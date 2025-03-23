@@ -2,6 +2,7 @@ const pageTitle = "Gishath Fetch: MTG Price Checker for Singapore's LGS";
 const form = document.getElementById("searchForm");
 const lgsCheckboxesDiv = document.getElementById("lgsCheckboxes");
 const searchInput = document.getElementById("search");
+const suggestionsDiv = document.getElementById("suggestions");
 const submitBtn = document.getElementById("submitBtn");
 const resultDiv = document.getElementById("result");
 const resultCountDiv = document.getElementById("resultCount");
@@ -295,3 +296,62 @@ function existsInCart(item) {
     }
     return false;
 }
+
+const debounceTimeout = 300;
+let debounceTimer;
+
+searchInput.addEventListener('input', () => {
+    let searchStr = searchInput.value.trim();
+
+    if (searchStr.length > 2) {
+        clearTimeout(debounceTimeout);
+
+        debounceTimer = setTimeout(() => {
+            const request = new XMLHttpRequest();
+            request.open('GET', `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchStr.toLowerCase())}`, true);
+            request.onload = function () {
+                if (request.status === 200) {
+                    let result = JSON.parse(request.responseText);
+                    if (result.hasOwnProperty("data")) {
+                        displaySuggestions(result["data"]);
+                    }
+                } else {
+                    console.error('There was an error making the request:', xhr.statusText);
+                }
+            };
+            request.onerror = function () {
+                console.error('Request failed');
+            };
+            request.send();
+        }, debounceTimeout);
+    } else {
+        clearSuggestions()
+    }
+});
+
+function displaySuggestions(suggestions) {
+    clearSuggestions();
+    suggestionsDiv.style.display = 'block';
+    suggestions.forEach(suggestion => {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.className = 'suggestion-item';
+        suggestionItem.textContent = suggestion;
+        suggestionItem.addEventListener('click', () => {
+            searchInput.value = suggestion;
+            clearSuggestions();
+        });
+        suggestionsDiv.appendChild(suggestionItem);
+    });
+}
+
+function clearSuggestions() {
+    suggestionsDiv.innerHTML = '';
+    suggestionsDiv.style.display = 'none';
+}
+
+// Hide suggestions box when clicking outside
+document.addEventListener('click', (event) => {
+    if (!searchInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
+        clearSuggestions();
+    }
+});
