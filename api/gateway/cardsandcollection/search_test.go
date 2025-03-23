@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Scrap(t *testing.T) {
+func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search("counterspell")
 	require.NoError(t, err)

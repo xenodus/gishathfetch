@@ -1,13 +1,17 @@
 package cardscitadel
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/binderpos"
 )
 
 const StoreName = "Cards Citadel"
@@ -30,21 +34,31 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-//func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-//	reqPayload, err := json.Marshal(binderpos.Payload{
-//		StoreURL:    binderposStoreURL,
-//		Game:        binderpos.ProductTypeMTG.ToString(),
-//		Title:       searchStr,
-//		InstockOnly: true,
-//	})
-//	if err != nil {
-//		return []gateway.Card{}, err
-//	}
-//
-//	return binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
-//}
-
 func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+	reqPayload, err := json.Marshal(binderpos.Payload{
+		StoreURL:    binderposStoreURL,
+		Game:        binderpos.ProductTypeMTG.ToString(),
+		Title:       searchStr,
+		InstockOnly: true,
+	})
+	if err != nil {
+		return []gateway.Card{}, err
+	}
+
+	cards, httpStatusCode, err := binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
+	if err != nil {
+		return cards, err
+	}
+
+	if httpStatusCode != http.StatusOK {
+		log.Printf("falling back to scrap for [%s]", s.Name)
+		return scrap(s, searchStr)
+	}
+
+	return cards, nil
+}
+
+func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 	var cards []gateway.Card
 
