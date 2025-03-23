@@ -21,12 +21,12 @@ func (p ProductType) ToString() string {
 	return string(p)
 }
 
-func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, error) {
+func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error) {
 	var cards []gateway.Card
 
-	res, err := getApiResponse(payload)
+	res, httpStatusCode, err := getApiResponse(payload)
 	if err != nil {
-		return cards, err
+		return cards, httpStatusCode, err
 	}
 
 	log.Printf("api response count for [%s]: [%d]", storeName, res.Count)
@@ -49,30 +49,30 @@ func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, e
 		}
 	}
 
-	return cards, nil
+	return cards, httpStatusCode, nil
 }
 
-func getApiResponse(payload []byte) (Response, error) {
+func getApiResponse(payload []byte) (Response, int, error) {
 	var res Response
 
 	resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
-		return res, err
+		return res, 0, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return res, err
+		return res, resp.StatusCode, err
 	}
 
 	log.Printf("api response status code: [%v]", resp.StatusCode)
 
 	if err = json.Unmarshal(body, &res); err != nil {
-		return res, err
+		return res, resp.StatusCode, err
 	}
 
-	return res, nil
+	return res, resp.StatusCode, nil
 }
 
 type Payload struct {
