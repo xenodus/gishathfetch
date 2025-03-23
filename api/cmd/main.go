@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -13,11 +14,11 @@ import (
 )
 
 func main() {
-	if config.IsTestEnv {
+	if os.Getenv("ENV") == config.EnvProd || os.Getenv("ENV") == config.EnvStaging {
+		lambda.Start(handler.Search)
+	} else {
 		start := time.Now()
 		log.Println(handler.Search(context.Background(), events.APIGatewayProxyRequest{}))
 		log.Println(fmt.Sprintf("Took: %s", time.Since(start)))
-	} else {
-		lambda.Start(handler.Search)
 	}
 }

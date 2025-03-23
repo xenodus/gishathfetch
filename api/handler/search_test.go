@@ -3,10 +3,12 @@ package handler
 import (
 	"context"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/require"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 func Test_Search_Success(t *testing.T) {
@@ -59,6 +61,8 @@ func Test_Search_Err(t *testing.T) {
 	}
 	for s, tc := range tcs {
 		t.Run(s, func(t *testing.T) {
+			err := os.Setenv("ENV", config.EnvStaging)
+			require.NoError(t, err)
 			result, err := Search(context.Background(), tc.givenAPIGatewayProxyRequest)
 			require.NoError(t, err)
 			require.Equal(t, tc.expResult, result)

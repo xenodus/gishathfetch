@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -31,7 +32,7 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 		lgsString = ""
 	}
 
-	if config.IsTestEnv {
+	if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
 		searchString = "Opt"
 		lgsString, _ = url.QueryUnescape("Flagship%20Games%2CGames%20Haven%2CGrey%20Ogre%20Games%2CHideout%2CMana%20Pro%2CMox%20%26%20Lotus%2COneMtg%2CSanctuary%20Gaming")
 	}

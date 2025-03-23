@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -73,10 +72,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		accessToken string
 	)
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Error loading .env file")
-	}
+	godotenv.Load()
 	accessToken = os.Getenv(accessTokenKey)
 
 	reqPayload, err := json.Marshal(payload{

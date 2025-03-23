@@ -1,6 +1,8 @@
 package config
 
 const (
-	IsTestEnv        = false
 	MaxPagesToSearch = 3
+	EnvProd          = "prod"
+	EnvStaging       = "staging"
+	EnvLocal         = "local"
 )

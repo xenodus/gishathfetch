@@ -42,7 +42,7 @@ func Search(input SearchInput) ([]gateway.Card, error) {
 		realStart := time.Now()
 		responseThreshold := 1 * time.Second
 
-		log.Println("Start checking shops...")
+		log.Printf("Start checking shops for [%s]...", input.SearchString)
 		for shopName, lgs := range shopNameToLGSMap {
 			sName := shopName
 			sLGS := lgs
