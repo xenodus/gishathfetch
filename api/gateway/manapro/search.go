@@ -46,12 +46,11 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 	cards, httpStatusCode, err := binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
 	if err != nil {
+		if httpStatusCode != http.StatusOK {
+			log.Printf("falling back to scrap for [%s]", s.Name)
+			return scrap(s, searchStr)
+		}
 		return cards, err
-	}
-
-	if httpStatusCode != http.StatusOK {
-		log.Printf("falling back to scrap for [%s]", s.Name)
-		return scrap(s, searchStr)
 	}
 
 	return cards, nil
