@@ -313,7 +313,7 @@ searchInput.addEventListener('input', () => {
                 if (request.status === 200) {
                     let result = JSON.parse(request.responseText);
                     if (result.hasOwnProperty("data")) {
-                        displaySuggestions(result["data"]);
+                        displaySuggestions(boldMatchingSuggestions(result["data"], searchStr));
                     }
                 } else {
                     console.error('There was an error making the request:', xhr.statusText);
@@ -335,9 +335,9 @@ function displaySuggestions(suggestions) {
     suggestions.forEach(suggestion => {
         const suggestionItem = document.createElement('div');
         suggestionItem.className = 'suggestion-item';
-        suggestionItem.textContent = suggestion;
+        suggestionItem.innerHTML = suggestion;
         suggestionItem.addEventListener('click', () => {
-            searchInput.value = suggestion;
+            searchInput.value = suggestionItem.innerText;
             clearSuggestions();
         });
         suggestionsDiv.appendChild(suggestionItem);
@@ -347,6 +347,15 @@ function displaySuggestions(suggestions) {
 function clearSuggestions() {
     suggestionsDiv.innerHTML = '';
     suggestionsDiv.style.display = 'none';
+}
+
+function boldMatchingSuggestions(suggestions, searchStr) {
+    let boldedSuggestions = [];
+    suggestions.forEach(suggestion => {
+        let boldedSuggestion = suggestion.replace(new RegExp(searchStr, 'gi'), (match) => `<b>${match}</b>`);
+        boldedSuggestions.push(boldedSuggestion);
+    });
+    return boldedSuggestions;
 }
 
 // Hide suggestions box when clicking outside
