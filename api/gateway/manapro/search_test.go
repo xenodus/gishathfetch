@@ -12,3 +12,13 @@ func Test_Search(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
 }
+
+func Test_scrap(t *testing.T) {
+	result, err := scrap(Store{
+		Name:      StoreName,
+		BaseUrl:   StoreBaseURL,
+		SearchUrl: StoreSearchURL,
+	}, "Abrade")
+	require.NoError(t, err)
+	require.True(t, len(result) > 0)
+}
