@@ -30,8 +30,20 @@ type SearchInput struct {
 	Lgs          []string
 }
 
-func Search(input SearchInput) ([]gateway.Card, error) {
-	var cards, inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []gateway.Card
+type Card struct {
+	Name      string  `json:"name"`
+	Url       string  `json:"url"`
+	Img       string  `json:"img"`
+	Price     float64 `json:"price"`
+	InStock   bool    `json:"inStock"`
+	Source    string  `json:"src"`
+	Quality   string  `json:"quality"`
+	ExtraInfo string  `json:"extraInfo"`
+}
+
+func Search(input SearchInput) ([]Card, error) {
+	var cards []gateway.Card
+	var inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []Card
 
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
 
@@ -80,31 +92,52 @@ func Search(input SearchInput) ([]gateway.Card, error) {
 				if c.InStock && !strings.Contains(strings.ToLower(c.Name), "art card") {
 					cleanCardName := c.Name
 
+					// if we have quality, remove it from name
+					if c.Quality != "" {
+						cleanCardName = strings.Replace(cleanCardName, c.Quality, "", -1)
+						cleanCardName = strings.Replace(cleanCardName, "-", "", -1)
+					}
+
+					extraInfo := ""
+
 					// if string has [, get index of it to strip [*] away
 					squareBracketIndex := strings.Index(cleanCardName, "[")
 					if squareBracketIndex > 1 {
+						extraInfo = strings.TrimSpace(cleanCardName[squareBracketIndex:])
 						cleanCardName = strings.TrimSpace(cleanCardName[:squareBracketIndex-1])
 					}
 
 					// if string has (, get index of it to strip (*) away
 					roundBracketIndex := strings.Index(cleanCardName, "(")
 					if roundBracketIndex > 1 {
+						extraInfo = strings.TrimSpace(cleanCardName[roundBracketIndex:])
 						cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex-1])
+					}
+
+					newCard := Card{
+						Name:      cleanCardName,
+						Url:       c.Url,
+						Img:       c.Img,
+						Price:     c.Price,
+						InStock:   c.InStock,
+						Source:    c.Source,
+						Quality:   c.Quality,
+						ExtraInfo: extraInfo,
 					}
 
 					// exact match
 					if strings.ToLower(cleanCardName) == strings.ToLower(input.SearchString) {
-						inStockExactMatchCards = append(inStockExactMatchCards, c)
+						inStockExactMatchCards = append(inStockExactMatchCards, newCard)
 						continue
 					}
 
 					// prefix
 					if strings.HasPrefix(strings.ToLower(cleanCardName), strings.ToLower(input.SearchString)) {
-						inStockPrefixMatchCards = append(inStockPrefixMatchCards, c)
+						inStockPrefixMatchCards = append(inStockPrefixMatchCards, newCard)
 						continue
 					}
 
-					inStockPartialMatchCards = append(inStockPartialMatchCards, c)
+					inStockPartialMatchCards = append(inStockPartialMatchCards, newCard)
 				}
 			}
 

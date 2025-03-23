@@ -81,13 +81,14 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 
 						if price > 0 {
 							cards = append(cards, gateway.Card{
-								Name:    strings.TrimSpace(el.ChildText("p.productTitle")),
-								Url:     strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1)),
-								InStock: isInstock,
-								Price:   price,
-								Source:  s.Name,
-								Img:     strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
-								Quality: quality,
+								Name:       strings.TrimSpace(el.ChildText("p.productTitle")),
+								Url:        strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1)),
+								InStock:    isInstock,
+								Price:      price,
+								Source:     s.Name,
+								Img:        strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
+								Quality:    quality,
+								IsScrapped: true,
 							})
 						}
 					}

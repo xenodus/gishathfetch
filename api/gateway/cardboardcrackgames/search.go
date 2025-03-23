@@ -72,13 +72,14 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 						if price > 0 {
 							cards = append(cards, gateway.Card{
-								Name:    strings.TrimSpace(el.ChildText("div.grid-view-item__title")),
-								Url:     strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href")),
-								InStock: isInstock,
-								Price:   price,
-								Source:  s.Name,
-								Img:     strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
-								Quality: strings.TrimSpace(el2.Text),
+								Name:       strings.TrimSpace(el.ChildText("div.grid-view-item__title")),
+								Url:        strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href")),
+								InStock:    isInstock,
+								Price:      price,
+								Source:     s.Name,
+								Img:        strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
+								Quality:    strings.TrimSpace(el2.Text),
+								IsScrapped: true,
 							})
 						}
 					}

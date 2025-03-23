@@ -65,13 +65,14 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			// Exclude Japanese cards
 			if price > 0 && !strings.Contains(name, "Japanese") {
 				cards = append(cards, gateway.Card{
-					Name:    strings.TrimSpace(el.ChildText("div.store-item-title")),
-					Url:     strings.TrimSpace(s.BaseUrl + "/store/search?category=mtg&searchfield=" + url.QueryEscape(searchStr)),
-					InStock: isInstock,
-					Price:   price,
-					Source:  s.Name,
-					Img:     strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
-					Quality: quality,
+					Name:       strings.TrimSpace(el.ChildText("div.store-item-title")),
+					Url:        strings.TrimSpace(s.BaseUrl + "/store/search?category=mtg&searchfield=" + url.QueryEscape(searchStr)),
+					InStock:    isInstock,
+					Price:      price,
+					Source:     s.Name,
+					Img:        strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
+					Quality:    quality,
+					IsScrapped: true,
 				})
 			}
 		})

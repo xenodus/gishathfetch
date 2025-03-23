@@ -10,12 +10,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"mtg-price-checker-sg/controller"
-	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/pkg/config"
 )
 
 type WebResponse struct {
-	Data []gateway.Card `json:"data"`
+	Data []controller.Card `json:"data"`
 }
 
 func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {

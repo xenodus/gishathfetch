@@ -76,6 +76,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				}
 			})
 			if c.InStock {
+				c.IsScrapped = true
 				cards = append(cards, c)
 			}
 		})
