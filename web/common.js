@@ -332,6 +332,7 @@ function updateCartPage() {
                 </div>
                 <div class="text-center">
                     <div class="fs-6 lh-sm fw-bold mb-1">`+cart[i]["name"]+`</div>
+                    `+((cart[i].hasOwnProperty("extraInfo") && cart[i]["extraInfo"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">`+cart[i]["extraInfo"]+`</div>`:``)+`                    
                     `+((cart[i].hasOwnProperty("quality") && cart[i]["quality"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">≪ `+cart[i]["quality"]+` ≫</div>`:``)+`
                     <div class="fs-6 lh-sm">S$ `+cart[i]["price"].toFixed(2)+`</div>
                     <div class="mb-2"><a href="`+cart[i]["url"]+`" target="_blank" class="link-offset-2">`+cart[i]["src"]+`</a></div>

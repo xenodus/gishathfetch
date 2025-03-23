@@ -215,6 +215,7 @@ function searchCard(event) {
                                     </div>
                                     <div class="text-center">
                                       <div class="fs-6 lh-sm fw-bold mb-1">`+result["data"][i]["name"]+`</div>
+                                      `+((result["data"][i].hasOwnProperty("extraInfo") && result["data"][i]["extraInfo"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">`+result["data"][i]["extraInfo"]+`</div>`:``)+`
                                       `+((result["data"][i].hasOwnProperty("quality") && result["data"][i]["quality"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">≪ `+result["data"][i]["quality"]+` ≫</div>`:``)+`
                                       <div class="fs-6 lh-sm">S$ `+result["data"][i]["price"].toFixed(2)+`</div>
                                       <div class="mb-2"><a href="`+result["data"][i]["url"]+`" target="_blank" class="link-offset-2">`+result["data"][i]["src"]+`</a></div>
