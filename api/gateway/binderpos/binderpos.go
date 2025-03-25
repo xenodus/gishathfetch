@@ -3,6 +3,7 @@ package binderpos
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -36,7 +37,7 @@ func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, i
 			for _, stock := range card.Variants {
 				if stock.Quantity > 0 {
 					cards = append(cards, gateway.Card{
-						Name:    card.CardTitle,
+						Name:    fmt.Sprintf("%s [%s]", card.CardName, card.SetName),
 						Url:     storeBaseURL + productPath + card.Handle,
 						InStock: true,
 						Price:   stock.Price,
