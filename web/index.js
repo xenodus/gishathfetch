@@ -4,9 +4,12 @@ const lgsCheckboxesDiv = document.getElementById("lgsCheckboxes");
 const searchInput = document.getElementById("search");
 const suggestionsDiv = document.getElementById("suggestions");
 const submitBtn = document.getElementById("submitBtn");
+const allBtn = document.getElementById("allBtn");
+const noneBtn = document.getElementById("noneBtn");
 const resultDiv = document.getElementById("result");
 const resultCountDiv = document.getElementById("resultCount");
 const lgsCheckboxes = document.getElementsByName('lgs[]');
+const debounceTimeout = 300;
 const lgsOptions = [
     "Agora Hobby",
     "Card Affinity",
@@ -61,20 +64,73 @@ function onloadSearch() {
 }
 
 function setupEventListeners() {
+    // Search
     form.addEventListener("submit", searchCard);
 
     document.addEventListener("keypress", function(event) {
-        if (event.keyCode === 13) {
+        if (event.code === "Enter") {
             event.preventDefault();
             submitBtn.click();
+        }
+    });
+
+    // Check all lgs checkboxes
+    allBtn.addEventListener("click", function() {
+        for(let i=0; i<lgsCheckboxes.length; i++) {
+            lgsCheckboxes[i].checked = true;
+        }
+    });
+
+    // Uncheck all lgs checkboxes
+    noneBtn.addEventListener("click", function() {
+        for (let i = 0; i < lgsCheckboxes.length; i++) {
+            lgsCheckboxes[i].checked = false;
+        }
+    });
+
+    // Auto suggest
+    let debounceTimer;
+
+    searchInput.addEventListener('input', () => {
+        let searchStr = searchInput.value.trim();
+
+        if (searchStr.length > 2) {
+            clearTimeout(debounceTimeout);
+
+            debounceTimer = setTimeout(() => {
+                const request = new XMLHttpRequest();
+                request.open('GET', `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchStr.toLowerCase())}`, true);
+                request.onload = function () {
+                    if (request.status === 200) {
+                        let result = JSON.parse(request.responseText);
+                        if (result.hasOwnProperty("data")) {
+                            displaySuggestions(boldMatchingSuggestions(result["data"], searchStr));
+                        }
+                    } else {
+                        console.error('Error making request to scryfall', request.statusText, request.status);
+                    }
+                };
+                request.onerror = function () {
+                    console.error('Request failed');
+                };
+                request.send();
+            }, debounceTimeout);
+        } else {
+            clearSuggestions()
+        }
+    });
+
+    // Hide suggestions box when clicking outside
+    document.addEventListener('click', (event) => {
+        if (!searchInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
+            clearSuggestions();
         }
     });
 }
 
 function appendLgsCheckboxes() {
-    let lgsSelected = [];
-
-    if(localStorage.getItem('lgsSelected') !== null && localStorage.getItem('lgsSelected') !== undefined && localStorage.getItem('lgsSelected') !== "") {
+    let lgsSelected;
+    if (localStorage.getItem('lgsSelected') !== null && localStorage.getItem('lgsSelected') !== undefined && localStorage.getItem('lgsSelected') !== "") {
         lgsSelected = decodeURIComponent(localStorage.getItem('lgsSelected')).split(",");
     } else {
         lgsSelected = lgsOptions;
@@ -298,40 +354,6 @@ function existsInCart(item) {
     return false;
 }
 
-// Auto completion / suggestion via scryfall
-
-const debounceTimeout = 300;
-let debounceTimer;
-
-searchInput.addEventListener('input', () => {
-    let searchStr = searchInput.value.trim();
-
-    if (searchStr.length > 2) {
-        clearTimeout(debounceTimeout);
-
-        debounceTimer = setTimeout(() => {
-            const request = new XMLHttpRequest();
-            request.open('GET', `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchStr.toLowerCase())}`, true);
-            request.onload = function () {
-                if (request.status === 200) {
-                    let result = JSON.parse(request.responseText);
-                    if (result.hasOwnProperty("data")) {
-                        displaySuggestions(boldMatchingSuggestions(result["data"], searchStr));
-                    }
-                } else {
-                    console.error('There was an error making the request:', xhr.statusText);
-                }
-            };
-            request.onerror = function () {
-                console.error('Request failed');
-            };
-            request.send();
-        }, debounceTimeout);
-    } else {
-        clearSuggestions()
-    }
-});
-
 function displaySuggestions(suggestions) {
     clearSuggestions();
     if (suggestions.length === 0) {
@@ -363,10 +385,3 @@ function boldMatchingSuggestions(suggestions, searchStr) {
     });
     return boldedSuggestions;
 }
-
-// Hide suggestions box when clicking outside
-document.addEventListener('click', (event) => {
-    if (!searchInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
-        clearSuggestions();
-    }
-});
