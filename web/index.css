@@ -36,6 +36,9 @@ body {
     padding: 5px 10px;
     cursor: pointer;
 }
+#suggestions div:nth-child(even) {
+    background-color: #fbfbfb;
+}
 #suggestions div:not(:last-child) {
     border-bottom: 1px solid #f3f3f3;
 }
