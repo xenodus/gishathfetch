@@ -298,6 +298,8 @@ function existsInCart(item) {
     return false;
 }
 
+// Auto completion / suggestion via scryfall
+
 const debounceTimeout = 300;
 let debounceTimer;
 
@@ -332,6 +334,9 @@ searchInput.addEventListener('input', () => {
 
 function displaySuggestions(suggestions) {
     clearSuggestions();
+    if (suggestions.length === 0) {
+        return;
+    }
     suggestionsDiv.style.display = 'block';
     suggestions.forEach(suggestion => {
         const suggestionItem = document.createElement('div');
