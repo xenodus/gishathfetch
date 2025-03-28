@@ -2,6 +2,7 @@ package gog
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -113,10 +114,18 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 						price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
 						price = price / 100
 
+						cardUrl := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
+						u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+						if err != nil {
+							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+							return
+						}
+						cleanPageURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+
 						if price > 0 {
 							cards = append(cards, gateway.Card{
 								Name:       strings.TrimSpace(el.ChildText("p.productCard__title")),
-								Url:        strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href")),
+								Url:        strings.TrimSpace(cleanPageURL),
 								InStock:    isInstock,
 								Price:      price,
 								Source:     s.Name,
@@ -166,10 +175,18 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 								price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
 								price = price / 100
 
+								cardUrl := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
+								u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+								if err != nil {
+									log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+									return
+								}
+								cleanPageURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+
 								if price > 0 {
 									cards = append(cards, gateway.Card{
 										Name:       strings.TrimSpace(el.ChildText("p.productCard__title")),
-										Url:        strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href")),
+										Url:        strings.TrimSpace(cleanPageURL),
 										InStock:    isInstock,
 										Price:      price,
 										Source:     s.Name,

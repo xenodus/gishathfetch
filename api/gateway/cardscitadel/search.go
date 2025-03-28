@@ -79,10 +79,18 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 							continue
 						}
 
+						cardUrl := strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1))
+						u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+						if err != nil {
+							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+							return
+						}
+						cleanPageURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+
 						if price > 0 {
 							cards = append(cards, gateway.Card{
 								Name:       strings.TrimSpace(el.ChildText("p.productTitle")),
-								Url:        strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1)),
+								Url:        strings.TrimSpace(cleanPageURL),
 								InStock:    isInstock,
 								Price:      price,
 								Source:     s.Name,

@@ -2,6 +2,7 @@ package tefuda
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
@@ -46,9 +47,17 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 			link := e.ChildAttr("div.product-card-wrapper > div > div.card__content > div.card__information > h3.card__heading a", "href")
 			img := e.ChildAttr("div.card__media img", "src")
 			priceStr := e.ChildText("div.product-card-wrapper > div > div.card__content > div.card__information > div.card-information div.price__container > div.price__regular > span.price-item")
-			price, _ := parsePriceStr(priceStr)
-			cardURL, _ := url.Parse(strings.TrimSpace(s.BaseUrl + link))
-			cleanURL := fmt.Sprintf("%s://%s%s", cardURL.Scheme, cardURL.Host, cardURL.Path)
+			price, err := parsePriceStr(priceStr)
+			if err != nil {
+				log.Printf("error parsing price for %s with value [%s]: %v", s.Name, priceStr, err)
+				return
+			}
+			u, err := url.Parse(strings.TrimSpace(s.BaseUrl + link))
+			if err != nil {
+				log.Printf("error parsing url for %s with value [%s]: %v", s.Name, link, err)
+				return
+			}
+			cleanURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
 
 			if price > 0 {
 				cards = append(cards, gateway.Card{

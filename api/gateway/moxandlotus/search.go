@@ -140,7 +140,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			if len(card.Conditions) > 0 {
 				for _, cardWithCondition := range card.Conditions {
 					if cardWithCondition.Stocks > 0 {
-						url := fmt.Sprintf(StoreBaseURL+"/view/%s/%v", strings.ToLower(card.ExpansionCode), card.ID)
+						cardUrl := fmt.Sprintf(StoreBaseURL+"/view/%s/%v", strings.ToLower(card.ExpansionCode), card.ID)
 						price, _ := strconv.ParseFloat(strings.TrimSpace(cardWithCondition.Price), 64)
 						cardNo, err := strconv.Atoi(card.CardNumber)
 						if err != nil {
@@ -149,7 +149,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 						cards = append(cards, gateway.Card{
 							Name:    strings.TrimSpace(card.Title),
-							Url:     url,
+							Url:     cardUrl,
 							InStock: true,
 							Price:   price,
 							Source:  s.Name,

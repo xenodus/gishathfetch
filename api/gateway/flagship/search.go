@@ -1,17 +1,21 @@
 package flagship
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/binderpos"
 )
 
 const StoreName = "Flagship Games"
 const StoreBaseURL = "https://www.flagshipgames.sg"
-const StoreSearchURL = "/search?type=product&q="
+const StoreSearchURL = "/search?type=product&q=%s"
 
 const binderposStoreURL = "flagship-games.myshopify.com"
 
@@ -29,61 +33,71 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-//func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-//	reqPayload, err := json.Marshal(binderpos.Payload{
-//		StoreURL:    binderposStoreURL,
-//		Game:        binderpos.ProductTypeMTG.ToString(),
-//		Title:       searchStr,
-//		InstockOnly: true,
-//	})
-//	if err != nil {
-//		return []gateway.Card{}, err
-//	}
-//
-//	return binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
-//}
-
 func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-	searchURL := s.BaseUrl + s.SearchUrl + url.QueryEscape(searchStr)
+	reqPayload, err := json.Marshal(binderpos.Payload{
+		StoreURL:    binderposStoreURL,
+		Game:        binderpos.ProductTypeMTG.ToString(),
+		Title:       searchStr,
+		InstockOnly: true,
+	})
+	if err != nil {
+		return []gateway.Card{}, err
+	}
+
+	cards, httpStatusCode, err := binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
+	if err != nil {
+		if httpStatusCode != http.StatusOK {
+			log.Printf("falling back to scrap for [%s]", s.Name)
+			return scrap(s, searchStr)
+		}
+		return cards, err
+	}
+
+	return cards, nil
+}
+
+func scrap(s Store, searchStr string) ([]gateway.Card, error) {
+	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 	var cards []gateway.Card
 
 	c := colly.NewCollector()
 
-	c.OnHTML("div.products-display", func(e *colly.HTMLElement) {
-		e.ForEach("div.product-card-list2", func(_ int, el *colly.HTMLElement) {
-			var (
-				isInstock bool
-				price     float64
-			)
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
+			cardInfoStr := el.Attr("data-product-variants")
+			if len(cardInfoStr) > 0 {
+				productId := el.Attr("data-product-id")
+				var pageUrl, cleanPageURL, imgUrl string
+				if len(productId) > 0 {
+					pageUrl = e.ChildAttr("div.product-card-list2__"+productId+" a", "href")
+					imgUrl = e.ChildAttr("div.product-card-list2__"+productId+" img", "src")
 
-			// in stock
-			if len(el.ChildTexts("a.addToCart span.value")) > 0 {
-				isInstock = el.ChildTexts("a.addToCart span.value")[len(el.ChildTexts("a.addToCart span.value"))-1] != "SOLD OUT"
-			}
+					u, err := url.Parse(strings.TrimSpace(s.BaseUrl + pageUrl))
+					if err != nil {
+						log.Printf("error parsing url for %s with value [%s]: %v", s.Name, pageUrl, err)
+						return
+					}
+					cleanPageURL = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+				}
 
-			if isInstock {
-				el.ForEach("select.product-form__variants[name=\"id\"] option", func(_ int, el2 *colly.HTMLElement) {
-					if el2.Attr("data-available") != "0" && el2.Attr("data-price") != "" {
-						priceStr := el2.Attr("data-price")
-
-						priceStr = strings.Replace(priceStr, "$", "", -1)
-						priceStr = strings.Replace(priceStr, ",", "", -1)
-						price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
-
-						if price > 0 {
+				var cardInfo []binderpos.CardInfo
+				err := json.Unmarshal([]byte(cardInfoStr), &cardInfo)
+				if err == nil {
+					if len(cardInfo) > 0 && len(pageUrl) > 0 && len(imgUrl) > 0 {
+						for _, card := range cardInfo {
 							cards = append(cards, gateway.Card{
-								Name:       strings.TrimSpace(el.ChildText("div.grid-view-item__title")),
-								Url:        strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href")),
-								InStock:    isInstock,
-								Price:      price,
+								Name:       strings.TrimSpace(card.Name),
+								Url:        strings.TrimSpace(cleanPageURL),
+								InStock:    card.Available,
+								Price:      float64(card.Price) / 100,
 								Source:     s.Name,
-								Img:        strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
-								Quality:    strings.TrimSpace(el2.Text),
+								Img:        strings.TrimSpace("https:" + imgUrl),
+								Quality:    card.Title,
 								IsScrapped: true,
 							})
 						}
 					}
-				})
+				}
 			}
 		})
 	})
