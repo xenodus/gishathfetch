@@ -111,6 +111,10 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					name = strings.TrimSpace(name[squareBracketIndex+1:])
 				}
 
+				if card.Setname != "" {
+					name += " [" + card.Setname + "]"
+				}
+
 				var img string
 				images := strings.Split(card.Image, " ")
 				if len(images) > 0 {
