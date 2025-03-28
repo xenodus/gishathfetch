@@ -14,6 +14,7 @@ import (
 func Test_Search_Success(t *testing.T) {
 	type args struct {
 		givenAPIGatewayProxyRequest events.APIGatewayProxyRequest
+		expResult                   events.APIGatewayProxyResponse
 	}
 	tcs := map[string]args{
 		"success": {
@@ -23,13 +24,29 @@ func Test_Search_Success(t *testing.T) {
 					"lgs": "Flagship%20Games",
 				},
 			},
+			expResult: events.APIGatewayProxyResponse{
+				StatusCode: http.StatusOK,
+			},
+		},
+		"success, no results": {
+			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
+				QueryStringParameters: map[string]string{
+					"s":   "shdjdhjksadjkahdjash",
+					"lgs": "Flagship%20Games",
+				},
+			},
+			expResult: events.APIGatewayProxyResponse{
+				StatusCode: http.StatusOK,
+			},
 		},
 	}
 	for s, tc := range tcs {
 		t.Run(s, func(t *testing.T) {
+			err := os.Setenv("ENV", config.EnvStaging)
+			require.NoError(t, err)
 			result, err := Search(context.Background(), tc.givenAPIGatewayProxyRequest)
 			require.NoError(t, err)
-			require.Equal(t, http.StatusOK, result.StatusCode)
+			require.Equal(t, tc.expResult.StatusCode, result.StatusCode)
 		})
 	}
 }
@@ -46,7 +63,7 @@ func Test_Search_Err(t *testing.T) {
 			},
 			expResult: events.APIGatewayProxyResponse{
 				StatusCode: http.StatusBadRequest,
-				Body:       "{\n    \"data\": null\n}",
+				Body:       "",
 			},
 		},
 		"less than 3 characters search string": {
@@ -55,7 +72,7 @@ func Test_Search_Err(t *testing.T) {
 			},
 			expResult: events.APIGatewayProxyResponse{
 				StatusCode: http.StatusBadRequest,
-				Body:       "{\n    \"data\": null\n}",
+				Body:       "",
 			},
 		},
 	}

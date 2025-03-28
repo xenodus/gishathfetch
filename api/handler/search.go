@@ -45,20 +45,27 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 		lgs = strings.Split(lgsString, ",")
 	}
 
-	inStockCards, _ := controller.Search(controller.SearchInput{
+	inStockCards, err := controller.Search(controller.SearchInput{
 		SearchString: searchString,
 		Lgs:          lgs,
 	})
-
-	if len(inStockCards) > 0 {
-		apiRes.StatusCode = http.StatusOK
-		webRes.Data = inStockCards
+	if err != nil {
+		apiRes.StatusCode = http.StatusInternalServerError
+		apiRes.Body = "err searching for cards"
+		return lambdaApiResponse(apiRes, webRes)
 	}
+
+	apiRes.StatusCode = http.StatusOK
+	webRes.Data = inStockCards
 
 	return lambdaApiResponse(apiRes, webRes)
 }
 
 func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse) (events.APIGatewayProxyResponse, error) {
+	if apiResponse.StatusCode != http.StatusOK {
+		return apiResponse, nil
+	}
+
 	bodyBytes, err := json.MarshalIndent(webResponse, "", "    ")
 	if err != nil {
 		apiResponse.StatusCode = http.StatusInternalServerError
