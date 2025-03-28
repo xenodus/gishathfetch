@@ -15,7 +15,7 @@ import (
 )
 
 const StoreName = "Cards Citadel"
-const StoreBaseURL = "https://cardscitadel.com/"
+const StoreBaseURL = "https://cardscitadel.com"
 const StoreSearchURL = "/search?q=*%s*"
 
 const binderposStoreURL = "card-citadel.myshopify.com"
