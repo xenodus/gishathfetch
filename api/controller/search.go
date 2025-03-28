@@ -99,19 +99,19 @@ func Search(input SearchInput) ([]Card, error) {
 						cleanCardName = strings.Replace(cleanCardName, "-", "", -1)
 					}
 
-					extraInfo := ""
+					var extraInfo []string
 
 					// if string has [, get index of it to strip [*] away
 					squareBracketIndex := strings.Index(cleanCardName, "[")
 					if squareBracketIndex > 1 {
-						extraInfo = strings.TrimSpace(cleanCardName[squareBracketIndex:])
+						extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[squareBracketIndex:]))
 						cleanCardName = strings.TrimSpace(cleanCardName[:squareBracketIndex-1])
 					}
 
 					// if string has (, get index of it to strip (*) away
 					roundBracketIndex := strings.Index(cleanCardName, "(")
 					if roundBracketIndex > 1 {
-						extraInfo = strings.TrimSpace(cleanCardName[roundBracketIndex:])
+						extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[roundBracketIndex:]))
 						cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex-1])
 					}
 
@@ -123,7 +123,7 @@ func Search(input SearchInput) ([]Card, error) {
 						InStock:   c.InStock,
 						Source:    c.Source,
 						Quality:   c.Quality,
-						ExtraInfo: extraInfo,
+						ExtraInfo: strings.Join(extraInfo, " "),
 					}
 
 					// exact match
@@ -145,7 +145,6 @@ func Search(input SearchInput) ([]Card, error) {
 			// order of results: exact > prefix > partial match
 			inStockCards = append(inStockExactMatchCards, inStockPrefixMatchCards...)
 			inStockCards = append(inStockCards, inStockPartialMatchCards...)
-
 		}
 
 		// ensure request takes at least X (responseThreshold) seconds

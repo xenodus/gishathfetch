@@ -16,7 +16,7 @@ import (
 const StoreName = "Mox & Lotus"
 const StoreBaseURL = "https://moxandlotus.sg"
 const StoreSearchURL = "/products?title="
-const StoreApiURL = "/api/products?&limit=48&full_search=true&showStatus=false&is_paginated=true&in_stock=true&sortVariation=true&&category_id=1&variation_code=regular&order_by=Price%20Low%20to%20High&search="
+const StoreApiURL = "/api/products?&limit=48&full_search=true&showStatus=false&is_paginated=true&in_stock=true&sortVariation=true&&category_id=1&variation_code=all&order_by=Price%20Low%20to%20High&search="
 const CardImageURL = "https://d3nmvyqkci0c2u.cloudfront.net/%s/%s.png"
 
 type response struct {
@@ -148,7 +148,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 						}
 
 						cards = append(cards, gateway.Card{
-							Name:    strings.TrimSpace(card.Title),
+							Name:    strings.TrimSpace(card.Title + " [" + card.Expansion + "]"),
 							Url:     cardUrl,
 							InStock: true,
 							Price:   price,
