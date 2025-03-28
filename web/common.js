@@ -252,6 +252,12 @@ let lgsMap = [
         "name": "One MTG",
         "address": "100 Jln Sultan, #03-11 Sultan Plaza, Singapore 199001",
         "iframe": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7866900551694!2d103.85910407451628!3d1.3029641617257042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19180d91f3a1%3A0x75c807bf93d430a4!2sOne%20MTG!5e0!3m2!1sen!2ssg!4v1702821425238!5m2!1sen!2ssg",
+    },
+    {
+        "id": "tefuda-map",
+        "name": "Tefuda",
+        "address": "B1-02 Macpherson Mall, Singapore 368125",
+        "iframe": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.740634996764!2d103.8765490749657!3d1.3317319986556433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da178ea031acdb%3A0xac7ea94397d6a870!2sTefuda!5e0!3m2!1sen!2ssg!4v1743179304416!5m2!1sen!2ssg",
     }
 ]
 

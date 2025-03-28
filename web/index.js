@@ -25,6 +25,7 @@ const lgsOptions = [
     "Mox & Lotus",
     "MTG Asia",
     "OneMtg",
+    "Tefuda",
     "The TCG Marketplace"
 ];
 const alreadyInCartBtnHtml = `<i data-feather="check-square" class="cartIcon"></i> Saved`;
