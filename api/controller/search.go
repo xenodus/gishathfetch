@@ -99,7 +99,7 @@ func Search(input SearchInput) ([]Card, error) {
 						cleanCardName = strings.Replace(cleanCardName, "-", "", -1)
 					}
 
-					var extraInfo []string
+					extraInfo := c.ExtraInfo
 
 					// if string has [, get index of it to strip [*] away
 					squareBracketIndex := strings.Index(cleanCardName, "[")
@@ -115,7 +115,7 @@ func Search(input SearchInput) ([]Card, error) {
 						cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex-1])
 					}
 
-					newCard := Card{
+					card := Card{
 						Name:      cleanCardName,
 						Url:       c.Url,
 						Img:       c.Img,
@@ -128,17 +128,17 @@ func Search(input SearchInput) ([]Card, error) {
 
 					// exact match
 					if strings.ToLower(cleanCardName) == strings.ToLower(input.SearchString) {
-						inStockExactMatchCards = append(inStockExactMatchCards, newCard)
+						inStockExactMatchCards = append(inStockExactMatchCards, card)
 						continue
 					}
 
 					// prefix
 					if strings.HasPrefix(strings.ToLower(cleanCardName), strings.ToLower(input.SearchString)) {
-						inStockPrefixMatchCards = append(inStockPrefixMatchCards, newCard)
+						inStockPrefixMatchCards = append(inStockPrefixMatchCards, card)
 						continue
 					}
 
-					inStockPartialMatchCards = append(inStockPartialMatchCards, newCard)
+					inStockPartialMatchCards = append(inStockPartialMatchCards, card)
 				}
 			}
 

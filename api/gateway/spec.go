@@ -1,14 +1,14 @@
 package gateway
 
 type Card struct {
-	Name       string  `json:"name"`
-	Url        string  `json:"url"`
-	Img        string  `json:"img"`
-	Price      float64 `json:"price"`
-	InStock    bool    `json:"inStock"`
-	Source     string  `json:"src"`
-	Quality    string  `json:"quality"`
-	IsScrapped bool    `json:"-"`
+	Name      string
+	Url       string
+	Img       string
+	Price     float64
+	InStock   bool
+	Source    string
+	Quality   string
+	ExtraInfo []string
 }
 
 type LGS interface {

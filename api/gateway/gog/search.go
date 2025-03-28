@@ -124,14 +124,14 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 
 						if price > 0 {
 							cards = append(cards, gateway.Card{
-								Name:       strings.TrimSpace(el.ChildText("p.productCard__title")),
-								Url:        strings.TrimSpace(cleanPageURL),
-								InStock:    isInstock,
-								Price:      price,
-								Source:     s.Name,
-								Img:        strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-								Quality:    el2.Attr("data-varianttitle"),
-								IsScrapped: true,
+								Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+								Url:       strings.TrimSpace(cleanPageURL),
+								InStock:   isInstock,
+								Price:     price,
+								Source:    s.Name,
+								Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+								Quality:   el2.Attr("data-varianttitle"),
+								ExtraInfo: []string{el.ChildText("p.productCard__setName")},
 							})
 						}
 					}
@@ -185,14 +185,14 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 
 								if price > 0 {
 									cards = append(cards, gateway.Card{
-										Name:       strings.TrimSpace(el.ChildText("p.productCard__title")),
-										Url:        strings.TrimSpace(cleanPageURL),
-										InStock:    isInstock,
-										Price:      price,
-										Source:     s.Name,
-										Img:        strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-										Quality:    el2.Attr("data-varianttitle"),
-										IsScrapped: true,
+										Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+										Url:       strings.TrimSpace(cleanPageURL),
+										InStock:   isInstock,
+										Price:     price,
+										Source:    s.Name,
+										Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+										Quality:   el2.Attr("data-varianttitle"),
+										ExtraInfo: []string{el.ChildText("p.productCard__setName")},
 									})
 								}
 							}

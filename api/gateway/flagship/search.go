@@ -91,14 +91,13 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 							cleanPageURL := fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, q.Encode())
 
 							cards = append(cards, gateway.Card{
-								Name:       strings.TrimSpace(card.Name),
-								Url:        strings.TrimSpace(cleanPageURL),
-								InStock:    card.Available,
-								Price:      float64(card.Price) / 100,
-								Source:     s.Name,
-								Img:        strings.TrimSpace("https:" + imgUrl),
-								Quality:    card.Title,
-								IsScrapped: true,
+								Name:    strings.TrimSpace(card.Name),
+								Url:     strings.TrimSpace(cleanPageURL),
+								InStock: card.Available,
+								Price:   float64(card.Price) / 100,
+								Source:  s.Name,
+								Img:     strings.TrimSpace("https:" + imgUrl),
+								Quality: card.Title,
 							})
 						}
 					}

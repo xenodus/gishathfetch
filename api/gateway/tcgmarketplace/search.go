@@ -111,10 +111,6 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					name = strings.TrimSpace(name[squareBracketIndex+1:])
 				}
 
-				if card.Setname != "" {
-					name += " [" + card.Setname + "]"
-				}
-
 				var img string
 				images := strings.Split(card.Image, " ")
 				if len(images) > 0 {
@@ -122,12 +118,13 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				}
 
 				cards = append(cards, gateway.Card{
-					Name:    strings.TrimSpace(name),
-					Url:     card.URL,
-					InStock: true,
-					Price:   price,
-					Source:  s.Name,
-					Img:     img,
+					Name:      strings.TrimSpace(name),
+					Url:       card.URL,
+					InStock:   true,
+					Price:     price,
+					Source:    s.Name,
+					Img:       img,
+					ExtraInfo: []string{fmt.Sprintf("[%s]", card.Setname)},
 				})
 			}
 		}

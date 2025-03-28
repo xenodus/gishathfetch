@@ -185,20 +185,15 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					quantity, _ := strconv.Atoi(quantityOnSaleStr)
 					minPrice, _ := strconv.ParseFloat(minPriceStr, 64)
 
-					name := hit.Source.Name
-
-					if hit.Source.SetName != "" {
-						name += " [" + hit.Source.SetName + "]"
-					}
-
 					if quantity > 0 && minPrice > 0 {
 						cards = append(cards, gateway.Card{
-							Name:    strings.TrimSpace(name),
-							Url:     fmt.Sprintf(StoreBaseURL+"/product/%v", hit.ID),
-							InStock: true,
-							Price:   minPrice,
-							Source:  s.Name,
-							Img:     hit.Source.Img,
+							Name:      strings.TrimSpace(hit.Source.Name),
+							Url:       fmt.Sprintf(StoreBaseURL+"/product/%v", hit.ID),
+							InStock:   true,
+							Price:     minPrice,
+							Source:    s.Name,
+							Img:       hit.Source.Img,
+							ExtraInfo: []string{fmt.Sprintf("[%s]", hit.Source.SetName)},
 						})
 					}
 				}

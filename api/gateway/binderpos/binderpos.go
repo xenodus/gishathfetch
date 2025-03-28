@@ -61,13 +61,14 @@ func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, i
 			for _, stock := range card.Variants {
 				if stock.Quantity > 0 {
 					cards = append(cards, gateway.Card{
-						Name:    fmt.Sprintf("%s [%s]", card.CardName, card.SetName),
-						Url:     fmt.Sprintf("%s%s%s?variant=%s", storeBaseURL, productPath, card.Handle, fmt.Sprint(stock.ShopifyID)),
-						InStock: true,
-						Price:   stock.Price,
-						Source:  storeName,
-						Img:     card.Img,
-						Quality: stock.Title,
+						Name:      fmt.Sprintf("%s", card.CardName),
+						Url:       fmt.Sprintf("%s%s%s?variant=%s", storeBaseURL, productPath, card.Handle, fmt.Sprint(stock.ShopifyID)),
+						InStock:   true,
+						Price:     stock.Price,
+						Source:    storeName,
+						Img:       card.Img,
+						Quality:   stock.Title,
+						ExtraInfo: []string{fmt.Sprintf("[%s]", card.SetName)},
 					})
 				}
 			}

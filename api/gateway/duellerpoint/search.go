@@ -56,7 +56,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				case 1:
 					c.Name = strings.TrimSpace(se3.Text())
 				case 2:
-					c.Name += " [" + strings.TrimSpace(se3.Text()) + "]"
+					c.ExtraInfo = []string{fmt.Sprintf("[%s]", strings.TrimSpace(se3.Text()))}
 				case 3:
 					se3.Find("p").Each(func(l int, se4 *goquery.Selection) {
 						if strings.Contains(se4.Find("span").Text(), "Condition") {
@@ -76,7 +76,6 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				}
 			})
 			if c.InStock {
-				c.IsScrapped = true
 				cards = append(cards, c)
 			}
 		})

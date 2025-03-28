@@ -147,22 +147,23 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 							continue
 						}
 
-						name := card.Title
+						var extraInfo []string
 						if card.VariationCode == "foil" {
-							name += " (Foil)"
+							extraInfo = append(extraInfo, fmt.Sprintf("(%s)", card.VariationCode))
 						}
 						if card.Expansion != "" {
-							name += " [" + card.Expansion + "]"
+							extraInfo = append(extraInfo, fmt.Sprintf("[%s]", card.Expansion))
 						}
 
 						cards = append(cards, gateway.Card{
-							Name:    strings.TrimSpace(name),
-							Url:     cardUrl,
-							InStock: true,
-							Price:   price,
-							Source:  s.Name,
-							Img:     fmt.Sprintf(CardImageURL, card.ExpansionCode, fmt.Sprintf("%03d", cardNo)),
-							Quality: cardWithCondition.Code,
+							Name:      strings.TrimSpace(card.Title),
+							Url:       cardUrl,
+							InStock:   true,
+							Price:     price,
+							Source:    s.Name,
+							Img:       fmt.Sprintf(CardImageURL, card.ExpansionCode, fmt.Sprintf("%03d", cardNo)),
+							Quality:   cardWithCondition.Code,
+							ExtraInfo: extraInfo,
 						})
 					}
 				}

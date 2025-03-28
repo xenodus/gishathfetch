@@ -61,13 +61,12 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 
 			if price > 0 {
 				cards = append(cards, gateway.Card{
-					Name:       strings.TrimSpace(name),
-					Url:        strings.TrimSpace(cleanURL),
-					InStock:    true,
-					Price:      price,
-					Source:     s.Name,
-					Img:        img,
-					IsScrapped: true,
+					Name:    strings.TrimSpace(name),
+					Url:     strings.TrimSpace(cleanURL),
+					InStock: true,
+					Price:   price,
+					Source:  s.Name,
+					Img:     img,
 				})
 			}
 		})

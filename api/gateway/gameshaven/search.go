@@ -75,22 +75,16 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 
 							cleanPageURL := fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, q.Encode())
 
-							name := el.ChildText("p.productCard__title")
-
-							if el.ChildText("p.productCard__setName") != "" {
-								name += " [" + el.ChildText("p.productCard__setName") + "]"
-							}
-
 							if price > 0 {
 								cards = append(cards, gateway.Card{
-									Name:       strings.TrimSpace(name),
-									Url:        strings.TrimSpace(cleanPageURL),
-									InStock:    isInstock,
-									Price:      price,
-									Source:     s.Name,
-									Img:        strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-									Quality:    el2.Attr("data-varianttitle"),
-									IsScrapped: true,
+									Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+									Url:       strings.TrimSpace(cleanPageURL),
+									InStock:   isInstock,
+									Price:     price,
+									Source:    s.Name,
+									Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+									Quality:   el2.Attr("data-varianttitle"),
+									ExtraInfo: []string{fmt.Sprintf("[%s]", el.ChildText("p.productCard__setName"))},
 								})
 							}
 						}
