@@ -36,7 +36,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 }
 
 func scrap(s Store, searchStr string) ([]gateway.Card, error) {
-	searchURL := s.BaseUrl + s.SearchUrl + url.QueryEscape(searchStr)
+	searchURL := s.BaseUrl + s.SearchUrl + url.QueryEscape(searchStr+" mtg")
 	var cards []gateway.Card
 
 	c := colly.NewCollector()

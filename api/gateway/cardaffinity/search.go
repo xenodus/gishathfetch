@@ -32,49 +32,12 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-//func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-//	reqPayload, err := json.Marshal(binderpos.Payload{
-//		StoreURL:    binderposStoreURL,
-//		Game:        binderpos.ProductTypeMTG.ToString(),
-//		Title:       searchStr,
-//		InstockOnly: true,
-//	})
-//	if err != nil {
-//		return []gateway.Card{}, err
-//	}
-//
-//	return binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
-//}
-
-type CardInfo struct {
-	ID                     int64    `json:"id"`
-	Title                  string   `json:"title"`
-	Option1                string   `json:"option1"`
-	Option2                any      `json:"option2"`
-	Option3                any      `json:"option3"`
-	Sku                    string   `json:"sku"`
-	RequiresShipping       bool     `json:"requires_shipping"`
-	Taxable                bool     `json:"taxable"`
-	FeaturedImage          any      `json:"featured_image"`
-	Available              bool     `json:"available"`
-	Name                   string   `json:"name"`
-	PublicTitle            string   `json:"public_title"`
-	Options                []string `json:"options"`
-	Price                  int      `json:"price"`
-	Weight                 int      `json:"weight"`
-	CompareAtPrice         any      `json:"compare_at_price"`
-	InventoryManagement    string   `json:"inventory_management"`
-	Barcode                any      `json:"barcode"`
-	RequiresSellingPlan    bool     `json:"requires_selling_plan"`
-	SellingPlanAllocations []any    `json:"selling_plan_allocations"`
-}
-
 func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 	return scrap(s, searchStr)
 }
 
 func scrap(s Store, searchStr string) ([]gateway.Card, error) {
-	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
+	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr+" mtg"))
 	var cards []gateway.Card
 
 	c := colly.NewCollector()
@@ -84,17 +47,10 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 			cardInfoStr := el.Attr("data-product-variants")
 			if len(cardInfoStr) > 0 {
 				productId := el.Attr("data-product-id")
-				var pageUrl, cleanPageURL, imgUrl string
+				var pageUrl, imgUrl string
 				if len(productId) > 0 {
 					pageUrl = e.ChildAttr("div.product-card-list2__"+productId+" a", "href")
 					imgUrl = e.ChildAttr("div.product-card-list2__"+productId+" img", "src")
-
-					u, err := url.Parse(strings.TrimSpace(s.BaseUrl + pageUrl))
-					if err != nil {
-						log.Printf("error parsing url for %s with value [%s]: %v", s.Name, pageUrl, err)
-						return
-					}
-					cleanPageURL = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
 				}
 
 				var cardInfo []binderpos.CardInfo
@@ -102,6 +58,18 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 				if err == nil {
 					if len(cardInfo) > 0 && len(pageUrl) > 0 && len(imgUrl) > 0 {
 						for _, card := range cardInfo {
+							// url with variant (quality)
+							u, err := url.Parse(strings.TrimSpace(s.BaseUrl + pageUrl))
+							if err != nil {
+								log.Printf("error parsing url for %s with value [%s]: %v", s.Name, pageUrl, err)
+								return
+							}
+							q := url.Values{
+								"variant": []string{fmt.Sprint(card.ID)},
+							}
+
+							cleanPageURL := fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, q.Encode())
+
 							cards = append(cards, gateway.Card{
 								Name:       strings.TrimSpace(card.Name),
 								Url:        strings.TrimSpace(cleanPageURL),
