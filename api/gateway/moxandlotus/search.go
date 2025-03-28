@@ -147,8 +147,16 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 							continue
 						}
 
+						name := card.Title
+						if card.VariationCode == "foil" {
+							name += " (Foil)"
+						}
+						if card.Expansion != "" {
+							name += " [" + card.Expansion + "]"
+						}
+
 						cards = append(cards, gateway.Card{
-							Name:    strings.TrimSpace(card.Title + " [" + card.Expansion + "]"),
+							Name:    strings.TrimSpace(name),
 							Url:     cardUrl,
 							InStock: true,
 							Price:   price,
