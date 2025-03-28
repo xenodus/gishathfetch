@@ -23,6 +23,7 @@ import (
 	"mtg-price-checker-sg/gateway/mtgasia"
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
+	"mtg-price-checker-sg/gateway/tefuda"
 )
 
 type SearchInput struct {
@@ -172,6 +173,7 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		moxandlotus.StoreName:         moxandlotus.NewLGS(),
 		mtgasia.StoreName:             mtgasia.NewLGS(),
 		onemtg.StoreName:              onemtg.NewLGS(),
+		tefuda.StoreName:              tefuda.NewLGS(),
 		tcgmarketplace.StoreName:      tcgmarketplace.NewLGS(),
 	}
 
