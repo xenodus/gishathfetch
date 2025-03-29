@@ -1,6 +1,7 @@
 package agora
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -11,7 +12,7 @@ import (
 
 const StoreName = "Agora Hobby"
 const StoreBaseURL = "https://agorahobby.com"
-const StoreSearchURL = "/store/search?category=mtg&searchfield="
+const StoreSearchURL = "/store/search?category=mtg&searchfield=%s"
 
 type Store struct {
 	Name      string
@@ -28,7 +29,7 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-	searchURL := s.BaseUrl + s.SearchUrl + url.QueryEscape(searchStr)
+	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 	var cards []gateway.Card
 
 	c := colly.NewCollector()
@@ -59,19 +60,29 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				quality = strings.TrimSpace(qualityStrSlice[1])
 			}
 
+			var (
+				extraInfo []string
+				set       string
+			)
+			if strings.Index(el.ChildText("div.store-item-cat"), "]") != -1 {
+				set = el.ChildText("div.store-item-cat")[:strings.Index(el.ChildText("div.store-item-cat"), "]")+1]
+				extraInfo = append(extraInfo, set)
+			}
+
 			// name
 			name := el.ChildText("div.store-item-title")
 
 			// Exclude Japanese cards
 			if price > 0 && !strings.Contains(name, "Japanese") {
 				cards = append(cards, gateway.Card{
-					Name:    strings.TrimSpace(el.ChildText("div.store-item-title")),
-					Url:     strings.TrimSpace(s.BaseUrl + "/store/search?category=mtg&searchfield=" + url.QueryEscape(searchStr)),
-					InStock: isInstock,
-					Price:   price,
-					Source:  s.Name,
-					Img:     strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
-					Quality: quality,
+					Name:      strings.TrimSpace(el.ChildText("div.store-item-title")),
+					Url:       strings.TrimSpace(searchURL),
+					InStock:   isInstock,
+					Price:     price,
+					Source:    s.Name,
+					Img:       strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
+					Quality:   quality,
+					ExtraInfo: extraInfo,
 				})
 			}
 		})
