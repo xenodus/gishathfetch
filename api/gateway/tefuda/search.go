@@ -9,6 +9,7 @@ import (
 
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Tefuda"
@@ -52,17 +53,22 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 				log.Printf("error parsing price for %s with value [%s]: %v", s.Name, priceStr, err)
 				return
 			}
-			u, err := url.Parse(strings.TrimSpace(s.BaseUrl + link))
+
+			// url
+			u := strings.TrimSpace(s.BaseUrl + link)
+			cleanPageURL, err := url.Parse(u)
 			if err != nil {
-				log.Printf("error parsing url for %s with value [%s]: %v", s.Name, link, err)
+				log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
 				return
 			}
-			cleanURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+			cleanPageURL.RawQuery = url.Values{
+				"utm_source": []string{config.UtmSource},
+			}.Encode()
 
 			if price > 0 {
 				cards = append(cards, gateway.Card{
 					Name:    strings.TrimSpace(name),
-					Url:     strings.TrimSpace(cleanURL),
+					Url:     strings.TrimSpace(cleanPageURL.String()),
 					InStock: true,
 					Price:   price,
 					Source:  s.Name,

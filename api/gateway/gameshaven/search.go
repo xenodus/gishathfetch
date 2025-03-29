@@ -9,6 +9,7 @@ import (
 
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Games Haven"
@@ -63,22 +64,21 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 							price = price / 100
 
 							// url with variant (quality)
-							cardUrl := strings.TrimSpace(el.ChildAttr("a", "href"))
-							u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+							u := strings.TrimSpace(el.ChildAttr("a", "href"))
+							cleanPageURL, err := url.Parse(u)
 							if err != nil {
-								log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+								log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
 								return
 							}
-							q := url.Values{
-								"variant": []string{el2.Attr("data-variantid")},
-							}
-
-							cleanPageURL := fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, q.Encode())
+							cleanPageURL.RawQuery = url.Values{
+								"variant":    []string{el2.Attr("data-variantid")},
+								"utm_source": []string{config.UtmSource},
+							}.Encode()
 
 							if price > 0 {
 								cards = append(cards, gateway.Card{
 									Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-									Url:       strings.TrimSpace(cleanPageURL),
+									Url:       strings.TrimSpace(cleanPageURL.String()),
 									InStock:   isInstock,
 									Price:     price,
 									Source:    s.Name,

@@ -7,8 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const endpoint = "https://portal.binderpos.com/external/shopify/products/forStore"
@@ -60,9 +63,21 @@ func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, i
 		for _, card := range res.Products {
 			for _, stock := range card.Variants {
 				if stock.Quantity > 0 {
+					// url
+					u := fmt.Sprintf("%s%s%s", storeBaseURL, productPath, card.Handle)
+					cleanPageURL, err := url.Parse(strings.TrimSpace(u))
+					if err != nil {
+						log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+						continue
+					}
+					cleanPageURL.RawQuery = url.Values{
+						"variant":    []string{fmt.Sprint(stock.ShopifyID)},
+						"utm_source": []string{config.UtmSource},
+					}.Encode()
+
 					cards = append(cards, gateway.Card{
 						Name:      fmt.Sprintf("%s", card.CardName),
-						Url:       fmt.Sprintf("%s%s%s?variant=%s", storeBaseURL, productPath, card.Handle, fmt.Sprint(stock.ShopifyID)),
+						Url:       cleanPageURL.String(),
 						InStock:   true,
 						Price:     stock.Price,
 						Source:    storeName,

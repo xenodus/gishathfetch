@@ -11,14 +11,14 @@ func Test_Search(t *testing.T) {
 	result, err := s.Search("sol ring")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
-}
 
-func Test_scrap(t *testing.T) {
-	result, err := scrap(Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
-	}, "sol ring")
-	require.NoError(t, err)
-	require.True(t, len(result) > 0)
+	for _, card := range result {
+		if card.InStock {
+			require.NotEmpty(t, card.Name)
+			require.NotEmpty(t, card.Source)
+			require.NotEmpty(t, card.Url)
+			require.NotEmpty(t, card.Img)
+			require.NotEmpty(t, card.Price)
+		}
+	}
 }

@@ -2,6 +2,7 @@ package duellerpoint
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Dueller's Point"
@@ -76,6 +78,17 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				}
 			})
 			if c.InStock {
+				// url
+				cleanPageURL, err := url.Parse(c.Url)
+				if err != nil {
+					log.Printf("error parsing url for %s with value [%s]: %v", s.Name, c.Url, err)
+					return
+				}
+				cleanPageURL.RawQuery = url.Values{
+					"utm_source": []string{config.UtmSource},
+				}.Encode()
+				c.Url = cleanPageURL.String()
+
 				cards = append(cards, c)
 			}
 		})

@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "The TCG Marketplace"
@@ -117,9 +120,20 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					img = images[0]
 				}
 
+				// url
+				u := strings.TrimSpace(card.URL)
+				cleanPageURL, err := url.Parse(u)
+				if err != nil {
+					log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
+					continue
+				}
+				cleanPageURL.RawQuery = url.Values{
+					"utm_source": []string{config.UtmSource},
+				}.Encode()
+
 				cards = append(cards, gateway.Card{
 					Name:      strings.TrimSpace(name),
-					Url:       card.URL,
+					Url:       cleanPageURL.String(),
 					InStock:   true,
 					Price:     price,
 					Source:    s.Name,

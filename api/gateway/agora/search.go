@@ -2,12 +2,14 @@ package agora
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Agora Hobby"
@@ -72,11 +74,23 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			// name
 			name := el.ChildText("div.store-item-title")
 
+			// url
+			cleanPageURL, err := url.Parse(strings.TrimSpace(searchURL))
+			if err != nil {
+				log.Printf("error parsing url for %s with value [%s]: %v", s.Name, searchURL, err)
+				return
+			}
+			cleanPageURL.RawQuery = url.Values{
+				"category":    []string{"mtg"},
+				"searchfield": []string{url.QueryEscape(searchStr)},
+				"utm_source":  []string{config.UtmSource},
+			}.Encode()
+
 			// Exclude Japanese cards
 			if price > 0 && !strings.Contains(name, "Japanese") {
 				cards = append(cards, gateway.Card{
 					Name:      strings.TrimSpace(el.ChildText("div.store-item-title")),
-					Url:       strings.TrimSpace(searchURL),
+					Url:       strings.TrimSpace(cleanPageURL.String()),
 					InStock:   isInstock,
 					Price:     price,
 					Source:    s.Name,

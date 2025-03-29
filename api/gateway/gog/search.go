@@ -2,7 +2,6 @@ package gog
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -114,18 +113,20 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 						price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
 						price = price / 100
 
-						cardUrl := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
-						u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+						u := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
+						cleanPageURL, err := url.Parse(u)
 						if err != nil {
-							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
 							return
 						}
-						cleanPageURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+						cleanPageURL.RawQuery = url.Values{
+							"utm_source": []string{config.UtmSource},
+						}.Encode()
 
 						if price > 0 {
 							cards = append(cards, gateway.Card{
 								Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-								Url:       strings.TrimSpace(cleanPageURL),
+								Url:       strings.TrimSpace(cleanPageURL.String()),
 								InStock:   isInstock,
 								Price:     price,
 								Source:    s.Name,
@@ -175,18 +176,20 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 								price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
 								price = price / 100
 
-								cardUrl := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
-								u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+								u := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
+								cleanPageURL, err := url.Parse(u)
 								if err != nil {
-									log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+									log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
 									return
 								}
-								cleanPageURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+								cleanPageURL.RawQuery = url.Values{
+									"utm_source": []string{config.UtmSource},
+								}.Encode()
 
 								if price > 0 {
 									cards = append(cards, gateway.Card{
 										Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-										Url:       strings.TrimSpace(cleanPageURL),
+										Url:       strings.TrimSpace(cleanPageURL.String()),
 										InStock:   isInstock,
 										Price:     price,
 										Source:    s.Name,

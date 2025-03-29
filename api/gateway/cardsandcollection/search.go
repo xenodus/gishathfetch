@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Cards & Collections"
@@ -186,9 +189,20 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					minPrice, _ := strconv.ParseFloat(minPriceStr, 64)
 
 					if quantity > 0 && minPrice > 0 {
+						// url
+						u := fmt.Sprintf(StoreBaseURL+"/product/%s", hit.ID)
+						cleanPageURL, err := url.Parse(u)
+						if err != nil {
+							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
+							continue
+						}
+						cleanPageURL.RawQuery = url.Values{
+							"utm_source": []string{config.UtmSource},
+						}.Encode()
+
 						cards = append(cards, gateway.Card{
 							Name:      strings.TrimSpace(hit.Source.Name),
-							Url:       fmt.Sprintf(StoreBaseURL+"/product/%v", hit.ID),
+							Url:       strings.TrimSpace(cleanPageURL.String()),
 							InStock:   true,
 							Price:     minPrice,
 							Source:    s.Name,

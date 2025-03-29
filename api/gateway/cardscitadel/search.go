@@ -12,6 +12,7 @@ import (
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Cards Citadel"
@@ -79,18 +80,20 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 							continue
 						}
 
-						cardUrl := strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1))
-						u, err := url.Parse(strings.TrimSpace(s.BaseUrl + cardUrl))
+						u := strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1))
+						cleanPageURL, err := url.Parse(u)
 						if err != nil {
-							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, cardUrl, err)
+							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
 							return
 						}
-						cleanPageURL := fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path)
+						cleanPageURL.RawQuery = url.Values{
+							"utm_source": []string{config.UtmSource},
+						}.Encode()
 
 						if price > 0 {
 							cards = append(cards, gateway.Card{
 								Name:    strings.TrimSpace(el.ChildText("p.productTitle")),
-								Url:     strings.TrimSpace(cleanPageURL),
+								Url:     strings.TrimSpace(cleanPageURL.String()),
 								InStock: isInstock,
 								Price:   price,
 								Source:  s.Name,

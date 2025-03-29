@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Mox & Lotus"
@@ -140,7 +142,17 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			if len(card.Conditions) > 0 {
 				for _, cardWithCondition := range card.Conditions {
 					if cardWithCondition.Stocks > 0 {
-						cardUrl := fmt.Sprintf(StoreBaseURL+"/view/%s/%v", strings.ToLower(card.ExpansionCode), card.ID)
+						// url
+						u := fmt.Sprintf(StoreBaseURL+"/view/%s/%v", strings.ToLower(card.ExpansionCode), card.ID)
+						cleanPageURL, err := url.Parse(u)
+						if err != nil {
+							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
+							continue
+						}
+						cleanPageURL.RawQuery = url.Values{
+							"utm_source": []string{config.UtmSource},
+						}.Encode()
+
 						price, _ := strconv.ParseFloat(strings.TrimSpace(cardWithCondition.Price), 64)
 						cardNo, err := strconv.Atoi(card.CardNumber)
 						if err != nil {
@@ -157,7 +169,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 						cards = append(cards, gateway.Card{
 							Name:      strings.TrimSpace(card.Title),
-							Url:       cardUrl,
+							Url:       cleanPageURL.String(),
 							InStock:   true,
 							Price:     price,
 							Source:    s.Name,

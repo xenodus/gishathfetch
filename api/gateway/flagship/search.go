@@ -11,6 +11,7 @@ import (
 	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Flagship Games"
@@ -79,20 +80,20 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 					if len(cardInfo) > 0 && len(pageUrl) > 0 && len(imgUrl) > 0 {
 						for _, card := range cardInfo {
 							// url with variant (quality)
-							u, err := url.Parse(strings.TrimSpace(s.BaseUrl + pageUrl))
+							u := strings.TrimSpace(s.BaseUrl + pageUrl)
+							cleanPageURL, err := url.Parse(u)
 							if err != nil {
 								log.Printf("error parsing url for %s with value [%s]: %v", s.Name, pageUrl, err)
 								return
 							}
-							q := url.Values{
-								"variant": []string{fmt.Sprint(card.ID)},
-							}
-
-							cleanPageURL := fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, q.Encode())
+							cleanPageURL.RawQuery = url.Values{
+								"variant":    []string{fmt.Sprint(card.ID)},
+								"utm_source": []string{config.UtmSource},
+							}.Encode()
 
 							cards = append(cards, gateway.Card{
 								Name:    strings.TrimSpace(card.Name),
-								Url:     strings.TrimSpace(cleanPageURL),
+								Url:     strings.TrimSpace(cleanPageURL.String()),
 								InStock: card.Available,
 								Price:   float64(card.Price) / 100,
 								Source:  s.Name,
