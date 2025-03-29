@@ -11,6 +11,16 @@ func Test_Search(t *testing.T) {
 	result, err := s.Search("Abrade")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
+
+	for _, card := range result {
+		if card.InStock {
+			require.NotEmpty(t, card.Name)
+			require.NotEmpty(t, card.Source)
+			require.NotEmpty(t, card.Url)
+			require.NotEmpty(t, card.Img)
+			require.NotEmpty(t, card.Price)
+		}
+	}
 }
 
 func Test_scrap(t *testing.T) {

@@ -80,7 +80,7 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 							continue
 						}
 
-						u := strings.TrimSpace(s.BaseUrl + strings.Replace(el.ChildAttr("a", "href"), "/products/", "products/", -1))
+						u := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
 						cleanPageURL, err := url.Parse(u)
 						if err != nil {
 							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
