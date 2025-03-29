@@ -64,7 +64,7 @@ func scrap(s Store, searchStr string) ([]gateway.Card, error) {
 							price = price / 100
 
 							// url with variant (quality)
-							u := strings.TrimSpace(el.ChildAttr("a", "href"))
+							u := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
 							cleanPageURL, err := url.Parse(u)
 							if err != nil {
 								log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
