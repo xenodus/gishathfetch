@@ -18,7 +18,7 @@ import (
 )
 
 const StoreName = "The TCG Marketplace"
-const StoreBaseURL = "https://www.thetcgmarketplace.com/"
+const StoreBaseURL = "https://thetcgmarketplace.com"
 
 const cardLinkAPI = "https://thetcgmarketplace.com:3501/encoder/advancedsearch"
 const mtgCategoryNo = 3

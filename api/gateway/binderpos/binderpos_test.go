@@ -32,6 +32,7 @@ func Test_GetCards_Success(t *testing.T) {
 			require.NotEmpty(t, card.Url)
 			require.NotEmpty(t, card.Img)
 			require.NotEmpty(t, card.Price)
+			require.Contains(t, card.Url, givenStoreBaseURL+productPath)
 		}
 	}
 }
