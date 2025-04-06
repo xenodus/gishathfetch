@@ -82,14 +82,13 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			}
 			cleanPageURL.RawQuery = url.Values{
 				"category":    []string{"mtg"},
-				"searchfield": []string{url.QueryEscape(searchStr)},
+				"searchfield": []string{searchStr},
 				"utm_source":  []string{config.UtmSource},
 			}.Encode()
 
-			// Exclude Japanese cards
-			if price > 0 && !strings.Contains(name, "Japanese") {
+			if price > 0 {
 				cards = append(cards, gateway.Card{
-					Name:      strings.TrimSpace(el.ChildText("div.store-item-title")),
+					Name:      strings.TrimSpace(name),
 					Url:       strings.TrimSpace(cleanPageURL.String()),
 					InStock:   isInstock,
 					Price:     price,
