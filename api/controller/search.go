@@ -127,6 +127,10 @@ func Search(input SearchInput) ([]Card, error) {
 						ExtraInfo: strings.Join(extraInfo, " "),
 					}
 
+					// replace all curly brackets with square brackets
+					card.ExtraInfo = strings.Replace(card.ExtraInfo, "(", "[", -1)
+					card.ExtraInfo = strings.Replace(card.ExtraInfo, ")", "]", -1)
+
 					// Skip if detected as art card or Japanese
 					if isArtCard(card.Name) || isJapanese(card.Name) || isArtCard(card.ExtraInfo) || isJapanese(card.ExtraInfo) {
 						continue
