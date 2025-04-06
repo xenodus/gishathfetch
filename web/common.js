@@ -60,6 +60,7 @@ document.body.innerHTML += `
                                 <li><a href="#faq-q2" class="link-offset-2">Is Gishath Fetch free to use?</a></li>
                                 <li><a href="#faq-q3" class="link-offset-2">How do I get in touch?</a></li>
                                 <li><a href="#faq-q4" class="link-offset-2">Why aren't all results shown?</a></li>
+                                <li><a href="#faq-q5" class="link-offset-2">Known issues</a></li>
                             </ol>
                         </div>
                         <div>
@@ -94,6 +95,14 @@ document.body.innerHTML += `
                                     </p>
                                 </div>
                             </div>
+                            <div class="mb-4" id="faq-q5">
+                                <div class="q-header"><h5>5. Known issues</h5></div>
+                                <div class="q-answer">
+                                    <p>
+                                        Links to some of the LGSs' card variants (e.g. Lightly Played) are not showing the correct item upon landing on the LGS's website. You are required to toggle between variants (e.g. click Near Mint and then back to Lightly Played) to see the correct item. This is a problem with the LGS's website and not Gishath Fetch.
+                                    </p>
+                                </div>
+                            </div>                            
                         </div>
                     </div>
                     <div class="modal-footer justify-content-start">
