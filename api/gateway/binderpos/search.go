@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -14,16 +13,8 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 )
 
-const endpoint = "https://portal.binderpos.com/external/shopify/products/forStore"
+const apiEndpoint = "https://portal.binderpos.com/external/shopify/products/forStore"
 const productPath = "/products/"
-
-type ProductType string
-
-const ProductTypeMTG ProductType = "mtg"
-
-func (p ProductType) ToString() string {
-	return string(p)
-}
 
 // CardInfo is the structure of the card information from scrapping
 type CardInfo struct {
@@ -49,10 +40,10 @@ type CardInfo struct {
 	SellingPlanAllocations []any    `json:"selling_plan_allocations"`
 }
 
-func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error) {
+func (i impl) Search(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error) {
 	var cards []gateway.Card
 
-	res, httpStatusCode, err := getApiResponse(payload)
+	res, httpStatusCode, err := i.getApiResponse(payload)
 	if err != nil {
 		return cards, httpStatusCode, err
 	}
@@ -93,10 +84,10 @@ func GetCards(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, i
 	return cards, httpStatusCode, nil
 }
 
-func getApiResponse(payload []byte) (Response, int, error) {
+func (i impl) getApiResponse(payload []byte) (Response, int, error) {
 	var res Response
 
-	resp, err := http.Post(endpoint, "application/json", bytes.NewBuffer(payload))
+	resp, err := i.searchClient.Post(i.apiEndpoint, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		return res, 0, err
 	}

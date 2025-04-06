@@ -1,9 +1,12 @@
 package mtgasia
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"mtg-price-checker-sg/gateway/binderpos"
 )
 
 func Test_Search(t *testing.T) {
@@ -24,12 +27,23 @@ func Test_Search(t *testing.T) {
 	}
 }
 
-func Test_scrap(t *testing.T) {
-	result, err := scrap(Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
-	}, "Abrade")
+func Test_Scrap(t *testing.T) {
+	// Mock the Binderpos API to return a 400 error
+	mockBinderposSearch := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{}`))
+	}))
+	defer mockBinderposSearch.Close()
+
+	// Init BinderposGwy with mocked API URL
+	s := Store{
+		Name:         StoreName,
+		BaseUrl:      StoreBaseURL,
+		SearchUrl:    StoreSearchURL,
+		BinderposGwy: binderpos.NewWithApiUrl(mockBinderposSearch.URL),
+	}
+	result, err := s.Search("Abrade")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
 

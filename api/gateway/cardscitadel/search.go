@@ -2,17 +2,11 @@ package cardscitadel
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 
-	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
-	"mtg-price-checker-sg/pkg/config"
 )
 
 const StoreName = "Cards Citadel"
@@ -22,16 +16,18 @@ const StoreSearchURL = "/search?q=*%s*"
 const binderposStoreURL = "card-citadel.myshopify.com"
 
 type Store struct {
-	Name      string
-	BaseUrl   string
-	SearchUrl string
+	Name         string
+	BaseUrl      string
+	SearchUrl    string
+	BinderposGwy binderpos.Gateway
 }
 
 func NewLGS() gateway.LGS {
 	return Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
+		Name:         StoreName,
+		BaseUrl:      StoreBaseURL,
+		SearchUrl:    StoreSearchURL,
+		BinderposGwy: binderpos.New(),
 	}
 }
 
@@ -46,83 +42,11 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		return []gateway.Card{}, err
 	}
 
-	cards, httpStatusCode, err := binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
-	if err != nil {
-		if httpStatusCode != http.StatusOK {
-			log.Printf("falling back to scrap for [%s]", s.Name)
-			return scrap(s, searchStr)
-		}
-		return cards, err
+	cards, httpStatusCode, err := s.BinderposGwy.Search(s.Name, s.BaseUrl, reqPayload)
+	if err != nil || httpStatusCode != http.StatusOK {
+		log.Printf("falling back to scrap for [%s]", s.Name)
+		return s.BinderposGwy.Scrap(1, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
 	}
 
 	return cards, nil
-}
-
-func scrap(s Store, searchStr string) ([]gateway.Card, error) {
-	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr+" mtg"))
-	var cards []gateway.Card
-
-	c := colly.NewCollector()
-
-	c.OnHTML("div.container", func(e *colly.HTMLElement) {
-		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {
-			var isInstock bool
-
-			if len(el.ChildTexts("div.addNow")) > 0 {
-				for i := 0; i < len(el.ChildTexts("div.addNow")); i++ {
-					isInstock = el.ChildTexts("div.addNow")[i] != ""
-
-					if isInstock {
-						priceStr := strings.TrimSpace(el.ChildTexts("div.addNow")[i])
-
-						price, quality, err := parsePriceAndQuality(priceStr)
-						if err != nil {
-							continue
-						}
-
-						u := strings.TrimSpace(s.BaseUrl + el.ChildAttr("a", "href"))
-						cleanPageURL, err := url.Parse(u)
-						if err != nil {
-							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
-							return
-						}
-						cleanPageURL.RawQuery = url.Values{
-							"utm_source": []string{config.UtmSource},
-						}.Encode()
-
-						if price > 0 {
-							cards = append(cards, gateway.Card{
-								Name:    strings.TrimSpace(el.ChildText("p.productTitle")),
-								Url:     strings.TrimSpace(cleanPageURL.String()),
-								InStock: isInstock,
-								Price:   price,
-								Source:  s.Name,
-								Img:     strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
-								Quality: quality,
-							})
-						}
-					}
-				}
-			}
-		})
-	})
-
-	return cards, c.Visit(searchURL)
-}
-
-func parsePriceAndQuality(priceQualityStr string) (float64, string, error) {
-	priceQualityStrSlice := strings.Split(priceQualityStr, " - ")
-	if len(priceQualityStrSlice) == 2 {
-		quality := strings.TrimSpace(priceQualityStrSlice[0])
-		price, err := parsePrice(priceQualityStrSlice[1])
-		return price, quality, err
-	}
-	return 0, "", nil
-}
-
-func parsePrice(price string) (float64, error) {
-	priceStr := strings.TrimSpace(price)
-	priceStr = strings.Replace(priceStr, "$", "", -1)
-	priceStr = strings.Replace(priceStr, ",", "", -1)
-	return strconv.ParseFloat(priceStr, 64)
 }

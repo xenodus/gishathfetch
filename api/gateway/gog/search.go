@@ -16,21 +16,23 @@ import (
 
 const StoreName = "Grey Ogre Games"
 const StoreBaseURL = "https://www.greyogregames.com"
-const StoreSearchURL = "/search?q="
+const StoreSearchURL = "/search?q=%s"
 
 const binderposStoreURL = "grey-ogre-games-singapore.myshopify.com"
 
 type Store struct {
-	Name      string
-	BaseUrl   string
-	SearchUrl string
+	Name         string
+	BaseUrl      string
+	SearchUrl    string
+	BinderposGwy binderpos.Gateway
 }
 
 func NewLGS() gateway.LGS {
 	return Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
+		Name:         StoreName,
+		BaseUrl:      StoreBaseURL,
+		SearchUrl:    StoreSearchURL,
+		BinderposGwy: binderpos.New(),
 	}
 }
 
@@ -45,17 +47,16 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		return []gateway.Card{}, err
 	}
 
-	cards, httpStatusCode, err := binderpos.GetCards(s.Name, s.BaseUrl, reqPayload)
-	if err != nil {
-		if httpStatusCode != http.StatusOK {
-			log.Printf("falling back to scrap for [%s]", s.Name)
-			return scrap(s, searchStr)
-		}
-		return cards, err
+	cards, httpStatusCode, err := s.BinderposGwy.Search(s.Name, s.BaseUrl, reqPayload)
+	if err != nil || httpStatusCode != http.StatusOK {
+		log.Printf("falling back to scrap for [%s]", s.Name)
+		return s.BinderposGwy.Scrap(3, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
 	}
 
 	return cards, nil
 }
+
+// todo: move pagination logic to binderpos
 
 type pagination struct {
 	last int

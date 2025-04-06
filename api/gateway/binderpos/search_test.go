@@ -3,12 +3,13 @@ package binderpos
 import (
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func Test_GetCards_Success(t *testing.T) {
+func Test_Search_Success(t *testing.T) {
 	givenStoreName := "MTG Asia"
 	givenStoreBaseURL := "https://www.mtg-asia.com"
 	givePayload, err := json.Marshal(Payload{
@@ -19,7 +20,8 @@ func Test_GetCards_Success(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	cards, httpStatusCode, err := GetCards(givenStoreName, givenStoreBaseURL, givePayload)
+	i := New()
+	cards, httpStatusCode, err := i.Search(givenStoreName, givenStoreBaseURL, givePayload)
 
 	require.NoError(t, err)
 	require.True(t, len(cards) > 0)
@@ -37,7 +39,15 @@ func Test_GetCards_Success(t *testing.T) {
 	}
 }
 
-func Test_GetCards_HttpFailure(t *testing.T) {
+func Test_Search_HttpFailure(t *testing.T) {
+	// Mock the Binderpos API to return a 400 error
+	mockBinderposSearch := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{}`))
+	}))
+	defer mockBinderposSearch.Close()
+
 	givenStoreName := "ASDF"
 	givenStoreBaseURL := "ASDF"
 	givePayload, err := json.Marshal(Payload{
@@ -48,9 +58,22 @@ func Test_GetCards_HttpFailure(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	cards, httpStatusCode, err := GetCards(givenStoreName, givenStoreBaseURL, givePayload)
+	i := NewWithApiUrl(mockBinderposSearch.URL)
+	cards, httpStatusCode, err := i.Search(givenStoreName, givenStoreBaseURL, givePayload)
 
 	require.NoError(t, err)
 	require.Equal(t, 0, len(cards))
-	require.NotEqual(t, http.StatusOK, httpStatusCode)
+	require.Equal(t, http.StatusBadRequest, httpStatusCode)
+}
+
+func Test_Search_HttpRequestError(t *testing.T) {
+	givePayload, err := json.Marshal(Payload{})
+	require.NoError(t, err)
+
+	i := NewWithApiUrl("http://invalid-url")
+	cards, httpStatusCode, err := i.Search("storeName", "storeBaseURL", givePayload)
+
+	require.Error(t, err)
+	require.Equal(t, 0, len(cards))
+	require.Equal(t, 0, httpStatusCode)
 }

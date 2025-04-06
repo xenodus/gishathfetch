@@ -90,7 +90,7 @@ func Search(input SearchInput) ([]Card, error) {
 
 			// Only showing in stock, contains searched string and not art card
 			for _, c := range cards {
-				if c.InStock && !isArtCard(c.Name) && !isJapanese(c.Name) {
+				if c.InStock {
 					cleanCardName := c.Name
 
 					// if we have quality, remove it from name
@@ -125,6 +125,11 @@ func Search(input SearchInput) ([]Card, error) {
 						Source:    c.Source,
 						Quality:   c.Quality,
 						ExtraInfo: strings.Join(extraInfo, " "),
+					}
+
+					// Skip if detected as art card or Japanese
+					if isArtCard(card.Name) || isJapanese(card.Name) || isArtCard(card.ExtraInfo) || isJapanese(card.ExtraInfo) {
+						continue
 					}
 
 					// exact match
@@ -187,11 +192,11 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 	return lgsMap
 }
 
-func isArtCard(cardName string) bool {
-	return strings.Contains(strings.ToLower(cardName), "art card") ||
-		strings.Contains(strings.ToLower(cardName), "art series")
+func isArtCard(s string) bool {
+	return strings.Contains(strings.ToLower(s), "art card") ||
+		strings.Contains(strings.ToLower(s), "art series")
 }
 
-func isJapanese(cardName string) bool {
-	return strings.Contains(strings.ToLower(cardName), "Japanese")
+func isJapanese(s string) bool {
+	return strings.Contains(strings.ToLower(s), "Japanese")
 }
