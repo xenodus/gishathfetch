@@ -140,6 +140,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 							return
 						}
 						cleanPageURL.RawQuery = url.Values{
+							"variant":    []string{el2.Attr("data-variantid")},
 							"utm_source": []string{config.UtmSource},
 						}.Encode()
 
@@ -203,6 +204,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 									return
 								}
 								cleanPageURL.RawQuery = url.Values{
+									"variant":    []string{el2.Attr("data-variantid")},
 									"utm_source": []string{config.UtmSource},
 								}.Encode()
 
