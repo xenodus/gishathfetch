@@ -73,68 +73,225 @@ func scrapVariant4(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 	return cards, c.Visit(searchURL)
 }
 
+type pagination struct {
+	last int
+	url  string
+}
+
+// scrap with pagination
 // games haven
 // gog
 // hideout
 func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	var (
+		err   error
+		cards []gateway.Card
+	)
+
+	page := new(pagination)
 	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
-	var cards []gateway.Card
 
 	c := colly.NewCollector()
 
-	c.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		// get page
+		e.ForEach("ol.pagination li", func(_ int, el *colly.HTMLElement) {
+			elStr := strings.Replace(el.Text, "«", "", -1)
+			elStr = strings.Replace(elStr, "page", "", -1)
+			elStr = strings.Replace(elStr, "Next", "", -1)
+			elStr = strings.Replace(elStr, "Previous", "", -1)
+			elStr = strings.Replace(elStr, "»", "", -1)
+			elStr = strings.TrimSpace(elStr)
+			if elStr != "" && elStr != "1" && el.ChildAttr("a", "href") != "" {
+				elInt, strConvErr := strconv.Atoi(elStr)
+				if strConvErr == nil {
+					page.last = elInt
+					page.url = el.ChildAttr("a", "href")
+				}
+			}
+		})
+
+		// get cards
 		e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
 			var (
 				isInstock bool
 				price     float64
 			)
 
-			// not out of stock
-			if el.ChildText("form") != "" {
+			// in stock
+			if len(el.ChildTexts("div.productCard__button--outOfStock")) == 0 {
 				isInstock = true
+			}
 
-				if isInstock {
-					el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
-						if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
-							priceStr := el2.Attr("data-variantprice")
-							priceStr = strings.Replace(priceStr, "$", "", -1)
-							priceStr = strings.Replace(priceStr, ",", "", -1)
-							priceStr = strings.Replace(priceStr, "SGD", "", -1)
-							price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
-							price = price / 100
+			if isInstock {
+				el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
+					if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
+						priceStr := el2.Attr("data-variantprice")
+						priceStr = strings.Replace(priceStr, "$", "", -1)
+						priceStr = strings.Replace(priceStr, ",", "", -1)
+						priceStr = strings.Replace(priceStr, "SGD", "", -1)
+						price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
+						price = price / 100
 
-							// url with variant (quality)
-							u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
-							cleanPageURL, err := url.Parse(u)
-							if err != nil {
-								log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
-								return
-							}
-							cleanPageURL.RawQuery = url.Values{
-								"variant":    []string{el2.Attr("data-variantid")},
-								"utm_source": []string{config.UtmSource},
-							}.Encode()
-
-							if price > 0 {
-								cards = append(cards, gateway.Card{
-									Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-									Url:       strings.TrimSpace(cleanPageURL.String()),
-									InStock:   isInstock,
-									Price:     price,
-									Source:    storeName,
-									Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-									Quality:   el2.Attr("data-varianttitle"),
-									ExtraInfo: []string{fmt.Sprintf("[%s]", el.ChildText("p.productCard__setName"))},
-								})
-							}
+						u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
+						cleanPageURL, err := url.Parse(u)
+						if err != nil {
+							log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+							return
 						}
-					})
-				}
+						cleanPageURL.RawQuery = url.Values{
+							"utm_source": []string{config.UtmSource},
+						}.Encode()
+
+						if price > 0 {
+							cards = append(cards, gateway.Card{
+								Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+								Url:       strings.TrimSpace(cleanPageURL.String()),
+								InStock:   isInstock,
+								Price:     price,
+								Source:    storeName,
+								Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+								Quality:   el2.Attr("data-varianttitle"),
+								ExtraInfo: []string{el.ChildText("p.productCard__setName")},
+							})
+						}
+					}
+				})
 			}
 		})
 	})
 
-	return cards, c.Visit(searchURL)
+	err = c.Visit(searchURL)
+	if err != nil {
+		return []gateway.Card{}, err
+	}
+
+	if page.url != "" {
+		log.Println("Pagination exists for " + storeName)
+
+		c2 := colly.NewCollector()
+
+		for i := 2; i <= page.last; i++ {
+			searchURL = baseUrl + strings.Replace(page.url, "page="+strconv.Itoa(page.last), "page="+strconv.Itoa(i), 1)
+
+			c2.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
+				e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
+					var (
+						isInstock bool
+						price     float64
+					)
+
+					// in stock
+					if len(el.ChildTexts("div.productCard__button--outOfStock")) == 0 {
+						isInstock = true
+					}
+
+					if isInstock {
+						el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
+							if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
+								priceStr := el2.Attr("data-variantprice")
+								priceStr = strings.Replace(priceStr, "$", "", -1)
+								priceStr = strings.Replace(priceStr, ",", "", -1)
+								priceStr = strings.Replace(priceStr, "SGD", "", -1)
+								price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
+								price = price / 100
+
+								u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
+								cleanPageURL, err := url.Parse(u)
+								if err != nil {
+									log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+									return
+								}
+								cleanPageURL.RawQuery = url.Values{
+									"utm_source": []string{config.UtmSource},
+								}.Encode()
+
+								if price > 0 {
+									cards = append(cards, gateway.Card{
+										Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+										Url:       strings.TrimSpace(cleanPageURL.String()),
+										InStock:   isInstock,
+										Price:     price,
+										Source:    storeName,
+										Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+										Quality:   el2.Attr("data-varianttitle"),
+										ExtraInfo: []string{el.ChildText("p.productCard__setName")},
+									})
+								}
+							}
+						})
+					}
+				})
+			})
+
+			log.Println("Searching page no: ", i)
+			log.Println(searchURL)
+
+			err = c2.Visit(searchURL)
+			if err != nil {
+				break
+			}
+
+			// Application's max page limit
+			if i >= config.MaxPagesToSearch {
+				break
+			}
+		}
+	}
+
+	//c.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
+	//	e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
+	//		var (
+	//			isInstock bool
+	//			price     float64
+	//		)
+	//
+	//		// not out of stock
+	//		if el.ChildText("form") != "" {
+	//			isInstock = true
+	//
+	//			if isInstock {
+	//				el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
+	//					if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
+	//						priceStr := el2.Attr("data-variantprice")
+	//						priceStr = strings.Replace(priceStr, "$", "", -1)
+	//						priceStr = strings.Replace(priceStr, ",", "", -1)
+	//						priceStr = strings.Replace(priceStr, "SGD", "", -1)
+	//						price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
+	//						price = price / 100
+	//
+	//						// url with variant (quality)
+	//						u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
+	//						cleanPageURL, err := url.Parse(u)
+	//						if err != nil {
+	//							log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+	//							return
+	//						}
+	//						cleanPageURL.RawQuery = url.Values{
+	//							"variant":    []string{el2.Attr("data-variantid")},
+	//							"utm_source": []string{config.UtmSource},
+	//						}.Encode()
+	//
+	//						if price > 0 {
+	//							cards = append(cards, gateway.Card{
+	//								Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+	//								Url:       strings.TrimSpace(cleanPageURL.String()),
+	//								InStock:   isInstock,
+	//								Price:     price,
+	//								Source:    storeName,
+	//								Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+	//								Quality:   el2.Attr("data-varianttitle"),
+	//								ExtraInfo: []string{fmt.Sprintf("[%s]", el.ChildText("p.productCard__setName"))},
+	//							})
+	//						}
+	//					}
+	//				})
+	//			}
+	//		}
+	//	})
+	//})
+
+	return cards, err
 }
 
 // card affinity
