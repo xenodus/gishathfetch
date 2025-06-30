@@ -75,7 +75,8 @@ document.body.innerHTML += `
                                 <div class="q-answer">
                                     <p>Gishath Fetch is build as a project of passion for fellow MTG enthusiasts. There are no plans currently nor in the foreseeable future to paywall it.</p>
                                     <p>Google ads are being served to hopefully generate sufficient earnings to cover the operating cost. This is still being tested and if you have any feedback about the ad placements, feel free to get in touch (below).</p>
-                                    <p>If you would like to support Gishath Fetch directly, you may do so via this <a href="https://www.patreon.com/GishathFetch" target="_blank">Patreon</a>.</p>
+                                    <p>If you would like to support Gishath Fetch directly, you can do so via this <a href="https://www.patreon.com/GishathFetch" target="_blank">Patreon</a> ❤️</p>
+                                    <p>You can also join as a free member on <a href="https://www.patreon.com/GishathFetch" target="_blank">Patreon</a> to follow the latest news from Gishath Fetch.</p>
                                 </div>
                             </div>
                             <div class="mb-4" id="faq-q3">
