@@ -5,7 +5,7 @@ deploy-staging: deploy-common docker-tag-staging docker-push-staging lambda-upda
 deploy-common: test docker-build aws-login
 
 docker-build:
-	docker build --platform linux/amd64 -t mtg-price-scrapper .
+	docker buildx build --platform linux/amd64 --provenance=false -t mtg-price-scrapper .
 
 docker-tag:
 	docker tag mtg-price-scrapper 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest
