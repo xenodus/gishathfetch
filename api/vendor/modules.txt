@@ -1,5 +1,5 @@
-# github.com/PuerkitoBio/goquery v1.10.2
-## explicit; go 1.23
+# github.com/PuerkitoBio/goquery v1.10.3
+## explicit; go 1.23.0
 github.com/PuerkitoBio/goquery
 # github.com/andybalholm/cascadia v1.3.3
 ## explicit; go 1.16
@@ -10,16 +10,19 @@ github.com/antchfx/htmlquery
 # github.com/antchfx/xmlquery v1.4.4
 ## explicit; go 1.14
 github.com/antchfx/xmlquery
-# github.com/antchfx/xpath v1.3.3
+# github.com/antchfx/xpath v1.3.4
 ## explicit; go 1.14
 github.com/antchfx/xpath
-# github.com/aws/aws-lambda-go v1.47.0
+# github.com/aws/aws-lambda-go v1.49.0
 ## explicit; go 1.18
 github.com/aws/aws-lambda-go/events
 github.com/aws/aws-lambda-go/lambda
 github.com/aws/aws-lambda-go/lambda/handlertrace
 github.com/aws/aws-lambda-go/lambda/messages
 github.com/aws/aws-lambda-go/lambdacontext
+# github.com/bits-and-blooms/bitset v1.22.0
+## explicit; go 1.16
+github.com/bits-and-blooms/bitset
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -33,8 +36,8 @@ github.com/gobwas/glob/syntax/ast
 github.com/gobwas/glob/syntax/lexer
 github.com/gobwas/glob/util/runes
 github.com/gobwas/glob/util/strings
-# github.com/gocolly/colly/v2 v2.1.0
-## explicit; go 1.12
+# github.com/gocolly/colly/v2 v2.2.0
+## explicit; go 1.23.0
 github.com/gocolly/colly/v2
 github.com/gocolly/colly/v2/debug
 github.com/gocolly/colly/v2/storage
@@ -52,6 +55,10 @@ github.com/joho/godotenv
 github.com/kennygrant/sanitize
 # github.com/kr/text v0.2.0
 ## explicit
+# github.com/nlnwa/whatwg-url v0.6.2
+## explicit; go 1.16
+github.com/nlnwa/whatwg-url/errors
+github.com/nlnwa/whatwg-url/url
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
@@ -72,12 +79,13 @@ go.uber.org/automaxprocs
 go.uber.org/automaxprocs/internal/cgroups
 go.uber.org/automaxprocs/internal/runtime
 go.uber.org/automaxprocs/maxprocs
-# golang.org/x/net v0.37.0
+# golang.org/x/net v0.42.0
 ## explicit; go 1.23.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
-# golang.org/x/text v0.23.0
+golang.org/x/net/idna
+# golang.org/x/text v0.27.0
 ## explicit; go 1.23.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -95,7 +103,10 @@ golang.org/x/text/internal/tag
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
+golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
 # google.golang.org/appengine v1.6.8
 ## explicit; go 1.11
 google.golang.org/appengine/internal
@@ -105,8 +116,8 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/protobuf v1.36.5
-## explicit; go 1.21
+# google.golang.org/protobuf v1.36.6
+## explicit; go 1.22
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
