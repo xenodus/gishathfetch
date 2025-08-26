@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/pkg/config"
+
+	"github.com/gocolly/colly/v2"
 )
 
 const StoreName = "Agora Hobby"

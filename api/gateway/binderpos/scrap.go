@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gocolly/colly/v2"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/pkg/config"
+
+	"github.com/gocolly/colly/v2"
 )
 
 func (i impl) Scrap(scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {

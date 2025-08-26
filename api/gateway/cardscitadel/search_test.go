@@ -5,8 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"mtg-price-checker-sg/gateway/binderpos"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_NewLGS(t *testing.T) {
