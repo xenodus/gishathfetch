@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-lambda-go v1.49.0
 	github.com/gocolly/colly/v2 v2.2.0
 	github.com/joho/godotenv v1.5.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	go.uber.org/automaxprocs v1.6.0
 )
 
