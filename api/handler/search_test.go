@@ -6,9 +6,10 @@ import (
 	"os"
 	"testing"
 
+	"mtg-price-checker-sg/pkg/config"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/require"
-	"mtg-price-checker-sg/pkg/config"
 )
 
 func Test_Search_Success(t *testing.T) {

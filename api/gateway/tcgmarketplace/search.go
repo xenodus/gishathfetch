@@ -12,9 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joho/godotenv"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/pkg/config"
+
+	"github.com/joho/godotenv"
 )
 
 const StoreName = "The TCG Marketplace"

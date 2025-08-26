@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/pkg/config"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 const StoreName = "Dueller's Point"

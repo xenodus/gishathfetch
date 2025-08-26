@@ -8,9 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-lambda-go/events"
 	"mtg-price-checker-sg/controller"
 	"mtg-price-checker-sg/pkg/config"
+
+	"github.com/aws/aws-lambda-go/events"
 )
 
 type WebResponse struct {

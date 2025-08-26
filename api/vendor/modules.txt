@@ -10,7 +10,7 @@ github.com/antchfx/htmlquery
 # github.com/antchfx/xmlquery v1.4.4
 ## explicit; go 1.14
 github.com/antchfx/xmlquery
-# github.com/antchfx/xpath v1.3.4
+# github.com/antchfx/xpath v1.3.5
 ## explicit; go 1.14
 github.com/antchfx/xpath
 # github.com/aws/aws-lambda-go v1.49.0
@@ -20,7 +20,7 @@ github.com/aws/aws-lambda-go/lambda
 github.com/aws/aws-lambda-go/lambda/handlertrace
 github.com/aws/aws-lambda-go/lambda/messages
 github.com/aws/aws-lambda-go/lambdacontext
-# github.com/bits-and-blooms/bitset v1.22.0
+# github.com/bits-and-blooms/bitset v1.24.0
 ## explicit; go 1.16
 github.com/bits-and-blooms/bitset
 # github.com/davecgh/go-spew v1.1.1
@@ -53,8 +53,6 @@ github.com/joho/godotenv
 # github.com/kennygrant/sanitize v1.2.4
 ## explicit
 github.com/kennygrant/sanitize
-# github.com/kr/text v0.2.0
-## explicit
 # github.com/nlnwa/whatwg-url v0.6.2
 ## explicit; go 1.16
 github.com/nlnwa/whatwg-url/errors
@@ -65,7 +63,7 @@ github.com/pmezard/go-difflib/difflib
 # github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
 ## explicit
 github.com/saintfish/chardet
-# github.com/stretchr/testify v1.10.0
+# github.com/stretchr/testify v1.11.0
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
@@ -73,19 +71,13 @@ github.com/stretchr/testify/require
 # github.com/temoto/robotstxt v1.1.2
 ## explicit; go 1.11
 github.com/temoto/robotstxt
-# go.uber.org/automaxprocs v1.6.0
-## explicit; go 1.20
-go.uber.org/automaxprocs
-go.uber.org/automaxprocs/internal/cgroups
-go.uber.org/automaxprocs/internal/runtime
-go.uber.org/automaxprocs/maxprocs
-# golang.org/x/net v0.42.0
+# golang.org/x/net v0.43.0
 ## explicit; go 1.23.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/idna
-# golang.org/x/text v0.27.0
+# golang.org/x/text v0.28.0
 ## explicit; go 1.23.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
@@ -116,8 +108,8 @@ google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/protobuf v1.36.6
-## explicit; go 1.22
+# google.golang.org/protobuf v1.36.8
+## explicit; go 1.23
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
