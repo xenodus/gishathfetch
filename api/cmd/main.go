@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	_ "go.uber.org/automaxprocs"
 	"mtg-price-checker-sg/handler"
 	"mtg-price-checker-sg/pkg/config"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 func main() {
