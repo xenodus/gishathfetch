@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"mtg-price-checker-sg/gateway"
@@ -49,17 +50,17 @@ func Search(input SearchInput) ([]Card, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
 
 	if len(shopNameToLGSMap) > 0 {
-		// Create a channel with a buffer size of shopNameToLGSMap
-		done := make(chan bool, len(shopNameToLGSMap))
-
 		realStart := time.Now()
 		responseThreshold := 1 * time.Second
 
 		log.Printf("Start checking shops for [%s]...", input.SearchString)
+		var wg sync.WaitGroup
+
 		for shopName, lgs := range shopNameToLGSMap {
 			sName := shopName
 			sLGS := lgs
-			go func() {
+
+			wg.Go(func() {
 				start := time.Now()
 				c, err := sLGS.Search(input.SearchString)
 				if err != nil {
@@ -70,16 +71,10 @@ func Search(input SearchInput) ([]Card, error) {
 				if len(c) > 0 {
 					cards = append(cards, c...)
 				}
-
-				// Signal that the goroutine is done
-				done <- true
-			}()
+			})
 		}
 
-		// Wait for all goroutines to finish
-		for i := 0; i < len(shopNameToLGSMap); i++ {
-			<-done
-		}
+		wg.Wait()
 		log.Println("End checking shops...")
 
 		if len(cards) > 0 {
