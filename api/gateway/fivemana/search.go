@@ -50,13 +50,8 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			Source: s.Name,
 		}
 
-		name := se.Find("h3.card__heading.h5 a").Text()
-
-		squareBracketIndex := strings.Index(name, "[")
-		if squareBracketIndex >= 0 {
-			c.Name = strings.TrimSpace(name[:squareBracketIndex-1])
-			c.ExtraInfo = append(c.ExtraInfo, strings.TrimSpace(name[squareBracketIndex:]))
-		}
+		// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
+		c.Name = se.Find("h3.card__heading.h5 a").Text()
 
 		c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
 		c.Img = se.Find("div.card__media img").AttrOr("src", "")

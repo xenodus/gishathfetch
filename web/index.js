@@ -17,6 +17,7 @@ const lgsOptions = [
     "Cards Citadel",
     "Cards & Collections",
     "Dueller's Point",
+    "5 Mana",
     "Flagship Games",
     "Games Haven",
     "Grey Ogre Games",
