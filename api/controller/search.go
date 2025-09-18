@@ -15,6 +15,7 @@ import (
 	"mtg-price-checker-sg/gateway/cardsandcollection"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/duellerpoint"
+	"mtg-price-checker-sg/gateway/fivemana"
 	"mtg-price-checker-sg/gateway/flagship"
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
@@ -169,6 +170,7 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		cardscitadel.StoreName:        cardscitadel.NewLGS(),
 		cardsandcollection.StoreName:  cardsandcollection.NewLGS(),
 		duellerpoint.StoreName:        duellerpoint.NewLGS(),
+		fivemana.StoreName:            fivemana.NewLGS(),
 		flagship.StoreName:            flagship.NewLGS(),
 		gameshaven.StoreName:          gameshaven.NewLGS(),
 		gog.StoreName:                 gog.NewLGS(),
