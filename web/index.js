@@ -11,13 +11,13 @@ const resultCountDiv = document.getElementById("resultCount");
 const lgsCheckboxes = document.getElementsByName('lgs[]');
 const debounceTimeout = 300;
 const lgsOptions = [
+    "5 Mana",
     "Agora Hobby",
     "Card Affinity",
     "Cardboard Crack Games",
     "Cards Citadel",
     "Cards & Collections",
     "Dueller's Point",
-    "5 Mana",
     "Flagship Games",
     "Games Haven",
     "Grey Ogre Games",

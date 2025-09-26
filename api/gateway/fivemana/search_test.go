@@ -1,7 +1,6 @@
 package fivemana
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,8 +20,6 @@ func Test_Search(t *testing.T) {
 			require.NotEmpty(t, card.Img)
 			require.NotEmpty(t, card.Price)
 			require.Contains(t, card.Url, StoreBaseURL+"/products/")
-
-			log.Println(card.ExtraInfo)
 		}
 	}
 }
