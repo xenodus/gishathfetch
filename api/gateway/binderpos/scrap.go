@@ -37,10 +37,11 @@ func scrapVariant4(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
-			name := e.ChildText("div.product-card-wrapper > div > div.card__content > div.card__information > h3.card__heading a")
-			link := e.ChildAttr("div.product-card-wrapper > div > div.card__content > div.card__information > h3.card__heading a", "href")
-			img := e.ChildAttr("div.card__media img", "src")
-			priceStr := e.ChildText("div.product-card-wrapper > div > div.card__content > div.card__information > div.card-information div.price__container > div.price__regular > span.price-item")
+			name := el.ChildText("div.product-card-wrapper > div > div.card__content > div.card__information > h3.card__heading a")
+			link := el.ChildAttr("div.product-card-wrapper > div > div.card__content > div.card__information > h3.card__heading a", "href")
+			img := el.ChildAttr("div.card__media img", "src")
+			priceStr := el.ChildText("div.product-card-wrapper > div > div.card__content > div.card__information > div.card-information div.price__container > div.price__regular > span.price-item")
+
 			price, err := parsePrice(priceStr)
 			if err != nil {
 				log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)
@@ -241,58 +242,6 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 			}
 		}
 	}
-
-	//c.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
-	//	e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
-	//		var (
-	//			isInstock bool
-	//			price     float64
-	//		)
-	//
-	//		// not out of stock
-	//		if el.ChildText("form") != "" {
-	//			isInstock = true
-	//
-	//			if isInstock {
-	//				el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
-	//					if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
-	//						priceStr := el2.Attr("data-variantprice")
-	//						priceStr = strings.Replace(priceStr, "$", "", -1)
-	//						priceStr = strings.Replace(priceStr, ",", "", -1)
-	//						priceStr = strings.Replace(priceStr, "SGD", "", -1)
-	//						price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
-	//						price = price / 100
-	//
-	//						// url with variant (quality)
-	//						u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
-	//						cleanPageURL, err := url.Parse(u)
-	//						if err != nil {
-	//							log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
-	//							return
-	//						}
-	//						cleanPageURL.RawQuery = url.Values{
-	//							"variant":    []string{el2.Attr("data-variantid")},
-	//							"utm_source": []string{config.UtmSource},
-	//						}.Encode()
-	//
-	//						if price > 0 {
-	//							cards = append(cards, gateway.Card{
-	//								Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-	//								Url:       strings.TrimSpace(cleanPageURL.String()),
-	//								InStock:   isInstock,
-	//								Price:     price,
-	//								Source:    storeName,
-	//								Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-	//								Quality:   el2.Attr("data-varianttitle"),
-	//								ExtraInfo: []string{fmt.Sprintf("[%s]", el.ChildText("p.productCard__setName"))},
-	//							})
-	//						}
-	//					}
-	//				})
-	//			}
-	//		}
-	//	})
-	//})
 
 	return cards, err
 }
