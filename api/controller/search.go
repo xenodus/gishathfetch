@@ -2,6 +2,7 @@ package controller
 
 import (
 	"log"
+	"mtg-price-checker-sg/gateway/google"
 	"slices"
 	"sort"
 	"strings"
@@ -49,6 +50,8 @@ func Search(input SearchInput) ([]Card, error) {
 	var inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []Card
 
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
+	// use to track which lgs has result
+	shopNameToHasResultMap := initShopHasResultMap(shopNameToLGSMap)
 
 	if len(shopNameToLGSMap) > 0 {
 		realStart := time.Now()
@@ -132,6 +135,11 @@ func Search(input SearchInput) ([]Card, error) {
 						continue
 					}
 
+					// if in substring, mark lgs as having result
+					if strings.Contains(strings.ToLower(cleanCardName), strings.ToLower(input.SearchString)) {
+						shopNameToHasResultMap[c.Source] = true
+					}
+
 					// exact match
 					if strings.ToLower(cleanCardName) == strings.ToLower(input.SearchString) {
 						inStockExactMatchCards = append(inStockExactMatchCards, card)
@@ -151,6 +159,21 @@ func Search(input SearchInput) ([]Card, error) {
 			// order of results: exact > prefix > partial match
 			inStockCards = append(inStockExactMatchCards, inStockPrefixMatchCards...)
 			inStockCards = append(inStockCards, inStockPartialMatchCards...)
+		}
+
+		log.Println("shopNameToHasResultMap >>>", shopNameToHasResultMap)
+
+		for shopName := range shopNameToHasResultMap {
+			if !shopNameToHasResultMap[shopName] {
+				log.Printf("Shop %s has no result for [%s]", shopName, input.SearchString)
+
+				go func(lgs, searchString string) {
+					err := google.LGSNoResultMeasurement(lgs, searchString)
+					if err != nil {
+						log.Printf("Error sending measurement for [%s]: %v", lgs, err)
+					}
+				}(shopName, input.SearchString)
+			}
 		}
 
 		// ensure request takes at least X (responseThreshold) seconds
@@ -191,6 +214,14 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		}
 	}
 	return lgsMap
+}
+
+func initShopHasResultMap(lgsMap map[string]gateway.LGS) map[string]bool {
+	shopNameToHasResultMap := make(map[string]bool, len(lgsMap))
+	for shopName := range lgsMap {
+		shopNameToHasResultMap[shopName] = false
+	}
+	return shopNameToHasResultMap
 }
 
 func isArtCard(s string) bool {

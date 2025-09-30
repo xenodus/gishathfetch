@@ -34,7 +34,7 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 
 	if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
 		searchString = "Opt"
-		lgsString, _ = url.QueryUnescape("Flagship%20Games%2CGames%20Haven%2CGrey%20Ogre%20Games%2CHideout%2CMana%20Pro%2CMox%20%26%20Lotus%2COneMtg%2CSanctuary%20Gaming")
+		lgsString, _ = url.QueryUnescape("Flagship%20Games%2CGames%20Haven%2CGrey%20Ogre%20Games%2CHideout%2CMana%20Pro%2CMox%20%26%20Lotus%2COneMtg%2CSanctuary%20Gaming%2CTefuda")
 	}
 
 	if searchString == "" || len(searchString) < 3 {

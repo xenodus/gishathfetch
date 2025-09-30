@@ -69,6 +69,15 @@ func NewLGS() gateway.LGS {
 	}
 }
 
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
+			log.Println("No .env file found or error loading .env")
+		}
+	}
+}
+
 func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 	var (
 		res         response
@@ -76,7 +85,6 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		accessToken string
 	)
 
-	godotenv.Load()
 	accessToken = os.Getenv(accessTokenKey)
 
 	reqPayload, err := json.Marshal(payload{

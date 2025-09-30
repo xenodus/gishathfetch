@@ -63,6 +63,12 @@ github.com/pmezard/go-difflib/difflib
 # github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d
 ## explicit
 github.com/saintfish/chardet
+# github.com/sony/sonyflake v1.3.0
+## explicit; go 1.13
+github.com/sony/sonyflake
+github.com/sony/sonyflake/types
+# github.com/sony/sonyflake/v2 v2.2.0
+## explicit; go 1.22
 # github.com/stretchr/testify v1.11.1
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
