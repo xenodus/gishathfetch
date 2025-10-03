@@ -2,13 +2,6 @@ package controller
 
 import (
 	"log"
-	"mtg-price-checker-sg/gateway/google"
-	"slices"
-	"sort"
-	"strings"
-	"sync"
-	"time"
-
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
@@ -20,6 +13,7 @@ import (
 	"mtg-price-checker-sg/gateway/flagship"
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
+	"mtg-price-checker-sg/gateway/google"
 	"mtg-price-checker-sg/gateway/hideout"
 	"mtg-price-checker-sg/gateway/manapro"
 	"mtg-price-checker-sg/gateway/moxandlotus"
@@ -27,6 +21,12 @@ import (
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
 	"mtg-price-checker-sg/gateway/tefuda"
+	"mtg-price-checker-sg/gateway/unsleeved"
+	"slices"
+	"sort"
+	"strings"
+	"sync"
+	"time"
 )
 
 type SearchInput struct {
@@ -161,8 +161,6 @@ func Search(input SearchInput) ([]Card, error) {
 			inStockCards = append(inStockCards, inStockPartialMatchCards...)
 		}
 
-		log.Println("shopNameToHasResultMap >>>", shopNameToHasResultMap)
-
 		for shopName := range shopNameToHasResultMap {
 			if !shopNameToHasResultMap[shopName] {
 				log.Printf("Shop %s has no result for [%s]", shopName, input.SearchString)
@@ -204,6 +202,7 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		onemtg.StoreName:              onemtg.NewLGS(),
 		tefuda.StoreName:              tefuda.NewLGS(),
 		tcgmarketplace.StoreName:      tcgmarketplace.NewLGS(),
+		unsleeved.StoreName:           unsleeved.NewLGS(),
 	}
 
 	if len(lgs) > 0 {

@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"log"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -57,7 +56,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		c.Img = se.Find("div.card__media img").AttrOr("src", "")
 		c.InStock = true
 
-		price, err := parsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
+		price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
 		if err != nil {
 			c.InStock = false
 		}
@@ -80,11 +79,4 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 	})
 
 	return cards, nil
-}
-
-func parsePrice(price string) (float64, error) {
-	priceStr := strings.Replace(price, "$", "", -1)
-	priceStr = strings.Replace(priceStr, "SGD", "", -1)
-	priceStr = strings.TrimSpace(priceStr)
-	return strconv.ParseFloat(priceStr, 64)
 }

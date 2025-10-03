@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mtg-price-checker-sg/gateway/util"
 	"net/url"
 	"strconv"
 	"strings"
@@ -42,7 +43,7 @@ func scrapVariant4(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 			img := el.ChildAttr("div.card__media img", "src")
 			priceStr := el.ChildText("div.product-card-wrapper > div > div.card__content > div.card__information > div.card-information div.price__container > div.price__regular > span.price-item")
 
-			price, err := parsePrice(priceStr)
+			price, err := util.ParsePrice(priceStr)
 			if err != nil {
 				log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)
 				return
@@ -360,18 +361,8 @@ func parsePriceAndQuality(priceQualityStr string) (float64, string, error) {
 	priceQualityStrSlice := strings.Split(priceQualityStr, " - ")
 	if len(priceQualityStrSlice) == 2 {
 		quality := strings.TrimSpace(priceQualityStrSlice[0])
-		price, err := parsePrice(priceQualityStrSlice[1])
+		price, err := util.ParsePrice(priceQualityStrSlice[1])
 		return price, quality, err
 	}
 	return 0, "", nil
-}
-
-func parsePrice(price string) (float64, error) {
-	priceStr := strings.TrimSpace(price)
-	priceStr = strings.Replace(priceStr, "From", "", -1)
-	priceStr = strings.Replace(priceStr, "$", "", -1)
-	priceStr = strings.Replace(priceStr, ",", "", -1)
-	priceStr = strings.Replace(priceStr, "SGD", "", -1)
-	priceStr = strings.TrimSpace(priceStr)
-	return strconv.ParseFloat(priceStr, 64)
 }
