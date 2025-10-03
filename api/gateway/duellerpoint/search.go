@@ -3,9 +3,9 @@ package duellerpoint
 import (
 	"fmt"
 	"log"
+	"mtg-price-checker-sg/gateway/util"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"mtg-price-checker-sg/gateway"
@@ -71,7 +71,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 						c.InStock = true
 					}
 				case 5:
-					price, err := parsePrice(se3.Text())
+					price, err := util.ParsePrice(se3.Text())
 					if err != nil {
 						break
 					}
@@ -96,11 +96,4 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 	})
 
 	return cards, nil
-}
-
-func parsePrice(price string) (float64, error) {
-	priceStr := strings.TrimSpace(price)
-	priceStr = strings.Replace(priceStr, "S$", "", -1)
-	priceStr = strings.Replace(priceStr, ",", "", -1)
-	return strconv.ParseFloat(priceStr, 64)
 }

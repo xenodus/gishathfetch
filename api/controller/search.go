@@ -161,8 +161,6 @@ func Search(input SearchInput) ([]Card, error) {
 			inStockCards = append(inStockCards, inStockPartialMatchCards...)
 		}
 
-		log.Println("shopNameToHasResultMap >>>", shopNameToHasResultMap)
-
 		for shopName := range shopNameToHasResultMap {
 			if !shopNameToHasResultMap[shopName] {
 				log.Printf("Shop %s has no result for [%s]", shopName, input.SearchString)
