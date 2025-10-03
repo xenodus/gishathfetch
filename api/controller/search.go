@@ -2,14 +2,6 @@ package controller
 
 import (
 	"log"
-	"mtg-price-checker-sg/gateway/google"
-	"mtg-price-checker-sg/gateway/unsleeved"
-	"slices"
-	"sort"
-	"strings"
-	"sync"
-	"time"
-
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
@@ -21,6 +13,7 @@ import (
 	"mtg-price-checker-sg/gateway/flagship"
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
+	"mtg-price-checker-sg/gateway/google"
 	"mtg-price-checker-sg/gateway/hideout"
 	"mtg-price-checker-sg/gateway/manapro"
 	"mtg-price-checker-sg/gateway/moxandlotus"
@@ -28,6 +21,12 @@ import (
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
 	"mtg-price-checker-sg/gateway/tefuda"
+	"mtg-price-checker-sg/gateway/unsleeved"
+	"slices"
+	"sort"
+	"strings"
+	"sync"
+	"time"
 )
 
 type SearchInput struct {
