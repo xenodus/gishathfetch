@@ -27,7 +27,8 @@ const lgsOptions = [
     "MTG Asia",
     "OneMtg",
     "Tefuda",
-    "The TCG Marketplace"
+    "The TCG Marketplace",
+    "Unsleeved"
 ];
 const alreadyInCartBtnHtml = `<i data-feather="check-square" class="cartIcon"></i> Saved`;
 

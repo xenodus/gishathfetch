@@ -3,6 +3,7 @@ package controller
 import (
 	"log"
 	"mtg-price-checker-sg/gateway/google"
+	"mtg-price-checker-sg/gateway/unsleeved"
 	"slices"
 	"sort"
 	"strings"
@@ -202,6 +203,7 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		onemtg.StoreName:              onemtg.NewLGS(),
 		tefuda.StoreName:              tefuda.NewLGS(),
 		tcgmarketplace.StoreName:      tcgmarketplace.NewLGS(),
+		unsleeved.StoreName:           unsleeved.NewLGS(),
 	}
 
 	if len(lgs) > 0 {
