@@ -1,15 +1,13 @@
-package cardboardcrackgames
+package cardscentral
 
 import (
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
 )
 
-const StoreName = "Cardboard Crack Games"
-const StoreBaseURL = "https://www.cardboardcrackgames.com"
+const StoreName = "Cards Central"
+const StoreBaseURL = "https://www.cardscentral.com"
 const StoreSearchURL = "/search?type=product&q=%s"
-
-const binderposStoreURL = "cardboardcrackgames.myshopify.com"
 
 type Store struct {
 	Name         string

@@ -1,4 +1,4 @@
-package cardboardcrackgames
+package cardscentral
 
 import (
 	"testing"

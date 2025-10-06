@@ -248,7 +248,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 }
 
 // card affinity
-// cardboard crack games
+// cards central
 // flagship games
 // onemtg
 // manapro

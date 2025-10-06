@@ -5,8 +5,8 @@ import (
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
-	"mtg-price-checker-sg/gateway/cardboardcrackgames"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
+	"mtg-price-checker-sg/gateway/cardscentral"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/duellerpoint"
 	"mtg-price-checker-sg/gateway/fivemana"
@@ -185,24 +185,24 @@ func Search(input SearchInput) ([]Card, error) {
 
 func initAndMapShops(lgs []string) map[string]gateway.LGS {
 	lgsMap := map[string]gateway.LGS{
-		agora.StoreName:               agora.NewLGS(),
-		cardaffinity.StoreName:        cardaffinity.NewLGS(),
-		cardboardcrackgames.StoreName: cardboardcrackgames.NewLGS(),
-		cardscitadel.StoreName:        cardscitadel.NewLGS(),
-		cardsandcollection.StoreName:  cardsandcollection.NewLGS(),
-		duellerpoint.StoreName:        duellerpoint.NewLGS(),
-		fivemana.StoreName:            fivemana.NewLGS(),
-		flagship.StoreName:            flagship.NewLGS(),
-		gameshaven.StoreName:          gameshaven.NewLGS(),
-		gog.StoreName:                 gog.NewLGS(),
-		hideout.StoreName:             hideout.NewLGS(),
-		manapro.StoreName:             manapro.NewLGS(),
-		moxandlotus.StoreName:         moxandlotus.NewLGS(),
-		mtgasia.StoreName:             mtgasia.NewLGS(),
-		onemtg.StoreName:              onemtg.NewLGS(),
-		tefuda.StoreName:              tefuda.NewLGS(),
-		tcgmarketplace.StoreName:      tcgmarketplace.NewLGS(),
-		unsleeved.StoreName:           unsleeved.NewLGS(),
+		agora.StoreName:              agora.NewLGS(),
+		cardaffinity.StoreName:       cardaffinity.NewLGS(),
+		cardscentral.StoreName:       cardscentral.NewLGS(),
+		cardscitadel.StoreName:       cardscitadel.NewLGS(),
+		cardsandcollection.StoreName: cardsandcollection.NewLGS(),
+		duellerpoint.StoreName:       duellerpoint.NewLGS(),
+		fivemana.StoreName:           fivemana.NewLGS(),
+		flagship.StoreName:           flagship.NewLGS(),
+		gameshaven.StoreName:         gameshaven.NewLGS(),
+		gog.StoreName:                gog.NewLGS(),
+		hideout.StoreName:            hideout.NewLGS(),
+		manapro.StoreName:            manapro.NewLGS(),
+		moxandlotus.StoreName:        moxandlotus.NewLGS(),
+		mtgasia.StoreName:            mtgasia.NewLGS(),
+		onemtg.StoreName:             onemtg.NewLGS(),
+		tefuda.StoreName:             tefuda.NewLGS(),
+		tcgmarketplace.StoreName:     tcgmarketplace.NewLGS(),
+		unsleeved.StoreName:          unsleeved.NewLGS(),
 	}
 
 	if len(lgs) > 0 {
