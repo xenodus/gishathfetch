@@ -181,11 +181,11 @@ let lgsMap = [
         "website": "https://agorahobby.com/"
     },
     {
-        "id": "cardboard-crack-games-map",
-        "name": "Cardboard Crack Games",
-        "address": "Upper Bukit Timah Rd, #03-28 Beauty World Centre, 144, Singapore 588177",
-        "iframe": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7233430292667!2d103.7736843749657!3d1.3423740986449086!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da1920d676db93%3A0xe7b298b897da7b52!2sCardboard%20Crack%20Games!5e0!3m2!1sen!2ssg!4v1731824736033!5m2!1sen!2ssg",
-        "website": "https://www.cardboardcrackgames.com/",
+        "id": "cards-central-map",
+        "name": "Cards Central",
+        "address": "62A Smith St, Singapore 058964",
+        "iframe": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.818216595602!2d103.84337860000001!3d1.2828996000000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19c193207037%3A0xdb0c80bb6cf21fe!2sCards%20Central!5e0!3m2!1sen!2ssg!4v1759732398183!5m2!1sen!2ssg",
+        "website": "https://www.cardscentral.com/",
     },
     {
         "id": "cards-citadel-map",
