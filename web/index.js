@@ -14,7 +14,7 @@ const lgsOptions = [
     "5 Mana",
     "Agora Hobby",
     "Card Affinity",
-    "Cardboard Crack Games",
+    "Cards Central",
     "Cards Citadel",
     "Cards & Collections",
     "Dueller's Point",
