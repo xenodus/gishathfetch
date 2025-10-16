@@ -7,6 +7,7 @@ import (
 	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/config"
 	"net/http"
 	"net/url"
 	"strings"
@@ -133,9 +134,19 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 			}
 
 			if card.Status == "published" {
+				u := fmt.Sprintf("%s/product/%s", StoreBaseURL, card.Handle)
+				cleanPageURL, err := url.Parse(u)
+				if err != nil {
+					log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
+					return cards, err
+				}
+				cleanPageURL.RawQuery = url.Values{
+					"utm_source": []string{config.UtmSource},
+				}.Encode()
+
 				cards = append(cards, gateway.Card{
 					Name:      strings.TrimSpace(card.Name),
-					Url:       card.ProductURL, // no gishath referral link, using product page link
+					Url:       cleanPageURL.String(),
 					InStock:   true,
 					Price:     price,
 					Source:    s.Name,
