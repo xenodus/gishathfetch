@@ -133,7 +133,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				return cards, err
 			}
 
-			if card.Status == "published" {
+			if card.Status == "published" && card.Quantity > 0 {
 				u := fmt.Sprintf("%s/product/%s", StoreBaseURL, card.Handle)
 				cleanPageURL, err := url.Parse(u)
 				if err != nil {
