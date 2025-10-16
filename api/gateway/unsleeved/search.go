@@ -36,7 +36,7 @@ type response struct {
 		Description            string      `json:"description"`
 		StockKeepingUnit       string      `json:"stock_keeping_unit"`
 		Currency               string      `json:"currency"`
-		Price                  int         `json:"price"`
+		Price                  float64     `json:"price"`
 		PriceBeforeDiscount    interface{} `json:"price_before_discount"`
 		PriceDisplay           string      `json:"price_display"`
 		PriceStored            int         `json:"price_stored"`
