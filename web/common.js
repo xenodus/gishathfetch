@@ -181,6 +181,13 @@ let version = "1.0";
 let cart = [];
 let lgsMap = [
     {
+        "id": "5-mana-map",
+        "name": "5 Mana",
+        "address": "511 Guillemard Rd, #02-06, Singapore 399849",
+        "iframe": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7686522542544!2d103.88875987494157!3d1.314306298673231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19ef83dc5edf%3A0xf45523d5c3efb509!2s5-MANA.SG!5e0!3m2!1sen!2ssg!4v1768142747318!5m2!1sen!2ssg",
+        "website": "https://5-mana.sg/"
+    },
+    {
         "id": "agora-map",
         "name": "Agora Hobby",
         "address": "French Rd, #05-164 Blk 809, Singapore 200809",
