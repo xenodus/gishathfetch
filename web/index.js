@@ -388,3 +388,15 @@ function boldMatchingSuggestions(suggestions, searchStr) {
     });
     return boldedSuggestions;
 }
+
+// func to get ins elements with adsbygoogle class from googles ads and set z-index to 1000
+function setAdsbyGoogleZIndex() {
+    const ads = document.querySelectorAll('ins.adsbygoogle');
+    ads.forEach(ad => {
+        ad.style.zIndex = '1000';
+    });
+}
+
+
+setTimeout(function(){setAdsbyGoogleZIndex()},1000);
+

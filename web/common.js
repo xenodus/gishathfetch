@@ -1,3 +1,10 @@
+/*
+    Contains common code for all pages
+    - Saved Cards (Cart)
+    - Map
+    - FAQ
+*/
+
 document.body.innerHTML += `
     <div class="fixed-bottom bg-primary text-light text-center">
         <div class="d-flex flex-row align-items-center justify-content-center">
