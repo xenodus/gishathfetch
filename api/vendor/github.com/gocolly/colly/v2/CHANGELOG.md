@@ -22,7 +22,7 @@
 
  - Compatibility with the latest htmlquery package
  - New request shortcut for HEAD requests
- - Check URL availibility before visiting
+ - Check URL availability before visiting
  - Fix proxy URL value
  - Request counter fix
  - Minor fixes in examples

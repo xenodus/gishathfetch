@@ -43,7 +43,7 @@ func Test_Scrap(t *testing.T) {
 			storeName:    "Tefuda",
 			baseUrl:      "https://tefudagames.com",
 			searchUrl:    "/search?q=%s",
-			searchStr:    "sol ring",
+			searchStr:    "smothering tithe",
 		},
 		"invalid variant": {
 			scrapVariant: 999,

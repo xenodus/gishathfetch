@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -127,13 +128,17 @@ type Collector struct {
 	requestCallbacks         []RequestCallback
 	responseCallbacks        []ResponseCallback
 	responseHeadersCallbacks []ResponseHeadersCallback
+	requestHeadersCallbacks  []RequestCallback
 	errorCallbacks           []ErrorCallback
 	scrapedCallbacks         []ScrapedCallback
-	requestCount             uint32
-	responseCount            uint32
+	requestCount             atomic.Uint32
+	responseCount            atomic.Uint32
 	backend                  *httpBackend
 	wg                       *sync.WaitGroup
 	lock                     *sync.RWMutex
+	// CacheExpiration sets the maximum age for cache files.
+	// If a cached file is older than this duration, it will be ignored and refreshed.
+	CacheExpiration time.Duration
 }
 
 // RequestCallback is a type alias for OnRequest callback functions
@@ -183,11 +188,13 @@ func (e *AlreadyVisitedError) Error() string {
 type htmlCallbackContainer struct {
 	Selector string
 	Function HTMLCallback
+	active   atomic.Bool
 }
 
 type xmlCallbackContainer struct {
 	Query    string
 	Function XMLCallback
+	active   atomic.Bool
 }
 
 type cookieJarSerializer struct {
@@ -202,7 +209,10 @@ var collectorCounter uint32
 type key int
 
 // ProxyURLKey is the context key for the request proxy address.
-const ProxyURLKey key = iota
+const (
+	ProxyURLKey key = iota
+	CheckRevisitKey
+)
 
 var (
 	// ErrForbiddenDomain is the error thrown if visiting
@@ -229,6 +239,8 @@ var (
 	ErrEmptyProxyURL = errors.New("Proxy URL list is empty")
 	// ErrAbortedAfterHeaders is the error returned when OnResponseHeaders aborts the transfer.
 	ErrAbortedAfterHeaders = errors.New("Aborted after receiving response headers")
+	// ErrAbortedBeforeRequest is the error returned when OnResponseHeaders aborts the transfer.
+	ErrAbortedBeforeRequest = errors.New("Aborted before Do Request")
 	// ErrQueueFull is the error returned when the queue is full
 	ErrQueueFull = errors.New("Queue MaxSize reached")
 	// ErrMaxRequests is the error returned when exceeding max requests
@@ -464,10 +476,18 @@ func CheckHead() CollectorOption {
 	}
 }
 
+// CacheExpiration sets the maximum age for cache files.
+// If a cached file is older than this duration, it will be ignored and refreshed.
+func CacheExpiration(d time.Duration) CollectorOption {
+	return func(c *Collector) {
+		c.CacheExpiration = d
+	}
+}
+
 // Init initializes the Collector's private variables and sets default
 // configuration for the Collector
 func (c *Collector) Init() {
-	c.UserAgent = "colly - https://github.com/gocolly/colly/v2"
+	c.UserAgent = "colly - https://github.com/gocolly/colly"
 	c.Headers = nil
 	c.MaxDepth = 0
 	c.MaxRequests = 0
@@ -603,7 +623,7 @@ func (c *Collector) UnmarshalRequest(r []byte) (*Request, error) {
 		Depth:     req.Depth,
 		Body:      bytes.NewReader(req.Body),
 		Ctx:       ctx,
-		ID:        atomic.AddUint32(&c.requestCount, 1),
+		ID:        c.requestCount.Add(1),
 		Headers:   &req.Headers,
 		collector: c,
 	}, nil
@@ -650,7 +670,8 @@ func (c *Collector) scrape(u, method string, depth int, requestData io.Reader, c
 	}
 	// note: once 1.13 is minimum supported Go version,
 	// replace this with http.NewRequestWithContext
-	req = req.WithContext(c.Context)
+	req = req.WithContext(context.WithValue(c.Context, CheckRevisitKey, checkRevisit))
+
 	if err := c.requestCheck(parsedURL, method, req.GetBody, depth, checkRevisit); err != nil {
 		return err
 	}
@@ -677,7 +698,7 @@ func (c *Collector) fetch(u, method string, depth int, requestData io.Reader, ct
 		Method:    method,
 		Body:      requestData,
 		collector: c,
-		ID:        atomic.AddUint32(&c.requestCount, 1),
+		ID:        c.requestCount.Add(1),
 	}
 
 	if req.Header.Get("Accept") == "" {
@@ -700,7 +721,7 @@ func (c *Collector) fetch(u, method string, depth int, requestData io.Reader, ct
 		req = hTrace.WithTrace(req)
 	}
 	origURL := req.URL
-	checkHeadersFunc := func(req *http.Request, statusCode int, headers http.Header) bool {
+	checkResponseHeadersFunc := func(req *http.Request, statusCode int, headers http.Header) bool {
 		if req.URL != origURL {
 			request.URL = req.URL
 			request.Headers = &req.Header
@@ -708,14 +729,18 @@ func (c *Collector) fetch(u, method string, depth int, requestData io.Reader, ct
 		c.handleOnResponseHeaders(&Response{Ctx: ctx, Request: request, StatusCode: statusCode, Headers: &headers})
 		return !request.abort
 	}
-	response, err := c.backend.Cache(req, c.MaxBodySize, checkHeadersFunc, c.CacheDir)
+	checkRequestHeadersFunc := func(req *http.Request) bool {
+		c.handleOnRequestHeaders(request)
+		return !request.abort
+	}
+	response, err := c.backend.Cache(req, c.MaxBodySize, checkRequestHeadersFunc, checkResponseHeadersFunc, c.CacheDir, c.CacheExpiration)
 	if proxyURL, ok := req.Context().Value(ProxyURLKey).(string); ok {
 		request.ProxyURL = proxyURL
 	}
 	if err := c.handleOnError(response, err, request, ctx); err != nil {
 		return err
 	}
-	atomic.AddUint32(&c.responseCount, 1)
+	c.responseCount.Add(1)
 	response.Ctx = ctx
 	response.Request = request
 	response.Trace = hTrace
@@ -747,7 +772,7 @@ func (c *Collector) requestCheck(parsedURL *url.URL, method string, getBody func
 	if c.MaxDepth > 0 && c.MaxDepth < depth {
 		return ErrMaxDepth
 	}
-	if c.MaxRequests > 0 && c.requestCount >= c.MaxRequests {
+	if c.MaxRequests > 0 && c.requestCount.Load() >= c.MaxRequests {
 		return ErrMaxRequests
 	}
 	if err := c.checkFilters(u, parsedURL.Hostname()); err != nil {
@@ -806,20 +831,13 @@ func (c *Collector) checkFilters(URL, domain string) error {
 }
 
 func (c *Collector) isDomainAllowed(domain string) bool {
-	for _, d2 := range c.DisallowedDomains {
-		if d2 == domain {
-			return false
-		}
+	if slices.Contains(c.DisallowedDomains, domain) {
+		return false
 	}
 	if c.AllowedDomains == nil || len(c.AllowedDomains) == 0 {
 		return true
 	}
-	for _, d2 := range c.AllowedDomains {
-		if d2 == domain {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.AllowedDomains, domain)
 }
 
 func (c *Collector) checkRobots(u *url.URL) error {
@@ -888,8 +906,8 @@ func (c *Collector) checkRobots(u *url.URL) error {
 func (c *Collector) String() string {
 	return fmt.Sprintf(
 		"Requests made: %d (%d responses) | Callbacks: OnRequest: %d, OnHTML: %d, OnResponse: %d, OnError: %d",
-		atomic.LoadUint32(&c.requestCount),
-		atomic.LoadUint32(&c.responseCount),
+		c.requestCount.Load(),
+		c.responseCount.Load(),
 		len(c.requestCallbacks),
 		len(c.htmlCallbacks),
 		len(c.responseCallbacks),
@@ -930,6 +948,14 @@ func (c *Collector) OnResponseHeaders(f ResponseHeadersCallback) {
 	c.lock.Unlock()
 }
 
+// OnRequestHeaders registers a function. Function will be executed on every
+// request made by the Collector before Request Do
+func (c *Collector) OnRequestHeaders(f RequestCallback) {
+	c.lock.Lock()
+	c.requestHeadersCallbacks = append(c.requestHeadersCallbacks, f)
+	c.lock.Unlock()
+}
+
 // OnResponse registers a function. Function will be executed on every response
 func (c *Collector) OnResponse(f ResponseCallback) {
 	c.lock.Lock()
@@ -948,10 +974,12 @@ func (c *Collector) OnHTML(goquerySelector string, f HTMLCallback) {
 	if c.htmlCallbacks == nil {
 		c.htmlCallbacks = make([]*htmlCallbackContainer, 0, 4)
 	}
-	c.htmlCallbacks = append(c.htmlCallbacks, &htmlCallbackContainer{
+	cc := &htmlCallbackContainer{
 		Selector: goquerySelector,
 		Function: f,
-	})
+	}
+	cc.active.Store(true)
+	c.htmlCallbacks = append(c.htmlCallbacks, cc)
 	c.lock.Unlock()
 }
 
@@ -963,43 +991,37 @@ func (c *Collector) OnXML(xpathQuery string, f XMLCallback) {
 	if c.xmlCallbacks == nil {
 		c.xmlCallbacks = make([]*xmlCallbackContainer, 0, 4)
 	}
-	c.xmlCallbacks = append(c.xmlCallbacks, &xmlCallbackContainer{
+	cc := &xmlCallbackContainer{
 		Query:    xpathQuery,
 		Function: f,
-	})
+	}
+	cc.active.Store(true)
+	c.xmlCallbacks = append(c.xmlCallbacks, cc)
 	c.lock.Unlock()
 }
 
 // OnHTMLDetach deregister a function. Function will not be execute after detached
 func (c *Collector) OnHTMLDetach(goquerySelector string) {
 	c.lock.Lock()
-	deleteIdx := -1
-	for i, cc := range c.htmlCallbacks {
+	defer c.lock.Unlock()
+
+	for _, cc := range c.htmlCallbacks {
 		if cc.Selector == goquerySelector {
-			deleteIdx = i
-			break
+			cc.active.Store(false)
 		}
 	}
-	if deleteIdx != -1 {
-		c.htmlCallbacks = append(c.htmlCallbacks[:deleteIdx], c.htmlCallbacks[deleteIdx+1:]...)
-	}
-	c.lock.Unlock()
 }
 
 // OnXMLDetach deregister a function. Function will not be execute after detached
 func (c *Collector) OnXMLDetach(xpathQuery string) {
 	c.lock.Lock()
-	deleteIdx := -1
-	for i, cc := range c.xmlCallbacks {
+	defer c.lock.Unlock()
+
+	for _, cc := range c.xmlCallbacks {
 		if cc.Query == xpathQuery {
-			deleteIdx = i
-			break
+			cc.active.Store(false)
 		}
 	}
-	if deleteIdx != -1 {
-		c.xmlCallbacks = append(c.xmlCallbacks[:deleteIdx], c.xmlCallbacks[deleteIdx+1:]...)
-	}
-	c.lock.Unlock()
 }
 
 // OnError registers a function. Function will be executed if an error
@@ -1079,7 +1101,7 @@ func (c *Collector) SetProxy(proxyURL string) error {
 // SetProxyFunc sets a custom proxy setter/switcher function.
 // See built-in ProxyFuncs for more details.
 // This method overrides the previously used http.Transport
-// if the type of the transport is not http.RoundTripper.
+// if the type of the transport is not *http.Transport.
 // The proxy type is determined by the URL scheme. "http"
 // and "socks5" are supported. If the scheme is empty,
 // "http" is assumed.
@@ -1139,9 +1161,23 @@ func (c *Collector) handleOnResponseHeaders(r *Response) {
 		f(r)
 	}
 }
+func (c *Collector) handleOnRequestHeaders(r *Request) {
+	if c.debugger != nil {
+		c.debugger.Event(createEvent("requestHeaders", r.ID, c.ID, map[string]string{
+			"url": r.URL.String(),
+		}))
+	}
+	for _, f := range c.requestHeadersCallbacks {
+		f(r)
+	}
+}
 
 func (c *Collector) handleOnHTML(resp *Response) error {
-	if len(c.htmlCallbacks) == 0 {
+	c.lock.RLock()
+	htmlCallbacks := slices.Clone(c.htmlCallbacks)
+	c.lock.RUnlock()
+
+	if len(htmlCallbacks) == 0 {
 		return nil
 	}
 
@@ -1176,7 +1212,10 @@ func (c *Collector) handleOnHTML(resp *Response) error {
 		}
 
 	}
-	for _, cc := range c.htmlCallbacks {
+	for _, cc := range htmlCallbacks {
+		if !cc.active.Load() {
+			continue
+		}
 		i := 0
 		doc.Find(cc.Selector).Each(func(_ int, s *goquery.Selection) {
 			for _, n := range s.Nodes {
@@ -1196,7 +1235,11 @@ func (c *Collector) handleOnHTML(resp *Response) error {
 }
 
 func (c *Collector) handleOnXML(resp *Response) error {
-	if len(c.xmlCallbacks) == 0 {
+	c.lock.RLock()
+	xmlCallbacks := slices.Clone(c.xmlCallbacks)
+	c.lock.RUnlock()
+
+	if len(xmlCallbacks) == 0 {
 		return nil
 	}
 	contentType := strings.ToLower(resp.Headers.Get("Content-Type"))
@@ -1222,9 +1265,13 @@ func (c *Collector) handleOnXML(resp *Response) error {
 			}
 		}
 
-		for _, cc := range c.xmlCallbacks {
-			for _, n := range htmlquery.Find(doc, cc.Query) {
+		for _, cc := range xmlCallbacks {
+			if !cc.active.Load() {
+				continue
+			}
+			for i, n := range htmlquery.Find(doc, cc.Query) {
 				e := NewXMLElementFromHTMLNode(resp, n)
+				e.Index = i
 				if c.debugger != nil {
 					c.debugger.Event(createEvent("xml", resp.Request.ID, c.ID, map[string]string{
 						"selector": cc.Query,
@@ -1240,7 +1287,10 @@ func (c *Collector) handleOnXML(resp *Response) error {
 			return err
 		}
 
-		for _, cc := range c.xmlCallbacks {
+		for _, cc := range xmlCallbacks {
+			if !cc.active.Load() {
+				continue
+			}
 			xmlquery.FindEach(doc, cc.Query, func(i int, n *xmlquery.Node) {
 				e := NewXMLElementFromXMLNode(resp, n)
 				if c.debugger != nil {
@@ -1287,6 +1337,21 @@ func (c *Collector) handleOnError(response *Response, err error, request *Reques
 	return err
 }
 
+func (c *Collector) cleanupCallbacks() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// Clean HTML callbacks
+	c.htmlCallbacks = slices.DeleteFunc(c.htmlCallbacks, func(cc *htmlCallbackContainer) bool {
+		return !cc.active.Load()
+	})
+
+	// Clean XML callbacks
+	c.xmlCallbacks = slices.DeleteFunc(c.xmlCallbacks, func(cc *xmlCallbackContainer) bool {
+		return !cc.active.Load()
+	})
+}
+
 func (c *Collector) handleOnScraped(r *Response) {
 	if c.debugger != nil {
 		c.debugger.Event(createEvent("scraped", r.Request.ID, c.ID, map[string]string{
@@ -1296,6 +1361,9 @@ func (c *Collector) handleOnScraped(r *Response) {
 	for _, f := range c.scrapedCallbacks {
 		f(r)
 	}
+
+	// Cleanup inactive callbacks after processing each response
+	c.cleanupCallbacks()
 }
 
 // Limit adds a new LimitRule to the collector
@@ -1347,6 +1415,7 @@ func (c *Collector) Clone() *Collector {
 		AllowedDomains:         c.AllowedDomains,
 		AllowURLRevisit:        c.AllowURLRevisit,
 		CacheDir:               c.CacheDir,
+		CacheExpiration:        c.CacheExpiration,
 		DetectCharset:          c.DetectCharset,
 		DisallowedDomains:      c.DisallowedDomains,
 		ID:                     atomic.AddUint32(&collectorCounter, 1),
@@ -1406,7 +1475,9 @@ func (c *Collector) checkRedirectFunc() func(req *http.Request, via []*http.Requ
 				return err
 			}
 			if visited {
-				return &AlreadyVisitedError{req.URL}
+				if checkRevisit, ok := req.Context().Value(CheckRevisitKey).(bool); !ok || checkRevisit {
+					return &AlreadyVisitedError{req.URL}
+				}
 			}
 			err = c.store.Visited(uHash)
 			if err != nil {

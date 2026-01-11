@@ -2,7 +2,6 @@ package unsleeved
 
 import (
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,7 +9,7 @@ import (
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
-	result, err := s.Search("ring")
+	result, err := s.Search("cactuar")
 	require.NoError(t, err)
 	require.NotEmpty(t, result)
 
@@ -22,7 +21,6 @@ func Test_Search(t *testing.T) {
 			require.NotEmpty(t, card.Img)
 			require.NotEmpty(t, card.Price)
 			require.Contains(t, card.Url, fmt.Sprintf("%s/product/", StoreBaseURL))
-			log.Println(card.Url)
 		}
 	}
 }

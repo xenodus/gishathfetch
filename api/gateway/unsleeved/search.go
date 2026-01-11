@@ -11,13 +11,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 const StoreName = "Unsleeved"
 const StoreBaseURL = "https://hitpay.shop/unsleeved"
 const StoreSearchURL = "/search"
-const StoreApiURL = "https://hitpay.shop/api/v1/search-products?keywords=%s"
+const StoreApiURL = "https://hitpay.shop/api/v1/products/search?keywords=%s"
 const StoreHeaderIDKey = "hitpay-identifier"
 const StoreHeaderIDVal = "9879a70f-ebff-4612-9818-2ad353f94dee"
 
@@ -31,58 +30,91 @@ type response struct {
 	Data []struct {
 		ID         string `json:"id"`
 		BusinessID string `json:"business_id"`
-		// Skipping CategoryID
-		Name                   string      `json:"name"`
-		Headline               interface{} `json:"headline"`
-		Description            string      `json:"description"`
-		StockKeepingUnit       string      `json:"stock_keeping_unit"`
-		Currency               string      `json:"currency"`
-		Price                  float64     `json:"price"`
-		PriceBeforeDiscount    interface{} `json:"price_before_discount"`
-		PriceDisplay           string      `json:"price_display"`
-		PriceStored            int         `json:"price_stored"`
-		IsManageable           int         `json:"is_manageable"`
-		IsPinned               bool        `json:"is_pinned"`
-		Status                 string      `json:"status"`
-		ProductWeight          int         `json:"product_weight"`
-		DeliveryMethodRequired bool        `json:"delivery_method_required"`
-		HasVariations          bool        `json:"has_variations"`
-		IsShopify              bool        `json:"is_shopify"`
-		IsWoocommerce          bool        `json:"is_woocommerce"`
-		Order                  int         `json:"order"`
-		Quantity               int         `json:"quantity"`
-		QuantityAlertLevel     interface{} `json:"quantity_alert_level"`
-		MinOrderQuantity       interface{} `json:"min_order_quantity"`
-		MaxOrderQuantity       interface{} `json:"max_order_quantity"`
-		Emoji                  interface{} `json:"emoji"`
-		OpenAmount             bool        `json:"open_amount"`
-		ProductURL             string      `json:"product_url"` // for linking to product page
-		VariationsCount        int         `json:"variations_count"`
-		// Skipping Images, using single dimension from field below
-		Image               string      `json:"image"`
-		IsPublished         bool        `json:"is_published"`
-		PublishedAt         interface{} `json:"published_at"`
-		CreatedAt           time.Time   `json:"created_at"`
-		UpdatedAt           time.Time   `json:"updated_at"`
-		OrderInCategory     interface{} `json:"order_in_category"`
-		AllowBackOrder      bool        `json:"allow_back_order"`
-		Available           bool        `json:"available"`
-		Type                string      `json:"type"`
-		PasswordProtected   bool        `json:"password_protected"`
-		DigitalContent      interface{} `json:"digital_content"`
-		AutoTagNewLocations bool        `json:"auto_tag_new_locations"`
-		Channels            []string    `json:"channels"`
-		// Skipping Locations
-		ProductUnit                   interface{}   `json:"product_unit"`
-		ProductUnitAbbreviation       interface{}   `json:"product_unit_abbreviation"`
-		ProductUnitValue              int           `json:"product_unit_value"`
-		Handle                        string        `json:"handle"`
-		PosColor                      interface{}   `json:"pos_color"`
-		ProductAddOns                 []interface{} `json:"product_add_ons"`
-		IsInventoryTracked            bool          `json:"is_inventory_tracked"`
-		IsOnlineStoreInventoryTracked bool          `json:"is_online_store_inventory_tracked"`
+		Categories []struct {
+			ID     string `json:"id"`
+			Name   string `json:"name"`
+			Handle string `json:"handle"`
+		} `json:"categories"`
+		Name            string `json:"name"`
+		Handle          string `json:"handle"`
+		IsPinned        bool   `json:"is_pinned"`
+		Order           int    `json:"order"`
+		Price           int    `json:"price"`
+		Emoji           any    `json:"emoji"`
+		VariationsCount int    `json:"variations_count"`
+		Variations      []any  `json:"variations"`
+		Image           struct {
+			ID              string `json:"id"`
+			Caption         string `json:"caption"`
+			AltText         any    `json:"alt_text"`
+			URL             string `json:"url"`
+			Height          int    `json:"height"`
+			Width           int    `json:"width"`
+			OtherDimensions struct {
+				Icon struct {
+					Size   string `json:"size"`
+					URL    string `json:"url"`
+					Height int    `json:"height"`
+					Width  int    `json:"width"`
+				} `json:"icon"`
+				Large struct {
+					Size   string `json:"size"`
+					URL    string `json:"url"`
+					Height int    `json:"height"`
+					Width  int    `json:"width"`
+				} `json:"large"`
+				Small struct {
+					Size   string `json:"size"`
+					URL    string `json:"url"`
+					Height int    `json:"height"`
+					Width  int    `json:"width"`
+				} `json:"small"`
+				Medium struct {
+					Size   string `json:"size"`
+					URL    string `json:"url"`
+					Height int    `json:"height"`
+					Width  int    `json:"width"`
+				} `json:"medium"`
+				Thumbnail struct {
+					Size   string `json:"size"`
+					URL    string `json:"url"`
+					Height int    `json:"height"`
+					Width  int    `json:"width"`
+				} `json:"thumbnail"`
+			} `json:"other_dimensions"`
+		} `json:"image"`
+		Available                  bool   `json:"available"`
+		PriceStored                int    `json:"price_stored"`
+		PriceBeforeDiscount        any    `json:"price_before_discount"`
+		PriceBeforeDiscountDisplay any    `json:"price_before_discount_display"`
+		PriceDisplay               string `json:"price_display"`
+		VariationsPriceRange       struct {
+			Display any `json:"display"`
+			Min     any `json:"min"`
+			Max     any `json:"max"`
+		} `json:"variations_price_range"`
 	} `json:"data"`
-	// Skipping Meta & Links (for pagination)
+	Links struct {
+		First string `json:"first"`
+		Last  string `json:"last"`
+		Prev  any    `json:"prev"`
+		Next  any    `json:"next"`
+	} `json:"links"`
+	Meta struct {
+		CurrentPage int `json:"current_page"`
+		From        int `json:"from"`
+		LastPage    int `json:"last_page"`
+		Links       []struct {
+			URL    any    `json:"url"`
+			Label  string `json:"label"`
+			Page   any    `json:"page"`
+			Active bool   `json:"active"`
+		} `json:"links"`
+		Path    string `json:"path"`
+		PerPage int    `json:"per_page"`
+		To      int    `json:"to"`
+		Total   int    `json:"total"`
+	} `json:"meta"`
 }
 
 func NewLGS() gateway.LGS {
@@ -133,7 +165,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				return cards, err
 			}
 
-			if card.Status == "published" && card.Quantity > 0 {
+			if card.Available {
 				u := fmt.Sprintf("%s/product/%s", StoreBaseURL, card.Handle)
 				cleanPageURL, err := url.Parse(u)
 				if err != nil {
@@ -145,13 +177,12 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				}.Encode()
 
 				cards = append(cards, gateway.Card{
-					Name:      strings.TrimSpace(card.Name),
-					Url:       cleanPageURL.String(),
-					InStock:   true,
-					Price:     price,
-					Source:    s.Name,
-					Img:       card.Image,
-					ExtraInfo: []string{card.Description},
+					Name:    strings.TrimSpace(card.Name),
+					Url:     cleanPageURL.String(),
+					InStock: true,
+					Price:   price,
+					Source:  s.Name,
+					Img:     card.Image.URL,
 				})
 			}
 		}

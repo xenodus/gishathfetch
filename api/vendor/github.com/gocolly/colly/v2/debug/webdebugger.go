@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-// WebDebugger is a web based debuging frontend for colly
+// WebDebugger is a web based debugging frontend for colly
 type WebDebugger struct {
 	// Address is the address of the web server. It is 127.0.0.1:7676 by default.
 	Address         string
