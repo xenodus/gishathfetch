@@ -2,6 +2,7 @@ package binderpos
 
 import (
 	"errors"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,6 +46,13 @@ func Test_Scrap(t *testing.T) {
 			searchUrl:    "/search?q=%s",
 			searchStr:    "smothering tithe",
 		},
+		"variant 5": {
+			scrapVariant: 5,
+			storeName:    "Arcane Sanctum",
+			baseUrl:      "https://arcanesanctumtcg.com",
+			searchUrl:    "/search?q=%s",
+			searchStr:    "signet",
+		},
 		"invalid variant": {
 			scrapVariant: 999,
 			expErr:       errors.New("invalid scrap variant: 999"),
@@ -79,6 +87,7 @@ func Test_Scrap(t *testing.T) {
 						require.Contains(t, card.Url, testArg.baseUrl+"/products/")
 					}
 				}
+				log.Println(result)
 			}
 		})
 	}

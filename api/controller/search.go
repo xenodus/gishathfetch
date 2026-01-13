@@ -4,6 +4,7 @@ import (
 	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
+	"mtg-price-checker-sg/gateway/arcanesanctum"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardboardcrackgames"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
@@ -186,6 +187,7 @@ func Search(input SearchInput) ([]Card, error) {
 func initAndMapShops(lgs []string) map[string]gateway.LGS {
 	lgsMap := map[string]gateway.LGS{
 		agora.StoreName:               agora.NewLGS(),
+		arcanesanctum.StoreName:       arcanesanctum.NewLGS(),
 		cardaffinity.StoreName:        cardaffinity.NewLGS(),
 		cardboardcrackgames.StoreName: cardboardcrackgames.NewLGS(),
 		cardscitadel.StoreName:        cardscitadel.NewLGS(),

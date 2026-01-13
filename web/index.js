@@ -13,6 +13,7 @@ const debounceTimeout = 300;
 const lgsOptions = [
     "5 Mana",
     "Agora Hobby",
+    "Arcane Sanctum",
     "Card Affinity",
     "Cardboard Crack Games",
     "Cards Citadel",

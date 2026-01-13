@@ -25,8 +25,59 @@ func (i impl) Scrap(scrapVariant int, storeName, baseUrl, searchUrl, searchStr s
 		return scrapVariant3(storeName, baseUrl, searchUrl, searchStr)
 	case 4:
 		return scrapVariant4(storeName, baseUrl, searchUrl, searchStr)
+	case 5:
+		return scrapVariant5(storeName, baseUrl, searchUrl, searchStr)
 	}
 	return []gateway.Card{}, fmt.Errorf("invalid scrap variant: %d", scrapVariant)
+}
+
+// arcane sanctum
+func scrapVariant5(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
+	var cards []gateway.Card
+
+	c := colly.NewCollector()
+
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
+			name := el.ChildText("div.collection-product-info > h3.collection-product-title a")
+			link := el.ChildAttr("div.collection-product-info > h3.collection-product-title a", "href")
+			img := el.ChildAttr("div.collection-product-img img", "src")
+			priceStr := el.ChildText("div.collection-product-info > span.collection-product-price")
+
+			if priceStr != "" {
+				price, err := util.ParsePrice(priceStr)
+				if err != nil {
+					log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)
+					return
+				}
+
+				// url
+				u := strings.TrimSpace(baseUrl + link)
+				cleanPageURL, err := url.Parse(u)
+				if err != nil {
+					log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+					return
+				}
+				cleanPageURL.RawQuery = url.Values{
+					"utm_source": []string{config.UtmSource},
+				}.Encode()
+
+				if price > 0 {
+					cards = append(cards, gateway.Card{
+						Name:    strings.TrimSpace(name),
+						Url:     strings.TrimSpace(cleanPageURL.String()),
+						InStock: true,
+						Price:   price,
+						Source:  storeName,
+						Img:     img,
+					})
+				}
+			}
+		})
+	})
+
+	return cards, c.Visit(searchURL)
 }
 
 // tefuda
