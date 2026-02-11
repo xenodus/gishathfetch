@@ -1,10 +1,10 @@
 module mtg-price-checker-sg
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.11.0
-	github.com/aws/aws-lambda-go v1.51.1
+	github.com/aws/aws-lambda-go v1.52.0
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/sony/sonyflake v1.3.0
@@ -26,8 +26,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
-	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

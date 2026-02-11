@@ -22,7 +22,6 @@ import (
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
 	"mtg-price-checker-sg/gateway/tefuda"
-	"mtg-price-checker-sg/gateway/unsleeved"
 	"slices"
 	"sort"
 	"strings"
@@ -204,7 +203,7 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		onemtg.StoreName:              onemtg.NewLGS(),
 		tefuda.StoreName:              tefuda.NewLGS(),
 		tcgmarketplace.StoreName:      tcgmarketplace.NewLGS(),
-		unsleeved.StoreName:           unsleeved.NewLGS(),
+		// unsleeved.StoreName:           unsleeved.NewLGS(),
 	}
 
 	if len(lgs) > 0 {
