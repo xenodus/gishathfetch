@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -17,6 +18,8 @@ import (
 type WebResponse struct {
 	Data []controller.Card `json:"data"`
 }
+
+var searchFunc = controller.Search
 
 func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var apiRes events.APIGatewayProxyResponse
@@ -46,7 +49,7 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 		lgs = strings.Split(lgsString, ",")
 	}
 
-	inStockCards, err := controller.Search(controller.SearchInput{
+	inStockCards, err := searchFunc(controller.SearchInput{
 		SearchString: searchString,
 		Lgs:          lgs,
 	})
@@ -67,14 +70,18 @@ func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse W
 		return apiResponse, nil
 	}
 
-	bodyBytes, err := json.MarshalIndent(webResponse, "", "    ")
-	if err != nil {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "    ")
+
+	if err := encoder.Encode(webResponse); err != nil {
 		apiResponse.StatusCode = http.StatusInternalServerError
 		apiResponse.Body = "err marshalling to json result"
 		return apiResponse, nil
 	}
 
-	apiResponse.Body = strings.Replace(string(bodyBytes), "\\u0026", "&", -1)
+	apiResponse.Body = buf.String()
 
 	return apiResponse, nil
 }
