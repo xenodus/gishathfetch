@@ -46,10 +46,14 @@ type Card struct {
 }
 
 func Search(input SearchInput) ([]Card, error) {
+	shopNameToLGSMap := initAndMapShops(input.Lgs)
+	return searchShops(input, shopNameToLGSMap)
+}
+
+func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, error) {
 	var cards []gateway.Card
 	var inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []Card
 
-	shopNameToLGSMap := initAndMapShops(input.Lgs)
 	// use to track which lgs has result
 	shopNameToHasResultMap := initShopHasResultMap(shopNameToLGSMap)
 
@@ -59,21 +63,21 @@ func Search(input SearchInput) ([]Card, error) {
 
 		log.Printf("Start checking shops for [%s]...", input.SearchString)
 		var wg sync.WaitGroup
+		var mu sync.Mutex
 
 		for shopName, lgs := range shopNameToLGSMap {
-			sName := shopName
-			sLGS := lgs
-
 			wg.Go(func() {
 				start := time.Now()
-				c, err := sLGS.Search(input.SearchString)
+				c, err := lgs.Search(input.SearchString)
 				if err != nil {
-					log.Printf("Error encountered searching [%s]: %v", sName, err)
+					log.Printf("Error encountered searching [%s]: %v", shopName, err)
 				}
-				log.Printf("Done searching [%s]. Took: [%s]", sName, time.Since(start))
+				log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
 
 				if len(c) > 0 {
+					mu.Lock()
 					cards = append(cards, c...)
+					mu.Unlock()
 				}
 			})
 		}
@@ -87,33 +91,12 @@ func Search(input SearchInput) ([]Card, error) {
 				return cards[i].Price < cards[j].Price
 			})
 
+			lowerSearchString := strings.ToLower(input.SearchString)
+
 			// Only showing in stock, contains searched string and not art card
 			for _, c := range cards {
 				if c.InStock {
-					cleanCardName := c.Name
-
-					// if we have quality, remove it from name
-					if c.Quality != "" {
-						cleanCardName = strings.Replace(cleanCardName, c.Quality, "", -1)
-						cleanCardName = strings.Replace(cleanCardName, " -", "", -1)
-						cleanCardName = strings.Replace(cleanCardName, "- ", "", -1)
-					}
-
-					extraInfo := c.ExtraInfo
-
-					// if string has [, get index of it to strip [*] away
-					squareBracketIndex := strings.Index(cleanCardName, "[")
-					if squareBracketIndex > 1 {
-						extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[squareBracketIndex:]))
-						cleanCardName = strings.TrimSpace(cleanCardName[:squareBracketIndex-1])
-					}
-
-					// if string has (, get index of it to strip (*) away
-					roundBracketIndex := strings.Index(cleanCardName, "(")
-					if roundBracketIndex > 1 {
-						extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[roundBracketIndex:]))
-						cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex-1])
-					}
+					cleanCardName, extraInfo := cleanName(c.Name, c.Quality, c.ExtraInfo)
 
 					card := Card{
 						Name:      cleanCardName,
@@ -123,7 +106,7 @@ func Search(input SearchInput) ([]Card, error) {
 						InStock:   c.InStock,
 						Source:    c.Source,
 						Quality:   c.Quality,
-						ExtraInfo: strings.Join(extraInfo, " "),
+						ExtraInfo: strings.TrimSpace(strings.Join(extraInfo, " ")),
 					}
 
 					// replace all curly brackets with square brackets
@@ -135,19 +118,21 @@ func Search(input SearchInput) ([]Card, error) {
 						continue
 					}
 
+					lowerName := strings.ToLower(cleanCardName)
+
 					// if in substring, mark lgs as having result
-					if strings.Contains(strings.ToLower(cleanCardName), strings.ToLower(input.SearchString)) {
+					if strings.Contains(lowerName, lowerSearchString) {
 						shopNameToHasResultMap[c.Source] = true
 					}
 
 					// exact match
-					if strings.ToLower(cleanCardName) == strings.ToLower(input.SearchString) {
+					if lowerName == lowerSearchString {
 						inStockExactMatchCards = append(inStockExactMatchCards, card)
 						continue
 					}
 
 					// prefix
-					if strings.HasPrefix(strings.ToLower(cleanCardName), strings.ToLower(input.SearchString)) {
+					if strings.HasPrefix(lowerName, lowerSearchString) {
 						inStockPrefixMatchCards = append(inStockPrefixMatchCards, card)
 						continue
 					}
@@ -230,5 +215,33 @@ func isArtCard(s string) bool {
 }
 
 func isJapanese(s string) bool {
-	return strings.Contains(strings.ToLower(s), "Japanese")
+	return strings.Contains(strings.ToLower(s), "japanese")
+}
+
+func cleanName(name, quality string, extraInfo []string) (string, []string) {
+	cleanCardName := name
+
+	// if we have quality, remove it from name
+	if quality != "" {
+		cleanCardName = strings.Replace(cleanCardName, quality, "", -1)
+		cleanCardName = strings.Replace(cleanCardName, " -", "", -1)
+		cleanCardName = strings.Replace(cleanCardName, "- ", "", -1)
+	}
+
+	// if string has [, get index of it to strip [*] away
+	squareBracketIndex := strings.Index(cleanCardName, "[")
+	if squareBracketIndex > 0 {
+		extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[squareBracketIndex:]))
+		cleanCardName = strings.TrimSpace(cleanCardName[:squareBracketIndex])
+	}
+
+	// if string has (, get index of it to strip (*) away
+	roundBracketIndex := strings.Index(cleanCardName, "(")
+	if roundBracketIndex > 0 {
+		extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[roundBracketIndex:]))
+		cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex])
+	}
+
+	cleanCardName = strings.TrimSpace(cleanCardName)
+	return cleanCardName, extraInfo
 }
