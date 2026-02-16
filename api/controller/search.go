@@ -157,7 +157,7 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 
 		for shopName := range shopNameToHasResultMap {
 			if !shopNameToHasResultMap[shopName] {
-				log.Printf("Shop %s has no result for [%s]", shopName, input.SearchString)
+				log.Printf("Shop [%s] has no result for [%s]", shopName, input.SearchString)
 
 				go func(lgs, searchString string) {
 					err := google.LGSNoResultMeasurement(lgs, searchString)
