@@ -67,6 +67,11 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 
 		for shopName, lgs := range shopNameToLGSMap {
 			wg.Go(func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("Recovered from panic in shop [%s]: %v", shopName, r)
+					}
+				}()
 				start := time.Now()
 				c, err := lgs.Search(input.SearchString)
 				if err != nil {

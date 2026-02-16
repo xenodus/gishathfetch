@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"mtg-price-checker-sg/gateway"
+	"strings"
 	"testing"
 )
 
@@ -238,6 +239,21 @@ func TestSearchShops(t *testing.T) {
 				}
 			},
 		},
+		"Error Handling - LGS Panic should be recovered": {
+			input: SearchInput{SearchString: "Card A"},
+			lgsResponses: map[string][]gateway.Card{
+				"Shop1": nil, // Will panic
+				"Shop2": {
+					{Name: "Card A", Price: 10.0, InStock: true, Source: "Shop2"},
+				},
+			},
+			expectedCount: 1,
+			verifyFunc: func(t *testing.T, cards []Card) {
+				if cards[0].Source != "Shop2" {
+					t.Errorf("Expected result from Shop2, got %s", cards[0].Source)
+				}
+			},
+		},
 		"Extra Info Parsing": {
 			input: SearchInput{SearchString: "Card A"},
 			lgsResponses: map[string][]gateway.Card{
@@ -266,6 +282,10 @@ func TestSearchShops(t *testing.T) {
 				mockMap[shopName] = &MockLGS{
 					SearchFunc: func(searchStr string) ([]gateway.Card, error) {
 						if cardsToReturn == nil {
+							// Special case for panic test
+							if shopName == "Shop1" && strings.Contains(name, "Panic") {
+								panic("simulated panic")
+							}
 							return nil, fmt.Errorf("simulated error")
 						}
 						return cardsToReturn, nil
