@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"mtg-price-checker-sg/pkg/config"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/sony/sonyflake"
 )
 
@@ -26,12 +24,7 @@ var (
 )
 
 func init() {
-	err := godotenv.Load()
-	if err != nil {
-		if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
-			log.Println("No .env file found or error loading .env")
-		}
-	}
+	var err error
 	measurementIDGenerator, err = sonyflake.New(sonyflake.Settings{
 		StartTime: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 	})

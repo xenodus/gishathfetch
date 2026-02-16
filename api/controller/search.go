@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
@@ -22,6 +23,7 @@ import (
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
 	"mtg-price-checker-sg/gateway/tefuda"
+	"mtg-price-checker-sg/pkg/alert"
 	"slices"
 	"sort"
 	"strings"
@@ -69,7 +71,9 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 			wg.Go(func() {
 				defer func() {
 					if r := recover(); r != nil {
-						log.Printf("Recovered from panic in shop [%s]: %v", shopName, r)
+						errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
+						log.Println(errMsg)
+						go alert.SendDiscordAlert(errMsg) // Send asynchronously
 					}
 				}()
 				start := time.Now()

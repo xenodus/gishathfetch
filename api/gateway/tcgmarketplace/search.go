@@ -14,8 +14,6 @@ import (
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/pkg/config"
-
-	"github.com/joho/godotenv"
 )
 
 const StoreName = "The TCG Marketplace"
@@ -66,15 +64,6 @@ func NewLGS() gateway.LGS {
 	return Store{
 		Name:    StoreName,
 		BaseUrl: StoreBaseURL,
-	}
-}
-
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
-			log.Println("No .env file found or error loading .env")
-		}
 	}
 }
 

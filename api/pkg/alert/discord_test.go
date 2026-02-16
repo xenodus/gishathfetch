@@ -6,7 +6,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	_ = godotenv.Load("../../.env")
+}
 
 func TestSendDiscordAlert(t *testing.T) {
 	// 1. Test Case: Success
@@ -35,8 +41,7 @@ func TestSendDiscordAlert(t *testing.T) {
 		defer server.Close()
 
 		// Set ENV to mock server
-		os.Setenv("DISCORD_WEBHOOK_URL", server.URL)
-		defer os.Unsetenv("DISCORD_WEBHOOK_URL")
+		t.Setenv("DISCORD_WEBHOOK_URL", server.URL)
 
 		// Call function
 		SendDiscordAlert("Test Message")
@@ -59,4 +64,13 @@ func TestSendDiscordAlert(t *testing.T) {
 
 		SendDiscordAlert("Test Message")
 	})
+}
+
+func TestSendDiscordAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
+	if webhookURL == "" {
+		t.Skip("DISCORD_WEBHOOK_URL not set, skipping integration test")
+	}
+
+	SendDiscordAlert("Integration Test Message (Ignore this)")
 }

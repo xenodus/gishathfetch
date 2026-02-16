@@ -12,7 +12,18 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/joho/godotenv"
 )
+
+func init() {
+	// load .env file
+	err := godotenv.Load()
+	if err != nil {
+		if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
+			log.Println("No .env file found or error loading .env")
+		}
+	}
+}
 
 func main() {
 	if os.Getenv("ENV") == config.EnvProd || os.Getenv("ENV") == config.EnvStaging {
