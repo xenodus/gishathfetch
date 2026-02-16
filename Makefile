@@ -55,4 +55,4 @@ aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
 
 test:
-	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...
+	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./... || (echo "\n\033[0;31mTESTS FAILED\033[0m. Continue deployment? [y/N] "; read ans; [ $${ans:-N} = y ])
