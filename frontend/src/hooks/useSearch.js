@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL, LGS_OPTIONS, BASE_URL } from '../constants';
 
 export default function useSearch() {
@@ -12,6 +12,8 @@ export default function useSearch() {
     const [selectedStores, setSelectedStores] = useState(LGS_OPTIONS);
 
     // --- Helpers ---
+    const skipSuggestionsRef = useRef(false);
+
     const updateUrlAndTitle = (query) => {
         if (window.location.hostname !== "localhost") {
             const newUrl = `${BASE_URL}?s=${encodeURIComponent(query.toLowerCase())}`;
@@ -58,6 +60,7 @@ export default function useSearch() {
                 setIsSearching(false);
                 setSearchProgress("Search");
                 clearInterval(progressInterval);
+                skipSuggestionsRef.current = false;
             });
     };
 
@@ -67,6 +70,11 @@ export default function useSearch() {
     };
 
     useEffect(() => {
+        if (skipSuggestionsRef.current) {
+            skipSuggestionsRef.current = false;
+            return;
+        }
+
         if (searchQuery.length > 2) {
             const timer = setTimeout(() => {
                 fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`)
@@ -87,6 +95,7 @@ export default function useSearch() {
     }, [searchQuery]);
 
     const handleSuggestionClick = (suggestion) => {
+        skipSuggestionsRef.current = true;
         setSearchQuery(suggestion);
         setShowSuggestions(false);
         performSearch(suggestion, selectedStores);

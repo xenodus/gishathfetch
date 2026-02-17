@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import StoreSelector from './StoreSelector';
 
 const SearchForm = ({
@@ -15,10 +15,25 @@ const SearchForm = ({
     selectedStores,
     onStoreToggle,
     onSelectAll,
-    onSelectNone
+    onSelectNone,
+    onCloseSuggestions
 }) => {
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                onCloseSuggestions && onCloseSuggestions();
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [onCloseSuggestions]);
+
     return (
-        <div>
+        <div ref={wrapperRef}>
             <form id="searchForm" onSubmit={onSearchSubmit}>
                 <div className="mb-3 position-relative">
                     <div className="form-floating">

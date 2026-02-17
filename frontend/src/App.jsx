@@ -82,6 +82,7 @@ export default function App() {
         onStoreToggle={toggleStore}
         onSelectAll={selectAllStores}
         onSelectNone={selectNoStores}
+        onCloseSuggestions={() => setShowSuggestions(false)}
       />
 
       <SearchResults
