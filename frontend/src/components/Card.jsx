@@ -18,7 +18,7 @@ const Card = memo(({
     const inCart = isCardInCart(card);
 
     return (
-        <div className={`col-6 col-lg-${isCart ? 6 : 3} mb-4`} key={index}>
+        <div className={`col-6 col-lg-${isCart ? 6 : 3} mb-4`}>
             <div className="text-center mb-2">
                 <a href={card.url} target="_blank" rel="noreferrer">
                     <img
