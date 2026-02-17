@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { API_BASE_URL, LGS_OPTIONS, BASE_URL } from '../constants';
 
 export default function useSearch() {
@@ -22,7 +22,7 @@ export default function useSearch() {
         }
     };
 
-    const performSearch = (query, stores) => {
+    const performSearch = useCallback((query, stores) => {
         if (!query || query.length < 3) return;
 
         setIsSearching(true);
@@ -62,7 +62,7 @@ export default function useSearch() {
                 clearInterval(progressInterval);
                 skipSuggestionsRef.current = false;
             });
-    };
+    }, []);
 
     // --- Handlers ---
     const handleQueryChange = (e) => {
@@ -146,7 +146,7 @@ export default function useSearch() {
             }
             setTimeout(() => performSearch(q, stores), 100);
         }
-    }, []);
+    }, [performSearch]);
 
     return {
         searchQuery,
