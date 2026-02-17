@@ -84,7 +84,8 @@ body {
   border-bottom: 1px solid #f3f3f3;
 }
 
-#suggestions div.suggestion-item:hover {
+#suggestions div.suggestion-item:hover,
+#suggestions div.suggestion-item.selected {
   background: #0d6efd;
   color: #fff;
 }
