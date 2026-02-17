@@ -92,8 +92,9 @@ export default function useSearch() {
                 return res.json();
             })
             .then(result => {
-                if (result && result.data) {
-                    setSearchResults(result.data);
+                if (result && result.hasOwnProperty('data')) {
+                    // Treat null data as empty array
+                    setSearchResults(result.data || []);
                     updateUrlAndTitle(query);
                     if (window.gtag) {
                         window.gtag('event', 'view_search_results', { 'search_term': query.toLowerCase() });
