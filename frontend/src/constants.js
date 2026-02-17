@@ -62,7 +62,7 @@ export const LGS_MAP = [
         id: "dueller-point-map",
         name: "Dueller's Point",
         address: "450 Hougang Ave 10, B1-541, Singapore 530450",
-        iframe: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.662159756766!2d103.89300967451602!3d1.3793695614811952!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da163eecb250ff%3A0xc7c259e72671dc62!2sDueller&#39;s%20Point!5e0!3m2!1sen!2ssg!4v1702820876967!5m2!1sen!2ssg",
+        iframe: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.6621597567673!2d103.89300967489284!3d1.3793695614804176!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da163eecb250ff%3A0xc7c259e72671dc62!2sDueller's%20Point!5e0!3m2!1sen!2ssg!4v1771347706226!5m2!1sen!2ssg",
         website: "https://www.duellerspoint.com/"
     },
     {
