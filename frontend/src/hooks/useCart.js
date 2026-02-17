@@ -38,7 +38,13 @@ export default function useCart() {
     };
 
     const isCardInCart = (card) => {
-        return cart.some((item) => JSON.stringify(item) === JSON.stringify(card));
+        return cart.some((item) =>
+            item.name === card.name &&
+            item.src === card.src &&
+            item.price === card.price && // price is a number, so it's fine
+            item.quality === card.quality &&
+            item.isFoil === card.isFoil
+        );
     };
 
     return {

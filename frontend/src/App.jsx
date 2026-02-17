@@ -55,7 +55,8 @@ export default function App() {
   const [modalType, setModalType] = useState(null);
 
   // --- Handlers ---
-  const handleCardSearch = (cardName, sourceStore) => {
+  const handleCardSearch = (e, cardName, sourceStore) => {
+    if (e) e.preventDefault();
     setSearchQuery(cardName);
     setShowCart(false);
     performSearch(cardName, [sourceStore]);
