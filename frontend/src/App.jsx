@@ -56,7 +56,7 @@ export default function App() {
 
   // --- Handlers ---
   const handleCardSearch = (e, cardName, sourceStore) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setSearchQuery(cardName);
     setShowCart(false);
     performSearch(cardName, [sourceStore]);
