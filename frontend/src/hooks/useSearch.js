@@ -98,13 +98,28 @@ export default function useSearch() {
         skipSuggestionsRef.current = true;
         setSearchQuery(suggestion);
         setShowSuggestions(false);
-        performSearch(suggestion, selectedStores);
+
+        let storesToSearch = selectedStores;
+        if (selectedStores.length === 0) {
+            storesToSearch = LGS_OPTIONS;
+            setSelectedStores(LGS_OPTIONS);
+            localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+        }
+        performSearch(suggestion, storesToSearch);
     };
 
     const handleSearchSubmit = (e) => {
         if (e) e.preventDefault();
         setShowSuggestions(false);
-        performSearch(searchQuery, selectedStores);
+
+        let storesToSearch = selectedStores;
+        if (selectedStores.length === 0) {
+            storesToSearch = LGS_OPTIONS;
+            setSelectedStores(LGS_OPTIONS);
+            localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+        }
+
+        performSearch(searchQuery, storesToSearch);
     };
 
     const toggleStore = (store) => {
@@ -128,8 +143,9 @@ export default function useSearch() {
     // --- Initialization ---
     useEffect(() => {
         const storedLgs = localStorage.getItem('lgsSelected');
-        if (storedLgs) {
-            setSelectedStores(decodeURIComponent(storedLgs).split(","));
+        if (storedLgs !== null) {
+            const decoded = decodeURIComponent(storedLgs);
+            setSelectedStores(decoded === "" ? [] : decoded.split(","));
         }
 
         const urlParams = new URLSearchParams(window.location.search);
