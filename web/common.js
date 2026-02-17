@@ -384,20 +384,17 @@ function updateCartPage() {
             let removeFromCartBtn = `<button data-index="` + i + `" type="button" class="removeFromCartBtn btn btn-danger btn-sm removeFromCartBtn"><i data-feather="trash-2" class="cartIcon"></i> Remove</button>`;
             let searchBtn = `<a href="/?s=` + encodeURIComponent(cart[i]["name"]) + `&src=` + encodeURIComponent(cart[i]["src"]) + `" class="btn btn-primary btn-sm cartSearchBtn ms-1"><i data-feather="search" class="cartIcon"></i> Search</a>`;
 
-            let qualityFoilDisp = "";
+            let qualityFoilDisp = [];
             if (cart[i].hasOwnProperty("quality") && cart[i]["quality"] !== "") {
-                qualityFoilDisp += "≪ " + cart[i]["quality"] + " ≫";
+                qualityFoilDisp.push("≪ " + cart[i]["quality"] + " ≫");
             }
             if (cart[i].hasOwnProperty("isFoil") && cart[i]["isFoil"] === true) {
-                if (qualityFoilDisp !== "") {
-                    qualityFoilDisp += " ";
-                }
-                qualityFoilDisp += "≪ FOIL ≫";
+                qualityFoilDisp.push("<span class='text-nowrap'>≪ <span class='animated-rainbow'>FOIL</span> ≫</span>");
             }
 
             let qualityFoilHtml = "";
-            if (qualityFoilDisp !== "") {
-                qualityFoilHtml = `<div class="fs-6 lh-sm fw-bold mb-1">` + qualityFoilDisp + `</div>`;
+            if (qualityFoilDisp.length > 0) {
+                qualityFoilHtml = `<div class="d-flex flex-wrap justify-content-center gap-1 fs-6 lh-sm fw-bold mb-1">` + qualityFoilDisp.join("") + `</div>`;
             }
 
             html += `
