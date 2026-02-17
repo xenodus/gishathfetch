@@ -37,7 +37,11 @@ export default function useSearch() {
         const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query.toLowerCase())}&lgs=${encodeURIComponent(stores.join(','))}`;
 
         let progressInterval = setInterval(() => {
-            setSearchProgress(prev => prev.length > 25 ? "Searching LGS" : prev + " .");
+            setSearchProgress(prev => {
+                const dots = (prev.match(/\./g) || []).length;
+                if (dots >= 15) return "Searching LGS";
+                return prev + " .";
+            });
         }, 1000);
 
         fetch(searchUrl)

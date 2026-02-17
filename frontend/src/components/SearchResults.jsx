@@ -1,6 +1,7 @@
 import React from 'react';
 import Card from './Card';
 import SkeletonCard from './SkeletonCard';
+import AdComponent from './AdComponent';
 
 const SearchResults = ({
     results,
@@ -23,18 +24,23 @@ const SearchResults = ({
             {((results && results.length > 0) || isSearching) && (
                 <div id="result" className="mb-3 text-center">
                     <div className="row">
-                        {results.map((card, i) => (
-                            <Card
-                                key={i}
-                                card={card}
-                                index={i}
-                                isCardInCart={isCardInCart}
-                                addToCart={addToCart}
-                                removeFromCart={removeFromCart}
-                                onSearchStore={onSearchStore}
-                                baseUrl={baseUrl}
-                            />
-                        ))}
+                        {results.map((card, i) => {
+                            const showAd = results.length > 8 && ((i + 1) % 8 === 0) && (i + 1 !== results.length);
+                            return (
+                                <React.Fragment key={i}>
+                                    <Card
+                                        card={card}
+                                        index={i}
+                                        isCardInCart={isCardInCart}
+                                        addToCart={addToCart}
+                                        removeFromCart={removeFromCart}
+                                        onSearchStore={onSearchStore}
+                                        baseUrl={baseUrl}
+                                    />
+                                    {showAd && <AdComponent />}
+                                </React.Fragment>
+                            );
+                        })}
 
                         {isSearching && (
                             <>
