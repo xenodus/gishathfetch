@@ -5,6 +5,7 @@ export default function useSearch() {
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState([]);
+    const [hasSearched, setHasSearched] = useState(false);
     const [searchProgress, setSearchProgress] = useState("Search");
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -27,6 +28,7 @@ export default function useSearch() {
         setIsSearching(true);
         setSearchProgress("Searching LGS");
         setSearchResults([]);
+        setHasSearched(true);
 
         if (window.gtag) {
             window.gtag('event', 'search', { 'search_term': query.toLowerCase() });
@@ -137,6 +139,7 @@ export default function useSearch() {
         searchQuery,
         setSearchQuery,
         isSearching,
+        hasSearched,
         searchResults,
         searchProgress,
         suggestions,

@@ -5,6 +5,7 @@ import SkeletonCard from './SkeletonCard';
 const SearchResults = ({
     results,
     isSearching,
+    hasSearched,
     isCardInCart,
     addToCart,
     removeFromCart,
@@ -13,13 +14,13 @@ const SearchResults = ({
 }) => {
     return (
         <>
-            {results.length > 0 && (
+            {hasSearched && !isSearching && (
                 <div id="resultCount" className="mb-3 text-center bg-warning-subtle text-dark rounded py-2">
-                    {results.length} result{results.length > 1 ? "s" : ""} found
+                    {results?.length || 0} result{(results?.length !== 1) ? "s" : ""} found
                 </div>
             )}
 
-            {(results.length > 0 || isSearching) && (
+            {((results && results.length > 0) || isSearching) && (
                 <div id="result" className="mb-3 text-center">
                     <div className="row">
                         {results.map((card, i) => (
