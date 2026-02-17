@@ -63,12 +63,13 @@ export default function useSearch() {
 
     // --- Handlers ---
     const handleQueryChange = (e) => {
-        const val = e.target.value;
-        setSearchQuery(val);
-        if (val.length > 2) {
-            // Scryfall autocomplete debounce
+        setSearchQuery(e.target.value);
+    };
+
+    useEffect(() => {
+        if (searchQuery.length > 2) {
             const timer = setTimeout(() => {
-                fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(val.toLowerCase())}`)
+                fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`)
                     .then(res => res.json())
                     .then(res => {
                         if (res.data) {
@@ -83,7 +84,7 @@ export default function useSearch() {
             setSuggestions([]);
             setShowSuggestions(false);
         }
-    };
+    }, [searchQuery]);
 
     const handleSuggestionClick = (suggestion) => {
         setSearchQuery(suggestion);
