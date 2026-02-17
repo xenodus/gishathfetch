@@ -19,7 +19,6 @@ docker-push:
 docker-push-staging:
 	export AWS_PAGER="" && docker push 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging
 
-# Legacy web-update targets removed
 
 frontend-dev:
 	cd frontend && npm install && npm run dev
@@ -31,7 +30,6 @@ frontend-update: frontend-build
 	aws s3 sync frontend/dist s3://gishathfetch.com
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
 
-# Legacy web-update-staging targets removed
 
 frontend-update-staging: frontend-build
 	aws s3 sync frontend/dist s3://staging.gishathfetch.com
