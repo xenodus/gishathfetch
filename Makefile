@@ -1,6 +1,6 @@
-deploy: deploy-common docker-tag docker-push lambda-update web-update
+deploy: deploy-common docker-tag docker-push lambda-update frontend-update
 
-deploy-staging: deploy-common docker-tag-staging docker-push-staging lambda-update-staging web-update-staging
+deploy-staging: deploy-common docker-tag-staging docker-push-staging lambda-update-staging frontend-update-staging
 
 deploy-common: test docker-build aws-login
 
@@ -19,9 +19,7 @@ docker-push:
 docker-push-staging:
 	export AWS_PAGER="" && docker push 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging
 
-web-update:
-	aws s3 sync web s3://gishathfetch.com
-	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
+# Legacy web-update targets removed
 
 frontend-dev:
 	cd frontend && npm install && npm run dev
@@ -33,9 +31,7 @@ frontend-update: frontend-build
 	aws s3 sync frontend/dist s3://gishathfetch.com
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
 
-web-update-staging:
-	aws s3 sync web s3://staging.gishathfetch.com
-	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E33AK6HADX83U0 --paths "/*"
+# Legacy web-update-staging targets removed
 
 frontend-update-staging: frontend-build
 	aws s3 sync frontend/dist s3://staging.gishathfetch.com
