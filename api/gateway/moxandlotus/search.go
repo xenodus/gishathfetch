@@ -162,7 +162,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 						var extraInfo []string
 						var isFoil bool
 						if card.VariationCode == "foil" {
-							extraInfo = append(extraInfo, fmt.Sprintf("(%s)", card.VariationCode))
+							// extraInfo = append(extraInfo, fmt.Sprintf("(%s)", card.VariationCode))
 							isFoil = true
 						}
 						if card.Expansion != "" {
