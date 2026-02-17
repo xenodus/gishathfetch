@@ -36,6 +36,7 @@ export default function App() {
     searchQuery,
     setSearchQuery,
     isSearching,
+    hasSearched,
     searchResults,
     searchProgress,
     suggestions,
