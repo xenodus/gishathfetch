@@ -1,0 +1,100 @@
+body {
+  font-family: 'Barlow', serif;
+}
+
+#logo {
+  width: 120px;
+}
+
+.map-item iframe {
+  float: left;
+  min-height: 450px;
+}
+
+.addCartBtn,
+.removeFromCartBtn,
+.cartSearchBtn {
+  font-size: 11px;
+  padding-bottom: 5px;
+}
+
+.animated-rainbow {
+  background: linear-gradient(to left, #c2410c, #ea580c, #f97316, #fb923c, #fbbf24, #f59e0b, #d97706, #c2410c);
+  animation: rainbow-move-left-right 4s linear infinite;
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Double clip for cross-browser */
+}
+
+@keyframes rainbow-move-left-right {
+  0% {
+    background-position: 0 0
+  }
+
+  100% {
+    background-position: -200% 0
+  }
+}
+
+.cartIcon {
+  width: 12px;
+  height: 12px;
+  position: relative;
+  bottom: 1px;
+}
+
+#suggestions {
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  display: none;
+  margin-top: 5px;
+  max-height: 30vh;
+  overflow-y: scroll;
+  position: absolute;
+  z-index: 2;
+  background: #fff;
+  width: 100%;
+}
+
+#suggestions div.suggestion-item {
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+#suggestions div:nth-child(even) {
+  background-color: #fbfbfb;
+}
+
+#suggestions div:not(:last-child) {
+  border-bottom: 1px solid #f3f3f3;
+}
+
+#suggestions div.suggestion-item:hover {
+  background: #0d6efd;
+  color: #fff;
+}
+
+input#search:focus {
+  box-shadow: none !important;
+  border-color: #dee2e6;
+}
+
+@media (min-width: 1400px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, .5);
+  -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, .5);
+}

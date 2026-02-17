@@ -23,8 +23,22 @@ web-update:
 	aws s3 sync web s3://gishathfetch.com
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
 
+frontend-dev:
+	cd frontend && npm install && npm run dev
+
+frontend-build:
+	cd frontend && npm install && npm run build
+
+frontend-update: frontend-build
+	aws s3 sync frontend/dist s3://gishathfetch.com
+	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
+
 web-update-staging:
 	aws s3 sync web s3://staging.gishathfetch.com
+	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E33AK6HADX83U0 --paths "/*"
+
+frontend-update-staging: frontend-build
+	aws s3 sync frontend/dist s3://staging.gishathfetch.com
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E33AK6HADX83U0 --paths "/*"
 
 lambda-create:
