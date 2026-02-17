@@ -59,15 +59,15 @@ const SearchForm = ({
 
                                 return (
                                     <div
-                                        key={i}
+                                        key={s}
                                         className="suggestion-item"
                                         onClick={() => onSuggestionClick(s)}
                                     >
                                         {parts.map((part, index) =>
                                             part.toLowerCase() === searchQuery.toLowerCase() ? (
-                                                <b key={index}>{part}</b>
+                                                <b key={`${index}-${part}`}>{part}</b>
                                             ) : (
-                                                <span key={index}>{part}</span>
+                                                <span key={`${index}-${part}`}>{part}</span>
                                             )
                                         )}
                                     </div>
