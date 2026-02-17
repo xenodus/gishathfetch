@@ -7,8 +7,15 @@ const Footer = ({
     onShowMap,
     onShowFaq
 }) => {
+    const adInitialized = React.useRef(false);
+
     useEffect(() => {
+        if (adInitialized.current) return;
+        adInitialized.current = true;
+
         try {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+
             // Parity fix: use setTimeout to set z-index for footer ads, exactly as in legacy index.js
             setTimeout(() => {
                 const ads = document.querySelectorAll('ins.adsbygoogle');
