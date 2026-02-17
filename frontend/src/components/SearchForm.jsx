@@ -67,7 +67,7 @@ const SearchForm = ({
                                             part.toLowerCase() === searchQuery.toLowerCase() ? (
                                                 <b key={index}>{part}</b>
                                             ) : (
-                                                part
+                                                <span key={index}>{part}</span>
                                             )
                                         )}
                                     </div>
