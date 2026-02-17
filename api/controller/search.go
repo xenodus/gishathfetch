@@ -235,8 +235,10 @@ func cleanName(name, quality string, extraInfo []string) (string, []string) {
 	// if we have quality, remove it from name
 	if quality != "" {
 		cleanCardName = strings.Replace(cleanCardName, quality, "", -1)
-		cleanCardName = strings.Replace(cleanCardName, " -", "", -1)
-		cleanCardName = strings.Replace(cleanCardName, "- ", "", -1)
+
+		if idx := strings.LastIndex(cleanCardName, " -"); idx != -1 {
+			cleanCardName = cleanCardName[:idx]
+		}
 	}
 
 	// if string has [, get index of it to strip [*] away

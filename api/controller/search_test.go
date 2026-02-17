@@ -83,6 +83,13 @@ func TestCleanName(t *testing.T) {
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag2]", "(Tag1)"},
 		},
+		// Debug test case for user reported issue
+		"Trailing Text Mismatched Quality": {
+			name:              "Chocobo Camp (Borderless) [FINAL FANTASY Commander] - Near Mint Foil",
+			quality:           "Near Mint", // Only matches part of the suffix
+			expectedName:      "Chocobo Camp",
+			expectedExtraInfo: []string{"[FINAL FANTASY Commander]", "(Borderless)"},
+		},
 		"Name - Quality": {
 			name:    "Name - Quality",
 			quality: "Quality",
