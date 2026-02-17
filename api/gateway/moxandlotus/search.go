@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 )
 
@@ -177,7 +178,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 							Price:     price,
 							Source:    s.Name,
 							Img:       fmt.Sprintf(CardImageURL, card.ExpansionCode, fmt.Sprintf("%03d", cardNo)),
-							Quality:   cardWithCondition.Code,
+							Quality:   util.MapQuality(cardWithCondition.Code),
 							ExtraInfo: extraInfo,
 						})
 					}

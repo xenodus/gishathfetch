@@ -73,7 +73,7 @@ func (i impl) Search(storeName, storeBaseURL string, payload []byte) ([]gateway.
 						Price:     stock.Price,
 						Source:    storeName,
 						Img:       card.Img,
-						Quality:   stock.Title,
+						Quality:   strings.TrimSpace(strings.Replace(stock.Title, "Foil", "", -1)),
 						IsFoil:    strings.Contains(stock.Title, "Foil"),
 						ExtraInfo: []string{card.SetName},
 					})
