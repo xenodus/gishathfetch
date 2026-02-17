@@ -84,6 +84,7 @@ export default function App() {
 
       <SearchResults
         results={searchResults}
+        isSearching={isSearching}
         isCardInCart={isCardInCart}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
