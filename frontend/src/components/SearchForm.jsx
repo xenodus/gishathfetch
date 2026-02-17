@@ -52,7 +52,7 @@ const SearchForm = ({
 
                     {showSuggestions && suggestions.length > 0 && (
                         <div id="suggestions" className="suggestions d-block">
-                            {suggestions.map((s) => {
+                            {suggestions.map((s, suggestionIndex) => {
                                 // Escape query for regex and split suggestion into parts
                                 const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                                 const parts = s.split(new RegExp(`(${escapedQuery})`, 'gi'));
@@ -65,9 +65,9 @@ const SearchForm = ({
                                     >
                                         {parts.map((part, index) =>
                                             part.toLowerCase() === searchQuery.toLowerCase() ? (
-                                                <b key={`${index}-${part}`}>{part}</b>
+                                                <b key={`${suggestionIndex}-${index}`}>{part}</b>
                                             ) : (
-                                                <span key={`${index}-${part}`}>{part}</span>
+                                                <span key={`${suggestionIndex}-${index}`}>{part}</span>
                                             )
                                         )}
                                     </div>
