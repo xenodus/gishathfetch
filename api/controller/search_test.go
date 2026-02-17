@@ -42,51 +42,51 @@ func TestIsJapanese(t *testing.T) {
 
 func TestCleanName(t *testing.T) {
 	tests := map[string]struct {
-		name              string
-		quality           string
-		extraInfo         []string
+		name    string
+		quality string
+
 		expectedName      string
 		expectedExtraInfo []string
 	}{
 		"Name [Tag]": {
-			name:              "Name [Tag]",
-			quality:           "",
-			extraInfo:         []string{},
+			name:    "Name [Tag]",
+			quality: "",
+
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag]"},
 		},
 		"Name[Tag]": {
-			name:              "Name[Tag]",
-			quality:           "",
-			extraInfo:         []string{},
+			name:    "Name[Tag]",
+			quality: "",
+
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag]"},
 		},
 		"Name (Tag)": {
-			name:              "Name (Tag)",
-			quality:           "",
-			extraInfo:         []string{},
+			name:    "Name (Tag)",
+			quality: "",
+
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"(Tag)"},
 		},
 		"Name [Tag1] (Tag2)": {
-			name:              "Name [Tag1] (Tag2)",
-			quality:           "",
-			extraInfo:         []string{},
+			name:    "Name [Tag1] (Tag2)",
+			quality: "",
+
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag1] (Tag2)"},
 		},
 		"Name (Tag1) [Tag2]": {
-			name:              "Name (Tag1) [Tag2]",
-			quality:           "",
-			extraInfo:         []string{},
+			name:    "Name (Tag1) [Tag2]",
+			quality: "",
+
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag2]", "(Tag1)"},
 		},
 		"Name - Quality": {
-			name:              "Name - Quality",
-			quality:           "Quality",
-			extraInfo:         []string{},
+			name:    "Name - Quality",
+			quality: "Quality",
+
 			expectedName:      "Name",
 			expectedExtraInfo: nil,
 		},
@@ -94,7 +94,7 @@ func TestCleanName(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			gotName, gotExtra := cleanName(tt.name, tt.quality, tt.extraInfo)
+			gotName, gotExtra := cleanName(tt.name, tt.quality, nil)
 			if gotName != tt.expectedName {
 				t.Errorf("cleanName() gotName = %v, want %v", gotName, tt.expectedName)
 			}

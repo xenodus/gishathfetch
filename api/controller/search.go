@@ -252,5 +252,16 @@ func cleanName(name, quality string, extraInfo []string) (string, []string) {
 	}
 
 	cleanCardName = strings.TrimSpace(cleanCardName)
-	return cleanCardName, extraInfo
+
+	var extraInfoWithBrackets []string
+	if len(extraInfo) > 0 {
+		for _, info := range extraInfo {
+			if !strings.HasPrefix(info, "[") && !strings.HasPrefix(info, "(") {
+				extraInfoWithBrackets = append(extraInfoWithBrackets, "["+info+"]")
+			} else {
+				extraInfoWithBrackets = append(extraInfoWithBrackets, info)
+			}
+		}
+	}
+	return cleanCardName, extraInfoWithBrackets
 }

@@ -74,7 +74,7 @@ func (i impl) Search(storeName, storeBaseURL string, payload []byte) ([]gateway.
 						Source:    storeName,
 						Img:       card.Img,
 						Quality:   stock.Title,
-						ExtraInfo: []string{fmt.Sprintf("[%s]", card.SetName)},
+						ExtraInfo: []string{card.SetName},
 					})
 				}
 			}
