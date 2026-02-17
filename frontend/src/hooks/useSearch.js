@@ -22,6 +22,7 @@ export default function useSearch() {
     const [searchProgress, setSearchProgress] = useState("Search");
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [searchError, setSearchError] = useState(null);
     const [selectedStores, setSelectedStores] = useState(() => {
         // First check URL parameters for store override
         const urlParams = new URLSearchParams(window.location.search);
@@ -66,6 +67,7 @@ export default function useSearch() {
         setSearchProgress("Searching LGS");
         setSearchResults([]);
         setHasSearched(true);
+        setSearchError(null); // Clear previous errors
 
         if (window.gtag) {
             window.gtag('event', 'search', { 'search_term': query.toLowerCase() });
@@ -82,7 +84,12 @@ export default function useSearch() {
         }, SEARCH_PROGRESS_INTERVAL_MS);
 
         fetch(searchUrl)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status} ${res.statusText}`);
+                }
+                return res.json();
+            })
             .then(result => {
                 if (result && result.data) {
                     setSearchResults(result.data);
@@ -90,9 +97,23 @@ export default function useSearch() {
                     if (window.gtag) {
                         window.gtag('event', 'view_search_results', { 'search_term': query.toLowerCase() });
                     }
+                } else {
+                    throw new Error('Invalid response format from server');
                 }
             })
-            .catch(err => console.error("Search error:", err))
+            .catch(err => {
+                console.error("Search error:", err);
+                setSearchResults([]);
+
+                // Set user-friendly error message
+                if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+                    setSearchError('Unable to connect to the server. Please check your internet connection and try again.');
+                } else if (err.message.includes('Server error')) {
+                    setSearchError('The server is experiencing issues. Please try again later.');
+                } else {
+                    setSearchError('An error occurred while searching. Please try again.');
+                }
+            })
             .finally(() => {
                 setIsSearching(false);
                 setSearchProgress("Search");
@@ -115,7 +136,12 @@ export default function useSearch() {
         if (searchQuery.length > MIN_SEARCH_LENGTH - 1) {
             const timer = setTimeout(() => {
                 fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`)
-                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.ok) {
+                            throw new Error(`Autocomplete error: ${res.status}`);
+                        }
+                        return res.json();
+                    })
                     .then(res => {
                         if (res.data && res.data.length > 0) {
                             setSuggestions(res.data);
@@ -125,7 +151,12 @@ export default function useSearch() {
                             setShowSuggestions(false);
                         }
                     })
-                    .catch(err => console.error("Autocomplete error:", err));
+                    .catch(err => {
+                        console.error("Autocomplete error:", err);
+                        // Silently fail for autocomplete - not critical
+                        setSuggestions([]);
+                        setShowSuggestions(false);
+                    });
             }, AUTOCOMPLETE_DEBOUNCE_MS);
             return () => clearTimeout(timer);
         }
@@ -228,6 +259,7 @@ export default function useSearch() {
         hasSearched,
         searchResults,
         searchProgress,
+        searchError,
         suggestions,
         showSuggestions,
         setShowSuggestions,

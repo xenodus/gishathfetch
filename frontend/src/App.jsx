@@ -40,6 +40,7 @@ export default function App() {
     hasSearched,
     searchResults,
     searchProgress,
+    searchError,
     suggestions,
     showSuggestions,
     setShowSuggestions,
@@ -102,6 +103,7 @@ export default function App() {
         results={searchResults}
         isSearching={isSearching}
         hasSearched={hasSearched}
+        searchError={searchError}
         isCardInCart={isCardInCart}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
