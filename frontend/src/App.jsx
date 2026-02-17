@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import './index.css';
 
 // --- Modular Components ---
 import Header from './components/Header';
 import SearchForm from './components/SearchForm';
 import SearchResults from './components/SearchResults';
-import CartOffcanvas from './components/CartOffcanvas';
-import Modals from './components/Modals';
 import Footer from './components/Footer';
+
+const CartOffcanvas = lazy(() => import('./components/CartOffcanvas'));
+const Modals = lazy(() => import('./components/Modals'));
 
 // --- Constants ---
 import {
@@ -97,27 +98,29 @@ export default function App() {
         onShowFaq={() => setModalType('FAQ')}
       />
 
-      <CartOffcanvas
-        show={showCart}
-        onHide={() => setShowCart(false)}
-        cart={cart}
-        isCardInCart={isCardInCart}
-        removeFromCart={removeFromCart}
-        onSearchStore={handleCardSearch}
-        onClearCart={clearCart}
-        baseUrl={BASE_URL}
-      />
+      <Suspense fallback={null}>
+        <CartOffcanvas
+          show={showCart}
+          onHide={() => setShowCart(false)}
+          cart={cart}
+          isCardInCart={isCardInCart}
+          removeFromCart={removeFromCart}
+          onSearchStore={handleCardSearch}
+          onClearCart={clearCart}
+          baseUrl={BASE_URL}
+        />
 
-      <Modals
-        showMap={modalType === 'MAP'}
-        onHideMap={() => setModalType(null)}
-        showFaq={modalType === 'FAQ'}
-        onHideFaq={() => setModalType(null)}
-        showPrivacy={modalType === 'PRIVACY'}
-        onHidePrivacy={() => setModalType(null)}
-        onShowPrivacy={() => setModalType('PRIVACY')}
-        lgsMapData={LGS_MAP}
-      />
+        <Modals
+          showMap={modalType === 'MAP'}
+          onHideMap={() => setModalType(null)}
+          showFaq={modalType === 'FAQ'}
+          onHideFaq={() => setModalType(null)}
+          showPrivacy={modalType === 'PRIVACY'}
+          onHidePrivacy={() => setModalType(null)}
+          onShowPrivacy={() => setModalType('PRIVACY')}
+          lgsMapData={LGS_MAP}
+        />
+      </Suspense>
     </div>
   );
 }
