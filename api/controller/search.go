@@ -134,6 +134,9 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 					// if in substring, mark lgs as having result
 					if strings.Contains(lowerName, lowerSearchString) {
 						shopNameToHasResultMap[c.Source] = true
+					} else {
+						// skip card if not in substring
+						continue
 					}
 
 					// exact match
