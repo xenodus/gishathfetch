@@ -48,6 +48,7 @@ export default function useSearch() {
 
     // --- Helpers ---
     const skipSuggestionsRef = useRef(false);
+    const progressIntervalRef = useRef(null);
 
     const updateUrlAndTitle = (query) => {
         if (window.location.hostname !== "localhost") {
@@ -75,7 +76,7 @@ export default function useSearch() {
 
         const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query.toLowerCase())}&lgs=${encodeURIComponent(stores.join(','))}`;
 
-        let progressInterval = setInterval(() => {
+        progressIntervalRef.current = setInterval(() => {
             setSearchProgress(prev => {
                 const dots = (prev.match(/\./g) || []).length;
                 if (dots >= MAX_PROGRESS_DOTS) return "Searching LGS";
@@ -117,7 +118,10 @@ export default function useSearch() {
             .finally(() => {
                 setIsSearching(false);
                 setSearchProgress("Search");
-                clearInterval(progressInterval);
+                if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current);
+                    progressIntervalRef.current = null;
+                }
                 skipSuggestionsRef.current = false;
             });
     }, []);
