@@ -42,6 +42,7 @@ type Card struct {
 	Img       string  `json:"img"`
 	Price     float64 `json:"price"`
 	InStock   bool    `json:"inStock"`
+	IsFoil    bool    `json:"isFoil"`
 	Source    string  `json:"src"`
 	Quality   string  `json:"quality"`
 	ExtraInfo string  `json:"extraInfo"`
@@ -113,6 +114,7 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 						Img:       c.Img,
 						Price:     c.Price,
 						InStock:   c.InStock,
+						IsFoil:    c.IsFoil,
 						Source:    c.Source,
 						Quality:   c.Quality,
 						ExtraInfo: strings.TrimSpace(strings.Join(extraInfo, " ")),

@@ -92,6 +92,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					Name:      strings.TrimSpace(name),
 					Url:       strings.TrimSpace(cleanPageURL.String()),
 					InStock:   isInstock,
+					IsFoil:    strings.Contains(name, "FOIL"), // case sensitive
 					Price:     price,
 					Source:    s.Name,
 					Img:       strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),

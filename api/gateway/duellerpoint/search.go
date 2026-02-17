@@ -58,6 +58,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 					c.Img = StoreBaseURL + se3.Find("a.product-list-thumb img").AttrOr("src", "")
 				case 1:
 					c.Name = strings.TrimSpace(se3.Text())
+					c.IsFoil = strings.Contains(c.Name, "Foil") // case sensitive
 				case 2:
 					c.ExtraInfo = []string{fmt.Sprintf("[%s]", strings.TrimSpace(se3.Text()))}
 				case 3:

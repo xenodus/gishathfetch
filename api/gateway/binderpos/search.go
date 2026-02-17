@@ -74,6 +74,7 @@ func (i impl) Search(storeName, storeBaseURL string, payload []byte) ([]gateway.
 						Source:    storeName,
 						Img:       card.Img,
 						Quality:   stock.Title,
+						IsFoil:    strings.Contains(stock.Title, "Foil"),
 						ExtraInfo: []string{card.SetName},
 					})
 				}

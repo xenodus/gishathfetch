@@ -65,12 +65,13 @@ func scrapVariant5(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 
 				if price > 0 {
 					cards = append(cards, gateway.Card{
-						Name:    strings.TrimSpace(name),
-						Url:     strings.TrimSpace(cleanPageURL.String()),
-						InStock: true,
-						Price:   price,
-						Source:  storeName,
-						Img:     img,
+						Name:      strings.TrimSpace(name),
+						Url:       strings.TrimSpace(cleanPageURL.String()),
+						InStock:   true,
+						Price:     price,
+						Source:    storeName,
+						Img:       img,
+						ExtraInfo: []string{el.ChildText("div.collection-variant-display")},
 					})
 				}
 			}
@@ -207,6 +208,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 								Source:    storeName,
 								Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
 								Quality:   util.MapQuality(el2.Text),
+								IsFoil:    strings.Contains(strings.ToLower(el2.Attr("data-varianttitle")), "foil"),
 								ExtraInfo: []string{el.ChildText("p.productCard__setName")},
 							})
 						}
@@ -271,6 +273,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 										Source:    storeName,
 										Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
 										Quality:   util.MapQuality(el2.Text),
+										IsFoil:    strings.Contains(strings.ToLower(el2.Attr("data-varianttitle")), "foil"),
 										ExtraInfo: []string{el.ChildText("p.productCard__setName")},
 									})
 								}
@@ -344,7 +347,8 @@ func scrapVariant2(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 								Price:   float64(card.Price) / 100,
 								Source:  storeName,
 								Img:     strings.TrimSpace("https:" + imgUrl),
-								Quality: card.Title,
+								IsFoil:  strings.Contains(strings.ToLower(card.Title), "foil"),
+								Quality: strings.TrimSpace(strings.Replace(card.Title, "Foil", "", -1)),
 							})
 						}
 					}
@@ -397,7 +401,8 @@ func scrapVariant1(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 								Price:   price,
 								Source:  storeName,
 								Img:     strings.TrimSpace("https:" + el.ChildAttr("img", "src")),
-								Quality: quality,
+								Quality: strings.TrimSpace(strings.Replace(quality, "Foil", "", -1)),
+								IsFoil:  strings.Contains(strings.ToLower(quality), "foil"),
 							})
 						}
 					}

@@ -8,6 +8,7 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -50,7 +51,9 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		}
 
 		// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
-		c.Name = se.Find("h3.card__heading.h5 a").Text()
+		c.Name = strings.TrimSpace(strings.Replace(se.Find("h3.card__heading.h5 a").Text(), "[Foil]", "", -1))
+
+		c.IsFoil = strings.Contains(strings.ToLower(se.Find("h3.card__heading.h5 a").Text()), "[foil]")
 
 		c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
 		c.Img = se.Find("div.card__media img").AttrOr("src", "")

@@ -6,6 +6,7 @@ type Card struct {
 	Img       string
 	Price     float64
 	InStock   bool
+	IsFoil    bool
 	Source    string
 	Quality   string
 	ExtraInfo []string

@@ -2,6 +2,7 @@ package binderpos
 
 import (
 	"errors"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,6 +31,13 @@ func Test_Scrap(t *testing.T) {
 			baseUrl:      "https://onemtg.com.sg",
 			searchUrl:    "/search?q=%s",
 			searchStr:    "Abrade",
+		},
+		"variant 2 - CA": {
+			scrapVariant: 2,
+			storeName:    "Card Affinity",
+			baseUrl:      "https://card-affinity.com",
+			searchUrl:    "/search?q=%s",
+			searchStr:    "chocobo%20camp",
 		},
 		"variant 3": {
 			scrapVariant: 3,
@@ -84,6 +92,8 @@ func Test_Scrap(t *testing.T) {
 						require.NotEmpty(t, card.Img)
 						require.NotEmpty(t, card.Price)
 						require.Contains(t, card.Url, testArg.baseUrl+"/products/")
+
+						log.Println(card.Name)
 					}
 				}
 			}

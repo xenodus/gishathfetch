@@ -160,8 +160,10 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 						}
 
 						var extraInfo []string
+						var isFoil bool
 						if card.VariationCode == "foil" {
 							extraInfo = append(extraInfo, fmt.Sprintf("(%s)", card.VariationCode))
+							isFoil = true
 						}
 						if card.Expansion != "" {
 							extraInfo = append(extraInfo, fmt.Sprintf("[%s]", card.Expansion))
@@ -171,6 +173,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 							Name:      strings.TrimSpace(card.Title),
 							Url:       cleanPageURL.String(),
 							InStock:   true,
+							IsFoil:    isFoil,
 							Price:     price,
 							Source:    s.Name,
 							Img:       fmt.Sprintf(CardImageURL, card.ExpansionCode, fmt.Sprintf("%03d", cardNo)),
