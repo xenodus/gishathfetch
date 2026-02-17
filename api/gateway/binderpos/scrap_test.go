@@ -2,7 +2,6 @@ package binderpos
 
 import (
 	"errors"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -87,7 +86,6 @@ func Test_Scrap(t *testing.T) {
 						require.Contains(t, card.Url, testArg.baseUrl+"/products/")
 					}
 				}
-				log.Println(result)
 			}
 		})
 	}

@@ -206,7 +206,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 								Price:     price,
 								Source:    storeName,
 								Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-								Quality:   el2.Attr("data-varianttitle"),
+								Quality:   util.MapQuality(el2.Text),
 								ExtraInfo: []string{el.ChildText("p.productCard__setName")},
 							})
 						}
@@ -270,7 +270,7 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 										Price:     price,
 										Source:    storeName,
 										Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-										Quality:   el2.Attr("data-varianttitle"),
+										Quality:   util.MapQuality(el2.Text),
 										ExtraInfo: []string{el.ChildText("p.productCard__setName")},
 									})
 								}
