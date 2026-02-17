@@ -340,6 +340,11 @@ func scrapVariant2(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 								"utm_source": []string{config.UtmSource},
 							}.Encode()
 
+							// use placeholder if no image url detected
+							if strings.Contains(imgUrl, "no-image") {
+								imgUrl = fmt.Sprintf("//placehold.co/304x424?text=%s", url.QueryEscape(strings.TrimSpace(card.Name)))
+							}
+
 							cards = append(cards, gateway.Card{
 								Name:    strings.TrimSpace(card.Name),
 								Url:     strings.TrimSpace(cleanPageURL.String()),
@@ -371,12 +376,23 @@ func scrapVariant1(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {
 			var isInstock bool
 
-			if len(el.ChildTexts("div.addNow")) > 0 {
-				for i := 0; i < len(el.ChildTexts("div.addNow")); i++ {
-					isInstock = el.ChildTexts("div.addNow")[i] != ""
+			addNowTexts := el.ChildTexts("div.addNow")
+			addNowAttrs := el.ChildAttrs("div.addNow", "onclick")
+
+			if len(addNowTexts) > 0 {
+				for i := 0; i < len(addNowTexts); i++ {
+					isInstock = addNowTexts[i] != ""
 
 					if isInstock {
-						priceStr := strings.TrimSpace(el.ChildTexts("div.addNow")[i])
+						priceStr := strings.TrimSpace(addNowTexts[i])
+
+						variantId := ""
+						if i < len(addNowAttrs) {
+							parts := strings.Split(addNowAttrs[i], "'")
+							if len(parts) > 1 {
+								variantId = parts[1]
+							}
+						}
 
 						price, quality, err := parsePriceAndQuality(priceStr)
 						if err != nil {
@@ -389,9 +405,14 @@ func scrapVariant1(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 							log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
 							return
 						}
-						cleanPageURL.RawQuery = url.Values{
+
+						rawQuery := url.Values{
 							"utm_source": []string{config.UtmSource},
-						}.Encode()
+						}
+						if variantId != "" {
+							rawQuery.Add("variant", variantId)
+						}
+						cleanPageURL.RawQuery = rawQuery.Encode()
 
 						if price > 0 {
 							cards = append(cards, gateway.Card{
