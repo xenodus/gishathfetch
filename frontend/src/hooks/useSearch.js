@@ -1,15 +1,49 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { API_BASE_URL, LGS_OPTIONS, BASE_URL } from '../constants';
 
+// Search configuration constants
+const MIN_SEARCH_LENGTH = 3;
+const AUTOCOMPLETE_DEBOUNCE_MS = 300;
+const SEARCH_PROGRESS_INTERVAL_MS = 1000;
+const MAX_PROGRESS_DOTS = 15;
+
+
 export default function useSearch() {
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('s') && urlParams.get('s') !== "") {
+            return decodeURIComponent(urlParams.get('s'));
+        }
+        return "";
+    });
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState([]);
     const [hasSearched, setHasSearched] = useState(false);
     const [searchProgress, setSearchProgress] = useState("Search");
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [selectedStores, setSelectedStores] = useState(LGS_OPTIONS);
+    const [selectedStores, setSelectedStores] = useState(() => {
+        // First check URL parameters for store override
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('src') && LGS_OPTIONS.includes(decodeURIComponent(urlParams.get('src')))) {
+            const stores = [decodeURIComponent(urlParams.get('src'))];
+            // Save to localStorage for URL-based navigation
+            try {
+                localStorage.setItem("lgsSelected", encodeURIComponent(stores.join(",")));
+            } catch (err) {
+                console.error("Failed to save selected stores:", err);
+            }
+            return stores;
+        }
+
+        // Otherwise check localStorage
+        const storedLgs = localStorage.getItem('lgsSelected');
+        if (storedLgs !== null) {
+            const decoded = decodeURIComponent(storedLgs);
+            return decoded === "" ? [] : decoded.split(",");
+        }
+        return LGS_OPTIONS;
+    });
 
     // --- Helpers ---
     const skipSuggestionsRef = useRef(false);
@@ -23,7 +57,7 @@ export default function useSearch() {
     };
 
     const performSearch = useCallback((query, stores) => {
-        if (!query || query.length < 3) return;
+        if (!query || query.length < MIN_SEARCH_LENGTH) return;
 
         setIsSearching(true);
         setSearchProgress("Searching LGS");
@@ -39,10 +73,10 @@ export default function useSearch() {
         let progressInterval = setInterval(() => {
             setSearchProgress(prev => {
                 const dots = (prev.match(/\./g) || []).length;
-                if (dots >= 15) return "Searching LGS";
+                if (dots >= MAX_PROGRESS_DOTS) return "Searching LGS";
                 return prev + " .";
             });
-        }, 1000);
+        }, SEARCH_PROGRESS_INTERVAL_MS);
 
         fetch(searchUrl)
             .then(res => res.json())
@@ -75,23 +109,24 @@ export default function useSearch() {
             return;
         }
 
-        if (searchQuery.length > 2) {
+        if (searchQuery.length > MIN_SEARCH_LENGTH - 1) {
             const timer = setTimeout(() => {
                 fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`)
                     .then(res => res.json())
                     .then(res => {
-                        if (res.data) {
+                        if (res.data && res.data.length > 0) {
                             setSuggestions(res.data);
                             setShowSuggestions(true);
+                        } else {
+                            setSuggestions([]);
+                            setShowSuggestions(false);
                         }
                     })
                     .catch(err => console.error("Autocomplete error:", err));
-            }, 300);
+            }, AUTOCOMPLETE_DEBOUNCE_MS);
             return () => clearTimeout(timer);
-        } else {
-            setSuggestions([]);
-            setShowSuggestions(false);
         }
+        // When searchQuery is too short, suggestions will naturally be empty from previous state
     }, [searchQuery]);
 
     const handleSuggestionClick = (suggestion) => {
@@ -103,7 +138,11 @@ export default function useSearch() {
         if (selectedStores.length === 0) {
             storesToSearch = LGS_OPTIONS;
             setSelectedStores(LGS_OPTIONS);
-            localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+            try {
+                localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+            } catch (err) {
+                console.error("Failed to save selected stores:", err);
+            }
         }
         performSearch(suggestion, storesToSearch);
     };
@@ -116,7 +155,11 @@ export default function useSearch() {
         if (selectedStores.length === 0) {
             storesToSearch = LGS_OPTIONS;
             setSelectedStores(LGS_OPTIONS);
-            localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+            try {
+                localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+            } catch (err) {
+                console.error("Failed to save selected stores:", err);
+            }
         }
 
         performSearch(searchQuery, storesToSearch);
@@ -127,42 +170,47 @@ export default function useSearch() {
             ? selectedStores.filter(s => s !== store)
             : [...selectedStores, store];
         setSelectedStores(newStores);
-        localStorage.setItem("lgsSelected", encodeURIComponent(newStores.join(",")));
+        try {
+            localStorage.setItem("lgsSelected", encodeURIComponent(newStores.join(",")));
+        } catch (err) {
+            console.error("Failed to save selected stores:", err);
+        }
     };
 
     const selectAllStores = () => {
         setSelectedStores(LGS_OPTIONS);
-        localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+        try {
+            localStorage.setItem("lgsSelected", encodeURIComponent(LGS_OPTIONS.join(",")));
+        } catch (err) {
+            console.error("Failed to save selected stores:", err);
+        }
     };
 
     const selectNoStores = () => {
         setSelectedStores([]);
-        localStorage.setItem("lgsSelected", encodeURIComponent(""));
+        try {
+            localStorage.setItem("lgsSelected", encodeURIComponent(""));
+        } catch (err) {
+            console.error("Failed to save selected stores:", err);
+        }
     };
 
     // --- Initialization ---
+    // Note: performSearch is included in deps but is stable (empty dep array in useCallback)
     useEffect(() => {
-        const storedLgs = localStorage.getItem('lgsSelected');
-        if (storedLgs !== null) {
-            const decoded = decodeURIComponent(storedLgs);
-            setSelectedStores(decoded === "" ? [] : decoded.split(","));
-        }
-
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('s') && urlParams.get('s') !== "") {
             const q = decodeURIComponent(urlParams.get('s'));
             skipSuggestionsRef.current = true;
-            setSearchQuery(q);
 
-            let stores = LGS_OPTIONS;
-            if (urlParams.has('src') && LGS_OPTIONS.includes(decodeURIComponent(urlParams.get('src')))) {
-                stores = [decodeURIComponent(urlParams.get('src'))];
-                setSelectedStores(stores);
-                localStorage.setItem("lgsSelected", encodeURIComponent(stores.join(",")));
-            }
+            // Determine which stores to search (URL param takes precedence, already set in state initialization)
+            const stores = urlParams.has('src') && LGS_OPTIONS.includes(decodeURIComponent(urlParams.get('src')))
+                ? [decodeURIComponent(urlParams.get('src'))]
+                : selectedStores;
+
             setTimeout(() => performSearch(q, stores), 100);
         }
-    }, [performSearch]);
+    }, [performSearch, selectedStores]);
 
     return {
         searchQuery,

@@ -52,7 +52,7 @@ const SearchForm = ({
 
                     {showSuggestions && suggestions.length > 0 && (
                         <div id="suggestions" className="suggestions d-block">
-                            {suggestions.map((s, i) => {
+                            {suggestions.map((s) => {
                                 // Escape query for regex and split suggestion into parts
                                 const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                                 const parts = s.split(new RegExp(`(${escapedQuery})`, 'gi'));

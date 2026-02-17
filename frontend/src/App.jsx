@@ -14,7 +14,8 @@ const Modals = lazy(() => import('./components/Modals'));
 import {
   LGS_OPTIONS,
   LGS_MAP,
-  BASE_URL
+  BASE_URL,
+  MIN_SEARCH_LENGTH
 } from './constants';
 
 // --- Hooks ---
@@ -74,7 +75,7 @@ export default function App() {
         suggestions={suggestions}
         showSuggestions={showSuggestions}
         onSuggestionClick={handleSuggestionClick}
-        onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
+        onFocus={() => searchQuery.length > MIN_SEARCH_LENGTH - 1 && setShowSuggestions(true)}
         isSearching={isSearching}
         searchProgress={searchProgress}
         lgsOptions={LGS_OPTIONS}

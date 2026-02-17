@@ -137,6 +137,8 @@ export const LGS_MAP = [
     }
 ];
 
+export const MIN_SEARCH_LENGTH = 3;
+
 export const API_BASE_URL = (window.location.hostname === "staging.gishathfetch.com" || window.location.hostname === "localhost")
     ? "https://staging-api.gishathfetch.com/"
     : "https://api.gishathfetch.com/";
