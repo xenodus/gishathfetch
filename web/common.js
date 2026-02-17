@@ -322,15 +322,15 @@ let topBtnHtml = `<a href="#map-list" class="btn btn-primary" role="button">Back
 let closeBtnHtml = `<button type="button" class="btn btn-secondary" style="margin-left: 7px;" data-bs-dismiss="modal">Close</button>`;
 
 mapListHtml += `<div class="mb-4"><ul style="padding-left: 1rem">`;
-for(let i = 0; i < lgsMap.length; i++) {
-    mapListHtml += `<li><a href="#`+lgsMap[i].id+`" class="link-offset-2" alt="`+lgsMap[i].name+`">`+lgsMap[i].name+`</a></li>`;
+for (let i = 0; i < lgsMap.length; i++) {
+    mapListHtml += `<li><a href="#` + lgsMap[i].id + `" class="link-offset-2" alt="` + lgsMap[i].name + `">` + lgsMap[i].name + `</a></li>`;
     mapItemsHtml += `
-        <div id="`+lgsMap[i].id+`" class="mb-4 map-item">
-            <h5>`+lgsMap[i].name+`</h5>
-            <div class="mb-2">`+lgsMap[i].address+`</div>
-            <div class="mb-2"><a href="`+lgsMap[i].website+`" target="_blank">`+lgsMap[i].website+`</a></div>
-            <iframe class="w-100 h-100 border border-dark mb-3" src="`+lgsMap[i].iframe+`" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-            <div>`+topBtnHtml+closeBtnHtml+`</div>
+        <div id="`+ lgsMap[i].id + `" class="mb-4 map-item">
+            <h5>`+ lgsMap[i].name + `</h5>
+            <div class="mb-2">`+ lgsMap[i].address + `</div>
+            <div class="mb-2"><a href="`+ lgsMap[i].website + `" target="_blank">` + lgsMap[i].website + `</a></div>
+            <iframe class="w-100 h-100 border border-dark mb-3" src="`+ lgsMap[i].iframe + `" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div>`+ topBtnHtml + closeBtnHtml + `</div>
         </div>    
     `;
 }
@@ -344,7 +344,7 @@ updateCartNo();
 updateCartPage();
 
 function setVersionAndClearStorage() {
-    if(localStorage.getItem('version') !== null && localStorage.getItem('version') !== undefined && localStorage.getItem('version') !== "") {
+    if (localStorage.getItem('version') !== null && localStorage.getItem('version') !== undefined && localStorage.getItem('version') !== "") {
         if (localStorage.getItem("version") !== version) {
             // clear storage from previous version if needed
         }
@@ -353,14 +353,14 @@ function setVersionAndClearStorage() {
 }
 
 function onloadCart() {
-    if(localStorage.getItem('cart') !== null && localStorage.getItem('cart') !== undefined && localStorage.getItem('cart') !== "") {
+    if (localStorage.getItem('cart') !== null && localStorage.getItem('cart') !== undefined && localStorage.getItem('cart') !== "") {
         cart = JSON.parse(localStorage.getItem('cart'));
     }
 }
 
 function removeFromCart(index) {
     // get from storage first in case multiple tabs add / removing
-    if(localStorage.getItem('cart') !== null && localStorage.getItem('cart') !== undefined && localStorage.getItem('cart') !== "") {
+    if (localStorage.getItem('cart') !== null && localStorage.getItem('cart') !== undefined && localStorage.getItem('cart') !== "") {
         cart = JSON.parse(localStorage.getItem('cart'));
     } else {
         cart = [];
@@ -380,31 +380,47 @@ function updateCartPage() {
     if (cart.length > 0) {
         html += `<div class="row">`;
 
-        for(let i=0; i<cart.length; i++) {
-            let removeFromCartBtn = `<button data-index="`+i+`" type="button" class="removeFromCartBtn btn btn-danger btn-sm removeFromCartBtn"><i data-feather="trash-2" class="cartIcon"></i> Remove</button>`;
-            let searchBtn = `<a href="/?s=`+encodeURIComponent(cart[i]["name"])+`&src=`+encodeURIComponent(cart[i]["src"])+`" class="btn btn-primary btn-sm cartSearchBtn ms-1"><i data-feather="search" class="cartIcon"></i> Search</a>`;
+        for (let i = 0; i < cart.length; i++) {
+            let removeFromCartBtn = `<button data-index="` + i + `" type="button" class="removeFromCartBtn btn btn-danger btn-sm removeFromCartBtn"><i data-feather="trash-2" class="cartIcon"></i> Remove</button>`;
+            let searchBtn = `<a href="/?s=` + encodeURIComponent(cart[i]["name"]) + `&src=` + encodeURIComponent(cart[i]["src"]) + `" class="btn btn-primary btn-sm cartSearchBtn ms-1"><i data-feather="search" class="cartIcon"></i> Search</a>`;
+
+            let qualityFoilDisp = "";
+            if (cart[i].hasOwnProperty("quality") && cart[i]["quality"] !== "") {
+                qualityFoilDisp += "≪ " + cart[i]["quality"] + " ≫";
+            }
+            if (cart[i].hasOwnProperty("isFoil") && cart[i]["isFoil"] === true) {
+                if (qualityFoilDisp !== "") {
+                    qualityFoilDisp += " ";
+                }
+                qualityFoilDisp += "≪ FOIL ≫";
+            }
+
+            let qualityFoilHtml = "";
+            if (qualityFoilDisp !== "") {
+                qualityFoilHtml = `<div class="fs-6 lh-sm fw-bold mb-1">` + qualityFoilDisp + `</div>`;
+            }
 
             html += `
             <div class="col-6 mb-3">
                 <div class="text-center mb-2">
-                    <a href="`+cart[i]["url"]+`" target="_blank">
-                        <img src="`+(cart[i]["img"]===""?`https://placehold.co/304x424?text=`+cart[i]["name"]:cart[i]["img"])+`" loading="lazy" class="img-fluid w-100" alt="`+cart[i]["name"]+`"/>
+                    <a href="`+ cart[i]["url"] + `" target="_blank">
+                        <img src="`+ (cart[i]["img"] === "" ? `https://placehold.co/304x424?text=` + cart[i]["name"] : cart[i]["img"]) + `" loading="lazy" class="img-fluid w-100" alt="` + cart[i]["name"] + `"/>
                     </a>
                 </div>
                 <div class="text-center">
-                    <div class="fs-6 lh-sm fw-bold mb-1">`+cart[i]["name"]+`</div>
-                    `+((cart[i].hasOwnProperty("extraInfo") && cart[i]["extraInfo"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">`+cart[i]["extraInfo"]+`</div>`:``)+`                    
-                    `+((cart[i].hasOwnProperty("quality") && cart[i]["quality"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">≪ `+cart[i]["quality"]+` ≫</div>`:``)+`
-                    <div class="fs-6 lh-sm">S$ `+cart[i]["price"].toFixed(2)+`</div>
-                    <div class="mb-2"><a href="`+cart[i]["url"]+`" target="_blank" class="link-offset-2">`+cart[i]["src"]+`</a></div>
-                    <div>`+removeFromCartBtn+searchBtn+`</div>
+                    <div class="fs-6 lh-sm fw-bold mb-1">`+ cart[i]["name"] + `</div>
+                    `+ ((cart[i].hasOwnProperty("extraInfo") && cart[i]["extraInfo"] !== "") ? `<div class="fs-6 lh-sm fw-bold mb-1">` + cart[i]["extraInfo"] + `</div>` : ``) + `                    
+                    `+ qualityFoilHtml + `
+                    <div class="fs-6 lh-sm">S$ `+ cart[i]["price"].toFixed(2) + `</div>
+                    <div class="mb-2"><a href="`+ cart[i]["url"] + `" target="_blank" class="link-offset-2">` + cart[i]["src"] + `</a></div>
+                    <div>`+ removeFromCartBtn + searchBtn + `</div>
                 </div>
             </div>
             `;
         }
         html += `</div>`;
 
-        if (cart.length >=2) {
+        if (cart.length >= 2) {
             html += `<div class="mt-5"><button type="button" id="clearCartBtn" class="btn btn-danger w-100 text-uppercase">Remove all saved cards</button></div>`;
         }
     } else {
@@ -428,8 +444,8 @@ function updateCartNo() {
 
 function removeCartEventListeners() {
     let removeFromCartBtns = document.querySelectorAll("button.removeFromCartBtn");
-    removeFromCartBtns.forEach(function(elem) {
-        elem.addEventListener("click", function() {
+    removeFromCartBtns.forEach(function (elem) {
+        elem.addEventListener("click", function () {
             if (this.getAttribute("data-index") !== "") {
                 removeFromCart(this.getAttribute("data-index"));
                 updateCartPage();
@@ -439,8 +455,8 @@ function removeCartEventListeners() {
 
     let emptyCartBtn = document.getElementById("clearCartBtn");
     if (emptyCartBtn !== null) {
-        emptyCartBtn.addEventListener("click", function() {
-            if(confirm("Are you sure you want to remove all saved cards?")) {
+        emptyCartBtn.addEventListener("click", function () {
+            if (confirm("Are you sure you want to remove all saved cards?")) {
                 if (cart.length > 0) {
                     cart = [];
                     localStorage.removeItem("cart");

@@ -266,6 +266,22 @@ function searchCard(event) {
                                     addToCartBtn = `<button type="button" class="btn btn-success btn-sm addCartBtn" disabled>` + alreadyInCartBtnHtml + ` </button>`;
                                 }
 
+                                let qualityFoilDisp = "";
+                                if (result["data"][i].hasOwnProperty("quality") && result["data"][i]["quality"] !== "") {
+                                    qualityFoilDisp += "≪ " + result["data"][i]["quality"] + " ≫";
+                                }
+                                if (result["data"][i].hasOwnProperty("isFoil") && result["data"][i]["isFoil"] === true) {
+                                    if (qualityFoilDisp !== "") {
+                                        qualityFoilDisp += " ";
+                                    }
+                                    qualityFoilDisp += "≪ FOIL ≫";
+                                }
+
+                                let qualityFoilHtml = "";
+                                if (qualityFoilDisp !== "") {
+                                    qualityFoilHtml = `<div class="fs-6 lh-sm fw-bold mb-1">` + qualityFoilDisp + `</div>`;
+                                }
+
                                 let h = `
                                   <div class="col-lg-3 col-6 mb-4">
                                     <div class="text-center mb-2">
@@ -276,7 +292,7 @@ function searchCard(event) {
                                     <div class="text-center">
                                       <div class="fs-6 lh-sm fw-bold mb-1">`+ result["data"][i]["name"] + `</div>
                                       `+ ((result["data"][i].hasOwnProperty("extraInfo") && result["data"][i]["extraInfo"] !== "") ? `<div class="fs-6 lh-sm fw-bold mb-1">` + result["data"][i]["extraInfo"] + `</div>` : ``) + `
-                                      `+ ((result["data"][i].hasOwnProperty("quality") && result["data"][i]["quality"] !== "") ? `<div class="fs-6 lh-sm fw-bold mb-1">≪ ` + result["data"][i]["quality"] + ` ≫</div>` : ``) + `
+                                      `+ qualityFoilHtml + `
                                       <div class="fs-6 lh-sm">S$ `+ result["data"][i]["price"].toFixed(2) + `</div>
                                       <div class="mb-2"><a href="`+ result["data"][i]["url"] + `" target="_blank" class="link-offset-2">` + result["data"][i]["src"] + `</a></div>
                                       <div>`+ addToCartBtn + `</div>
