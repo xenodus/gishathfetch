@@ -47,14 +47,14 @@ export default function useSearch() {
     });
 
     // --- Helpers ---
-    const skipSuggestionsRef = useRef(false);
+    const skipSuggestionsRef = useRef(new URLSearchParams(window.location.search).has('s'));
     const progressIntervalRef = useRef(null);
 
     const updateUrlAndTitle = (query) => {
         if (window.location.hostname !== "localhost") {
-            const newUrl = `${BASE_URL}?s=${encodeURIComponent(query.toLowerCase())}`;
-            window.history.pushState(query.toLowerCase(), `${query.toLowerCase()} | Gishath Fetch`, newUrl);
-            document.title = `${query.toLowerCase()} | Gishath Fetch`;
+            const newUrl = `${BASE_URL}?s=${encodeURIComponent(query)}`;
+            window.history.pushState(query, `${query} @ Gishath Fetch`, newUrl);
+            document.title = `${query} @ Gishath Fetch`;
         }
     };
 
@@ -71,10 +71,10 @@ export default function useSearch() {
         setSearchError(null); // Clear previous errors
 
         if (window.gtag) {
-            window.gtag('event', 'search', { 'search_term': query.toLowerCase() });
+            window.gtag('event', 'search', { 'search_term': query });
         }
 
-        const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query.toLowerCase())}&lgs=${encodeURIComponent(stores.join(','))}`;
+        const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(','))}`;
 
         progressIntervalRef.current = setInterval(() => {
             setSearchProgress(prev => {
@@ -97,7 +97,7 @@ export default function useSearch() {
                     setSearchResults(result.data || []);
                     updateUrlAndTitle(query);
                     if (window.gtag) {
-                        window.gtag('event', 'view_search_results', { 'search_term': query.toLowerCase() });
+                        window.gtag('event', 'view_search_results', { 'search_term': query });
                     }
                 } else {
                     throw new Error('Invalid response format from server');
@@ -140,6 +140,8 @@ export default function useSearch() {
 
         if (searchQuery.length > MIN_SEARCH_LENGTH - 1) {
             const timer = setTimeout(() => {
+                if (skipSuggestionsRef.current) return;
+
                 fetch(`https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`)
                     .then(res => {
                         if (!res.ok) {
