@@ -225,6 +225,7 @@ export default function useSearch() {
         showSuggestions,
         setShowSuggestions,
         selectedStores,
+        setSelectedStores,
         handleQueryChange,
         handleSuggestionClick,
         handleSearchSubmit,

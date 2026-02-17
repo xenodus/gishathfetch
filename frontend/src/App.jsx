@@ -44,6 +44,7 @@ export default function App() {
     showSuggestions,
     setShowSuggestions,
     selectedStores,
+    setSelectedStores,
     handleQueryChange,
     handleSuggestionClick,
     handleSearchSubmit,
@@ -61,8 +62,18 @@ export default function App() {
     setSearchQuery(cardName);
     setShowCart(false);
     setShowSuggestions(false); // Close suggestions dropdown
-    performSearch(cardName, [sourceStore]);
-  }, [performSearch, setSearchQuery, setShowCart, setShowSuggestions]);
+
+    // Update selected stores to show only the source store in checkboxes
+    const storeArray = [sourceStore];
+    setSelectedStores(storeArray);
+    try {
+      localStorage.setItem("lgsSelected", encodeURIComponent(storeArray.join(",")));
+    } catch (err) {
+      console.error("Failed to save selected stores:", err);
+    }
+
+    performSearch(cardName, storeArray);
+  }, [performSearch, setSearchQuery, setShowCart, setShowSuggestions, setSelectedStores]);
 
   // --- Main Render ---
   return (
