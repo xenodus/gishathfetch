@@ -71,7 +71,7 @@ function setupEventListeners() {
     // Search
     form.addEventListener("submit", searchCard);
 
-    document.addEventListener("keypress", function(event) {
+    document.addEventListener("keypress", function (event) {
         if (event.code === "Enter") {
             event.preventDefault();
             submitBtn.click();
@@ -79,14 +79,14 @@ function setupEventListeners() {
     });
 
     // Check all lgs checkboxes
-    allBtn.addEventListener("click", function() {
-        for(let i=0; i<lgsCheckboxes.length; i++) {
+    allBtn.addEventListener("click", function () {
+        for (let i = 0; i < lgsCheckboxes.length; i++) {
             lgsCheckboxes[i].checked = true;
         }
     });
 
     // Uncheck all lgs checkboxes
-    noneBtn.addEventListener("click", function() {
+    noneBtn.addEventListener("click", function () {
         for (let i = 0; i < lgsCheckboxes.length; i++) {
             lgsCheckboxes[i].checked = false;
         }
@@ -141,19 +141,19 @@ function appendLgsCheckboxes() {
     }
 
     lgsCheckboxesDiv.innerHTML = '';
-    for(let i=0; i<lgsOptions.length; i++) {
+    for (let i = 0; i < lgsOptions.length; i++) {
         let isChecked = lgsSelected.includes(lgsOptions[i]) ? "checked" : "";
         lgsCheckboxesDiv.innerHTML += `
                 <div class="form-check form-check-inline">
-                  <input class="form-check-input" type="checkbox" id="lgsCheckbox`+i+`" class="lgsCheckboxes" value="`+lgsOptions[i]+`" name="lgs[]" `+isChecked+`>
-                  <label class="form-check-label" for="lgsCheckbox`+i+`">`+lgsOptions[i]+`</label>
+                  <input class="form-check-input" type="checkbox" id="lgsCheckbox`+ i + `" class="lgsCheckboxes" value="` + lgsOptions[i] + `" name="lgs[]" ` + isChecked + `>
+                  <label class="form-check-label" for="lgsCheckbox`+ i + `">` + lgsOptions[i] + `</label>
                 </div>
               `;
     }
 }
 
 function clearTimeouts() {
-    for (let i=0; i<timeouts.length; i++) {
+    for (let i = 0; i < timeouts.length; i++) {
         clearTimeout(timeouts[i]);
     }
 }
@@ -162,8 +162,8 @@ function clearTimeouts() {
 function updateSubmitBtnProgress() {
     submitBtn.innerHTML = "Searching LGS"
 
-    for(let i=1; i<=15; i++){
-        timeouts.push(window.setTimeout(function(){
+    for (let i = 1; i <= 15; i++) {
+        timeouts.push(window.setTimeout(function () {
             submitBtn.innerHTML += " ."
         }, i * 1000));
     }
@@ -209,7 +209,7 @@ function searchCard(event) {
 
     let lgsSelected = [];
 
-    for(let i=0; i<lgsCheckboxes.length; i++) {
+    for (let i = 0; i < lgsCheckboxes.length; i++) {
         if (lgsCheckboxes[i].checked) {
             lgsSelected.push(lgsCheckboxes[i].value)
         }
@@ -217,7 +217,7 @@ function searchCard(event) {
 
     if (lgsSelected.length === 0) {
         lgsSelected = lgsOptions;
-        for(let i=0; i<lgsCheckboxes.length; i++) {
+        for (let i = 0; i < lgsCheckboxes.length; i++) {
             lgsCheckboxes[i].checked = true;
         }
     }
@@ -228,7 +228,7 @@ function searchCard(event) {
     resetResult();
 
     let request = new XMLHttpRequest();
-    let searchQueryString = "?s="+encodeURIComponent(searchStr.toLowerCase());
+    let searchQueryString = "?s=" + encodeURIComponent(searchStr.toLowerCase());
     let searchUrl = apiBaseUrl + searchQueryString
     searchUrl += "&lgs=" + encodeURIComponent(lgsSelected.join(','));
 
@@ -239,7 +239,7 @@ function searchCard(event) {
 
     updateSubmitBtnProgress();
 
-    request.onreadystatechange = function() {
+    request.onreadystatechange = function () {
         if (request.readyState === XMLHttpRequest.DONE) {
             let resultCount = 0;
 
@@ -253,7 +253,7 @@ function searchCard(event) {
                         searchResults = result["data"];
                         updatePageUrlTitle(searchStr, baseUrl + searchQueryString);
                         let html = `<div class="row">`;
-                        for(let i = 0; i < result["data"].length; i++) {
+                        for (let i = 0; i < result["data"].length; i++) {
                             if (result["data"][i].hasOwnProperty("url")
                                 && result["data"][i].hasOwnProperty("img")
                                 && result["data"][i].hasOwnProperty("name")
@@ -261,30 +261,30 @@ function searchCard(event) {
                                 && result["data"][i].hasOwnProperty("src")) {
 
                                 // add to cart btn state
-                                let addToCartBtn = `<button data-index="`+i+`" type="button" class="addToCartBtn btn btn-primary btn-sm addCartBtn"><i data-feather="folder-plus" class="cartIcon"></i> Save</button>`;
+                                let addToCartBtn = `<button data-index="` + i + `" type="button" class="addToCartBtn btn btn-primary btn-sm addCartBtn"><i data-feather="folder-plus" class="cartIcon"></i> Save</button>`;
                                 if (existsInCart(result["data"][i]) === true) {
-                                    addToCartBtn = `<button type="button" class="btn btn-success btn-sm addCartBtn" disabled>`+alreadyInCartBtnHtml+` </button>`;
+                                    addToCartBtn = `<button type="button" class="btn btn-success btn-sm addCartBtn" disabled>` + alreadyInCartBtnHtml + ` </button>`;
                                 }
 
                                 let h = `
                                   <div class="col-lg-3 col-6 mb-4">
                                     <div class="text-center mb-2">
-                                      <a href="`+result["data"][i]["url"]+`" target="_blank">
-                                        <img src="`+(result["data"][i]["img"]===""?`https://placehold.co/304x424?text=`+result["data"][i]["name"]:result["data"][i]["img"])+`" loading="lazy" class="img-fluid w-100" alt="`+result["data"][i]["name"]+`"/>
+                                      <a href="`+ result["data"][i]["url"] + `" target="_blank">
+                                        <img src="`+ (result["data"][i]["img"] === "" ? `https://placehold.co/304x424?text=` + result["data"][i]["name"] : result["data"][i]["img"]) + `" loading="lazy" class="img-fluid w-100" alt="` + result["data"][i]["name"] + `"/>
                                       </a>
                                     </div>
                                     <div class="text-center">
-                                      <div class="fs-6 lh-sm fw-bold mb-1">`+result["data"][i]["name"]+`</div>
-                                      `+((result["data"][i].hasOwnProperty("extraInfo") && result["data"][i]["extraInfo"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">`+result["data"][i]["extraInfo"]+`</div>`:``)+`
-                                      `+((result["data"][i].hasOwnProperty("quality") && result["data"][i]["quality"]!=="")?`<div class="fs-6 lh-sm fw-bold mb-1">≪ `+result["data"][i]["quality"]+` ≫</div>`:``)+`
-                                      <div class="fs-6 lh-sm">S$ `+result["data"][i]["price"].toFixed(2)+`</div>
-                                      <div class="mb-2"><a href="`+result["data"][i]["url"]+`" target="_blank" class="link-offset-2">`+result["data"][i]["src"]+`</a></div>
-                                      <div>`+addToCartBtn+`</div>
+                                      <div class="fs-6 lh-sm fw-bold mb-1">`+ result["data"][i]["name"] + `</div>
+                                      `+ ((result["data"][i].hasOwnProperty("extraInfo") && result["data"][i]["extraInfo"] !== "") ? `<div class="fs-6 lh-sm fw-bold mb-1">` + result["data"][i]["extraInfo"] + `</div>` : ``) + `
+                                      `+ ((result["data"][i].hasOwnProperty("quality") && result["data"][i]["quality"] !== "") ? `<div class="fs-6 lh-sm fw-bold mb-1">≪ ` + result["data"][i]["quality"] + ` ≫</div>` : ``) + `
+                                      <div class="fs-6 lh-sm">S$ `+ result["data"][i]["price"].toFixed(2) + `</div>
+                                      <div class="mb-2"><a href="`+ result["data"][i]["url"] + `" target="_blank" class="link-offset-2">` + result["data"][i]["src"] + `</a></div>
+                                      <div>`+ addToCartBtn + `</div>
                                     </div>
                                   </div>`;
 
                                 // Only place in content if result count > 8
-                                if (result["data"].length > 8 && (((i+1)%8) === 0) && (i+1 !== result["data"].length)) {
+                                if (result["data"].length > 8 && (((i + 1) % 8) === 0) && (i + 1 !== result["data"].length)) {
                                     h += contentAd;
                                 }
 
@@ -308,7 +308,7 @@ function searchCard(event) {
                 // Handle error
             }
 
-            resultCountDiv.innerHTML = `<div class="py-2">`+resultCount+` result`+(resultCount>1?"s":"")+` found</div>`;
+            resultCountDiv.innerHTML = `<div class="py-2">` + resultCount + ` result` + (resultCount > 1 ? "s" : "") + ` found</div>`;
 
             // Reset state
             resetSubmitBtn();
@@ -318,8 +318,8 @@ function searchCard(event) {
 
 function addCartEventListeners() {
     let addToCartBtns = document.querySelectorAll("button.addToCartBtn");
-    addToCartBtns.forEach(function(elem) {
-        elem.addEventListener("click", function() {
+    addToCartBtns.forEach(function (elem) {
+        elem.addEventListener("click", function () {
             if (this.getAttribute("data-index") !== "") {
                 addToCart(this.getAttribute("data-index"));
                 this.innerHTML = alreadyInCartBtnHtml;
@@ -335,13 +335,13 @@ function addCartEventListeners() {
 function addToCart(index) {
     if (index >= 0 && searchResults.length > index) {
         // get from storage first in case multiple tabs add / removing
-        if(localStorage.getItem('cart') !== null && localStorage.getItem('cart') !== undefined && localStorage.getItem('cart') !== "") {
+        if (localStorage.getItem('cart') !== null && localStorage.getItem('cart') !== undefined && localStorage.getItem('cart') !== "") {
             cart = JSON.parse(localStorage.getItem('cart'));
         } else {
             cart = [];
         }
 
-        cart.push(searchResults[index]);
+        cart.unshift(searchResults[index]);
         localStorage.setItem("cart", JSON.stringify(cart));
         updateCartPage();
     }
@@ -349,7 +349,7 @@ function addToCart(index) {
 
 function existsInCart(item) {
     if (cart.length > 0) {
-        for(let i=0; i<cart.length; i++) {
+        for (let i = 0; i < cart.length; i++) {
             if (JSON.stringify(cart[i]) === JSON.stringify(item)) {
                 return true;
             }
@@ -399,5 +399,5 @@ function setAdsbyGoogleZIndex() {
 }
 
 
-setTimeout(function(){setAdsbyGoogleZIndex()},1000);
+setTimeout(function () { setAdsbyGoogleZIndex() }, 1000);
 
