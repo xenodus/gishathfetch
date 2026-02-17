@@ -22,7 +22,7 @@ const Card = memo(({
             <div className="text-center mb-2">
                 <a href={card.url} target="_blank" rel="noreferrer">
                     <img
-                        src={card.img || `https://placehold.co/304x424?text=${encodeURIComponent(card.name)}`}
+                        src={card.img || `https://placehold.co/304x424?text=${card.name}`}
                         loading="lazy"
                         className="img-fluid w-100"
                         alt={card.name}
