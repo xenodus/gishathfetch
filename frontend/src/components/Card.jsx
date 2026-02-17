@@ -1,7 +1,7 @@
-import React, { memo } from 'react';
+import React from 'react';
 import { FolderPlus, Search as SearchIcon, Trash2, CheckSquare } from 'react-feather';
 
-const Card = memo(({
+const Card = ({
     card,
     index,
     isCart = false,
@@ -84,6 +84,6 @@ const Card = memo(({
             </div>
         </div>
     );
-});
+};
 
 export default Card;

@@ -20,6 +20,8 @@
   <meta name="author" content="Alvin Yeoh" />
   <meta name="description"
     content="Magic: The Gathering Price Checker for Singapore's LGS. Search for mtg singles from 12+ online shops at one go!" />
+  <meta name="keywords"
+    content="MTG, Magic The Gathering, Singapore, LGS, card prices, price checker, local game store, TCG, trading card game, singles" />
 
   <meta property="og:title" content="Gishath Fetch">
   <meta property="og:site_name" content="Gishath Fetch">
@@ -29,6 +31,12 @@
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://gishathfetch.com/img/og-image.png">
 
+  <!-- Preconnect to external domains for better performance -->
+  <link rel="preconnect" href="https://api.scryfall.com">
+  <link rel="preconnect" href="https://pagead2.googlesyndication.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
@@ -37,6 +45,28 @@
     integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Barlow">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Barlow:medium">
+
+  <!-- Structured Data for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Gishath Fetch",
+    "description": "Magic: The Gathering Price Checker for Singapore's LGS. Search for mtg singles from 12+ online shops at one go!",
+    "url": "https://gishathfetch.com/",
+    "applicationCategory": "UtilityApplication",
+    "operatingSystem": "Any",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "SGD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Alvin Yeoh"
+    }
+  }
+  </script>
 </head>
 
 <body>

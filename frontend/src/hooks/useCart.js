@@ -1,20 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 export default function useCart() {
-    const [cart, setCart] = useState([]);
-    const [showCart, setShowCart] = useState(false);
-
-    // Initial load from LocalStorage
-    useEffect(() => {
+    const [cart, setCart] = useState(() => {
         const storedCart = localStorage.getItem('cart');
         if (storedCart) {
             try {
-                setCart(JSON.parse(storedCart));
+                return JSON.parse(storedCart);
             } catch (err) {
                 console.error("Failed to parse cart from localStorage:", err);
+                return [];
             }
         }
-    }, []);
+        return [];
+    });
+    const [showCart, setShowCart] = useState(false);
 
     const addToCart = useCallback((card) => {
         setCart((prev) => {
@@ -23,7 +22,11 @@ export default function useCart() {
             if (exists) return prev;
 
             const newCart = [card, ...prev];
-            localStorage.setItem('cart', JSON.stringify(newCart));
+            try {
+                localStorage.setItem('cart', JSON.stringify(newCart));
+            } catch (err) {
+                console.error("Failed to save cart to localStorage:", err);
+            }
             return newCart;
         });
     }, []);
@@ -31,14 +34,22 @@ export default function useCart() {
     const removeFromCart = useCallback((index) => {
         setCart((prev) => {
             const newCart = prev.filter((_, i) => i !== index);
-            localStorage.setItem('cart', JSON.stringify(newCart));
+            try {
+                localStorage.setItem('cart', JSON.stringify(newCart));
+            } catch (err) {
+                console.error("Failed to save cart to localStorage:", err);
+            }
             return newCart;
         });
     }, []);
 
     const clearCart = useCallback(() => {
         setCart([]);
-        localStorage.removeItem('cart');
+        try {
+            localStorage.removeItem('cart');
+        } catch (err) {
+            console.error("Failed to clear cart from localStorage:", err);
+        }
     }, []);
 
     const isCardInCart = useCallback((card) => {

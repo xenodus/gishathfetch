@@ -47,6 +47,7 @@ const Footer = ({
                 <div className="d-flex flex-row align-items-center justify-content-center">
                     <a
                         role="button"
+                        aria-label={`View saved cards${cartCount > 0 ? ` (${cartCount} items)` : ''}`}
                         className="py-1 link-light link-offset-2 link-underline-opacity-0"
                         onClick={onShowCart}
                     >
@@ -56,6 +57,7 @@ const Footer = ({
                     </a>
                     <a
                         role="button"
+                        aria-label="View store locations map"
                         className="py-1 link-light link-offset-2 link-underline-opacity-0"
                         onClick={onShowMap}
                     >
@@ -65,6 +67,7 @@ const Footer = ({
                     </a>
                     <a
                         role="button"
+                        aria-label="View frequently asked questions"
                         className="py-1 link-light link-offset-2 link-underline-opacity-0"
                         onClick={onShowFaq}
                     >
@@ -72,7 +75,11 @@ const Footer = ({
                             <HelpCircle size={14} className="me-1 mb-1" /> FAQs
                         </div>
                     </a>
-                    <a href="#top" className="py-1 link-light link-offset-2 link-underline-opacity-0">
+                    <a
+                        href="#top"
+                        aria-label="Scroll to top of page"
+                        className="py-1 link-light link-offset-2 link-underline-opacity-0"
+                    >
                         <div className="px-3 py-1">
                             <ArrowUp size={14} className="me-1" /> Top
                         </div>

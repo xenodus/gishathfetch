@@ -14,7 +14,8 @@ const Modals = lazy(() => import('./components/Modals'));
 import {
   LGS_OPTIONS,
   LGS_MAP,
-  BASE_URL
+  BASE_URL,
+  MIN_SEARCH_LENGTH
 } from './constants';
 
 // --- Hooks ---
@@ -39,10 +40,12 @@ export default function App() {
     hasSearched,
     searchResults,
     searchProgress,
+    searchError,
     suggestions,
     showSuggestions,
     setShowSuggestions,
     selectedStores,
+    setSelectedStores,
     handleQueryChange,
     handleSuggestionClick,
     handleSearchSubmit,
@@ -59,8 +62,19 @@ export default function App() {
     if (e && e.preventDefault) e.preventDefault();
     setSearchQuery(cardName);
     setShowCart(false);
-    performSearch(cardName, [sourceStore]);
-  }, [performSearch, setSearchQuery, setShowCart]);
+    setShowSuggestions(false); // Close suggestions dropdown
+
+    // Update selected stores to show only the source store in checkboxes
+    const storeArray = [sourceStore];
+    setSelectedStores(storeArray);
+    try {
+      localStorage.setItem("lgsSelected", encodeURIComponent(storeArray.join(",")));
+    } catch (err) {
+      console.error("Failed to save selected stores:", err);
+    }
+
+    performSearch(cardName, storeArray);
+  }, [performSearch, setSearchQuery, setShowCart, setShowSuggestions, setSelectedStores]);
 
   // --- Main Render ---
   return (
@@ -74,7 +88,7 @@ export default function App() {
         suggestions={suggestions}
         showSuggestions={showSuggestions}
         onSuggestionClick={handleSuggestionClick}
-        onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
+        onFocus={() => searchQuery.length > MIN_SEARCH_LENGTH - 1 && setShowSuggestions(true)}
         isSearching={isSearching}
         searchProgress={searchProgress}
         lgsOptions={LGS_OPTIONS}
@@ -89,6 +103,7 @@ export default function App() {
         results={searchResults}
         isSearching={isSearching}
         hasSearched={hasSearched}
+        searchError={searchError}
         isCardInCart={isCardInCart}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
