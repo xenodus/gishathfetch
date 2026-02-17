@@ -33,7 +33,7 @@ body {
 }
 
 .animated-rainbow {
-  background: linear-gradient(to left, #c2410c, #ea580c, #f97316, #fb923c, #fbbf24, #f59e0b, #d97706, #c2410c);
+  background: linear-gradient(to left, #ff99d6, #ff8fa3, #ffcc99, #ffeb99, #99f5c2, #99d6ff, #c299ff, #ff99d6);
   animation: rainbow-move-left-right 4s linear infinite;
   background-size: 200% auto;
   -webkit-background-clip: text;
