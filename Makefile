@@ -19,7 +19,6 @@ docker-push:
 docker-push-staging:
 	export AWS_PAGER="" && docker push 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging
 
-
 frontend-dev:
 	cd frontend && npm install && npm run dev
 
@@ -29,7 +28,6 @@ frontend-build:
 frontend-update: frontend-build
 	aws s3 sync frontend/dist s3://gishathfetch.com
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
-
 
 frontend-update-staging: frontend-build
 	aws s3 sync frontend/dist s3://staging.gishathfetch.com
