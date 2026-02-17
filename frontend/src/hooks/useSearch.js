@@ -199,7 +199,13 @@ export default function useSearch() {
 
     // --- Initialization ---
     // Note: performSearch is included in deps but is stable (empty dep array in useCallback)
+    // This effect should only run once on mount, not when selectedStores changes
+    const hasInitializedRef = useRef(false);
+
     useEffect(() => {
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
+
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('s') && urlParams.get('s') !== "") {
             const q = decodeURIComponent(urlParams.get('s'));
@@ -212,7 +218,8 @@ export default function useSearch() {
 
             setTimeout(() => performSearch(q, stores), 100);
         }
-    }, [performSearch, selectedStores]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [performSearch]);
 
     return {
         searchQuery,
