@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const StoreSelector = ({ options, selectedStores, onToggle, onSelectAll, onSelectNone }) => {
+const StoreSelector = memo(({ options, selectedStores, onToggle, onSelectAll, onSelectNone }) => {
     return (
         <>
             <div><h6>Stores</h6></div>
@@ -23,11 +23,11 @@ const StoreSelector = ({ options, selectedStores, onToggle, onSelectAll, onSelec
             </div>
 
             <div className="mb-3">
-                <a role="button" className="p-0 me-3 text-decoration-none" onClick={onSelectAll}>All</a>
-                <a role="button" className="p-0 text-decoration-none" onClick={onSelectNone}>None</a>
+                <button type="button" className="btn btn-link p-0 me-3 text-decoration-none" onClick={onSelectAll}>All</button>
+                <button type="button" className="btn btn-link p-0 text-decoration-none" onClick={onSelectNone}>None</button>
             </div>
         </>
     );
-};
+});
 
 export default StoreSelector;
