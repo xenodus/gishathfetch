@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { FolderPlus, Search as SearchIcon, Trash2, CheckSquare } from 'react-feather';
 
-const Card = ({
+const Card = memo(({
     card,
     index,
     isCart = false,
@@ -14,6 +14,8 @@ const Card = ({
     const qualityFoil = [];
     if (card.quality) qualityFoil.push(`≪ ${card.quality} ≫`);
     if (card.isFoil) qualityFoil.push(<span key="foil" className='text-nowrap'>≪ <span className='animated-rainbow'>FOIL</span> ≫</span>);
+
+    const inCart = isCardInCart(card);
 
     return (
         <div className={`col-6 col-lg-${isCart ? 6 : 3} mb-4`} key={index}>
@@ -60,7 +62,7 @@ const Card = ({
                             </a>
                         </div>
                     ) : (
-                        isCardInCart(card) ? (
+                        inCart ? (
                             <button
                                 type="button"
                                 className="btn btn-success btn-sm addCartBtn"
@@ -82,6 +84,6 @@ const Card = ({
             </div>
         </div>
     );
-};
+});
 
 export default Card;
