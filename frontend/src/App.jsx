@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useCallback } from 'react';
 import './index.css';
 
 // --- Modular Components ---
@@ -55,12 +55,12 @@ export default function App() {
   const [modalType, setModalType] = useState(null);
 
   // --- Handlers ---
-  const handleCardSearch = (e, cardName, sourceStore) => {
+  const handleCardSearch = useCallback((e, cardName, sourceStore) => {
     if (e && e.preventDefault) e.preventDefault();
     setSearchQuery(cardName);
     setShowCart(false);
     performSearch(cardName, [sourceStore]);
-  };
+  }, [performSearch, setSearchQuery, setShowCart]);
 
   // --- Main Render ---
   return (

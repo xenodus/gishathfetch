@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export default function useCart() {
     const [cart, setCart] = useState([]);
@@ -16,28 +16,28 @@ export default function useCart() {
         }
     }, []);
 
-    const addToCart = (card) => {
+    const addToCart = useCallback((card) => {
         setCart((prev) => {
             const newCart = [card, ...prev];
             localStorage.setItem('cart', JSON.stringify(newCart));
             return newCart;
         });
-    };
+    }, []);
 
-    const removeFromCart = (index) => {
+    const removeFromCart = useCallback((index) => {
         setCart((prev) => {
             const newCart = prev.filter((_, i) => i !== index);
             localStorage.setItem('cart', JSON.stringify(newCart));
             return newCart;
         });
-    };
+    }, []);
 
-    const clearCart = () => {
+    const clearCart = useCallback(() => {
         setCart([]);
         localStorage.removeItem('cart');
-    };
+    }, []);
 
-    const isCardInCart = (card) => {
+    const isCardInCart = useCallback((card) => {
         return cart.some((item) =>
             item.name === card.name &&
             item.src === card.src &&
@@ -45,7 +45,7 @@ export default function useCart() {
             item.quality === card.quality &&
             item.isFoil === card.isFoil
         );
-    };
+    }, [cart]);
 
     return {
         cart,
