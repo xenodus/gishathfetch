@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { API_BASE_URL, LGS_OPTIONS, BASE_URL } from '../constants';
 
 export default function useSearch() {
@@ -10,8 +10,6 @@ export default function useSearch() {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [selectedStores, setSelectedStores] = useState(LGS_OPTIONS);
-
-    const searchInputRef = useRef(null);
 
     // --- Helpers ---
     const updateUrlAndTitle = (query) => {
