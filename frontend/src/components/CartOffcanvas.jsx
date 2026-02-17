@@ -12,6 +12,12 @@ const CartOffcanvas = ({
     onClearCart,
     baseUrl
 }) => {
+    const handleClearCart = () => {
+        if (window.confirm("Are you sure you want to remove all saved cards?")) {
+            onClearCart();
+        }
+    };
+
     return (
         <Offcanvas show={show} onHide={onHide} placement="end">
             <Offcanvas.Header closeButton>
@@ -39,7 +45,7 @@ const CartOffcanvas = ({
                         </div>
                         {cart.length >= 2 && (
                             <div className="mt-5">
-                                <Button variant="danger" className="w-100 text-uppercase" onClick={onClearCart}>
+                                <Button variant="danger" className="w-100 text-uppercase" onClick={handleClearCart}>
                                     Remove all saved cards
                                 </Button>
                             </div>
