@@ -1,7 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const AdComponent = () => {
+    const adInitialized = useRef(false);
+
     useEffect(() => {
+        if (adInitialized.current) return;
+        adInitialized.current = true;
+
         try {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
 
