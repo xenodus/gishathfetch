@@ -4,11 +4,14 @@ const AdComponent = () => {
     useEffect(() => {
         try {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
-            // Parity fix: ensure ads have correct z-index
-            const ads = document.querySelectorAll('ins.adsbygoogle');
-            ads.forEach(ad => {
-                ad.style.zIndex = '1000';
-            });
+
+            // Parity fix: use setTimeout to set z-index, exactly as in legacy index.js
+            setTimeout(() => {
+                const ads = document.querySelectorAll('ins.adsbygoogle');
+                ads.forEach(ad => {
+                    ad.style.zIndex = '1000';
+                });
+            }, 1000);
         } catch (e) {
             console.error("AdSense error:", e);
         }
