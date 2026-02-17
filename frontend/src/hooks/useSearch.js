@@ -135,6 +135,7 @@ export default function useSearch() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('s') && urlParams.get('s') !== "") {
             const q = decodeURIComponent(urlParams.get('s'));
+            skipSuggestionsRef.current = true;
             setSearchQuery(q);
 
             let stores = LGS_OPTIONS;
