@@ -110,3 +110,8 @@ input#search:focus {
   background-color: rgba(0, 0, 0, .5);
   -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, .5);
 }
+
+/* Parity fix: Google Ads z-index */
+ins.adsbygoogle {
+  z-index: 1000 !important;
+}
