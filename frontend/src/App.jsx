@@ -60,8 +60,9 @@ export default function App() {
     if (e && e.preventDefault) e.preventDefault();
     setSearchQuery(cardName);
     setShowCart(false);
+    setShowSuggestions(false); // Close suggestions dropdown
     performSearch(cardName, [sourceStore]);
-  }, [performSearch, setSearchQuery, setShowCart]);
+  }, [performSearch, setSearchQuery, setShowCart, setShowSuggestions]);
 
   // --- Main Render ---
   return (

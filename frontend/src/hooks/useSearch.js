@@ -59,6 +59,9 @@ export default function useSearch() {
     const performSearch = useCallback((query, stores) => {
         if (!query || query.length < MIN_SEARCH_LENGTH) return;
 
+        // Prevent suggestions from appearing after programmatic search
+        skipSuggestionsRef.current = true;
+
         setIsSearching(true);
         setSearchProgress("Searching LGS");
         setSearchResults([]);
