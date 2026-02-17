@@ -38,17 +38,24 @@ const SearchForm = ({
                     {showSuggestions && suggestions.length > 0 && (
                         <div id="suggestions" className="suggestions d-block">
                             {suggestions.map((s, i) => {
-                                const boldedSuggestion = s.replace(
-                                    new RegExp(searchQuery, 'gi'),
-                                    (match) => `<b>${match}</b>`
-                                );
+                                // Escape query for regex and split suggestion into parts
+                                const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                const parts = s.split(new RegExp(`(${escapedQuery})`, 'gi'));
+
                                 return (
                                     <div
                                         key={i}
                                         className="suggestion-item"
                                         onClick={() => onSuggestionClick(s)}
-                                        dangerouslySetInnerHTML={{ __html: boldedSuggestion }}
-                                    />
+                                    >
+                                        {parts.map((part, index) =>
+                                            part.toLowerCase() === searchQuery.toLowerCase() ? (
+                                                <b key={index}>{part}</b>
+                                            ) : (
+                                                part
+                                            )
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>
