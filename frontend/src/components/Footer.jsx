@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FolderPlus, Map as MapIcon, HelpCircle, ArrowUp } from 'react-feather';
 
 const Footer = ({
@@ -7,6 +7,19 @@ const Footer = ({
     onShowMap,
     onShowFaq
 }) => {
+    useEffect(() => {
+        try {
+            // Parity fix: use setTimeout to set z-index for footer ads, exactly as in legacy index.js
+            setTimeout(() => {
+                const ads = document.querySelectorAll('ins.adsbygoogle');
+                ads.forEach(ad => {
+                    ad.style.zIndex = '1000';
+                });
+            }, 1000);
+        } catch (e) {
+            console.error("Footer AdSense error:", e);
+        }
+    }, []);
     return (
         <>
             {/* Footer / Ads */}
