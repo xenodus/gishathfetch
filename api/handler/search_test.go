@@ -78,6 +78,55 @@ func Test_Search_Success(t *testing.T) {
 	}
 }
 
+func Test_Search_CORS(t *testing.T) {
+	// Setup Mock
+	originalSearchFunc := searchFunc
+	defer func() { searchFunc = originalSearchFunc }()
+	searchFunc = func(input controller.SearchInput) ([]controller.Card, error) {
+		return []controller.Card{}, nil
+	}
+
+	err := os.Setenv("ENV", config.EnvStaging)
+	require.NoError(t, err)
+
+	t.Run("allowed origin returns CORS headers", func(t *testing.T) {
+		req := events.APIGatewayProxyRequest{
+			QueryStringParameters: map[string]string{"s": "test"},
+			// Lambda proxy normalises headers to lowercase.
+			Headers: map[string]string{"origin": "http://localhost:5173"},
+		}
+		result, err := Search(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, "http://localhost:5173", result.Headers["Access-Control-Allow-Origin"])
+		require.Equal(t, "Origin", result.Headers["Vary"])
+	})
+
+	t.Run("OPTIONS request returns 204 and CORS headers", func(t *testing.T) {
+		// No query params needed: OPTIONS is short-circuited before query parsing.
+		req := events.APIGatewayProxyRequest{
+			HTTPMethod: "OPTIONS",
+			// Lambda proxy normalises headers to lowercase.
+			Headers: map[string]string{"origin": "http://localhost:5173"},
+		}
+		result, err := Search(context.Background(), req)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNoContent, result.StatusCode)
+		require.Equal(t, "http://localhost:5173", result.Headers["Access-Control-Allow-Origin"])
+		require.Equal(t, "Origin", result.Headers["Vary"])
+	})
+
+	t.Run("disallowed origin does not return CORS headers", func(t *testing.T) {
+		req := events.APIGatewayProxyRequest{
+			QueryStringParameters: map[string]string{"s": "test"},
+			Headers:               map[string]string{"Origin": "http://malicious.com"},
+		}
+		result, err := Search(context.Background(), req)
+		require.NoError(t, err)
+		_, ok := result.Headers["Access-Control-Allow-Origin"]
+		require.False(t, ok)
+	})
+}
+
 func Test_Search_Err(t *testing.T) {
 	type args struct {
 		givenAPIGatewayProxyRequest events.APIGatewayProxyRequest

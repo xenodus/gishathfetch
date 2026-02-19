@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 
 	"mtg-price-checker-sg/controller"
@@ -26,6 +27,16 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 	var webRes WebResponse
 	var lgs []string
 
+	// Determine allowed origin for CORS.
+	// AWS Lambda proxy integration normalises all headers to lowercase,
+	// so only the lowercase "origin" key is needed.
+	origin := request.Headers["origin"]
+
+	if request.HTTPMethod == "OPTIONS" {
+		apiRes.StatusCode = http.StatusNoContent
+		return lambdaApiResponse(apiRes, webRes, origin)
+	}
+
 	searchString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["s"]))
 	if err != nil {
 		searchString = ""
@@ -42,7 +53,7 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 
 	if searchString == "" || len(searchString) < 3 {
 		apiRes.StatusCode = http.StatusBadRequest
-		return lambdaApiResponse(apiRes, webRes)
+		return lambdaApiResponse(apiRes, webRes, origin)
 	}
 
 	if lgsString != "" {
@@ -56,16 +67,28 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 	if err != nil {
 		apiRes.StatusCode = http.StatusInternalServerError
 		apiRes.Body = "err searching for cards"
-		return lambdaApiResponse(apiRes, webRes)
+		return lambdaApiResponse(apiRes, webRes, origin)
 	}
 
 	apiRes.StatusCode = http.StatusOK
 	webRes.Data = inStockCards
 
-	return lambdaApiResponse(apiRes, webRes)
+	return lambdaApiResponse(apiRes, webRes, origin)
 }
 
-func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse) (events.APIGatewayProxyResponse, error) {
+func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse, origin string) (events.APIGatewayProxyResponse, error) {
+	// Set CORS headers.
+	// Vary: Origin is required so CDNs/caches don't serve a response cached
+	// for one origin to a different origin when the Allow-Origin is dynamic.
+	if slices.Contains(config.GetAllowedOrigins(), origin) {
+		apiResponse.Headers = map[string]string{
+			"Access-Control-Allow-Origin":  origin,
+			"Access-Control-Allow-Methods": "GET, OPTIONS",
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Vary":                         "Origin",
+		}
+	}
+
 	if apiResponse.StatusCode != http.StatusOK {
 		return apiResponse, nil
 	}

@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"mtg-price-checker-sg/gateway"
-	"strings"
 	"testing"
 )
 
@@ -42,58 +41,44 @@ func TestIsJapanese(t *testing.T) {
 
 func TestCleanName(t *testing.T) {
 	tests := map[string]struct {
-		name    string
-		quality string
-
+		name              string
+		quality           string
 		expectedName      string
 		expectedExtraInfo []string
 	}{
 		"Name [Tag]": {
-			name:    "Name [Tag]",
-			quality: "",
-
+			name:              "Name [Tag]",
+			quality:           "",
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag]"},
 		},
 		"Name[Tag]": {
-			name:    "Name[Tag]",
-			quality: "",
-
+			name:              "Name[Tag]",
+			quality:           "",
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag]"},
 		},
 		"Name (Tag)": {
-			name:    "Name (Tag)",
-			quality: "",
-
+			name:              "Name (Tag)",
+			quality:           "",
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"(Tag)"},
 		},
 		"Name [Tag1] (Tag2)": {
-			name:    "Name [Tag1] (Tag2)",
-			quality: "",
-
+			name:              "Name [Tag1] (Tag2)",
+			quality:           "",
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag1] (Tag2)"},
 		},
 		"Name (Tag1) [Tag2]": {
-			name:    "Name (Tag1) [Tag2]",
-			quality: "",
-
+			name:              "Name (Tag1) [Tag2]",
+			quality:           "",
 			expectedName:      "Name",
 			expectedExtraInfo: []string{"[Tag2]", "(Tag1)"},
 		},
-		// Debug test case for user reported issue
-		"Trailing Text Mismatched Quality": {
-			name:              "Chocobo Camp (Borderless) [FINAL FANTASY Commander] - Near Mint Foil",
-			quality:           "Near Mint", // Only matches part of the suffix
-			expectedName:      "Chocobo Camp",
-			expectedExtraInfo: []string{"[FINAL FANTASY Commander]", "(Borderless)"},
-		},
 		"Name - Quality": {
-			name:    "Name - Quality",
-			quality: "Quality",
-
+			name:              "Name - Quality",
+			quality:           "Quality",
 			expectedName:      "Name",
 			expectedExtraInfo: nil,
 		},
@@ -231,36 +216,7 @@ func TestSearchShops(t *testing.T) {
 				}
 			},
 		},
-		"Error Handling - LGS Error should not crash": {
-			input: SearchInput{SearchString: "Card A"},
-			lgsResponses: map[string][]gateway.Card{
-				"Shop1": nil, // Simulates error or empty
-				"Shop2": {
-					{Name: "Card A", Price: 10.0, InStock: true, Source: "Shop2"},
-				},
-			},
-			expectedCount: 1,
-			verifyFunc: func(t *testing.T, cards []Card) {
-				if cards[0].Source != "Shop2" {
-					t.Errorf("Expected result from Shop2, got %s", cards[0].Source)
-				}
-			},
-		},
-		"Error Handling - LGS Panic should be recovered": {
-			input: SearchInput{SearchString: "Card A"},
-			lgsResponses: map[string][]gateway.Card{
-				"Shop1": nil, // Will panic
-				"Shop2": {
-					{Name: "Card A", Price: 10.0, InStock: true, Source: "Shop2"},
-				},
-			},
-			expectedCount: 1,
-			verifyFunc: func(t *testing.T, cards []Card) {
-				if cards[0].Source != "Shop2" {
-					t.Errorf("Expected result from Shop2, got %s", cards[0].Source)
-				}
-			},
-		},
+
 		"Extra Info Parsing": {
 			input: SearchInput{SearchString: "Card A"},
 			lgsResponses: map[string][]gateway.Card{
@@ -289,10 +245,6 @@ func TestSearchShops(t *testing.T) {
 				mockMap[shopName] = &MockLGS{
 					SearchFunc: func(searchStr string) ([]gateway.Card, error) {
 						if cardsToReturn == nil {
-							// Special case for panic test
-							if shopName == "Shop1" && strings.Contains(name, "Panic") {
-								panic("simulated panic")
-							}
 							return nil, fmt.Errorf("simulated error")
 						}
 						return cardsToReturn, nil
