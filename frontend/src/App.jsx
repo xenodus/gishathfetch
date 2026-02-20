@@ -1,26 +1,21 @@
-import React, { useState, lazy, Suspense, useCallback } from 'react';
-import './index.css';
+import { lazy, Suspense, useCallback, useState } from "react";
+import "./index.css";
 
+import Footer from "./components/Footer";
 // --- Modular Components ---
-import Header from './components/Header';
-import SearchForm from './components/SearchForm';
-import SearchResults from './components/SearchResults';
-import Footer from './components/Footer';
+import Header from "./components/Header";
+import SearchForm from "./components/SearchForm";
+import SearchResults from "./components/SearchResults";
 
-const CartOffcanvas = lazy(() => import('./components/CartOffcanvas'));
-const Modals = lazy(() => import('./components/Modals'));
+const CartOffcanvas = lazy(() => import("./components/CartOffcanvas"));
+const Modals = lazy(() => import("./components/Modals"));
 
 // --- Constants ---
-import {
-  LGS_OPTIONS,
-  LGS_MAP,
-  BASE_URL,
-  MIN_SEARCH_LENGTH
-} from './constants';
+import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
 
 // --- Hooks ---
-import useCart from './hooks/useCart';
-import useSearch from './hooks/useSearch';
+import useCart from "./hooks/useCart";
+import useSearch from "./hooks/useSearch";
 
 export default function App() {
   const {
@@ -30,7 +25,7 @@ export default function App() {
     addToCart,
     removeFromCart,
     clearCart,
-    isCardInCart
+    isCardInCart,
   } = useCart();
 
   const {
@@ -52,29 +47,41 @@ export default function App() {
     toggleStore,
     selectAllStores,
     selectNoStores,
-    performSearch
+    performSearch,
   } = useSearch();
 
   const [modalType, setModalType] = useState(null);
 
   // --- Handlers ---
-  const handleCardSearch = useCallback((e, cardName, sourceStore) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setSearchQuery(cardName);
-    setShowCart(false);
-    setShowSuggestions(false); // Close suggestions dropdown
+  const handleCardSearch = useCallback(
+    (e, cardName, sourceStore) => {
+      if (e?.preventDefault) e.preventDefault();
+      setSearchQuery(cardName);
+      setShowCart(false);
+      setShowSuggestions(false); // Close suggestions dropdown
 
-    // Update selected stores to show only the source store in checkboxes
-    const storeArray = [sourceStore];
-    setSelectedStores(storeArray);
-    try {
-      localStorage.setItem("lgsSelected", encodeURIComponent(storeArray.join(",")));
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+      // Update selected stores to show only the source store in checkboxes
+      const storeArray = [sourceStore];
+      setSelectedStores(storeArray);
+      try {
+        localStorage.setItem(
+          "lgsSelected",
+          encodeURIComponent(storeArray.join(",")),
+        );
+      } catch (err) {
+        console.error("Failed to save selected stores:", err);
+      }
 
-    performSearch(cardName, storeArray);
-  }, [performSearch, setSearchQuery, setShowCart, setShowSuggestions, setSelectedStores]);
+      performSearch(cardName, storeArray);
+    },
+    [
+      performSearch,
+      setSearchQuery,
+      setShowCart,
+      setShowSuggestions,
+      setSelectedStores,
+    ],
+  );
 
   // --- Main Render ---
   return (
@@ -88,7 +95,9 @@ export default function App() {
         suggestions={suggestions}
         showSuggestions={showSuggestions}
         onSuggestionClick={handleSuggestionClick}
-        onFocus={() => searchQuery.length > MIN_SEARCH_LENGTH - 1 && setShowSuggestions(true)}
+        onFocus={() =>
+          searchQuery.length > MIN_SEARCH_LENGTH - 1 && setShowSuggestions(true)
+        }
         isSearching={isSearching}
         searchProgress={searchProgress}
         lgsOptions={LGS_OPTIONS}
@@ -114,8 +123,8 @@ export default function App() {
       <Footer
         cartCount={cart.length}
         onShowCart={() => setShowCart(true)}
-        onShowMap={() => setModalType('MAP')}
-        onShowFaq={() => setModalType('FAQ')}
+        onShowMap={() => setModalType("MAP")}
+        onShowFaq={() => setModalType("FAQ")}
       />
 
       <Suspense fallback={null}>
@@ -131,13 +140,13 @@ export default function App() {
         />
 
         <Modals
-          showMap={modalType === 'MAP'}
+          showMap={modalType === "MAP"}
           onHideMap={() => setModalType(null)}
-          showFaq={modalType === 'FAQ'}
+          showFaq={modalType === "FAQ"}
           onHideFaq={() => setModalType(null)}
-          showPrivacy={modalType === 'PRIVACY'}
+          showPrivacy={modalType === "PRIVACY"}
           onHidePrivacy={() => setModalType(null)}
-          onShowPrivacy={() => setModalType('PRIVACY')}
+          onShowPrivacy={() => setModalType("PRIVACY")}
           lgsMapData={LGS_MAP}
         />
       </Suspense>
