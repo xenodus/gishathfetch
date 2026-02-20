@@ -59,7 +59,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
             onClick={onShowCart}
           >
-            <div className="px-3 py-1">
+            <div className="px-2 py-1">
               <FolderPlus size={14} className="me-1 mb-1" /> Saved{" "}
               {cartCount > 0 && `(${cartCount})`}
             </div>
@@ -70,7 +70,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
             onClick={onShowMap}
           >
-            <div className="px-3 py-1">
+            <div className="px-2 py-1">
               <MapIcon size={14} className="me-1" /> Map
             </div>
           </button>
@@ -80,7 +80,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
             onClick={onShowFaq}
           >
-            <div className="px-3 py-1">
+            <div className="px-2 py-1">
               <HelpCircle size={14} className="me-1 mb-1" /> FAQs
             </div>
           </button>
@@ -89,7 +89,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             aria-label="Scroll to top of page"
             className="py-1 link-light link-offset-2 link-underline-opacity-0"
           >
-            <div className="px-3 py-1">
+            <div className="px-2 py-1">
               <ArrowUp size={14} className="me-1" /> Top
             </div>
           </a>
