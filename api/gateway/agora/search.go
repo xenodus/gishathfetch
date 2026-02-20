@@ -68,7 +68,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 				extraInfo []string
 				set       string
 			)
-			if strings.Index(el.ChildText("div.store-item-cat"), "]") != -1 {
+			if strings.Contains(el.ChildText("div.store-item-cat"), "]") {
 				set = el.ChildText("div.store-item-cat")[:strings.Index(el.ChildText("div.store-item-cat"), "]")+1]
 				extraInfo = append(extraInfo, set)
 			}

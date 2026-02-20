@@ -54,132 +54,155 @@ func Search(input SearchInput) ([]Card, error) {
 }
 
 func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, error) {
-	var cards []gateway.Card
-	var inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []Card
-
-	// use to track which lgs has result
 	shopNameToHasResultMap := initShopHasResultMap(shopNameToLGSMap)
 
-	if len(shopNameToLGSMap) > 0 {
-		realStart := time.Now()
-		responseThreshold := 1 * time.Second
+	if len(shopNameToLGSMap) == 0 {
+		return nil, nil
+	}
 
-		log.Printf("Start checking shops for [%s]...", input.SearchString)
-		var wg sync.WaitGroup
-		var mu sync.Mutex
+	realStart := time.Now()
+	responseThreshold := 1 * time.Second
 
-		for shopName, lgs := range shopNameToLGSMap {
-			wg.Go(func() {
-				defer func() {
-					if r := recover(); r != nil {
-						errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
-						log.Println(errMsg)
-						go alert.SendDiscordAlert(errMsg) // Send asynchronously
-					}
-				}()
-				start := time.Now()
-				c, err := lgs.Search(input.SearchString)
-				if err != nil {
-					log.Printf("Error encountered searching [%s]: %v", shopName, err)
+	// 1. Fetch concurrently
+	cards := fetchCardsConcurrently(input.SearchString, shopNameToLGSMap)
+
+	// 2. Filter and Sort
+	var inStockCards []Card
+	if len(cards) > 0 {
+		inStockCards = filterAndSortCards(cards, input.SearchString, shopNameToHasResultMap)
+	}
+
+	// 3. Report metrics for shops with no results
+	reportNoResultMetrics(shopNameToHasResultMap, input.SearchString)
+
+	// 4. Ensure request takes at least the threshold
+	if time.Since(realStart) < responseThreshold {
+		sleepDuration := responseThreshold - time.Since(realStart)
+		time.Sleep(sleepDuration)
+		log.Printf("Sleeping for [%s]", sleepDuration)
+	}
+
+	return inStockCards, nil
+}
+
+func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) []gateway.Card {
+	var cards []gateway.Card
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	log.Printf("Start checking shops for [%s]...", searchString)
+
+	for shopName, lgs := range shops {
+		wg.Go(func() {
+			defer func() {
+				if r := recover(); r != nil {
+					errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
+					log.Println(errMsg)
+					go alert.SendDiscordAlert(errMsg) // Send asynchronously
 				}
-				log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
+			}()
+			start := time.Now()
+			c, err := lgs.Search(searchString)
+			if err != nil {
+				log.Printf("Error encountered searching [%s]: %v", shopName, err)
+			}
+			log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
 
-				if len(c) > 0 {
-					mu.Lock()
-					cards = append(cards, c...)
-					mu.Unlock()
-				}
-			})
-		}
+			if len(c) > 0 {
+				mu.Lock()
+				cards = append(cards, c...)
+				mu.Unlock()
+			}
+		})
+	}
 
-		wg.Wait()
-		log.Println("End checking shops...")
+	wg.Wait()
+	log.Println("End checking shops...")
+	return cards
+}
 
-		if len(cards) > 0 {
-			// Sort by price ASC
-			sort.SliceStable(cards, func(i, j int) bool {
-				return cards[i].Price < cards[j].Price
-			})
+func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHasResultMap map[string]bool) []Card {
+	var inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []Card
 
-			lowerSearchString := strings.ToLower(input.SearchString)
+	// Sort by price ASC
+	sort.SliceStable(cards, func(i, j int) bool {
+		return cards[i].Price < cards[j].Price
+	})
 
-			// Only showing in stock, contains searched string and not art card
-			for _, c := range cards {
-				if c.InStock {
-					cleanCardName, extraInfo := cleanName(c.Name, c.Quality, c.ExtraInfo)
+	lowerSearchString := strings.ToLower(searchString)
 
-					card := Card{
-						Name:      cleanCardName,
-						Url:       c.Url,
-						Img:       c.Img,
-						Price:     c.Price,
-						InStock:   c.InStock,
-						IsFoil:    c.IsFoil,
-						Source:    c.Source,
-						Quality:   c.Quality,
-						ExtraInfo: strings.TrimSpace(strings.Join(extraInfo, " ")),
-					}
+	// Only showing in stock, contains searched string and not art card
+	for _, c := range cards {
+		if c.InStock {
+			cleanCardName, extraInfo := cleanName(c.Name, c.Quality, c.ExtraInfo)
 
-					// replace all curly brackets with square brackets
-					card.ExtraInfo = strings.Replace(card.ExtraInfo, "(", "[", -1)
-					card.ExtraInfo = strings.Replace(card.ExtraInfo, ")", "]", -1)
-
-					// Skip if detected as art card or Japanese
-					if isArtCard(card.Name) || isJapanese(card.Name) || isArtCard(card.ExtraInfo) || isJapanese(card.ExtraInfo) {
-						continue
-					}
-
-					lowerName := strings.ToLower(cleanCardName)
-
-					// if in substring, mark lgs as having result
-					if strings.Contains(lowerName, lowerSearchString) {
-						shopNameToHasResultMap[c.Source] = true
-					} else {
-						// skip card if not in substring
-						continue
-					}
-
-					// exact match
-					if lowerName == lowerSearchString {
-						inStockExactMatchCards = append(inStockExactMatchCards, card)
-						continue
-					}
-
-					// prefix
-					if strings.HasPrefix(lowerName, lowerSearchString) {
-						inStockPrefixMatchCards = append(inStockPrefixMatchCards, card)
-						continue
-					}
-
-					inStockPartialMatchCards = append(inStockPartialMatchCards, card)
-				}
+			card := Card{
+				Name:      cleanCardName,
+				Url:       c.Url,
+				Img:       c.Img,
+				Price:     c.Price,
+				InStock:   c.InStock,
+				IsFoil:    c.IsFoil,
+				Source:    c.Source,
+				Quality:   c.Quality,
+				ExtraInfo: strings.TrimSpace(strings.Join(extraInfo, " ")),
 			}
 
-			// order of results: exact > prefix > partial match
-			inStockCards = append(inStockExactMatchCards, inStockPrefixMatchCards...)
-			inStockCards = append(inStockCards, inStockPartialMatchCards...)
-		}
+			// replace all curly brackets with square brackets
+			card.ExtraInfo = strings.Replace(card.ExtraInfo, "(", "[", -1)
+			card.ExtraInfo = strings.Replace(card.ExtraInfo, ")", "]", -1)
 
-		for shopName := range shopNameToHasResultMap {
-			if !shopNameToHasResultMap[shopName] {
-				log.Printf("Shop [%s] has no result for [%s]", shopName, input.SearchString)
-
-				go func(lgs, searchString string) {
-					err := google.LGSNoResultMeasurement(lgs, searchString)
-					if err != nil {
-						log.Printf("Error sending measurement for [%s]: %v", lgs, err)
-					}
-				}(shopName, input.SearchString)
+			// Skip if detected as art card or Japanese
+			if isArtCard(card.Name) || isJapanese(card.Name) || isArtCard(card.ExtraInfo) || isJapanese(card.ExtraInfo) {
+				continue
 			}
-		}
 
-		// ensure request takes at least X (responseThreshold) seconds
-		if time.Since(realStart) < responseThreshold {
-			time.Sleep(responseThreshold - time.Since(realStart))
-			log.Printf("Sleeping for [%s]", responseThreshold-time.Since(realStart))
+			lowerName := strings.ToLower(cleanCardName)
+
+			// if in substring, mark lgs as having result
+			if strings.Contains(lowerName, lowerSearchString) {
+				shopNameToHasResultMap[c.Source] = true
+			} else {
+				// skip card if not in substring
+				continue
+			}
+
+			// exact match
+			if lowerName == lowerSearchString {
+				inStockExactMatchCards = append(inStockExactMatchCards, card)
+				continue
+			}
+
+			// prefix
+			if strings.HasPrefix(lowerName, lowerSearchString) {
+				inStockPrefixMatchCards = append(inStockPrefixMatchCards, card)
+				continue
+			}
+
+			inStockPartialMatchCards = append(inStockPartialMatchCards, card)
 		}
 	}
-	return inStockCards, nil
+
+	// order of results: exact > prefix > partial match
+	inStockCards = append(inStockExactMatchCards, inStockPrefixMatchCards...)
+	inStockCards = append(inStockCards, inStockPartialMatchCards...)
+
+	return inStockCards
+}
+
+func reportNoResultMetrics(shopNameToHasResultMap map[string]bool, searchString string) {
+	for shopName, hasResult := range shopNameToHasResultMap {
+		if !hasResult {
+			log.Printf("Shop [%s] has no result for [%s]", shopName, searchString)
+
+			go func(lgs, searchString string) {
+				err := google.LGSNoResultMeasurement(lgs, searchString)
+				if err != nil {
+					log.Printf("Error sending measurement for [%s]: %v", lgs, err)
+				}
+			}(shopName, searchString)
+		}
+	}
 }
 
 func initAndMapShops(lgs []string) map[string]gateway.LGS {
