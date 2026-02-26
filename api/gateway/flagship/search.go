@@ -1,6 +1,7 @@
 package flagship
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -31,7 +32,7 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	reqPayload, err := json.Marshal(binderpos.Payload{
 		StoreURL:    binderposStoreURL,
 		Game:        binderpos.ProductTypeMTG.ToString(),
@@ -42,10 +43,10 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		return []gateway.Card{}, err
 	}
 
-	cards, httpStatusCode, err := s.BinderposGwy.Search(s.Name, s.BaseUrl, reqPayload)
+	cards, httpStatusCode, err := s.BinderposGwy.Search(ctx, s.Name, s.BaseUrl, reqPayload)
 	if err != nil || httpStatusCode != http.StatusOK {
 		log.Printf("falling back to scrap for [%s]", s.Name)
-		return s.BinderposGwy.Scrap(2, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
+		return s.BinderposGwy.Scrap(ctx, 2, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
 	}
 
 	return cards, nil

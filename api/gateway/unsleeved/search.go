@@ -1,6 +1,7 @@
 package unsleeved
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -125,15 +126,22 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var (
 		res   response
 		cards []gateway.Card
 	)
 
-	apiURL := fmt.Sprintf(StoreApiURL, url.QueryEscape(searchStr))
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   "hitpay.shop",
+		Path:   "/api/v1/products/search",
+		RawQuery: url.Values{
+			"keywords": {searchStr},
+		}.Encode(),
+	}
 
-	req, err := http.NewRequest("GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL.String(), nil)
 	if err != nil {
 		return cards, err
 	}
@@ -143,9 +151,12 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
+		return cards, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return cards, fmt.Errorf("unexpected status for %s: %s", s.Name, resp.Status)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

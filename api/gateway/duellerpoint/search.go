@@ -1,6 +1,7 @@
 package duellerpoint
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"mtg-price-checker-sg/gateway/util"
@@ -16,30 +17,45 @@ import (
 
 const StoreName = "Dueller's Point"
 const StoreBaseURL = "https://www.duellerspoint.com"
-const StoreSearchURL = "/products/search?search_text=%s"
+const StoreSearchPath = "/products/search"
 
 type Store struct {
-	Name      string
-	BaseUrl   string
-	SearchUrl string
+	Name       string
+	BaseUrl    string
+	SearchPath string
 }
 
 func NewLGS() gateway.LGS {
 	return Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
+		Name:       StoreName,
+		BaseUrl:    StoreBaseURL,
+		SearchPath: StoreSearchPath,
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
-	apiURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 
-	resp, err := http.Get(apiURL)
+	// Build the request URL from constant components only;
+	// user input is placed exclusively into query parameters via url.Values.
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   "www.duellerspoint.com",
+		Path:   StoreSearchPath,
+		RawQuery: url.Values{
+			"search_text": {searchStr},
+		}.Encode(),
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
 	if err != nil {
 		return cards, err
 	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return cards, err
+	}
+	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {

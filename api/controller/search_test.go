@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"mtg-price-checker-sg/gateway"
 	"testing"
@@ -8,12 +9,12 @@ import (
 
 // MockLGS is a mock implementation of gateway.LGS
 type MockLGS struct {
-	SearchFunc func(searchStr string) ([]gateway.Card, error)
+	SearchFunc func(ctx context.Context, searchStr string) ([]gateway.Card, error)
 }
 
-func (m *MockLGS) Search(searchStr string) ([]gateway.Card, error) {
+func (m *MockLGS) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	if m.SearchFunc != nil {
-		return m.SearchFunc(searchStr)
+		return m.SearchFunc(ctx, searchStr)
 	}
 	return nil, nil
 }
@@ -243,7 +244,7 @@ func TestSearchShops(t *testing.T) {
 				// Avoid closure capture issues
 				cardsToReturn := storedCards
 				mockMap[shopName] = &MockLGS{
-					SearchFunc: func(searchStr string) ([]gateway.Card, error) {
+					SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 						if cardsToReturn == nil {
 							return nil, fmt.Errorf("simulated error")
 						}
@@ -252,7 +253,7 @@ func TestSearchShops(t *testing.T) {
 				}
 			}
 
-			results, err := searchShops(tt.input, mockMap)
+			results, err := searchShops(context.Background(), tt.input, mockMap)
 			if err != nil {
 				t.Fatalf("searchShops returned unexpected error: %v", err)
 			}

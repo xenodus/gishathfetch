@@ -2,6 +2,7 @@ package tcgmarketplace
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -67,7 +68,7 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var (
 		res         response
 		cards       []gateway.Card
@@ -86,7 +87,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 		return cards, err
 	}
 
-	res, err = getApiResponse(reqPayload)
+	res, err = getApiResponse(ctx, reqPayload)
 	if err != nil {
 		return cards, err
 	}
@@ -144,10 +145,15 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 	return cards, nil
 }
 
-func getApiResponse(payload []byte) (response, error) {
+func getApiResponse(ctx context.Context, payload []byte) (response, error) {
 	var res response
 
-	resp, err := http.Post(cardLinkAPI, "application/json", bytes.NewBuffer(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
+	if err != nil {
+		return res, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return res, err
 	}

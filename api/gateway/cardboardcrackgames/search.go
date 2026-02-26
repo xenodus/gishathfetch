@@ -1,6 +1,7 @@
 package cardboardcrackgames
 
 import (
+	"context"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
 )
@@ -27,8 +28,8 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Scrap(
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	return s.BinderposGwy.Scrap(ctx, 
 		2,
 		s.Name,
 		s.BaseUrl,

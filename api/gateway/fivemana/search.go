@@ -1,7 +1,7 @@
 package fivemana
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
@@ -15,30 +15,46 @@ import (
 
 const StoreName = "5 Mana"
 const StoreBaseURL = "https://5-mana.sg"
-const StoreSearchURL = "/search?q=%s&filter.v.availability=1"
+const StoreSearchPath = "/search"
 
 type Store struct {
-	Name      string
-	BaseUrl   string
-	SearchUrl string
+	Name       string
+	BaseUrl    string
+	SearchPath string
 }
 
 func NewLGS() gateway.LGS {
 	return Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
+		Name:       StoreName,
+		BaseUrl:    StoreBaseURL,
+		SearchPath: StoreSearchPath,
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
-	apiURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 
-	resp, err := http.Get(apiURL)
+	// Build the request URL from constant components only;
+	// user input is placed exclusively into query parameters via url.Values.
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   "5-mana.sg",
+		Path:   StoreSearchPath,
+		RawQuery: url.Values{
+			"q":                     {searchStr},
+			"filter.v.availability": {"1"},
+		}.Encode(),
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
 	if err != nil {
 		return cards, err
 	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return cards, err
+	}
+	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {

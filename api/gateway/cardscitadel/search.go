@@ -1,6 +1,7 @@
 package cardscitadel
 
 import (
+	"context"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
 )
@@ -27,6 +28,6 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Scrap(1, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	return s.BinderposGwy.Scrap(ctx, 1, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
 }

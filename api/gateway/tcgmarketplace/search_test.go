@@ -1,6 +1,7 @@
 package tcgmarketplace
 
 import (
+	"context"
 	"testing"
 
 	"github.com/joho/godotenv"
@@ -13,7 +14,7 @@ func init() {
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
-	result, err := s.Search("abrade")
+	result, err := s.Search(context.Background(), "abrade")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
 

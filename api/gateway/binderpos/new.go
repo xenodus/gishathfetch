@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -16,8 +17,8 @@ func (p ProductType) ToString() string {
 }
 
 type Gateway interface {
-	Search(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error)
-	Scrap(scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error)
+	Search(ctx context.Context, storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error)
+	Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error)
 }
 
 type impl struct {

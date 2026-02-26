@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"context"
 	"errors"
 	"log"
 	"testing"
@@ -37,7 +38,7 @@ func Test_Scrap(t *testing.T) {
 			storeName:    "Card Affinity",
 			baseUrl:      "https://card-affinity.com",
 			searchUrl:    "/search?q=%s",
-			searchStr:    "chocobo%20camp",
+			searchStr:    "Abrade",
 		},
 		"variant 3": {
 			scrapVariant: 3,
@@ -69,6 +70,7 @@ func Test_Scrap(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			i := New()
 			result, err := i.Scrap(
+				context.Background(),
 				testArg.scrapVariant,
 				testArg.storeName,
 				testArg.baseUrl,

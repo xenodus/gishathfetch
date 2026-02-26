@@ -2,6 +2,7 @@ package cardsandcollection
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -158,7 +159,7 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var (
 		res   response
 		cards []gateway.Card
@@ -166,10 +167,16 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 	apiURL := s.BaseUrl + StoreApiURL
 	requestBody := []byte(fmt.Sprintf(`{"query":{"bool":{"should":[{"simple_query_string":{"query":"%s","fields":["name","setCode","setName"],"default_operator":"AND"}},{"multi_match":{"query":"%s","type":"phrase_prefix","fields":["name","setCode","setName"]}}]}},"post_filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory4":{"filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory.raw":{"terms":{"field":"productCategory.raw","size":50}},"productCategory.raw_count":{"cardinality":{"field":"productCategory.raw"}}}}},"size":20,"sort":[{"quantityOnSale":"desc"}]}`, searchStr, searchStr))
-	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(requestBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return cards, err
 	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return cards, err
+	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

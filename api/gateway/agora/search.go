@@ -1,7 +1,7 @@
 package agora
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/url"
 	"strconv"
@@ -16,27 +16,43 @@ import (
 
 const StoreName = "Agora Hobby"
 const StoreBaseURL = "https://agorahobby.com"
-const StoreSearchURL = "/store/search?category=mtg&searchfield=%s"
+const StoreSearchPath = "/store/search"
 
 type Store struct {
-	Name      string
-	BaseUrl   string
-	SearchUrl string
+	Name       string
+	BaseUrl    string
+	SearchPath string
 }
 
 func NewLGS() gateway.LGS {
 	return Store{
-		Name:      StoreName,
-		BaseUrl:   StoreBaseURL,
-		SearchUrl: StoreSearchURL,
+		Name:       StoreName,
+		BaseUrl:    StoreBaseURL,
+		SearchPath: StoreSearchPath,
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
-	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	baseURL, err := url.Parse(s.BaseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	apiURL := &url.URL{
+		Scheme: baseURL.Scheme,
+		Host:   baseURL.Host,
+		Path:   s.SearchPath,
+		RawQuery: url.Values{
+			"category":    {"mtg"},
+			"searchfield": {searchStr},
+		}.Encode(),
+	}
+	searchURL := apiURL.String()
 	var cards []gateway.Card
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 
 	c.OnHTML("div#store_listingcontainer", func(e *colly.HTMLElement) {
 		e.ForEach("div.store-item", func(_ int, el *colly.HTMLElement) {
