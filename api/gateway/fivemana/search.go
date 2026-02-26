@@ -34,9 +34,27 @@ func NewLGS() gateway.LGS {
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
-	apiURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	// Build the request URL safely using net/url to avoid uncontrolled data in network requests.
+	baseURL, err := url.Parse(s.BaseUrl)
+	if err != nil {
+		return cards, fmt.Errorf("invalid base URL: %w", err)
+	}
+
+	searchPath := fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
+	ref, err := url.Parse(searchPath)
+	if err != nil {
+		return cards, fmt.Errorf("invalid search path: %w", err)
+	}
+
+	apiURL := baseURL.ResolveReference(ref)
+
+	// Validate that the resolved URL still points to the expected host.
+	if apiURL.Host != baseURL.Host {
+		return cards, fmt.Errorf("resolved URL host %q does not match expected host %q", apiURL.Host, baseURL.Host)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
 	if err != nil {
 		return cards, err
 	}
