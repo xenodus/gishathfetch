@@ -121,7 +121,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 				errMu.Lock()
 				siteErrors[shopName] = err
 				errMu.Unlock()
-			} else if len(c) > 0 {
+			}
+
+			if len(c) > 0 {
 				mu.Lock()
 				cards = append(cards, c...)
 				mu.Unlock()
