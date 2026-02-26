@@ -176,6 +176,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	if err != nil {
 		return cards, err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
