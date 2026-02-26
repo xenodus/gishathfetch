@@ -1,6 +1,7 @@
 package moxandlotus
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -114,7 +115,7 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var (
 		res   response
 		cards []gateway.Card
@@ -122,7 +123,11 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 	apiURL := s.BaseUrl + StoreApiURL + url.QueryEscape(searchStr)
 
-	resp, err := http.Get(apiURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return cards, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return cards, err
 	}

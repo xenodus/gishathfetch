@@ -1,6 +1,7 @@
 package unsleeved
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -125,7 +126,7 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var (
 		res   response
 		cards []gateway.Card
@@ -133,7 +134,7 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 	apiURL := fmt.Sprintf(StoreApiURL, url.QueryEscape(searchStr))
 
-	req, err := http.NewRequest("GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return cards, err
 	}

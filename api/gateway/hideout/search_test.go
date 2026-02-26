@@ -1,6 +1,7 @@
 package hideout
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,7 +9,7 @@ import (
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
-	result, err := s.Search("Abrade")
+	result, err := s.Search(context.Background(), "Abrade")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
 

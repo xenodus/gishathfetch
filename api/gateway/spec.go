@@ -1,5 +1,7 @@
 package gateway
 
+import "context"
+
 type Card struct {
 	Name      string
 	Url       string
@@ -13,5 +15,5 @@ type Card struct {
 }
 
 type LGS interface {
-	Search(searchStr string) ([]Card, error)
+	Search(ctx context.Context, searchStr string) ([]Card, error)
 }

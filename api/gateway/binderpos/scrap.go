@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,7 +16,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func (i impl) Scrap(scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	switch scrapVariant {
 	case 1:
 		return scrapVariant1(storeName, baseUrl, searchUrl, searchStr)

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"mtg-price-checker-sg/gateway"
@@ -64,7 +65,8 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 	responseThreshold := 1 * time.Second
 
 	// 1. Fetch concurrently
-	cards := fetchCardsConcurrently(input.SearchString, shopNameToLGSMap)
+	cards, siteErrors := fetchCardsConcurrently(input.SearchString, shopNameToLGSMap)
+	_ = siteErrors // available for future use (e.g. partial-failure UX)
 
 	// 2. Filter and Sort
 	var inStockCards []Card
@@ -85,7 +87,7 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 	return inStockCards, nil
 }
 
-func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) []gateway.Card {
+func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
 	var cards []gateway.Card
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -94,14 +96,8 @@ func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) [
 	siteErrors := make(map[string]error, len(shops))
 
 	log.Printf("Start checking shops for [%s]...", searchString)
-	type siteResult struct {
-		cards []gateway.Card
-		err   error
-	}
 
 	for shopName, lgs := range shops {
-		shopName := shopName
-		lgs := lgs
 		wg.Go(func() {
 			defer func() {
 				if r := recover(); r != nil {
@@ -115,27 +111,19 @@ func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) [
 			}()
 			start := time.Now()
 
-			resultCh := make(chan siteResult, 1)
-			go func() {
-				c, err := lgs.Search(searchString)
-				resultCh <- siteResult{cards: c, err: err}
-			}()
+			ctx, cancel := context.WithTimeout(context.Background(), perSiteTimeout)
+			defer cancel()
 
-			var result siteResult
-			select {
-			case result = <-resultCh:
-			case <-time.After(perSiteTimeout):
-				result.err = fmt.Errorf("timeout after %s", perSiteTimeout)
-			}
+			c, err := lgs.Search(ctx, searchString)
 
-			if result.err != nil {
-				log.Printf("Error encountered searching [%s]: %v", shopName, result.err)
+			if err != nil {
+				log.Printf("Error encountered searching [%s]: %v", shopName, err)
 				errMu.Lock()
-				siteErrors[shopName] = result.err
+				siteErrors[shopName] = err
 				errMu.Unlock()
-			} else if len(result.cards) > 0 {
+			} else if len(c) > 0 {
 				mu.Lock()
-				cards = append(cards, result.cards...)
+				cards = append(cards, c...)
 				mu.Unlock()
 			}
 
@@ -148,7 +136,7 @@ func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) [
 		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
 	}
 	log.Println("End checking shops...")
-	return cards
+	return cards, siteErrors
 }
 
 func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHasResultMap map[string]bool) []Card {

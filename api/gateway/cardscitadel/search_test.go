@@ -1,6 +1,7 @@
 package cardscitadel
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +22,7 @@ func Test_NewLGS(t *testing.T) {
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
-	result, err := s.Search("Abrade")
+	result, err := s.Search(context.Background(), "Abrade")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
 
@@ -53,7 +54,7 @@ func Test_Scrap(t *testing.T) {
 		SearchUrl:    StoreSearchURL,
 		BinderposGwy: binderpos.NewWithApiUrl(mockBinderposSearch.URL),
 	}
-	result, err := s.Search("Abrade")
+	result, err := s.Search(context.Background(), "Abrade")
 	require.NoError(t, err)
 	require.True(t, len(result) > 0)
 

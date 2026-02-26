@@ -2,10 +2,12 @@ package binderpos
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -40,10 +42,10 @@ type CardInfo struct {
 	SellingPlanAllocations []any    `json:"selling_plan_allocations"`
 }
 
-func (i impl) Search(storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error) {
+func (i impl) Search(ctx context.Context, storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error) {
 	var cards []gateway.Card
 
-	res, httpStatusCode, err := i.getApiResponse(payload)
+	res, httpStatusCode, err := i.getApiResponse(ctx, payload)
 	if err != nil {
 		return cards, httpStatusCode, err
 	}
@@ -85,10 +87,15 @@ func (i impl) Search(storeName, storeBaseURL string, payload []byte) ([]gateway.
 	return cards, httpStatusCode, nil
 }
 
-func (i impl) getApiResponse(payload []byte) (Response, int, error) {
+func (i impl) getApiResponse(ctx context.Context, payload []byte) (Response, int, error) {
 	var res Response
 
-	resp, err := i.searchClient.Post(i.apiEndpoint, "application/json", bytes.NewBuffer(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, i.apiEndpoint, bytes.NewBuffer(payload))
+	if err != nil {
+		return res, 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := i.searchClient.Do(req)
 	if err != nil {
 		return res, 0, err
 	}

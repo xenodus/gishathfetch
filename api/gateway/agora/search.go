@@ -1,6 +1,7 @@
 package agora
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
@@ -32,7 +33,7 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	searchURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 	var cards []gateway.Card
 

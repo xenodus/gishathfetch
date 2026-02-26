@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"context"
 	"errors"
 	"log"
 	"testing"
@@ -69,6 +70,7 @@ func Test_Scrap(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			i := New()
 			result, err := i.Scrap(
+				context.Background(),
 				testArg.scrapVariant,
 				testArg.storeName,
 				testArg.baseUrl,

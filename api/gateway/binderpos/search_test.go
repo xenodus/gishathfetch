@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +22,7 @@ func Test_Search_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	i := New()
-	cards, httpStatusCode, err := i.Search(givenStoreName, givenStoreBaseURL, givePayload)
+	cards, httpStatusCode, err := i.Search(context.Background(), givenStoreName, givenStoreBaseURL, givePayload)
 
 	require.NoError(t, err)
 	require.True(t, len(cards) > 0)
@@ -59,7 +60,7 @@ func Test_Search_HttpFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	i := NewWithApiUrl(mockBinderposSearch.URL)
-	cards, httpStatusCode, err := i.Search(givenStoreName, givenStoreBaseURL, givePayload)
+	cards, httpStatusCode, err := i.Search(context.Background(), givenStoreName, givenStoreBaseURL, givePayload)
 
 	require.NoError(t, err)
 	require.Equal(t, 0, len(cards))
@@ -71,7 +72,7 @@ func Test_Search_HttpRequestError(t *testing.T) {
 	require.NoError(t, err)
 
 	i := NewWithApiUrl("http://invalid-url")
-	cards, httpStatusCode, err := i.Search("storeName", "storeBaseURL", givePayload)
+	cards, httpStatusCode, err := i.Search(context.Background(), "storeName", "storeBaseURL", givePayload)
 
 	require.Error(t, err)
 	require.Equal(t, 0, len(cards))

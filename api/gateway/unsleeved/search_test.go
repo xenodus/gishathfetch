@@ -2,7 +2,7 @@ package unsleeved
 
 //func Test_Search(t *testing.T) {
 //	s := NewLGS()
-//	result, err := s.Search("cactuar")
+//	result, err := s.Search(context.Background(), "cactuar")
 //	require.NoError(t, err)
 //	require.NotEmpty(t, result)
 //

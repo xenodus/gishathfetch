@@ -1,6 +1,7 @@
 package duellerpoint
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"mtg-price-checker-sg/gateway/util"
@@ -32,11 +33,15 @@ func NewLGS() gateway.LGS {
 	}
 }
 
-func (s Store) Search(searchStr string) ([]gateway.Card, error) {
+func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
 	apiURL := s.BaseUrl + fmt.Sprintf(s.SearchUrl, url.QueryEscape(searchStr))
 
-	resp, err := http.Get(apiURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return cards, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return cards, err
 	}
