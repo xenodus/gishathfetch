@@ -121,11 +121,27 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		cards []gateway.Card
 	)
 
-	apiURL := s.BaseUrl + StoreApiURL + url.QueryEscape(searchStr)
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   "moxandlotus.sg",
+		Path:   "/api/products", // base part of StoreApiURL
+		RawQuery: url.Values{
+			"limit":          {"48"},
+			"full_search":    {"true"},
+			"showStatus":     {"false"},
+			"is_paginated":   {"true"},
+			"in_stock":       {"true"},
+			"sortVariation":  {"true"},
+			"category_id":    {"1"},
+			"variation_code": {"all"},
+			"order_by":       {"Price Low to High"},
+			"search":         {searchStr},
+		}.Encode(),
+	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
 	if err != nil {
-		return cards, err
+		return nil, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

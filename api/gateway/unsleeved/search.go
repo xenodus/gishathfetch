@@ -132,9 +132,16 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		cards []gateway.Card
 	)
 
-	apiURL := fmt.Sprintf(StoreApiURL, url.QueryEscape(searchStr))
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   "hitpay.shop",
+		Path:   "/api/v1/products/search",
+		RawQuery: url.Values{
+			"keywords": {searchStr},
+		}.Encode(),
+	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL.String(), nil)
 	if err != nil {
 		return cards, err
 	}
