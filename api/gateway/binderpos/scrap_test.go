@@ -37,7 +37,7 @@ func Test_Scrap(t *testing.T) {
 			storeName:    "Card Affinity",
 			baseUrl:      "https://card-affinity.com",
 			searchUrl:    "/search?q=%s",
-			searchStr:    "chocobo%20camp",
+			searchStr:    "Abrade",
 		},
 		"variant 3": {
 			scrapVariant: 3,

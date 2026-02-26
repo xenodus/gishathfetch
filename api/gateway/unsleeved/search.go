@@ -143,9 +143,12 @@ func (s Store) Search(searchStr string) ([]gateway.Card, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
+		return cards, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return cards, fmt.Errorf("unexpected status for %s: %s", s.Name, resp.Status)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -89,34 +89,64 @@ func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) [
 	var cards []gateway.Card
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+	var errMu sync.Mutex
+	perSiteTimeout := 8 * time.Second
+	siteErrors := make(map[string]error, len(shops))
 
 	log.Printf("Start checking shops for [%s]...", searchString)
+	type siteResult struct {
+		cards []gateway.Card
+		err   error
+	}
 
 	for shopName, lgs := range shops {
+		shopName := shopName
+		lgs := lgs
 		wg.Go(func() {
 			defer func() {
 				if r := recover(); r != nil {
 					errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
 					log.Println(errMsg)
 					go alert.SendDiscordAlert(errMsg) // Send asynchronously
+					errMu.Lock()
+					siteErrors[shopName] = fmt.Errorf("panic: %v", r)
+					errMu.Unlock()
 				}
 			}()
 			start := time.Now()
-			c, err := lgs.Search(searchString)
-			if err != nil {
-				log.Printf("Error encountered searching [%s]: %v", shopName, err)
-			}
-			log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
 
-			if len(c) > 0 {
+			resultCh := make(chan siteResult, 1)
+			go func() {
+				c, err := lgs.Search(searchString)
+				resultCh <- siteResult{cards: c, err: err}
+			}()
+
+			var result siteResult
+			select {
+			case result = <-resultCh:
+			case <-time.After(perSiteTimeout):
+				result.err = fmt.Errorf("timeout after %s", perSiteTimeout)
+			}
+
+			if result.err != nil {
+				log.Printf("Error encountered searching [%s]: %v", shopName, result.err)
+				errMu.Lock()
+				siteErrors[shopName] = result.err
+				errMu.Unlock()
+			} else if len(result.cards) > 0 {
 				mu.Lock()
-				cards = append(cards, c...)
+				cards = append(cards, result.cards...)
 				mu.Unlock()
 			}
+
+			log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
 		})
 	}
 
 	wg.Wait()
+	if len(siteErrors) > 0 {
+		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
+	}
 	log.Println("End checking shops...")
 	return cards
 }
