@@ -49,12 +49,12 @@ type Card struct {
 	ExtraInfo string  `json:"extraInfo"`
 }
 
-func Search(input SearchInput) ([]Card, error) {
+func Search(ctx context.Context, input SearchInput) ([]Card, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
-	return searchShops(input, shopNameToLGSMap)
+	return searchShops(ctx, input, shopNameToLGSMap)
 }
 
-func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, error) {
+func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, error) {
 	shopNameToHasResultMap := initShopHasResultMap(shopNameToLGSMap)
 
 	if len(shopNameToLGSMap) == 0 {
@@ -65,7 +65,7 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 	responseThreshold := 1 * time.Second
 
 	// 1. Fetch concurrently
-	cards, siteErrors := fetchCardsConcurrently(input.SearchString, shopNameToLGSMap)
+	cards, siteErrors := fetchCardsConcurrently(ctx, input.SearchString, shopNameToLGSMap)
 	_ = siteErrors // available for future use (e.g. partial-failure UX)
 
 	// 2. Filter and Sort
@@ -87,7 +87,7 @@ func searchShops(input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]
 	return inStockCards, nil
 }
 
-func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
+func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
 	var cards []gateway.Card
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -111,7 +111,7 @@ func fetchCardsConcurrently(searchString string, shops map[string]gateway.LGS) (
 			}()
 			start := time.Now()
 
-			ctx, cancel := context.WithTimeout(context.Background(), perSiteTimeout)
+			ctx, cancel := context.WithTimeout(ctx, perSiteTimeout)
 			defer cancel()
 
 			c, err := lgs.Search(ctx, searchString)

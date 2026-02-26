@@ -253,7 +253,7 @@ func TestSearchShops(t *testing.T) {
 				}
 			}
 
-			results, err := searchShops(tt.input, mockMap)
+			results, err := searchShops(context.Background(), tt.input, mockMap)
 			if err != nil {
 				t.Fatalf("searchShops returned unexpected error: %v", err)
 			}

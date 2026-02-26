@@ -22,7 +22,7 @@ type WebResponse struct {
 
 var searchFunc = controller.Search
 
-func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var apiRes events.APIGatewayProxyResponse
 	var webRes WebResponse
 	var lgs []string
@@ -60,7 +60,7 @@ func Search(_ context.Context, request events.APIGatewayProxyRequest) (events.AP
 		lgs = strings.Split(lgsString, ",")
 	}
 
-	inStockCards, err := searchFunc(controller.SearchInput{
+	inStockCards, err := searchFunc(ctx, controller.SearchInput{
 		SearchString: searchString,
 		Lgs:          lgs,
 	})

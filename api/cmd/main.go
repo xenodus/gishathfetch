@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -31,6 +30,6 @@ func main() {
 	} else {
 		start := time.Now()
 		log.Println(handler.Search(context.Background(), events.APIGatewayProxyRequest{}))
-		log.Println(fmt.Sprintf("Took: %s", time.Since(start)))
+		log.Printf("Took: %s", time.Since(start))
 	}
 }

@@ -58,7 +58,7 @@ func Test_Search_Success(t *testing.T) {
 			// Setup Mock
 			originalSearchFunc := searchFunc
 			defer func() { searchFunc = originalSearchFunc }()
-			searchFunc = func(input controller.SearchInput) ([]controller.Card, error) {
+			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, error) {
 				return tc.mockSearchResponse, tc.mockSearchErr
 			}
 
@@ -82,7 +82,7 @@ func Test_Search_CORS(t *testing.T) {
 	// Setup Mock
 	originalSearchFunc := searchFunc
 	defer func() { searchFunc = originalSearchFunc }()
-	searchFunc = func(input controller.SearchInput) ([]controller.Card, error) {
+	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, error) {
 		return []controller.Card{}, nil
 	}
 
@@ -164,7 +164,7 @@ func Test_Search_Err(t *testing.T) {
 			// Setup Mock
 			originalSearchFunc := searchFunc
 			defer func() { searchFunc = originalSearchFunc }()
-			searchFunc = func(input controller.SearchInput) ([]controller.Card, error) {
+			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, error) {
 				return tc.mockSearchResponse, tc.mockSearchErr
 			}
 
