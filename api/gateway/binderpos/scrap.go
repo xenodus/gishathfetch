@@ -19,25 +19,27 @@ import (
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	switch scrapVariant {
 	case 1:
-		return scrapVariant1(storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant1(ctx, storeName, baseUrl, searchUrl, searchStr)
 	case 2:
-		return scrapVariant2(storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant2(ctx, storeName, baseUrl, searchUrl, searchStr)
 	case 3:
-		return scrapVariant3(storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant3(ctx, storeName, baseUrl, searchUrl, searchStr)
 	case 4:
-		return scrapVariant4(storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant4(ctx, storeName, baseUrl, searchUrl, searchStr)
 	case 5:
-		return scrapVariant5(storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant5(ctx, storeName, baseUrl, searchUrl, searchStr)
 	}
 	return []gateway.Card{}, fmt.Errorf("invalid scrap variant: %d", scrapVariant)
 }
 
 // arcane sanctum
-func scrapVariant5(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
 	var cards []gateway.Card
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -83,11 +85,13 @@ func scrapVariant5(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 }
 
 // tefuda
-func scrapVariant4(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
 	var cards []gateway.Card
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -138,7 +142,7 @@ type pagination struct {
 // games haven
 // gog
 // hideout
-func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	var (
 		err   error
 		cards []gateway.Card
@@ -147,7 +151,9 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 	page := new(pagination)
 	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		// get page
@@ -227,7 +233,9 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 	if page.url != "" {
 		log.Println("Pagination exists for " + storeName)
 
-		c2 := colly.NewCollector()
+		c2 := colly.NewCollector(
+			colly.StdlibContext(ctx),
+		)
 
 		for i := 2; i <= page.last; i++ {
 			searchURL = baseUrl + strings.Replace(page.url, "page="+strconv.Itoa(page.last), "page="+strconv.Itoa(i), 1)
@@ -308,11 +316,13 @@ func scrapVariant3(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 // onemtg
 // manapro
 // mtgasia
-func scrapVariant2(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
 	var cards []gateway.Card
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
@@ -367,11 +377,13 @@ func scrapVariant2(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.C
 }
 
 // cards citadel
-func scrapVariant1(storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	searchURL := baseUrl + fmt.Sprintf(searchUrl, url.QueryEscape(searchStr+" mtg"))
 	var cards []gateway.Card
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {
