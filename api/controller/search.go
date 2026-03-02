@@ -92,7 +92,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var errMu sync.Mutex
-	perSiteTimeout := 8 * time.Second
+	perSiteTimeout := 10 * time.Second
 	siteErrors := make(map[string]error, len(shops))
 
 	log.Printf("Start checking shops for [%s]...", searchString)
