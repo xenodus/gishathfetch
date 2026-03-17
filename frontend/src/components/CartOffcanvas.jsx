@@ -15,36 +15,6 @@ const CartOffcanvas = ({
 }) => {
   const [sortOption, setSortOption] = useState("default");
 
-  const renderCardsWithAds = (cards) => {
-    const elements = [];
-    for (let i = 0; i < cards.length; i++) {
-      const card = cards[i];
-      elements.push(
-        <Card
-          key={`card-${i}`}
-          card={card}
-          index={i}
-          isCart={true}
-          isCardInCart={isCardInCart}
-          removeFromCart={removeFromCart}
-          onSearchStore={onSearchStore}
-          baseUrl={baseUrl}
-        />,
-      );
-
-      const isEndOfGroup = (i + 1) % 4 === 0;
-      const hasMoreCards = i + 1 < cards.length;
-      if (isEndOfGroup && hasMoreCards) {
-        elements.push(
-          <div key={`ad-${i}`} className="col-12">
-            <AdComponent variant="responsive" />
-          </div>,
-        );
-      }
-    }
-    return elements;
-  };
-
   const handleClearCart = () => {
     if (window.confirm("Are you sure you want to remove all saved cards?")) {
       onClearCart();
@@ -97,7 +67,21 @@ const CartOffcanvas = ({
         {cart.length > 0 ? (
           <>
             {sortOption === "default" && (
-              <div className="row">{renderCardsWithAds(cart)}</div>
+              <div className="row">
+                {cart.map((card, i) => (
+                  <Card
+                    // biome-ignore lint/suspicious/noArrayIndexKey: Cart items do not have unique IDs
+                    key={i}
+                    card={card}
+                    index={i}
+                    isCart={true}
+                    isCardInCart={isCardInCart}
+                    removeFromCart={removeFromCart}
+                    onSearchStore={onSearchStore}
+                    baseUrl={baseUrl}
+                  />
+                ))}
+              </div>
             )}
 
             {sortOption === "store" &&
@@ -107,41 +91,26 @@ const CartOffcanvas = ({
                     {storeName} - S$ {data.total.toFixed(2)}
                   </h5>
                   <div className="row">
-                    {(() => {
-                      const elements = [];
-                      for (let i = 0; i < data.cards.length; i++) {
-                        const card = data.cards[i];
-                        elements.push(
-                          <Card
-                            key={`card-${storeName}-${card.originalIndex}`}
-                            card={card}
-                            index={card.originalIndex}
-                            isCart={true}
-                            isCardInCart={isCardInCart}
-                            removeFromCart={removeFromCart}
-                            onSearchStore={onSearchStore}
-                            baseUrl={baseUrl}
-                          />,
-                        );
-
-                        const isEndOfGroup = (i + 1) % 4 === 0;
-                        const hasMoreCards = i + 1 < data.cards.length;
-                        if (isEndOfGroup && hasMoreCards) {
-                          elements.push(
-                            <div
-                              key={`ad-${storeName}-${i}`}
-                              className="col-12"
-                            >
-                              <AdComponent variant="responsive" />
-                            </div>,
-                          );
-                        }
-                      }
-                      return elements;
-                    })()}
+                    {data.cards.map((card) => (
+                      <Card
+                        key={card.originalIndex}
+                        card={card}
+                        index={card.originalIndex}
+                        isCart={true}
+                        isCardInCart={isCardInCart}
+                        removeFromCart={removeFromCart}
+                        onSearchStore={onSearchStore}
+                        baseUrl={baseUrl}
+                      />
+                    ))}
                   </div>
                 </div>
               ))}
+
+            <div className="mt-4">
+              <AdComponent variant="responsive" />
+            </div>
+
             {cart.length >= 2 && (
               <div className="mt-5">
                 <Button
