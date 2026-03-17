@@ -15,7 +15,7 @@ Gishath Fetch is a high-performance web application designed for Magic: The Gath
 Gishath Fetch utilizes a modern decoupled architecture:
 
 - **Frontend**: A responsive Single Page Application (SPA) built with **React 19** and **Vite**. It uses **Bootstrap 5** for a clean, mobile-friendly UI and custom React hooks for efficient state management of search results and the unified shopping cart.
-- **Backend**: A robust API written in **Go 1.26.0**, deployed as **AWS Lambda** functions. The backend leverages Go's concurrency primitives (Goroutines) to perform multiple LGS scrapings in parallel, aggregating the results before returning them to the client.
+- **Backend**: A robust API written in **Go 1.26.1**, deployed as **AWS Lambda** functions. The backend leverages Go's concurrency primitives (Goroutines) to perform multiple LGS scrapings in parallel, aggregating the results before returning them to the client.
 
 ## 🛠️ Tech Stack
 
@@ -26,7 +26,7 @@ Gishath Fetch utilizes a modern decoupled architecture:
 - **Icons**: [React Feather](https://feathericons.com/)
 
 ### Backend
-- **Language**: [Go 1.26.0](https://go.dev/)
+- **Language**: [Go 1.26.1](https://go.dev/)
 - **Infrastructure**: [AWS Lambda](https://aws.amazon.com/lambda/)
 - **Scraping**: [Colly](http://go-colly.org/), [GoQuery](https://github.com/PuerkitoBio/goquery)
 - **Environment**: [GoDotEnv](https://github.com/joho/godotenv)
