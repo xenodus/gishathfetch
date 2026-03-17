@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button, Form, Offcanvas } from "react-bootstrap";
+import AdComponent from "./AdComponent";
 import Card from "./Card";
 
 const CartOffcanvas = ({
@@ -92,7 +93,6 @@ const CartOffcanvas = ({
                   <div className="row">
                     {data.cards.map((card) => (
                       <Card
-                        // biome-ignore lint/suspicious/noArrayIndexKey: Cart items do not have unique IDs
                         key={card.originalIndex}
                         card={card}
                         index={card.originalIndex}
@@ -106,6 +106,11 @@ const CartOffcanvas = ({
                   </div>
                 </div>
               ))}
+
+            <div className="mt-4">
+              <AdComponent variant="responsive" />
+            </div>
+
             {cart.length >= 2 && (
               <div className="mt-5">
                 <Button

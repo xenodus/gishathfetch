@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const AdComponent = () => {
+const AdComponent = ({ variant = "leaderboard" }) => {
   const adInitialized = useRef(false);
 
   useEffect(() => {
@@ -23,17 +23,28 @@ const AdComponent = () => {
     }
   }, []);
 
+  const isResponsive = variant === "responsive";
+
   return (
-    <div className="ad-large mt-4 pb-5 text-center d-print-none d-block d-sm-block w-100">
+    <div
+      className="ad-large mt-4 text-center d-print-none d-block d-sm-block w-100"
+      style={{ overflow: "hidden" }}
+    >
       <div className="text-secondary mb-2" style={{ fontSize: "11px" }}>
         Advertisement
       </div>
-      <div style={{ minHeight: "90px" }}>
+      <div style={{ minHeight: "90px", overflow: "hidden" }}>
         <ins
           className="adsbygoogle"
-          style={{ display: "inline-block", width: "728px", height: "90px" }}
+          style={
+            isResponsive
+              ? { display: "block", width: "100%", maxWidth: "100%" }
+              : { display: "inline-block", width: "728px", height: "90px" }
+          }
           data-ad-client="ca-pub-2393161407259792"
           data-ad-slot="6707964257"
+          data-ad-format={isResponsive ? "auto" : undefined}
+          data-full-width-responsive={isResponsive ? "true" : undefined}
         ></ins>
       </div>
       <div className="text-center mt-2" style={{ fontSize: "11px" }}>

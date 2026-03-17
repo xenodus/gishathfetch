@@ -126,3 +126,24 @@ input#search:focus {
 ins.adsbygoogle {
   z-index: 1000;
 }
+
+/* Prevent AdSense from causing horizontal scrolling in narrow containers (e.g. offcanvas) */
+.ad-large {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+ins.adsbygoogle,
+ins.adsbygoogle iframe {
+  /* biome-ignore lint/complexity/noImportantStyles: AdSense injects inline styles that can cause overflow */
+  max-width: 100% !important;
+}
+
+ins.adsbygoogle {
+  /* biome-ignore lint/complexity/noImportantStyles: AdSense injects inline styles that can cause overflow */
+  width: 100% !important;
+}
+
+ins.adsbygoogle iframe {
+  display: block;
+}
