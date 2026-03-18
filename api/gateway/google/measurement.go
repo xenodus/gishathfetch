@@ -51,6 +51,10 @@ type eventParams struct {
 func LGSNoResultMeasurement(lgs, keyword string) error {
 	apiSecret := os.Getenv(apiSecretKey)
 
+	if measurementIDGenerator == nil {
+		return fmt.Errorf("measurement id generator not initialized")
+	}
+
 	url := fmt.Sprintf(
 		"%s?measurement_id=%s&api_secret=%s",
 		measurementAPIBaseUrl, measurementID, apiSecret,

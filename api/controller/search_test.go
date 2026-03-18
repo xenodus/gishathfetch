@@ -155,6 +155,16 @@ func TestSearchShops(t *testing.T) {
 			expectedCount: 0,
 			verifyFunc:    nil,
 		},
+		"Filtering - Skip Price Zero": {
+			input: SearchInput{SearchString: "Card A"},
+			lgsResponses: map[string][]gateway.Card{
+				"Shop1": {
+					{Name: "Card A", Price: 0, InStock: true, Source: "Shop1"},
+				},
+			},
+			expectedCount: 0,
+			verifyFunc:    nil,
+		},
 		"Filtering - Skip Art Card": {
 			input: SearchInput{SearchString: "Card A"},
 			lgsResponses: map[string][]gateway.Card{

@@ -155,7 +155,7 @@ func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHas
 
 	// Only showing in stock, contains searched string and not art card
 	for _, c := range cards {
-		if c.InStock {
+		if c.InStock && c.Price > 0 {
 			cleanCardName, extraInfo := cleanName(c.Name, c.Quality, c.ExtraInfo)
 
 			card := Card{
