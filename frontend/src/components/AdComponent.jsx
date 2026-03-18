@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const AdComponent = ({ variant = "leaderboard" }) => {
   const adInitialized = useRef(false);
+  const insRef = useRef(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     if (adInitialized.current) return;
@@ -25,9 +27,44 @@ const AdComponent = ({ variant = "leaderboard" }) => {
 
   const isResponsive = variant === "responsive";
 
+  useEffect(() => {
+    const insEl = insRef.current;
+    if (!insEl) return;
+
+    let cancelled = false;
+
+    const hasFilledAd = () => {
+      if (!insEl.isConnected) return false;
+      if (insEl.querySelector("iframe")) return true;
+      // Some fills won't use an iframe immediately; a non-trivial height is a good proxy.
+      return insEl.offsetHeight >= 50;
+    };
+
+    // Give AdSense a moment to render; if it doesn't fill, collapse this block.
+    const timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+      if (!hasFilledAd()) setCollapsed(true);
+    }, 2500);
+
+    // If it does fill later, un-collapse.
+    const observer = new MutationObserver(() => {
+      if (cancelled) return;
+      if (hasFilledAd()) setCollapsed(false);
+    });
+    observer.observe(insEl, { childList: true, subtree: true, attributes: true });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
+
+  if (collapsed) return null;
+
   return (
     <div
-      className="ad-large mt-4 text-center d-print-none d-block d-sm-block w-100"
+      className="ad-large text-center d-print-none d-block d-sm-block w-100"
       style={{ overflow: "hidden" }}
     >
       <div className="text-secondary mb-2" style={{ fontSize: "11px" }}>
@@ -35,6 +72,7 @@ const AdComponent = ({ variant = "leaderboard" }) => {
       </div>
       <div style={{ minHeight: "90px", overflow: "hidden" }}>
         <ins
+          ref={insRef}
           className="adsbygoogle"
           style={
             isResponsive

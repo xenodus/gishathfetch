@@ -55,7 +55,11 @@ const SearchResults = ({
                     onSearchStore={onSearchStore}
                     baseUrl={baseUrl}
                   />
-                  {showAd && <AdComponent />}
+                  {showAd && (
+                    <div className="col-12 mb-4">
+                      <AdComponent />
+                    </div>
+                  )}
                 </React.Fragment>
               );
             })}
