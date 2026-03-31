@@ -76,9 +76,9 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		colly.StdlibContext(ctx),
 	)
 
-	// if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-	// 	c.SetProxy(os.Getenv("PROXY_URL"))
-	// }
+	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+		c.SetProxy(os.Getenv("PROXY_URL"))
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -438,9 +438,9 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		colly.StdlibContext(ctx),
 	)
 
-	// if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-	// 	c.SetProxy(os.Getenv("PROXY_URL"))
-	// }
+	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+		c.SetProxy(os.Getenv("PROXY_URL"))
+	}
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {
