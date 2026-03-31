@@ -7,6 +7,7 @@ import (
 	"log"
 	"mtg-price-checker-sg/gateway/util"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -15,6 +16,8 @@ import (
 
 	"github.com/gocolly/colly/v2"
 )
+
+const proxyUrlKey = "PROXY_URL"
 
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	switch scrapVariant {
@@ -73,6 +76,10 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		colly.StdlibContext(ctx),
 	)
 
+	// if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+	// 	c.SetProxy(os.Getenv("PROXY_URL"))
+	// }
+
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
 			name := el.ChildText("div.collection-product-info > h3.collection-product-title a")
@@ -124,6 +131,10 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
+
+	// if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+	// 	c.SetProxy(os.Getenv("PROXY_URL"))
+	// }
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -186,6 +197,11 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
+
+	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+		log.Printf("Using proxy for %s", storeName)
+		c.SetProxy(os.Getenv("PROXY_URL"))
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		// get page
@@ -262,82 +278,82 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		return []gateway.Card{}, err
 	}
 
-	if page.url != "" {
-		log.Println("Pagination exists for " + storeName)
+	// if page.url != "" {
+	// 	log.Println("Pagination exists for " + storeName)
 
-		c2 := colly.NewCollector(
-			colly.StdlibContext(ctx),
-		)
+	// 	c2 := colly.NewCollector(
+	// 		colly.StdlibContext(ctx),
+	// 	)
 
-		for i := 2; i <= page.last; i++ {
-			searchURL = baseUrl + strings.Replace(page.url, "page="+strconv.Itoa(page.last), "page="+strconv.Itoa(i), 1)
+	// 	for i := 2; i <= page.last; i++ {
+	// 		searchURL = baseUrl + strings.Replace(page.url, "page="+strconv.Itoa(page.last), "page="+strconv.Itoa(i), 1)
 
-			c2.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
-				e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
-					var (
-						isInstock bool
-						price     float64
-					)
+	// 		c2.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
+	// 			e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
+	// 				var (
+	// 					isInstock bool
+	// 					price     float64
+	// 				)
 
-					// in stock
-					if len(el.ChildTexts("div.productCard__button--outOfStock")) == 0 {
-						isInstock = true
-					}
+	// 				// in stock
+	// 				if len(el.ChildTexts("div.productCard__button--outOfStock")) == 0 {
+	// 					isInstock = true
+	// 				}
 
-					if isInstock {
-						el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
-							if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
-								priceStr := el2.Attr("data-variantprice")
-								priceStr = strings.Replace(priceStr, "$", "", -1)
-								priceStr = strings.Replace(priceStr, ",", "", -1)
-								priceStr = strings.Replace(priceStr, "SGD", "", -1)
-								price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
-								price = price / 100
+	// 				if isInstock {
+	// 					el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
+	// 						if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
+	// 							priceStr := el2.Attr("data-variantprice")
+	// 							priceStr = strings.Replace(priceStr, "$", "", -1)
+	// 							priceStr = strings.Replace(priceStr, ",", "", -1)
+	// 							priceStr = strings.Replace(priceStr, "SGD", "", -1)
+	// 							price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
+	// 							price = price / 100
 
-								u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
-								cleanPageURL, err := url.Parse(u)
-								if err != nil {
-									log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
-									return
-								}
-								cleanPageURL.RawQuery = url.Values{
-									"variant":    []string{el2.Attr("data-variantid")},
-									"utm_source": []string{config.UtmSource},
-								}.Encode()
+	// 							u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
+	// 							cleanPageURL, err := url.Parse(u)
+	// 							if err != nil {
+	// 								log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+	// 								return
+	// 							}
+	// 							cleanPageURL.RawQuery = url.Values{
+	// 								"variant":    []string{el2.Attr("data-variantid")},
+	// 								"utm_source": []string{config.UtmSource},
+	// 							}.Encode()
 
-								if price > 0 {
-									cards = append(cards, gateway.Card{
-										Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-										Url:       strings.TrimSpace(cleanPageURL.String()),
-										InStock:   isInstock,
-										Price:     price,
-										Source:    storeName,
-										Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-										Quality:   util.MapQuality(el2.Text),
-										IsFoil:    strings.Contains(strings.ToLower(el2.Attr("data-varianttitle")), "foil"),
-										ExtraInfo: []string{el.ChildText("p.productCard__setName")},
-									})
-								}
-							}
-						})
-					}
-				})
-			})
+	// 							if price > 0 {
+	// 								cards = append(cards, gateway.Card{
+	// 									Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
+	// 									Url:       strings.TrimSpace(cleanPageURL.String()),
+	// 									InStock:   isInstock,
+	// 									Price:     price,
+	// 									Source:    storeName,
+	// 									Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
+	// 									Quality:   util.MapQuality(el2.Text),
+	// 									IsFoil:    strings.Contains(strings.ToLower(el2.Attr("data-varianttitle")), "foil"),
+	// 									ExtraInfo: []string{el.ChildText("p.productCard__setName")},
+	// 								})
+	// 							}
+	// 						}
+	// 					})
+	// 				}
+	// 			})
+	// 		})
 
-			log.Println("Searching page no: ", i)
-			log.Println(searchURL)
+	// 		log.Println("Searching page no: ", i)
+	// 		log.Println(searchURL)
 
-			err = c2.Visit(searchURL)
-			if err != nil {
-				break
-			}
+	// 		err = c2.Visit(searchURL)
+	// 		if err != nil {
+	// 			break
+	// 		}
 
-			// Application's max page limit
-			if i >= config.MaxPagesToSearch {
-				break
-			}
-		}
-	}
+	// 		// Application's max page limit
+	// 		if i >= config.MaxPagesToSearch {
+	// 			break
+	// 		}
+	// 	}
+	// }
 
 	return cards, err
 }
@@ -355,6 +371,11 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
+
+	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+		log.Printf("Using proxy for %s", storeName)
+		c.SetProxy(os.Getenv("PROXY_URL"))
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
@@ -416,6 +437,10 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
+
+	// if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+	// 	c.SetProxy(os.Getenv("PROXY_URL"))
+	// }
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {

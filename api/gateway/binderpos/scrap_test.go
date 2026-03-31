@@ -6,8 +6,13 @@ import (
 	"log"
 	"testing"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	_ = godotenv.Load("../../.env")
+}
 
 func Test_Scrap(t *testing.T) {
 	type args struct {

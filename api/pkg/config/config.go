@@ -8,6 +8,7 @@ const (
 	EnvProd          = "prod"
 	EnvStaging       = "staging"
 	EnvLocal         = "local"
+	UseProxy         = true
 )
 
 func GetAllowedOrigins() []string {
