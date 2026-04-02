@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"mtg-price-checker-sg/gateway"
@@ -119,7 +120,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 			if err != nil {
 				errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
 				log.Println(errMsg)
-				go alert.SendDiscordAlert(errMsg)
+				if !errors.Is(err, context.Canceled) {
+					go alert.SendDiscordAlert(errMsg)
+				}
 				errMu.Lock()
 				siteErrors[shopName] = err
 				errMu.Unlock()
