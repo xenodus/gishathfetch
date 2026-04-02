@@ -2,6 +2,9 @@ package gog
 
 import (
 	"context"
+	"encoding/json"
+	"log"
+	"net/http"
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
@@ -30,23 +33,21 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Scrap(ctx, 3, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
+	reqPayload, err := json.Marshal(binderpos.Payload{
+		StoreURL:    binderposStoreURL,
+		Game:        binderpos.ProductTypeMTG.ToString(),
+		Title:       searchStr,
+		InstockOnly: true,
+	})
+	if err != nil {
+		return []gateway.Card{}, err
+	}
 
-	// reqPayload, err := json.Marshal(binderpos.Payload{
-	// 	StoreURL:    binderposStoreURL,
-	// 	Game:        binderpos.ProductTypeMTG.ToString(),
-	// 	Title:       searchStr,
-	// 	InstockOnly: true,
-	// })
-	// if err != nil {
-	// 	return []gateway.Card{}, err
-	// }
+	cards, httpStatusCode, err := s.BinderposGwy.Search(ctx, s.Name, s.BaseUrl, reqPayload)
+	if err != nil || httpStatusCode != http.StatusOK {
+		log.Printf("falling back to scrap for [%s]", s.Name)
+		return s.BinderposGwy.Scrap(ctx, 3, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
+	}
 
-	// cards, httpStatusCode, err := s.BinderposGwy.Search(ctx, s.Name, s.BaseUrl, reqPayload)
-	// if err != nil || httpStatusCode != http.StatusOK {
-	// 	log.Printf("falling back to scrap for [%s]", s.Name)
-	// 	return s.BinderposGwy.Scrap(ctx, 3, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
-	// }
-
-	// return cards, nil
+	return cards, nil
 }

@@ -142,9 +142,9 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	)
 	configureRequestOptimizations(c)
 
-	// if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-	// 	c.SetProxy(os.Getenv("PROXY_URL"))
-	// }
+	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
+		c.SetProxy(os.Getenv("PROXY_URL"))
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
