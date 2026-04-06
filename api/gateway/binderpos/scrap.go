@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"mtg-price-checker-sg/gateway/util"
 	"net/url"
 	"os"
@@ -18,6 +19,13 @@ import (
 )
 
 const proxyUrlKey = "PROXY_URL"
+
+func getRandomDedicatedProxy() (int, string) {
+	dedicatedProxies := util.GetDedicatedProxy()
+	randomProxyIndex := rand.Intn(len(dedicatedProxies))
+	randomProxy := dedicatedProxies[randomProxyIndex]
+	return randomProxyIndex, fmt.Sprintf("http://%s:%s@%s:%s", randomProxy.Username, randomProxy.Password, randomProxy.Host, randomProxy.Port)
+}
 
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	switch scrapVariant {
@@ -74,8 +82,16 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 
 	c := gateway.NewOptimizedCollector(ctx)
 
-	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-		c.SetProxy(os.Getenv("PROXY_URL"))
+	if config.UseProxy {
+		// Use getRandomDedicatedProxy() instead of os.Getenv("PROXY_URL") at 70% chance
+		if rand.Float64() < 0.7 {
+			index, proxyUrl := getRandomDedicatedProxy()
+			log.Printf("Using dedicated proxy %d", index+1)
+			c.SetProxy(proxyUrl)
+		} else {
+			log.Println("Using default proxy")
+			c.SetProxy(os.Getenv("PROXY_URL"))
+		}
 	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
@@ -128,8 +144,16 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 
 	c := gateway.NewOptimizedCollector(ctx)
 
-	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-		c.SetProxy(os.Getenv("PROXY_URL"))
+	if config.UseProxy {
+		// Use getRandomDedicatedProxy() instead of os.Getenv("PROXY_URL") at 70% chance
+		if rand.Float64() < 0.7 {
+			index, proxyUrl := getRandomDedicatedProxy()
+			log.Printf("Using dedicated proxy %d", index+1)
+			c.SetProxy(proxyUrl)
+		} else {
+			log.Println("Using default proxy")
+			c.SetProxy(os.Getenv("PROXY_URL"))
+		}
 	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
@@ -182,39 +206,24 @@ type pagination struct {
 // gog
 // hideout
 func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
-	var (
-		err   error
-		cards []gateway.Card
-	)
-
-	page := new(pagination)
+	var cards []gateway.Card
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 
 	c := gateway.NewOptimizedCollector(ctx)
 
-	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-		log.Printf("Using proxy for %s", storeName)
-		c.SetProxy(os.Getenv("PROXY_URL"))
+	if config.UseProxy {
+		// Use getRandomDedicatedProxy() instead of os.Getenv("PROXY_URL") at 70% chance
+		if rand.Float64() < 0.7 {
+			index, proxyUrl := getRandomDedicatedProxy()
+			log.Printf("Using dedicated proxy %d", index+1)
+			c.SetProxy(proxyUrl)
+		} else {
+			log.Println("Using default proxy")
+			c.SetProxy(os.Getenv("PROXY_URL"))
+		}
 	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
-		// get page
-		e.ForEach("ol.pagination li", func(_ int, el *colly.HTMLElement) {
-			elStr := strings.Replace(el.Text, "«", "", -1)
-			elStr = strings.Replace(elStr, "page", "", -1)
-			elStr = strings.Replace(elStr, "Next", "", -1)
-			elStr = strings.Replace(elStr, "Previous", "", -1)
-			elStr = strings.Replace(elStr, "»", "", -1)
-			elStr = strings.TrimSpace(elStr)
-			if elStr != "" && elStr != "1" && el.ChildAttr("a", "href") != "" {
-				elInt, strConvErr := strconv.Atoi(elStr)
-				if strConvErr == nil {
-					page.last = elInt
-					page.url = el.ChildAttr("a", "href")
-				}
-			}
-		})
-
 		// get cards
 		e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
 			var (
@@ -267,89 +276,7 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		})
 	})
 
-	err = c.Visit(searchURL)
-	if err != nil {
-		return []gateway.Card{}, err
-	}
-
-	// if page.url != "" {
-	// 	log.Println("Pagination exists for " + storeName)
-
-	// 	c2 := colly.NewCollector(
-	// 		colly.StdlibContext(ctx),
-	// 	)
-
-	// 	for i := 2; i <= page.last; i++ {
-	// 		searchURL = baseUrl + strings.Replace(page.url, "page="+strconv.Itoa(page.last), "page="+strconv.Itoa(i), 1)
-
-	// 		c2.OnHTML("div.collectionGrid", func(e *colly.HTMLElement) {
-	// 			e.ForEach("div.productCard__card", func(_ int, el *colly.HTMLElement) {
-	// 				var (
-	// 					isInstock bool
-	// 					price     float64
-	// 				)
-
-	// 				// in stock
-	// 				if len(el.ChildTexts("div.productCard__button--outOfStock")) == 0 {
-	// 					isInstock = true
-	// 				}
-
-	// 				if isInstock {
-	// 					el.ForEach("ul.productChip__grid li", func(_ int, el2 *colly.HTMLElement) {
-	// 						if el2.Attr("data-variantavailable") == "true" && el2.Attr("data-variantqty") != "0" {
-	// 							priceStr := el2.Attr("data-variantprice")
-	// 							priceStr = strings.Replace(priceStr, "$", "", -1)
-	// 							priceStr = strings.Replace(priceStr, ",", "", -1)
-	// 							priceStr = strings.Replace(priceStr, "SGD", "", -1)
-	// 							price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
-	// 							price = price / 100
-
-	// 							u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
-	// 							cleanPageURL, err := url.Parse(u)
-	// 							if err != nil {
-	// 								log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
-	// 								return
-	// 							}
-	// 							cleanPageURL.RawQuery = url.Values{
-	// 								"variant":    []string{el2.Attr("data-variantid")},
-	// 								"utm_source": []string{config.UtmSource},
-	// 							}.Encode()
-
-	// 							if price > 0 {
-	// 								cards = append(cards, gateway.Card{
-	// 									Name:      strings.TrimSpace(el.ChildText("p.productCard__title")),
-	// 									Url:       strings.TrimSpace(cleanPageURL.String()),
-	// 									InStock:   isInstock,
-	// 									Price:     price,
-	// 									Source:    storeName,
-	// 									Img:       strings.TrimSpace("https:" + el.ChildAttr("img", "data-src")),
-	// 									Quality:   util.MapQuality(el2.Text),
-	// 									IsFoil:    strings.Contains(strings.ToLower(el2.Attr("data-varianttitle")), "foil"),
-	// 									ExtraInfo: []string{el.ChildText("p.productCard__setName")},
-	// 								})
-	// 							}
-	// 						}
-	// 					})
-	// 				}
-	// 			})
-	// 		})
-
-	// 		log.Println("Searching page no: ", i)
-	// 		log.Println(searchURL)
-
-	// 		err = c2.Visit(searchURL)
-	// 		if err != nil {
-	// 			break
-	// 		}
-
-	// 		// Application's max page limit
-	// 		if i >= config.MaxPagesToSearch {
-	// 			break
-	// 		}
-	// 	}
-	// }
-
-	return cards, err
+	return cards, c.Visit(searchURL)
 }
 
 // card affinity
@@ -364,9 +291,16 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 
 	c := gateway.NewOptimizedCollector(ctx)
 
-	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-		log.Printf("Using proxy for %s", storeName)
-		c.SetProxy(os.Getenv("PROXY_URL"))
+	if config.UseProxy {
+		// Use getRandomDedicatedProxy() instead of os.Getenv("PROXY_URL") at 70% chance
+		if rand.Float64() < 0.7 {
+			index, proxyUrl := getRandomDedicatedProxy()
+			log.Printf("Using dedicated proxy %d", index+1)
+			c.SetProxy(proxyUrl)
+		} else {
+			log.Println("Using default proxy")
+			c.SetProxy(os.Getenv("PROXY_URL"))
+		}
 	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
@@ -428,8 +362,16 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 
 	c := gateway.NewOptimizedCollector(ctx)
 
-	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
-		c.SetProxy(os.Getenv("PROXY_URL"))
+	if config.UseProxy {
+		// Use getRandomDedicatedProxy() instead of os.Getenv("PROXY_URL") at 70% chance
+		if rand.Float64() < 0.7 {
+			index, proxyUrl := getRandomDedicatedProxy()
+			log.Printf("Using dedicated proxy %d", index+1)
+			c.SetProxy(proxyUrl)
+		} else {
+			log.Println("Using default proxy")
+			c.SetProxy(os.Getenv("PROXY_URL"))
+		}
 	}
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {

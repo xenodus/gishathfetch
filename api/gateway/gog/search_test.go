@@ -8,8 +8,13 @@ import (
 
 	"mtg-price-checker-sg/gateway/binderpos"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	_ = godotenv.Load("../../.env")
+}
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
