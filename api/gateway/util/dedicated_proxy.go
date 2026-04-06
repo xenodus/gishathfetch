@@ -42,5 +42,7 @@ func GetDedicatedProxy() []DedicatedProxy {
 		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_1")),
 		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_2")),
 		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_3")),
+		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_4")),
+		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_5")),
 	}
 }

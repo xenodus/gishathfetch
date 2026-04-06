@@ -12,9 +12,11 @@ func TestGetDedicatedProxyReadsEnvVars(t *testing.T) {
 	t.Setenv("DEDICATED_PROXY_1", "host-1|1111|user-1|pass-1")
 	t.Setenv("DEDICATED_PROXY_2", "host-2|2222|user-2|pass-2")
 	t.Setenv("DEDICATED_PROXY_3", "host-3|3333|user-3|pass-3")
+	t.Setenv("DEDICATED_PROXY_4", "host-4|4444|user-4|pass-4")
+	t.Setenv("DEDICATED_PROXY_5", "host-5|5555|user-5|pass-5")
 
 	got := GetDedicatedProxy()
-	require.Len(t, got, 3)
+	require.Len(t, got, 5)
 
 	require.Equal(t, "host-1", got[0].Host)
 	require.Equal(t, "1111", got[0].Port)
@@ -30,15 +32,25 @@ func TestGetDedicatedProxyReadsEnvVars(t *testing.T) {
 	require.Equal(t, "3333", got[2].Port)
 	require.Equal(t, "user-3", got[2].Username)
 	require.Equal(t, "pass-3", got[2].Password)
+
+	require.Equal(t, "host-4", got[3].Host)
+	require.Equal(t, "4444", got[3].Port)
+	require.Equal(t, "user-4", got[3].Username)
+	require.Equal(t, "pass-4", got[3].Password)
+
+	require.Equal(t, "host-5", got[4].Host)
+	require.Equal(t, "5555", got[4].Port)
+	require.Equal(t, "user-5", got[4].Username)
+	require.Equal(t, "pass-5", got[4].Password)
 }
 
 func TestGetDedicatedProxyReturnsEmptyStringsWhenEnvVarsAreEmpty(t *testing.T) {
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 5; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
 
 	got := GetDedicatedProxy()
-	require.Len(t, got, 3)
+	require.Len(t, got, 5)
 	for _, proxy := range got {
 		require.Equal(t, "", proxy.Host)
 		require.Equal(t, "", proxy.Port)
@@ -48,12 +60,12 @@ func TestGetDedicatedProxyReturnsEmptyStringsWhenEnvVarsAreEmpty(t *testing.T) {
 }
 
 func TestGetDedicatedProxyParsesPartialSegments(t *testing.T) {
-	t.Setenv("DEDICATED_PROXY_1", "host-1") // missing port/username/password
-	t.Setenv("DEDICATED_PROXY_2", "host-2|2222") // missing username/password
+	t.Setenv("DEDICATED_PROXY_1", "host-1")             // missing port/username/password
+	t.Setenv("DEDICATED_PROXY_2", "host-2|2222")        // missing username/password
 	t.Setenv("DEDICATED_PROXY_3", "host-3|3333|user-3") // missing password
 
 	got := GetDedicatedProxy()
-	require.Len(t, got, 3)
+	require.Len(t, got, 5)
 
 	require.Equal(t, "host-1", got[0].Host)
 	require.Equal(t, "", got[0].Port)
@@ -70,4 +82,3 @@ func TestGetDedicatedProxyParsesPartialSegments(t *testing.T) {
 	require.Equal(t, "user-3", got[2].Username)
 	require.Equal(t, "", got[2].Password)
 }
-

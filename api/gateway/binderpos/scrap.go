@@ -201,7 +201,6 @@ type pagination struct {
 	url  string
 }
 
-// scrap with pagination
 // games haven
 // gog
 // hideout

@@ -2,11 +2,8 @@ package onemtg
 
 import (
 	"context"
-	"encoding/json"
-	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
-	"net/http"
 )
 
 const StoreName = "OneMtg"
@@ -32,27 +29,35 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	reqPayload, err := json.Marshal(binderpos.Payload{
-		StoreURL:    binderposStoreURL,
-		Game:        binderpos.ProductTypeMTG.ToString(),
-		Title:       searchStr,
-		InstockOnly: true,
-	})
-	if err != nil {
-		return []gateway.Card{}, err
-	}
+	return s.BinderposGwy.Scrap(ctx,
+		2,
+		s.Name,
+		s.BaseUrl,
+		s.SearchUrl,
+		searchStr,
+	)
 
-	cards, httpStatusCode, err := s.BinderposGwy.Search(ctx, s.Name, s.BaseUrl, reqPayload)
-	if err != nil || httpStatusCode != http.StatusOK {
-		log.Printf("falling back to scrap for [%s]", s.Name)
-		return s.BinderposGwy.Scrap(ctx,
-			2,
-			s.Name,
-			s.BaseUrl,
-			s.SearchUrl,
-			searchStr,
-		)
-	}
+	// reqPayload, err := json.Marshal(binderpos.Payload{
+	// 	StoreURL:    binderposStoreURL,
+	// 	Game:        binderpos.ProductTypeMTG.ToString(),
+	// 	Title:       searchStr,
+	// 	InstockOnly: true,
+	// })
+	// if err != nil {
+	// 	return []gateway.Card{}, err
+	// }
 
-	return cards, nil
+	// cards, httpStatusCode, err := s.BinderposGwy.Search(ctx, s.Name, s.BaseUrl, reqPayload)
+	// if err != nil || httpStatusCode != http.StatusOK {
+	// 	log.Printf("falling back to scrap for [%s]", s.Name)
+	// 	return s.BinderposGwy.Scrap(ctx,
+	// 		2,
+	// 		s.Name,
+	// 		s.BaseUrl,
+	// 		s.SearchUrl,
+	// 		searchStr,
+	// 	)
+	// }
+
+	// return cards, nil
 }
