@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"time"
+)
 
 const (
 	UtmSource        = "gishathfetch"
@@ -9,6 +12,7 @@ const (
 	EnvStaging       = "staging"
 	EnvLocal         = "local"
 	UseProxy         = true
+	PerSiteTimeout   = 15 * time.Second
 )
 
 func GetAllowedOrigins() []string {

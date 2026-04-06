@@ -26,6 +26,7 @@ import (
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
 	"mtg-price-checker-sg/gateway/tefuda"
 	"mtg-price-checker-sg/pkg/alert"
+	"mtg-price-checker-sg/pkg/config"
 	"slices"
 	"sort"
 	"strings"
@@ -93,7 +94,6 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var errMu sync.Mutex
-	perSiteTimeout := 10 * time.Second
 	siteErrors := make(map[string]error, len(shops))
 
 	log.Printf("Start checking shops for [%s]...", searchString)
@@ -112,7 +112,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 			}()
 			start := time.Now()
 
-			ctx, cancel := context.WithTimeout(ctx, perSiteTimeout)
+			ctx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
 			defer cancel()
 
 			c, err := lgs.Search(ctx, searchString)
