@@ -19,14 +19,6 @@ import (
 
 const proxyUrlKey = "PROXY_URL"
 
-func configureRequestOptimizations(c *colly.Collector) {
-	c.DisableCookies()
-	c.OnRequest(func(r *colly.Request) {
-		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
-		r.Headers.Set("Accept-Encoding", "gzip")
-	})
-}
-
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	switch scrapVariant {
 	case 1:
@@ -80,10 +72,7 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := colly.NewCollector(
-		colly.StdlibContext(ctx),
-	)
-	configureRequestOptimizations(c)
+	c := gateway.NewOptimizedCollector(ctx)
 
 	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
 		c.SetProxy(os.Getenv("PROXY_URL"))
@@ -137,10 +126,7 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := colly.NewCollector(
-		colly.StdlibContext(ctx),
-	)
-	configureRequestOptimizations(c)
+	c := gateway.NewOptimizedCollector(ctx)
 
 	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
 		c.SetProxy(os.Getenv("PROXY_URL"))
@@ -204,10 +190,7 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	page := new(pagination)
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 
-	c := colly.NewCollector(
-		colly.StdlibContext(ctx),
-	)
-	configureRequestOptimizations(c)
+	c := gateway.NewOptimizedCollector(ctx)
 
 	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
 		log.Printf("Using proxy for %s", storeName)
@@ -379,10 +362,7 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := colly.NewCollector(
-		colly.StdlibContext(ctx),
-	)
-	configureRequestOptimizations(c)
+	c := gateway.NewOptimizedCollector(ctx)
 
 	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
 		log.Printf("Using proxy for %s", storeName)
@@ -446,10 +426,7 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := colly.NewCollector(
-		colly.StdlibContext(ctx),
-	)
-	configureRequestOptimizations(c)
+	c := gateway.NewOptimizedCollector(ctx)
 
 	if config.UseProxy && os.Getenv("PROXY_URL") != "" {
 		c.SetProxy(os.Getenv("PROXY_URL"))

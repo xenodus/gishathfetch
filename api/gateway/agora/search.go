@@ -50,9 +50,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	searchURL := apiURL.String()
 	var cards []gateway.Card
 
-	c := colly.NewCollector(
-		colly.StdlibContext(ctx),
-	)
+	c := gateway.NewOptimizedCollector(ctx)
 
 	c.OnHTML("div#store_listingcontainer", func(e *colly.HTMLElement) {
 		e.ForEach("div.store-item", func(_ int, el *colly.HTMLElement) {
