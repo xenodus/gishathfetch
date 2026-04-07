@@ -118,9 +118,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 			c, err := lgs.Search(ctx, searchString)
 
 			if err != nil {
-				errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
-				log.Println(errMsg)
-				if !errors.Is(err, context.Canceled) {
+				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+					errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
+					log.Println(errMsg)
 					go alert.SendDiscordAlert(errMsg)
 				}
 				errMu.Lock()
