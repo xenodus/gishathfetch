@@ -20,6 +20,7 @@ const SearchForm = ({
 }) => {
   const wrapperRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showTip, setShowTip] = useState(true);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -145,6 +146,24 @@ const SearchForm = ({
           onSelectAll={onSelectAll}
           onSelectNone={onSelectNone}
         />
+
+        {showTip && (
+          <div
+            className="alert bg-info-subtle mb-3 px-2 py-1 small d-flex align-items-center justify-content-between"
+            role="note"
+          >
+            <div>
+              <span className="text-info-emphasis me-1 fw-semibold">Tip:</span>
+              Selecting less stores generally helps GishathFetch to search faster and also helps save $$$.
+            </div>
+            <button
+              type="button"
+              className="btn-close ms-2"
+              aria-label="Dismiss tip"
+              onClick={() => setShowTip(false)}
+            />
+          </div>
+        )}
 
         <div className="mb-3 d-grid">
           <button
