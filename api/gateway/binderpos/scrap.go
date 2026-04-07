@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"mtg-price-checker-sg/gateway/util"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
@@ -17,32 +15,6 @@ import (
 
 	"github.com/gocolly/colly/v2"
 )
-
-const proxyUrlKey = "PROXY_URL"
-
-func getRandomDedicatedProxy() (int, string) {
-	dedicatedProxies := util.GetDedicatedProxy()
-	randomProxyIndex := rand.Intn(len(dedicatedProxies))
-	randomProxy := dedicatedProxies[randomProxyIndex]
-	return randomProxyIndex, fmt.Sprintf("http://%s:%s@%s:%s", randomProxy.Username, randomProxy.Password, randomProxy.Host, randomProxy.Port)
-}
-
-func applyProxy(c *colly.Collector) {
-	if !config.UseProxy {
-		return
-	}
-
-	// Use getRandomDedicatedProxy() instead of os.Getenv("PROXY_URL") at 70% chance
-	if rand.Float64() < 0.7 {
-		index, proxyUrl := getRandomDedicatedProxy()
-		log.Printf("Using dedicated proxy %d", index+1)
-		c.SetProxy(proxyUrl)
-		return
-	}
-
-	log.Println("Using default proxy")
-	c.SetProxy(os.Getenv("PROXY_URL"))
-}
 
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	switch scrapVariant {
@@ -98,7 +70,6 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	var cards []gateway.Card
 
 	c := gateway.NewOptimizedCollector(ctx)
-	applyProxy(c)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -149,7 +120,6 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	var cards []gateway.Card
 
 	c := gateway.NewOptimizedCollector(ctx)
-	applyProxy(c)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -204,7 +174,6 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 
 	c := gateway.NewOptimizedCollector(ctx)
-	applyProxy(c)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		// get cards
@@ -273,7 +242,6 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	var cards []gateway.Card
 
 	c := gateway.NewOptimizedCollector(ctx)
-	applyProxy(c)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
@@ -333,7 +301,6 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	var cards []gateway.Card
 
 	c := gateway.NewOptimizedCollector(ctx)
-	applyProxy(c)
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {

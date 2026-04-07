@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
+	"os"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -47,6 +49,7 @@ func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 	c.DisableCookies()
 	c.SetRequestTimeout(config.PerSiteTimeout)
+	applyProxyForRetryAttempt(c, 0)
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
@@ -75,8 +78,10 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 		retries, _ := r.Ctx.GetAny("retries").(int)
 
 		if retries < maxRetries {
-			r.Ctx.Put("retries", retries+1)
-			fmt.Printf("Retrying %s (attempt %d)...\n", r.Request.URL, retries+1)
+			nextRetry := retries + 1
+			r.Ctx.Put("retries", nextRetry)
+			applyProxyForRetryAttempt(c, nextRetry)
+			fmt.Printf("Retrying %s (attempt %d)...\n", r.Request.URL, nextRetry)
 			time.Sleep(time.Duration(retries+1) * time.Second) // backoff
 			if retryErr := r.Request.Retry(); retryErr != nil {
 				fmt.Printf("Retry failed for %s: %v\n", r.Request.URL, retryErr)
@@ -85,4 +90,49 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 			fmt.Printf("Failed after %d retries: %s\n", maxRetries, r.Request.URL)
 		}
 	})
+}
+
+func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int) {
+	if !config.UseProxy {
+		c.SetProxyFunc(nil)
+		return
+	}
+
+	switch retryAttempt {
+	case 0, 1:
+		if proxyURL, ok := randomDedicatedProxyURL(); ok {
+			c.SetProxy(proxyURL)
+			return
+		}
+		fallthrough
+	case 2:
+		if proxyURL := os.Getenv("PROXY_URL"); proxyURL != "" {
+			c.SetProxy(proxyURL)
+			return
+		}
+		fallthrough
+	default:
+		c.SetProxyFunc(nil)
+	}
+}
+
+func randomDedicatedProxyURL() (string, bool) {
+	dedicatedProxies := util.GetDedicatedProxy()
+	valid := make([]util.DedicatedProxy, 0, len(dedicatedProxies))
+	for _, proxy := range dedicatedProxies {
+		if proxy.Host == "" || proxy.Port == "" {
+			continue
+		}
+		valid = append(valid, proxy)
+	}
+	if len(valid) == 0 {
+		return "", false
+	}
+
+	p := valid[rand.IntN(len(valid))]
+	if p.Username != "" || p.Password != "" {
+		return fmt.Sprintf("http://%s:%s@%s:%s", p.Username, p.Password, p.Host, p.Port), true
+	}
+
+	return fmt.Sprintf("http://%s:%s", p.Host, p.Port), true
 }
