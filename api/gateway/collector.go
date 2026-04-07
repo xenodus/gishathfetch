@@ -2,7 +2,9 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"math/rand/v2"
+	"time"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -29,5 +31,20 @@ func ConfigureRequestOptimizations(c *colly.Collector) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
 		r.Headers.Set("User-Agent", browserUserAgents[rand.IntN(len(browserUserAgents))])
+	})
+
+	const maxRetries = 3
+
+	c.OnError(func(r *colly.Response, err error) {
+		retries, _ := r.Ctx.GetAny("retries").(int)
+
+		if retries < maxRetries {
+			r.Ctx.Put("retries", retries+1)
+			fmt.Printf("Retrying %s (attempt %d)...\n", r.Request.URL, retries+1)
+			time.Sleep(time.Duration(retries+1) * time.Second) // backoff
+			r.Request.Retry()
+		} else {
+			fmt.Printf("Failed after %d retries: %s\n", maxRetries, r.Request.URL)
+		}
 	})
 }
