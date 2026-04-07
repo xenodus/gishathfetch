@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"mtg-price-checker-sg/pkg/config"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -20,29 +21,66 @@ var browserUserAgents = []string{
 }
 
 func NewOptimizedCollector(ctx context.Context) *colly.Collector {
-	c := colly.NewCollector(colly.StdlibContext(ctx))
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
 	ConfigureRequestOptimizations(c)
 	return c
 }
 
+func NewOptimizedCollectorNoRetry(ctx context.Context) *colly.Collector {
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
+	ConfigureRequestOptimizationsNoRetry(c)
+	return c
+}
+
 func ConfigureRequestOptimizations(c *colly.Collector) {
+	configureRequestOptimizations(c, true)
+}
+
+func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
+	configureRequestOptimizations(c, false)
+}
+
+func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 	c.DisableCookies()
+	c.SetRequestTimeout(config.PerSiteTimeout)
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
 		r.Headers.Set("User-Agent", browserUserAgents[rand.IntN(len(browserUserAgents))])
 	})
 
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		RandomDelay: 2 * time.Second, // adds 0–2s on top of Delay
+	})
+
+	if !enableRetry {
+		return
+	}
+
 	const maxRetries = 3
 
 	c.OnError(func(r *colly.Response, err error) {
+		// Colly may call OnError without a full response/request on network/proxy failures.
+		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
+		if r == nil || r.Ctx == nil || r.Request == nil || r.Request.URL == nil {
+			fmt.Printf("Request failed before response was available: %v\n", err)
+			return
+		}
+
 		retries, _ := r.Ctx.GetAny("retries").(int)
 
 		if retries < maxRetries {
 			r.Ctx.Put("retries", retries+1)
 			fmt.Printf("Retrying %s (attempt %d)...\n", r.Request.URL, retries+1)
 			time.Sleep(time.Duration(retries+1) * time.Second) // backoff
-			r.Request.Retry()
+			if retryErr := r.Request.Retry(); retryErr != nil {
+				fmt.Printf("Retry failed for %s: %v\n", r.Request.URL, retryErr)
+			}
 		} else {
 			fmt.Printf("Failed after %d retries: %s\n", maxRetries, r.Request.URL)
 		}
