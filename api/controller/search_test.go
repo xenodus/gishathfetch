@@ -4,7 +4,15 @@ import (
 	"context"
 	"fmt"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/agora"
+	"mtg-price-checker-sg/gateway/cardaffinity"
+	"mtg-price-checker-sg/gateway/cardscitadel"
+	"mtg-price-checker-sg/gateway/gameshaven"
+	"mtg-price-checker-sg/gateway/hideout"
+	"mtg-price-checker-sg/gateway/tefuda"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // MockLGS is a mock implementation of gateway.LGS
@@ -276,5 +284,62 @@ func TestSearchShops(t *testing.T) {
 				tt.verifyFunc(t, results)
 			}
 		})
+	}
+}
+
+func TestIsBinderposStore(t *testing.T) {
+	tests := map[string]bool{
+		cardscitadel.StoreName: true,
+		tefuda.StoreName:       true,
+		agora.StoreName:        false,
+		"Unknown Shop":         false,
+	}
+
+	for shop, expected := range tests {
+		t.Run(shop, func(t *testing.T) {
+			if got := isBinderposStore(shop); got != expected {
+				t.Fatalf("isBinderposStore(%q) = %v, want %v", shop, got, expected)
+			}
+		})
+	}
+}
+
+func TestFetchCardsConcurrently_BinderposGate(t *testing.T) {
+	var activeBinderpos int32
+	var maxActiveBinderpos int32
+
+	binderposShops := []string{
+		cardscitadel.StoreName,
+		cardaffinity.StoreName,
+		hideout.StoreName,
+		gameshaven.StoreName,
+	}
+	shops := make(map[string]gateway.LGS, len(binderposShops)+1)
+	for _, name := range binderposShops {
+		shops[name] = &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				active := atomic.AddInt32(&activeBinderpos, 1)
+				for {
+					currentMax := atomic.LoadInt32(&maxActiveBinderpos)
+					if active <= currentMax || atomic.CompareAndSwapInt32(&maxActiveBinderpos, currentMax, active) {
+						break
+					}
+				}
+				time.Sleep(80 * time.Millisecond)
+				atomic.AddInt32(&activeBinderpos, -1)
+				return []gateway.Card{{Name: searchStr, InStock: true, Price: 1, Source: cardscitadel.StoreName}}, nil
+			},
+		}
+	}
+
+	shops[agora.StoreName] = &MockLGS{
+		SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+			return []gateway.Card{{Name: searchStr, InStock: true, Price: 1, Source: agora.StoreName}}, nil
+		},
+	}
+
+	_, _ = fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	if atomic.LoadInt32(&maxActiveBinderpos) > binderposMaxConcurrent {
+		t.Fatalf("expected at most %d concurrent binderpos searches, got %d", binderposMaxConcurrent, maxActiveBinderpos)
 	}
 }

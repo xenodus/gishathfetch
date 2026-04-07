@@ -3,10 +3,12 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -49,16 +51,20 @@ func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 	c.DisableCookies()
 	c.SetRequestTimeout(config.PerSiteTimeout)
-	applyProxyForRetryAttempt(c, 0)
+	initialProxyMode, initialProxyURL := applyProxyForRetryAttempt(c, 0, "")
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
 		r.Headers.Set("User-Agent", browserUserAgents[rand.IntN(len(browserUserAgents))])
+		if r.Ctx != nil && r.Ctx.Get("last_proxy_url") == "" {
+			r.Ctx.Put("last_proxy_mode", initialProxyMode)
+			r.Ctx.Put("last_proxy_url", initialProxyURL)
+		}
 	})
 
 	c.Limit(&colly.LimitRule{
 		DomainGlob:  "*",
-		RandomDelay: 2 * time.Second, // adds 0–2s on top of Delay
+		RandomDelay: 2 * time.Second, // adds 0–2s jitter between matching-domain requests
 	})
 
 	if !enableRetry {
@@ -76,47 +82,56 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 		}
 
 		retries, _ := r.Ctx.GetAny("retries").(int)
+		statusCode := r.StatusCode
 
 		if retries < maxRetries {
 			nextRetry := retries + 1
 			r.Ctx.Put("retries", nextRetry)
-			applyProxyForRetryAttempt(c, nextRetry)
-			fmt.Printf("Retrying %s (attempt %d)...\n", r.Request.URL, nextRetry)
-			time.Sleep(time.Duration(retries+1) * time.Second) // backoff
+			previousProxyURL := r.Ctx.Get("last_proxy_url")
+			proxyMode, proxyURL := applyProxyForRetryAttempt(c, nextRetry, previousProxyURL)
+			r.Ctx.Put("last_proxy_mode", proxyMode)
+			r.Ctx.Put("last_proxy_url", proxyURL)
+
+			retryAfterHeader := ""
+			if r.Headers != nil {
+				retryAfterHeader = r.Headers.Get("Retry-After")
+			}
+			waitDuration := retryDelay(statusCode, retryAfterHeader, retries)
+			log.Printf("Retrying %s (attempt=%d status=%d wait=%s proxy_mode=%s)", r.Request.URL, nextRetry, statusCode, waitDuration, proxyMode)
+			time.Sleep(waitDuration)
 			if retryErr := r.Request.Retry(); retryErr != nil {
-				fmt.Printf("Retry failed for %s: %v\n", r.Request.URL, retryErr)
+				log.Printf("Retry failed for %s (attempt=%d status=%d): %v", r.Request.URL, nextRetry, statusCode, retryErr)
 			}
 		} else {
-			fmt.Printf("Failed after %d retries: %s\n", maxRetries, r.Request.URL)
+			log.Printf("Failed after %d retries: %s (status=%d)", maxRetries, r.Request.URL, statusCode)
 		}
 	})
 }
 
-func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int) {
+func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int, avoidProxyURL string) (string, string) {
 	if !config.UseProxy {
 		c.SetProxyFunc(nil)
-		return
+		return "direct", ""
 	}
 
 	switch retryAttempt {
 	case 0, 1:
-		if proxyURL, ok := randomDedicatedProxyURL(); ok {
+		if proxyURL, ok := randomDedicatedProxyURL(avoidProxyURL); ok {
 			c.SetProxy(proxyURL)
-			return
+			return "dedicated", proxyURL
 		}
-		fallthrough
-	case 2:
+	default:
 		if proxyURL := os.Getenv("PROXY_URL"); proxyURL != "" {
 			c.SetProxy(proxyURL)
-			return
+			return "shared", proxyURL
 		}
-		fallthrough
-	default:
-		c.SetProxyFunc(nil)
 	}
+
+	c.SetProxyFunc(nil)
+	return "direct", ""
 }
 
-func randomDedicatedProxyURL() (string, bool) {
+func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
 	dedicatedProxies := util.GetDedicatedProxy()
 	valid := make([]util.DedicatedProxy, 0, len(dedicatedProxies))
 	for _, proxy := range dedicatedProxies {
@@ -129,10 +144,68 @@ func randomDedicatedProxyURL() (string, bool) {
 		return "", false
 	}
 
-	p := valid[rand.IntN(len(valid))]
+	candidates := valid
+	if avoidProxyURL != "" && len(valid) > 1 {
+		filtered := make([]util.DedicatedProxy, 0, len(valid))
+		for _, p := range valid {
+			proxyURL := fmt.Sprintf("http://%s:%s", p.Host, p.Port)
+			if p.Username != "" || p.Password != "" {
+				proxyURL = fmt.Sprintf("http://%s:%s@%s:%s", p.Username, p.Password, p.Host, p.Port)
+			}
+			if proxyURL != avoidProxyURL {
+				filtered = append(filtered, p)
+			}
+		}
+		if len(filtered) > 0 {
+			candidates = filtered
+		}
+	}
+
+	p := candidates[rand.IntN(len(candidates))]
 	if p.Username != "" || p.Password != "" {
 		return fmt.Sprintf("http://%s:%s@%s:%s", p.Username, p.Password, p.Host, p.Port), true
 	}
 
 	return fmt.Sprintf("http://%s:%s", p.Host, p.Port), true
+}
+
+func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Duration {
+	if statusCode == 429 {
+		if retryAfter, ok := parseRetryAfter(retryAfterHeader); ok {
+			return retryAfter
+		}
+
+		// Stronger backoff for explicit throttling.
+		base := time.Duration(retries+2) * time.Second
+		jitter := time.Duration(rand.IntN(1000)) * time.Millisecond
+		return base + jitter
+	}
+
+	base := time.Duration(retries+1) * time.Second
+	jitter := time.Duration(rand.IntN(500)) * time.Millisecond
+	return base + jitter
+}
+
+func parseRetryAfter(value string) (time.Duration, bool) {
+	if value == "" {
+		return 0, false
+	}
+
+	seconds, err := strconv.Atoi(value)
+	if err == nil {
+		if seconds <= 0 {
+			return 0, false
+		}
+		return time.Duration(seconds) * time.Second, true
+	}
+
+	retryAt, err := time.Parse(time.RFC1123, value)
+	if err != nil {
+		return 0, false
+	}
+	wait := time.Until(retryAt)
+	if wait <= 0 {
+		return 0, false
+	}
+	return wait, true
 }

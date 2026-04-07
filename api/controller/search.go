@@ -51,6 +51,8 @@ type Card struct {
 	ExtraInfo string  `json:"extraInfo"`
 }
 
+const binderposMaxConcurrent = 4
+
 func Search(ctx context.Context, input SearchInput) ([]Card, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
 	return searchShops(ctx, input, shopNameToLGSMap)
@@ -95,6 +97,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	var mu sync.Mutex
 	var errMu sync.Mutex
 	siteErrors := make(map[string]error, len(shops))
+	binderposGate := make(chan struct{}, binderposMaxConcurrent)
 
 	log.Printf("Start checking shops for [%s]...", searchString)
 
@@ -114,6 +117,11 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 
 			ctx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
 			defer cancel()
+
+			if isBinderposStore(shopName) {
+				binderposGate <- struct{}{}
+				defer func() { <-binderposGate }()
+			}
 
 			c, err := lgs.Search(ctx, searchString)
 
@@ -269,6 +277,26 @@ func initShopHasResultMap(lgsMap map[string]gateway.LGS) map[string]bool {
 		shopNameToHasResultMap[shopName] = false
 	}
 	return shopNameToHasResultMap
+}
+
+func isBinderposStore(shopName string) bool {
+	switch shopName {
+	case cardaffinity.StoreName,
+		cardboardcrackgames.StoreName,
+		cardscitadel.StoreName,
+		flagship.StoreName,
+		gameshaven.StoreName,
+		gog.StoreName,
+		hideout.StoreName,
+		manapro.StoreName,
+		mtgasia.StoreName,
+		onemtg.StoreName,
+		tefuda.StoreName,
+		arcanesanctum.StoreName:
+		return true
+	default:
+		return false
+	}
 }
 
 func isArtCard(s string) bool {
