@@ -27,6 +27,11 @@ var browserUserAgents = []string{
 
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
+const (
+	maxRetries                   = 3
+	dedicatedProxyRetryThreshold = 1
+)
+
 type dedicatedProxyLeasePool struct {
 	mu    sync.Mutex
 	cond  *sync.Cond
@@ -78,6 +83,7 @@ func (p *dedicatedProxyLeasePool) release(proxyURL string) {
 	}
 }
 
+// Collector constructors and top-level configuration.
 func NewOptimizedCollector(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
@@ -110,10 +116,34 @@ func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 	configureRequestOptimizations(c, false, false)
 }
 
+// Core request optimization pipeline.
 func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool) {
+	applyCollectorDefaults(c)
+
+	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease)
+	registerRequestHandler(c, leasedDedicatedProxyURL)
+	registerScrapedHandler(c, releaseDedicatedProxy)
+
+	if !enableRetry {
+		registerNoRetryErrorHandler(c, releaseDedicatedProxy)
+		return
+	}
+
+	registerRetryErrorHandler(c, leasedDedicatedProxyURL, releaseDedicatedProxy)
+}
+
+// Base collector defaults used by all optimized collectors.
+func applyCollectorDefaults(c *colly.Collector) {
 	c.DisableCookies()
 	c.SetRequestTimeout(config.PerSiteTimeout)
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "*",
+		RandomDelay: 2 * time.Second, // adds 0-2s jitter between matching-domain requests
+	})
+}
 
+// Dedicated proxy lease lifecycle helpers.
+func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func()) {
 	var leasedDedicatedProxyURL string
 	releaseLeasedDedicatedProxy := func() {}
 	if enforceDedicatedProxyLease && config.UseProxy {
@@ -129,6 +159,11 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedic
 		releaseOnce.Do(releaseLeasedDedicatedProxy)
 	}
 
+	return leasedDedicatedProxyURL, releaseDedicatedProxy
+}
+
+// Colly callback registration helpers.
+func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string) {
 	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL)
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
@@ -139,25 +174,21 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedic
 			r.Ctx.Put("last_proxy_url", initialProxyURL)
 		}
 	})
+}
 
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*",
-		RandomDelay: 2 * time.Second, // adds 0–2s jitter between matching-domain requests
-	})
-
+func registerScrapedHandler(c *colly.Collector, releaseDedicatedProxy func()) {
 	c.OnScraped(func(_ *colly.Response) {
 		releaseDedicatedProxy()
 	})
+}
 
-	if !enableRetry {
-		c.OnError(func(_ *colly.Response, _ error) {
-			releaseDedicatedProxy()
-		})
-		return
-	}
+func registerNoRetryErrorHandler(c *colly.Collector, releaseDedicatedProxy func()) {
+	c.OnError(func(_ *colly.Response, _ error) {
+		releaseDedicatedProxy()
+	})
+}
 
-	const maxRetries = 3
-
+func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL string, releaseDedicatedProxy func()) {
 	c.OnError(func(r *colly.Response, err error) {
 		// Colly may call OnError without a full response/request on network/proxy failures.
 		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
@@ -178,11 +209,7 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedic
 			r.Ctx.Put("last_proxy_mode", proxyMode)
 			r.Ctx.Put("last_proxy_url", proxyURL)
 
-			retryAfterHeader := ""
-			if r.Headers != nil {
-				retryAfterHeader = r.Headers.Get("Retry-After")
-			}
-			waitDuration := retryDelay(statusCode, retryAfterHeader, retries)
+			waitDuration := retryDelay(statusCode, retryAfterHeaderValue(r), retries)
 			log.Printf("Retrying %s (attempt=%d status=%d wait=%s proxy_mode=%s)", r.Request.URL, nextRetry, statusCode, waitDuration, proxyMode)
 			time.Sleep(waitDuration)
 			if retryErr := r.Request.Retry(); retryErr != nil {
@@ -196,38 +223,54 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedic
 	})
 }
 
+// Retry metadata helpers.
+func retryAfterHeaderValue(r *colly.Response) string {
+	if r == nil || r.Headers == nil {
+		return ""
+	}
+	return r.Headers.Get("Retry-After")
+}
+
+// Proxy strategy helpers.
 func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int, avoidProxyURL string) (string, string) {
 	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "")
 }
 
+func clearProxy(c *colly.Collector) (string, string) {
+	c.SetProxyFunc(nil)
+	return "direct", ""
+}
+
+func isDedicatedRetryAttempt(retryAttempt int) bool {
+	return retryAttempt <= dedicatedProxyRetryThreshold
+}
+
 func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string) (string, string) {
 	if !config.UseProxy {
-		c.SetProxyFunc(nil)
-		return "direct", ""
+		return clearProxy(c)
 	}
 
 	// Keep pinned dedicated proxy only for initial and first retry.
 	// From attempt 2 onward, prefer shared PROXY_URL fallback when available.
-	if pinnedDedicatedProxyURL != "" && retryAttempt <= 1 {
+	if pinnedDedicatedProxyURL != "" && isDedicatedRetryAttempt(retryAttempt) {
 		c.SetProxy(pinnedDedicatedProxyURL)
 		return "dedicated", pinnedDedicatedProxyURL
 	}
 
-	switch retryAttempt {
-	case 0, 1:
+	if isDedicatedRetryAttempt(retryAttempt) {
 		if proxyURL, ok := randomDedicatedProxyURL(avoidProxyURL); ok {
 			c.SetProxy(proxyURL)
 			return "dedicated", proxyURL
 		}
-	default:
-		if proxyURL := os.Getenv("PROXY_URL"); proxyURL != "" {
-			c.SetProxy(proxyURL)
-			return "shared", proxyURL
-		}
+		return clearProxy(c)
 	}
 
-	c.SetProxyFunc(nil)
-	return "direct", ""
+	if proxyURL := os.Getenv("PROXY_URL"); proxyURL != "" {
+		c.SetProxy(proxyURL)
+		return "shared", proxyURL
+	}
+
+	return clearProxy(c)
 }
 
 func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
