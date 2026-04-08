@@ -206,7 +206,9 @@ func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttem
 		return "direct", ""
 	}
 
-	if pinnedDedicatedProxyURL != "" {
+	// Keep pinned dedicated proxy only for initial and first retry.
+	// From attempt 2 onward, prefer shared PROXY_URL fallback when available.
+	if pinnedDedicatedProxyURL != "" && retryAttempt <= 1 {
 		c.SetProxy(pinnedDedicatedProxyURL)
 		return "dedicated", pinnedDedicatedProxyURL
 	}

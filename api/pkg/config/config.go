@@ -12,7 +12,7 @@ const (
 	EnvStaging       = "staging"
 	EnvLocal         = "local"
 	UseProxy         = true
-	PerSiteTimeout   = 15 * time.Second
+	PerSiteTimeout   = 20 * time.Second
 )
 
 func GetAllowedOrigins() []string {

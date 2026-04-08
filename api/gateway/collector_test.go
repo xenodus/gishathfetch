@@ -110,13 +110,23 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 	t.Setenv("PROXY_URL", "http://shared:8080")
 
 	pinned := "http://pinned:1234"
-	for attempt := 0; attempt <= 3; attempt++ {
+	for attempt := 0; attempt <= 1; attempt++ {
 		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned)
 		if mode != "dedicated" {
 			t.Fatalf("expected dedicated mode for pinned proxy on attempt %d, got %q", attempt, mode)
 		}
 		if proxyURL != pinned {
 			t.Fatalf("expected pinned proxy url %q on attempt %d, got %q", pinned, attempt, proxyURL)
+		}
+	}
+
+	for attempt := 2; attempt <= 3; attempt++ {
+		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned)
+		if mode != "shared" {
+			t.Fatalf("expected shared mode on attempt %d, got %q", attempt, mode)
+		}
+		if proxyURL != "http://shared:8080" {
+			t.Fatalf("expected shared proxy url on attempt %d, got %q", attempt, proxyURL)
 		}
 	}
 }
