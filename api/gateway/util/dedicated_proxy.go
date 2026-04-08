@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"strings"
 )
@@ -45,4 +46,28 @@ func GetDedicatedProxy() []DedicatedProxy {
 		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_4")),
 		parseDedicatedProxy(os.Getenv("DEDICATED_PROXY_5")),
 	}
+}
+
+func BuildDedicatedProxyURL(proxy DedicatedProxy) (string, bool) {
+	if proxy.Host == "" || proxy.Port == "" {
+		return "", false
+	}
+
+	if proxy.Username != "" || proxy.Password != "" {
+		return fmt.Sprintf("http://%s:%s@%s:%s", proxy.Username, proxy.Password, proxy.Host, proxy.Port), true
+	}
+
+	return fmt.Sprintf("http://%s:%s", proxy.Host, proxy.Port), true
+}
+
+func GetDedicatedProxyURLs() []string {
+	proxies := GetDedicatedProxy()
+	proxyURLs := make([]string, 0, len(proxies))
+	for _, proxy := range proxies {
+		proxyURL, ok := BuildDedicatedProxyURL(proxy)
+		if ok {
+			proxyURLs = append(proxyURLs, proxyURL)
+		}
+	}
+	return proxyURLs
 }
