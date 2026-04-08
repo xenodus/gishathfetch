@@ -69,7 +69,7 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollector(ctx)
+	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -119,7 +119,7 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollector(ctx)
+	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -173,7 +173,7 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	var cards []gateway.Card
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 
-	c := gateway.NewOptimizedCollector(ctx)
+	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		// get cards
@@ -241,7 +241,7 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollector(ctx)
+	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
@@ -300,7 +300,7 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollector(ctx)
+	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {

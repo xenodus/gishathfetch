@@ -9,6 +9,7 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -24,11 +25,64 @@ var browserUserAgents = []string{
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/135.0.3179.98 Chrome/135.0.0.0 Safari/537.36",
 }
 
+var dedicatedProxyLeases = newDedicatedProxyLeasePool()
+
+type dedicatedProxyLeasePool struct {
+	mu    sync.Mutex
+	cond  *sync.Cond
+	inUse map[string]bool
+}
+
+func newDedicatedProxyLeasePool() *dedicatedProxyLeasePool {
+	pool := &dedicatedProxyLeasePool{
+		inUse: make(map[string]bool),
+	}
+	pool.cond = sync.NewCond(&pool.mu)
+	return pool
+}
+
+func (p *dedicatedProxyLeasePool) acquire(proxyURLs []string) (string, bool) {
+	if len(proxyURLs) == 0 {
+		return "", false
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for {
+		for _, idx := range rand.Perm(len(proxyURLs)) {
+			proxyURL := proxyURLs[idx]
+			if proxyURL == "" {
+				continue
+			}
+			if !p.inUse[proxyURL] {
+				p.inUse[proxyURL] = true
+				return proxyURL, true
+			}
+		}
+		p.cond.Wait()
+	}
+}
+
+func (p *dedicatedProxyLeasePool) release(proxyURL string) {
+	if proxyURL == "" {
+		return
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.inUse[proxyURL] {
+		delete(p.inUse, proxyURL)
+		p.cond.Signal()
+	}
+}
+
 func NewOptimizedCollector(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	ConfigureRequestOptimizations(c)
+	configureRequestOptimizations(c, true, false)
 	return c
 }
 
@@ -36,22 +90,46 @@ func NewOptimizedCollectorNoRetry(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	ConfigureRequestOptimizationsNoRetry(c)
+	configureRequestOptimizations(c, false, false)
+	return c
+}
+
+func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
+	configureRequestOptimizations(c, true, true)
 	return c
 }
 
 func ConfigureRequestOptimizations(c *colly.Collector) {
-	configureRequestOptimizations(c, true)
+	configureRequestOptimizations(c, true, false)
 }
 
 func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, false, false)
 }
 
-func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
+func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool) {
 	c.DisableCookies()
 	c.SetRequestTimeout(config.PerSiteTimeout)
-	initialProxyMode, initialProxyURL := applyProxyForRetryAttempt(c, 0, "")
+
+	var leasedDedicatedProxyURL string
+	releaseLeasedDedicatedProxy := func() {}
+	if enforceDedicatedProxyLease && config.UseProxy {
+		if proxyURL, ok := dedicatedProxyLeases.acquire(util.GetDedicatedProxyURLs()); ok {
+			leasedDedicatedProxyURL = proxyURL
+			releaseLeasedDedicatedProxy = func() {
+				dedicatedProxyLeases.release(proxyURL)
+			}
+		}
+	}
+	var releaseOnce sync.Once
+	releaseDedicatedProxy := func() {
+		releaseOnce.Do(releaseLeasedDedicatedProxy)
+	}
+
+	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL)
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
@@ -67,7 +145,14 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 		RandomDelay: 2 * time.Second, // adds 0–2s jitter between matching-domain requests
 	})
 
+	c.OnScraped(func(_ *colly.Response) {
+		releaseDedicatedProxy()
+	})
+
 	if !enableRetry {
+		c.OnError(func(_ *colly.Response, _ error) {
+			releaseDedicatedProxy()
+		})
 		return
 	}
 
@@ -78,6 +163,7 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
 		if r == nil || r.Ctx == nil || r.Request == nil || r.Request.URL == nil {
 			fmt.Printf("Request failed before response was available: %v\n", err)
+			releaseDedicatedProxy()
 			return
 		}
 
@@ -88,7 +174,7 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 			nextRetry := retries + 1
 			r.Ctx.Put("retries", nextRetry)
 			previousProxyURL := r.Ctx.Get("last_proxy_url")
-			proxyMode, proxyURL := applyProxyForRetryAttempt(c, nextRetry, previousProxyURL)
+			proxyMode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, nextRetry, previousProxyURL, leasedDedicatedProxyURL)
 			r.Ctx.Put("last_proxy_mode", proxyMode)
 			r.Ctx.Put("last_proxy_url", proxyURL)
 
@@ -101,17 +187,28 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry bool) {
 			time.Sleep(waitDuration)
 			if retryErr := r.Request.Retry(); retryErr != nil {
 				log.Printf("Retry failed for %s (attempt=%d status=%d): %v", r.Request.URL, nextRetry, statusCode, retryErr)
+				releaseDedicatedProxy()
 			}
 		} else {
 			log.Printf("Failed after %d retries: %s (status=%d)", maxRetries, r.Request.URL, statusCode)
+			releaseDedicatedProxy()
 		}
 	})
 }
 
 func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int, avoidProxyURL string) (string, string) {
+	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "")
+}
+
+func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string) (string, string) {
 	if !config.UseProxy {
 		c.SetProxyFunc(nil)
 		return "direct", ""
+	}
+
+	if pinnedDedicatedProxyURL != "" {
+		c.SetProxy(pinnedDedicatedProxyURL)
+		return "dedicated", pinnedDedicatedProxyURL
 	}
 
 	switch retryAttempt {
@@ -148,9 +245,9 @@ func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
 	if avoidProxyURL != "" && len(valid) > 1 {
 		filtered := make([]util.DedicatedProxy, 0, len(valid))
 		for _, p := range valid {
-			proxyURL := fmt.Sprintf("http://%s:%s", p.Host, p.Port)
-			if p.Username != "" || p.Password != "" {
-				proxyURL = fmt.Sprintf("http://%s:%s@%s:%s", p.Username, p.Password, p.Host, p.Port)
+			proxyURL, ok := util.BuildDedicatedProxyURL(p)
+			if !ok {
+				continue
 			}
 			if proxyURL != avoidProxyURL {
 				filtered = append(filtered, p)
@@ -162,11 +259,8 @@ func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
 	}
 
 	p := candidates[rand.IntN(len(candidates))]
-	if p.Username != "" || p.Password != "" {
-		return fmt.Sprintf("http://%s:%s@%s:%s", p.Username, p.Password, p.Host, p.Port), true
-	}
-
-	return fmt.Sprintf("http://%s:%s", p.Host, p.Port), true
+	proxyURL, ok := util.BuildDedicatedProxyURL(p)
+	return proxyURL, ok
 }
 
 func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Duration {

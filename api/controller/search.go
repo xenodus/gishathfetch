@@ -51,7 +51,7 @@ type Card struct {
 	ExtraInfo string  `json:"extraInfo"`
 }
 
-const binderposMaxConcurrent = 4
+const binderposMaxConcurrent = 5
 
 func Search(ctx context.Context, input SearchInput) ([]Card, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)

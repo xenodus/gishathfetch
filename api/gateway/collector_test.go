@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"mtg-price-checker-sg/gateway/util"
+
 	"github.com/gocolly/colly/v2"
 )
 
@@ -98,6 +100,88 @@ func TestApplyProxyForRetryAttempt(t *testing.T) {
 		}
 		if proxyURL != "" {
 			t.Fatalf("expected empty proxy url, got %q", proxyURL)
+		}
+	})
+}
+
+func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
+	c := colly.NewCollector()
+	t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
+	t.Setenv("PROXY_URL", "http://shared:8080")
+
+	pinned := "http://pinned:1234"
+	for attempt := 0; attempt <= 3; attempt++ {
+		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned)
+		if mode != "dedicated" {
+			t.Fatalf("expected dedicated mode for pinned proxy on attempt %d, got %q", attempt, mode)
+		}
+		if proxyURL != pinned {
+			t.Fatalf("expected pinned proxy url %q on attempt %d, got %q", pinned, attempt, proxyURL)
+		}
+	}
+}
+
+func TestDedicatedProxyLeasePoolAcquireRelease(t *testing.T) {
+	pool := newDedicatedProxyLeasePool()
+	proxyURLs := []string{"http://a:1", "http://b:2"}
+
+	first, ok := pool.acquire(proxyURLs)
+	if !ok || first == "" {
+		t.Fatalf("expected first acquire to succeed")
+	}
+	second, ok := pool.acquire(proxyURLs)
+	if !ok || second == "" {
+		t.Fatalf("expected second acquire to succeed")
+	}
+	if first == second {
+		t.Fatalf("expected distinct leased proxies, got duplicate %q", first)
+	}
+
+	acquired := make(chan string, 1)
+	go func() {
+		third, ok := pool.acquire(proxyURLs)
+		if ok {
+			acquired <- third
+			return
+		}
+		acquired <- ""
+	}()
+
+	select {
+	case v := <-acquired:
+		t.Fatalf("expected third acquire to block before release, got %q", v)
+	case <-time.After(50 * time.Millisecond):
+		// expected: blocked
+	}
+
+	pool.release(first)
+
+	select {
+	case third := <-acquired:
+		if third != first {
+			t.Fatalf("expected released proxy %q to be re-acquired, got %q", first, third)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatalf("expected third acquire to unblock after release")
+	}
+
+	pool.release(second)
+	pool.release(first)
+}
+
+func TestDedicatedProxyURLHelpers(t *testing.T) {
+	t.Run("build dedicated proxy url", func(t *testing.T) {
+		proxyURL, ok := util.BuildDedicatedProxyURL(util.DedicatedProxy{
+			Host:     "1.1.1.1",
+			Port:     "8080",
+			Username: "user",
+			Password: "pass",
+		})
+		if !ok {
+			t.Fatalf("expected proxy url build to succeed")
+		}
+		if proxyURL != "http://user:pass@1.1.1.1:8080" {
+			t.Fatalf("unexpected proxy url: %q", proxyURL)
 		}
 	})
 }

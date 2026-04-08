@@ -8,6 +8,7 @@ import (
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/gameshaven"
+	"mtg-price-checker-sg/gateway/gog"
 	"mtg-price-checker-sg/gateway/hideout"
 	"mtg-price-checker-sg/gateway/tefuda"
 	"sync/atomic"
@@ -313,6 +314,8 @@ func TestFetchCardsConcurrently_BinderposGate(t *testing.T) {
 		cardaffinity.StoreName,
 		hideout.StoreName,
 		gameshaven.StoreName,
+		tefuda.StoreName,
+		gog.StoreName,
 	}
 	shops := make(map[string]gateway.LGS, len(binderposShops)+1)
 	for _, name := range binderposShops {
