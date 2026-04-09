@@ -28,8 +28,12 @@ var browserUserAgents = []string{
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
 const (
-	maxRetries                   = 3
+	// Allow two retries after the initial request so the second retry can switch to PROXY_URL.
+	maxRetries = 2
+	// Dedicated (leased or random pool) is used while retryAttempt <= this value (initial request is attempt 0).
+	// First retry = attempt 1 (still dedicated); second retry = attempt 2 (PROXY_URL when set).
 	dedicatedProxyRetryThreshold = 1
+	binderposDedicatedProxyRetryThreshold = dedicatedProxyRetryThreshold
 )
 
 type dedicatedProxyLeasePool struct {
@@ -104,7 +108,7 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, true, true)
+	configureRequestOptimizationsWithDedicatedThreshold(c, true, true, binderposDedicatedProxyRetryThreshold)
 	return c
 }
 
@@ -118,10 +122,14 @@ func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 
 // Core request optimization pipeline.
 func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool) {
+	configureRequestOptimizationsWithDedicatedThreshold(c, enableRetry, enforceDedicatedProxyLease, dedicatedProxyRetryThreshold)
+}
+
+func configureRequestOptimizationsWithDedicatedThreshold(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool, dedicatedRetryThreshold int) {
 	applyCollectorDefaults(c)
 
 	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease)
-	registerRequestHandler(c, leasedDedicatedProxyURL)
+	registerRequestHandler(c, leasedDedicatedProxyURL, dedicatedRetryThreshold)
 	registerScrapedHandler(c, releaseDedicatedProxy)
 
 	if !enableRetry {
@@ -129,7 +137,7 @@ func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedic
 		return
 	}
 
-	registerRetryErrorHandler(c, leasedDedicatedProxyURL, releaseDedicatedProxy)
+	registerRetryErrorHandler(c, leasedDedicatedProxyURL, releaseDedicatedProxy, dedicatedRetryThreshold)
 }
 
 // Base collector defaults used by all optimized collectors.
@@ -163,8 +171,8 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func(
 }
 
 // Colly callback registration helpers.
-func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string) {
-	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL)
+func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, dedicatedRetryThreshold int) {
+	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL, dedicatedRetryThreshold)
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
@@ -188,7 +196,7 @@ func registerNoRetryErrorHandler(c *colly.Collector, releaseDedicatedProxy func(
 	})
 }
 
-func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL string, releaseDedicatedProxy func()) {
+func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL string, releaseDedicatedProxy func(), dedicatedRetryThreshold int) {
 	c.OnError(func(r *colly.Response, err error) {
 		// Colly may call OnError without a full response/request on network/proxy failures.
 		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
@@ -205,7 +213,7 @@ func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL strin
 			nextRetry := retries + 1
 			r.Ctx.Put("retries", nextRetry)
 			previousProxyURL := r.Ctx.Get("last_proxy_url")
-			proxyMode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, nextRetry, previousProxyURL, leasedDedicatedProxyURL)
+			proxyMode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, nextRetry, previousProxyURL, leasedDedicatedProxyURL, dedicatedRetryThreshold)
 			r.Ctx.Put("last_proxy_mode", proxyMode)
 			r.Ctx.Put("last_proxy_url", proxyURL)
 
@@ -233,7 +241,7 @@ func retryAfterHeaderValue(r *colly.Response) string {
 
 // Proxy strategy helpers.
 func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int, avoidProxyURL string) (string, string) {
-	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "")
+	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "", dedicatedProxyRetryThreshold)
 }
 
 func clearProxy(c *colly.Collector) (string, string) {
@@ -241,23 +249,23 @@ func clearProxy(c *colly.Collector) (string, string) {
 	return "direct", ""
 }
 
-func isDedicatedRetryAttempt(retryAttempt int) bool {
-	return retryAttempt <= dedicatedProxyRetryThreshold
+func isDedicatedRetryAttempt(retryAttempt int, dedicatedRetryThreshold int) bool {
+	return retryAttempt <= dedicatedRetryThreshold
 }
 
-func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string) (string, string) {
+func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string, dedicatedRetryThreshold int) (string, string) {
 	if !config.UseProxy {
 		return clearProxy(c)
 	}
 
-	// Keep pinned dedicated proxy only for initial and first retry.
-	// From attempt 2 onward, prefer shared PROXY_URL fallback when available.
-	if pinnedDedicatedProxyURL != "" && isDedicatedRetryAttempt(retryAttempt) {
+	// Keep pinned dedicated proxy only while retryAttempt <= dedicatedRetryThreshold (see constants).
+	// After that, prefer shared PROXY_URL fallback when available.
+	if pinnedDedicatedProxyURL != "" && isDedicatedRetryAttempt(retryAttempt, dedicatedRetryThreshold) {
 		c.SetProxy(pinnedDedicatedProxyURL)
 		return "dedicated", pinnedDedicatedProxyURL
 	}
 
-	if isDedicatedRetryAttempt(retryAttempt) {
+	if isDedicatedRetryAttempt(retryAttempt, dedicatedRetryThreshold) {
 		if proxyURL, ok := randomDedicatedProxyURL(avoidProxyURL); ok {
 			c.SetProxy(proxyURL)
 			return "dedicated", proxyURL
