@@ -28,11 +28,15 @@ var browserUserAgents = []string{
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
 const (
-	// Allow two retries after the initial request so the second retry can switch to PROXY_URL.
-	maxRetries = 2
+	// Allow three retries after the initial request.
+	// Retry flow:
+	// - first retry (attempt 1): dedicated proxy
+	// - second retry (attempt 2): shared PROXY_URL
+	// - third/final retry (attempt 3): direct (no proxy)
+	maxRetries = 3
 	// Dedicated (leased or random pool) is used while retryAttempt <= this value (initial request is attempt 0).
-	// First retry = attempt 1 (still dedicated); second retry = attempt 2 (PROXY_URL when set).
-	dedicatedProxyRetryThreshold = 1
+	// First retry = attempt 1 (still dedicated).
+	dedicatedProxyRetryThreshold          = 1
 	binderposDedicatedProxyRetryThreshold = dedicatedProxyRetryThreshold
 )
 
@@ -253,8 +257,17 @@ func isDedicatedRetryAttempt(retryAttempt int, dedicatedRetryThreshold int) bool
 	return retryAttempt <= dedicatedRetryThreshold
 }
 
+func isFinalRetryAttempt(retryAttempt int) bool {
+	return retryAttempt >= maxRetries
+}
+
 func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string, dedicatedRetryThreshold int) (string, string) {
 	if !config.UseProxy {
+		return clearProxy(c)
+	}
+
+	// Final retry is always direct to bypass potentially bad proxy routes.
+	if isFinalRetryAttempt(retryAttempt) {
 		return clearProxy(c)
 	}
 
