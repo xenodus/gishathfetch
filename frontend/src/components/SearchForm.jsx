@@ -154,7 +154,7 @@ const SearchForm = ({
           >
             <div>
               <span className="text-info-emphasis me-1 fw-semibold">Tip:</span>
-              Selecting less stores generally enables GishathFetch to finish searching faster and also helps save $$$.
+              Selecting fewer stores usually helps GishathFetch finish searching faster and keeps operational costs down.
             </div>
             <button
               type="button"
