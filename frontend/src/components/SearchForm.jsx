@@ -18,9 +18,11 @@ const SearchForm = ({
   onSelectNone,
   onCloseSuggestions,
 }) => {
+  const PLACEHOLDER_SUGGESTION = "Sol Ring";
   const wrapperRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showTip, setShowTip] = useState(true);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -72,6 +74,32 @@ const SearchForm = ({
     }
   };
 
+  const handleInputChange = (e) => {
+    setIsInputFocused(true);
+    onQueryChange(e);
+  };
+
+  const handleInputFocus = (e) => {
+    setIsInputFocused(true);
+
+    // If there is no real query yet, clear the suggestion value
+    if (!searchQuery) {
+      e.target.value = "";
+      onQueryChange({
+        target: { value: "" },
+      });
+    }
+
+    onFocus?.(e);
+  };
+
+  const handleInputBlur = () => {
+    setIsInputFocused(false);
+  };
+
+  const displayValue =
+    !isInputFocused && !searchQuery ? PLACEHOLDER_SUGGESTION : searchQuery;
+
   return (
     <div ref={wrapperRef}>
       <form id="searchForm" onSubmit={onSearchSubmit}>
@@ -82,12 +110,12 @@ const SearchForm = ({
               type="search"
               className="form-control"
               id="search"
-              placeholder="lightning bolt"
-              value={searchQuery}
-              onChange={onQueryChange}
+              value={displayValue}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               autoComplete="off"
-              onFocus={onFocus}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
               aria-autocomplete="list"
               aria-controls="suggestions"
               aria-expanded={showSuggestions && suggestions.length > 0}
