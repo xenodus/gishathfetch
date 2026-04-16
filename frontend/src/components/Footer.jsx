@@ -27,8 +27,14 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
     <>
       {/* Footer / Ads */}
       <div className="ad-large mt-4 pb-5 text-center d-print-none d-block d-sm-block">
-        <div className="text-secondary mb-2" style={{ fontSize: "11px" }}>
-          Advertisement
+        <div className="text-center mb-2" style={{ fontSize: "11px" }}>
+          <a
+            href="https://www.patreon.com/GishathFetch"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Follow / Support Gishath Fetch on Patreon
+          </a>
         </div>
         <div style={{ minHeight: "90px" }}>
           {/* AdSense slot placeholder */}
@@ -39,14 +45,8 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             data-ad-slot="6707964257"
           ></ins>
         </div>
-        <div className="text-center mt-2" style={{ fontSize: "11px" }}>
-          <a
-            href="https://www.patreon.com/GishathFetch"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Follow / Support Gishath Fetch on Patreon
-          </a>
+        <div className="text-secondary mt-2" style={{ fontSize: "11px" }}>
+          Advertisement
         </div>
       </div>
 
