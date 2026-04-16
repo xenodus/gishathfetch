@@ -67,8 +67,14 @@ const AdComponent = ({ variant = "leaderboard" }) => {
       className="ad-large text-center d-print-none d-block d-sm-block w-100"
       style={{ overflow: "hidden" }}
     >
-      <div className="text-secondary mb-2" style={{ fontSize: "11px" }}>
-        Advertisement
+      <div className="text-center mb-2" style={{ fontSize: "11px" }}>
+        <a
+          href="https://www.patreon.com/GishathFetch"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Follow / Support Gishath Fetch on Patreon
+        </a>
       </div>
       <div style={{ minHeight: "90px", overflow: "hidden" }}>
         <ins
@@ -85,14 +91,8 @@ const AdComponent = ({ variant = "leaderboard" }) => {
           data-full-width-responsive={isResponsive ? "true" : undefined}
         ></ins>
       </div>
-      <div className="text-center mt-2" style={{ fontSize: "11px" }}>
-        <a
-          href="https://www.patreon.com/GishathFetch"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Follow / Support Gishath Fetch on Patreon
-        </a>
+      <div className="text-secondary mt-2" style={{ fontSize: "11px" }}>
+        Advertisement
       </div>
     </div>
   );
