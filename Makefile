@@ -1,4 +1,4 @@
-deploy: deploy-common docker-tag docker-push lambda-update frontend-update
+deploy: docker-build aws-login docker-tag docker-push lambda-update frontend-update
 
 deploy-staging: deploy-common docker-tag-staging docker-push-staging lambda-update-staging frontend-update-staging
 
