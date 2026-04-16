@@ -10,8 +10,6 @@ const StoreName = "Arcane Sanctum"
 const StoreBaseURL = "https://arcanesanctumtcg.com"
 const StoreSearchURL = "/search?q=%s"
 
-// const binderposStoreURL = "bacc1b-3.myshopify.com"
-
 type Store struct {
 	Name         string
 	BaseUrl      string
@@ -29,7 +27,7 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Scrap(ctx, 
+	return s.BinderposGwy.Scrap(ctx,
 		5,
 		s.Name,
 		s.BaseUrl,

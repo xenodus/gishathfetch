@@ -2,40 +2,16 @@ package binderpos
 
 import (
 	"context"
-	"net/http"
-	"strings"
 
 	"mtg-price-checker-sg/gateway"
 )
 
-type ProductType string
-
-const ProductTypeMTG ProductType = "mtg"
-
-func (p ProductType) ToString() string {
-	return string(p)
-}
-
 type Gateway interface {
-	Search(ctx context.Context, storeName, storeBaseURL string, payload []byte) ([]gateway.Card, int, error)
 	Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error)
 }
 
-type impl struct {
-	searchClient http.Client
-	apiEndpoint  string
-}
+type impl struct{}
 
 func New() Gateway {
-	return &impl{
-		searchClient: http.Client{},
-		apiEndpoint:  apiEndpoint,
-	}
-}
-
-func NewWithApiUrl(apiUrl string) Gateway {
-	return &impl{
-		searchClient: http.Client{},
-		apiEndpoint:  strings.TrimSpace(apiUrl),
-	}
+	return &impl{}
 }
