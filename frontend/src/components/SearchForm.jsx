@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import StoreSelector from "./StoreSelector";
 
+const TIP_DISMISSED_STORAGE_KEY = "search-form-tip-dismissed";
+
 const SearchForm = ({
   searchQuery,
   onQueryChange,
@@ -20,7 +22,17 @@ const SearchForm = ({
 }) => {
   const wrapperRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [showTip, setShowTip] = useState(true);
+  const [showTip, setShowTip] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    try {
+      return localStorage.getItem(TIP_DISMISSED_STORAGE_KEY) !== "true";
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -69,6 +81,16 @@ const SearchForm = ({
         break;
       default:
         break;
+    }
+  };
+
+  const handleDismissTip = () => {
+    setShowTip(false);
+
+    try {
+      localStorage.setItem(TIP_DISMISSED_STORAGE_KEY, "true");
+    } catch {
+      // Ignore storage access failures and keep in-memory state only.
     }
   };
 
@@ -154,13 +176,14 @@ const SearchForm = ({
           >
             <div>
               <span className="text-info-emphasis me-1 fw-semibold">Tip:</span>
-              Selecting fewer stores usually helps GishathFetch finish searching faster and keeps operational costs down.
+              Selecting fewer stores usually helps GishathFetch finish searching
+              faster and keeps operational costs down.
             </div>
             <button
               type="button"
               className="btn-close ms-2"
               aria-label="Dismiss tip"
-              onClick={() => setShowTip(false)}
+              onClick={handleDismissTip}
             />
           </div>
         )}
