@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import StoreSelector from "./StoreSelector";
+import { DEFAULT_SEARCH_QUERY } from "../constants";
 
 const SearchForm = ({
   searchQuery,
@@ -18,7 +19,6 @@ const SearchForm = ({
   onSelectNone,
   onCloseSuggestions,
 }) => {
-  const PLACEHOLDER_SUGGESTION = "Sol Ring";
   const wrapperRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showTip, setShowTip] = useState(true);
@@ -98,11 +98,16 @@ const SearchForm = ({
   };
 
   const displayValue =
-    !isInputFocused && !searchQuery ? PLACEHOLDER_SUGGESTION : searchQuery;
+    !isInputFocused && !searchQuery ? DEFAULT_SEARCH_QUERY : searchQuery;
 
   return (
     <div ref={wrapperRef}>
-      <form id="searchForm" onSubmit={onSearchSubmit}>
+      <form
+        id="searchForm"
+        onSubmit={(e) =>
+          onSearchSubmit(e, { defaultQuery: DEFAULT_SEARCH_QUERY })
+        }
+      >
         <div className="mb-3 position-relative">
           <div className="form-floating">
             {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: Controlled input behaves like combobox */}

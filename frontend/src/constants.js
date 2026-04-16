@@ -1,6 +1,7 @@
 // --- App Constants ---
 export const PAGE_TITLE =
   "Gishath Fetch: MTG Price Checker for Singapore's LGS";
+export const DEFAULT_SEARCH_QUERY = "Sol Ring";
 
 export const LGS_OPTIONS = [
   "5 Mana",

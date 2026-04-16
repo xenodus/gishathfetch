@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE_URL, BASE_URL, LGS_OPTIONS } from "../constants";
+import {
+  API_BASE_URL,
+  BASE_URL,
+  DEFAULT_SEARCH_QUERY,
+  LGS_OPTIONS,
+} from "../constants";
 
 // Search configuration constants
 const MIN_SEARCH_LENGTH = 3;
@@ -213,9 +218,16 @@ export default function useSearch() {
     // Note: Search is NOT triggered automatically - user must click Search button or press Enter
   };
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = (
+    e,
+    { defaultQuery = DEFAULT_SEARCH_QUERY } = {},
+  ) => {
     if (e) e.preventDefault();
     setShowSuggestions(false);
+
+    const normalizedSearchQuery = searchQuery.trim();
+    const normalizedDefaultQuery = defaultQuery.trim();
+    const queryToSearch = normalizedSearchQuery || normalizedDefaultQuery;
 
     let storesToSearch = selectedStores;
     if (selectedStores.length === 0) {
@@ -231,7 +243,11 @@ export default function useSearch() {
       }
     }
 
-    performSearch(searchQuery, storesToSearch);
+    if (!normalizedSearchQuery && queryToSearch) {
+      setSearchQuery(queryToSearch);
+    }
+
+    performSearch(queryToSearch, storesToSearch);
   };
 
   const toggleStore = (store) => {
