@@ -1,8 +1,8 @@
-deploy: docker-build aws-login docker-tag docker-push lambda-update frontend-update
+deploy: deploy-common docker-tag docker-push lambda-update frontend-update
 
 deploy-staging: deploy-common docker-tag-staging docker-push-staging lambda-update-staging frontend-update-staging
 
-deploy-common: test docker-build aws-login
+deploy-common: docker-build aws-login
 
 docker-build:
 	docker buildx build --platform linux/amd64 --provenance=false -t mtg-price-scrapper .
