@@ -1,41 +1,62 @@
 # Gishath Fetch
 
-Gishath Fetch is a high-performance web application designed for Magic: The Gathering players to search for card singles across multiple local game stores (LGS) concurrently. It streamlines the process of finding the best prices and availability by aggregating data from various sources in real-time.
+Gishath Fetch is a web application for Magic: The Gathering players in Singapore to search singles across multiple local game stores (LGS) in parallel.
+
+It aggregates listings from supported stores, normalizes results, and sorts by price so users can quickly find the best available options.
 
 ## 🚀 Features
 
-- **⚡ Concurrent Search**: Scrapes multiple LGS websites simultaneously using a highly parallel Go backend for near-instant results.
-- **🎯 Precision Filtering**: Implements advanced result filtering and normalization to ensure high match accuracy.
-- **💰 Price Sorting**: Automatically compiles and sorts results from all sources by price, making it easy to find the best deal.
-- **🛒 Unified Shopping Cart**: Save cards from different stores into a single, persistent cart for easy tracking.
-- **🔍 Smart Suggestions**: Real-time search suggestions with term highlighting to help you find the right card faster.
+- ⚡ Concurrent search across supported stores
+- 🎯 Result filtering and normalization for better match quality
+- 💰 Price-first sorting for faster deal discovery
+- 🧭 Store filtering (query specific LGS only)
+- 🛒 Persistent cart in the frontend UI
 
 ## 🏗️ Architecture
 
-Gishath Fetch utilizes a modern decoupled architecture:
+- Frontend: React 19 + Vite + Bootstrap (`frontend/`)
+- Backend: Go Lambda handler + concurrent scrapers (`api/`)
 
-- **Frontend**: A responsive Single Page Application (SPA) built with **React 19** and **Vite**. It uses **Bootstrap 5** for a clean, mobile-friendly UI and custom React hooks for efficient state management of search results and the unified shopping cart.
-- **Backend**: A robust API written in **Go 1.26.1**, deployed as **AWS Lambda** functions. The backend leverages Go's concurrency primitives (Goroutines) to perform multiple LGS scrapings in parallel, aggregating the results before returning them to the client.
+## 🗂️ Repository layout
 
-## 🛠️ Tech Stack
+```text
+.
+|-- api/         # Go backend (Lambda handler, scraping gateways, tests)
+|-- frontend/    # React + Vite single-page app
+|-- Makefile     # Local helpers for common project tasks
+`-- Dockerfile   # Backend container build definition
+```
 
-### Frontend
-- **Framework**: [React 19](https://react.dev/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styling**: [Bootstrap 5](https://getbootstrap.com/)
-- **Icons**: [React Feather](https://feathericons.com/)
+## ✅ Prerequisites
 
-### Backend
-- **Language**: [Go 1.26.1](https://go.dev/)
-- **Infrastructure**: [AWS Lambda](https://aws.amazon.com/lambda/)
-- **Scraping**: [Colly](http://go-colly.org/), [GoQuery](https://github.com/PuerkitoBio/goquery)
-- **Environment**: [GoDotEnv](https://github.com/joho/godotenv)
-- **ID Generation**: [Sonyflake](https://github.com/sony/sonyflake)
+- Node.js 22 (matches CI workflow)
+- npm
+- Go (version declared in `api/go.mod`)
+
+## 🧪 Tests
+
+From repo root:
+
+```bash
+make test
+```
+
+Or directly:
+
+```bash
+cd api
+go clean -testcache
+go test -mod=vendor -failfast -timeout 5m ./...
+```
+
+## 🌐 Proxy support (rate limiting)
+
+The scraper supports multiple proxies to reduce rate-limiting issues from upstream stores.
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](file:///Users/paya0969/Desktop/projects/gishathfetch/LICENSE) file for details.
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).
 
 ---
 
-*Gishath Fetch is not affiliated with Wizards of the Coast or any of the supported local game stores.*
+Gishath Fetch is not affiliated with Wizards of the Coast or any supported local game store.
