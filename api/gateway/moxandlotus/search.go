@@ -176,10 +176,6 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 						}.Encode()
 
 						price, _ := strconv.ParseFloat(strings.TrimSpace(cardWithCondition.Price), 64)
-						cardNo, err := strconv.Atoi(card.CardNumber)
-						if err != nil {
-							continue
-						}
 
 						var extraInfo []string
 						var isFoil bool
@@ -191,6 +187,11 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 							extraInfo = append(extraInfo, fmt.Sprintf("[%s]", card.Expansion))
 						}
 
+						imageURL, ok := resolveCardImageURL(card.ExpansionCode, card.CardNumber, card.ImagePath)
+						if !ok {
+							continue
+						}
+
 						cards = append(cards, gateway.Card{
 							Name:      strings.TrimSpace(card.Title),
 							Url:       cleanPageURL.String(),
@@ -198,7 +199,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 							IsFoil:    isFoil,
 							Price:     price,
 							Source:    s.Name,
-							Img:       fmt.Sprintf(CardImageURL, card.ExpansionCode, fmt.Sprintf("%03d", cardNo)),
+							Img:       imageURL,
 							Quality:   util.MapQuality(cardWithCondition.Code),
 							ExtraInfo: extraInfo,
 						})
@@ -209,4 +210,20 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	return cards, nil
+}
+
+func resolveCardImageURL(expansionCode, cardNumber string, imagePath any) (string, bool) {
+	if imageURL, ok := imagePath.(string); ok {
+		imageURL = strings.TrimSpace(imageURL)
+		if imageURL != "" {
+			return imageURL, true
+		}
+	}
+
+	cardNo, err := strconv.Atoi(strings.TrimSpace(cardNumber))
+	if err != nil {
+		return "", false
+	}
+
+	return fmt.Sprintf(CardImageURL, strings.TrimSpace(expansionCode), fmt.Sprintf("%03d", cardNo)), true
 }
