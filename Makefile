@@ -1,6 +1,6 @@
-deploy: deploy-common docker-tag docker-push lambda-update frontend-update
+deploy: test deploy-common docker-tag docker-push lambda-update frontend-update
 
-deploy-staging: deploy-common docker-tag-staging docker-push-staging lambda-update-staging frontend-update-staging
+deploy-staging: test deploy-common docker-tag-staging docker-push-staging lambda-update-staging frontend-update-staging
 
 deploy-common: docker-build aws-login
 
@@ -61,4 +61,7 @@ aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
 
 test:
-	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./... || (echo "\n\033[0;31mTESTS FAILED\033[0m. Continue deployment? [y/N] "; read ans; [ $${ans:-N} = y ])
+	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m -skip 'Test_Search|Test_Scrap|Test_LGSNoResultMeasurement' ./...
+
+test-live:
+	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 10m ./gateway/... -run 'Test_Search|Test_Scrap|Test_LGSNoResultMeasurement'
