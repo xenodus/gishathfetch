@@ -10,6 +10,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockBinderposGateway struct {
+	gotVariant   int
+	gotStoreName string
+	gotBaseURL   string
+	gotSearchURL string
+	gotSearchStr string
+	returnCards  []gateway.Card
+	returnErr    error
+}
+
+func (m *mockBinderposGateway) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	m.gotVariant = scrapVariant
+	m.gotStoreName = storeName
+	m.gotBaseURL = baseUrl
+	m.gotSearchURL = searchUrl
+	m.gotSearchStr = searchStr
+	return m.returnCards, m.returnErr
+}
+
 func TestSearchUsesBinderposGateway(t *testing.T) {
 	mockGateway := &mockBinderposGateway{
 		returnCards: []gateway.Card{{Name: "Abrade", InStock: true, Price: 2.5, Source: StoreName}},

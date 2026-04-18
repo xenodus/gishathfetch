@@ -58,5 +58,5 @@ func TestSearchParsesStoreResponse(t *testing.T) {
 	require.Equal(t, "https://img.example/abrade.png", card.Img)
 	require.Contains(t, card.Url, baseURL.String()+"/store/search?category=mtg&searchfield=Abrade")
 	require.Contains(t, card.Url, "utm_source=gishathfetch")
-	require.Equal(t, []string{"[BRO]"}, card.ExtraInfo)
+	require.Equal(t, []string{"Single - NM [BRO]"}, card.ExtraInfo)
 }

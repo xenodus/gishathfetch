@@ -57,7 +57,7 @@ func TestSearchParsesHTMLTable(t *testing.T) {
 	require.Equal(t, StoreName, result[0].Source)
 	require.Equal(t, 3.10, result[0].Price)
 	require.True(t, result[0].InStock)
-	require.Equal(t, "Near Mint", result[0].Quality)
+	require.Equal(t, "NM", result[0].Quality)
 	require.Equal(t, StoreBaseURL+"/images/abrade.png", result[0].Img)
 	require.Equal(t, []string{"[Revised]"}, result[0].ExtraInfo)
 	require.Contains(t, result[0].Url, StoreBaseURL+"/products/abrade")
