@@ -2,30 +2,42 @@ package onemtg
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/joho/godotenv"
+	"mtg-price-checker-sg/gateway"
+
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
-	_ = godotenv.Load("../../.env")
-}
-
-func Test_Search(t *testing.T) {
-	s := NewLGS()
+func TestSearchUsesBinderposGateway(t *testing.T) {
+	mockGateway := &mockBinderposGateway{
+		returnCards: []gateway.Card{{Name: "Abrade", InStock: true, Price: 2.5, Source: StoreName}},
+	}
+	s := Store{
+		Name:         StoreName,
+		BaseUrl:      StoreBaseURL,
+		SearchUrl:    StoreSearchURL,
+		BinderposGwy: mockGateway,
+	}
 	result, err := s.Search(context.Background(), "Abrade")
 	require.NoError(t, err)
-	require.True(t, len(result) > 0)
+	require.Len(t, result, 1)
+	require.Equal(t, 2, mockGateway.gotVariant)
+	require.Equal(t, StoreName, mockGateway.gotStoreName)
+	require.Equal(t, StoreBaseURL, mockGateway.gotBaseURL)
+	require.Equal(t, StoreSearchURL, mockGateway.gotSearchURL)
+	require.Equal(t, "Abrade", mockGateway.gotSearchStr)
+}
 
-	for _, card := range result {
-		if card.InStock {
-			require.NotEmpty(t, card.Name)
-			require.NotEmpty(t, card.Source)
-			require.NotEmpty(t, card.Url)
-			require.NotEmpty(t, card.Img)
-			require.NotEmpty(t, card.Price)
-			require.Contains(t, card.Url, StoreBaseURL+"/products/")
-		}
+func TestSearchPropagatesBinderposError(t *testing.T) {
+	s := Store{
+		Name:         StoreName,
+		BaseUrl:      StoreBaseURL,
+		SearchUrl:    StoreSearchURL,
+		BinderposGwy: &mockBinderposGateway{returnErr: errors.New("upstream error")},
 	}
+	result, err := s.Search(context.Background(), "Abrade")
+	require.Error(t, err)
+	require.Nil(t, result)
 }

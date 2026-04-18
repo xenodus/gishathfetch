@@ -61,7 +61,7 @@ aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
 
 test:
-	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m -skip 'Test_Search|Test_Scrap|Test_LGSNoResultMeasurement' ./...
+	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...
 
 test-live:
-	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 10m ./gateway/... -run 'Test_Search|Test_Scrap|Test_LGSNoResultMeasurement'
+	cd api && go clean -testcache && RUN_LIVE_GATEWAY_TESTS=1 go test -mod=vendor -failfast -timeout 10m -tags=live ./gateway/... -run '^TestLive'
