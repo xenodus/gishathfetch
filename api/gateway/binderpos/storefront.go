@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strings"
@@ -56,8 +57,15 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 }
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
-	client := &http.Client{Timeout: config.PerSiteTimeout}
+	client, ok := newDedicatedProxyHTTPClient()
+	if !ok {
+		return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")
+	}
 
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+}
+
+func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
 	products, err := fetchSuggestProducts(ctx, client, baseURL, searchStr)
 	if err != nil {
 		return nil, err
@@ -116,6 +124,30 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 	}
 
 	return cards, nil
+}
+
+func newDedicatedProxyHTTPClient() (*http.Client, bool) {
+	proxyURLs := util.GetDedicatedProxyURLs()
+	if len(proxyURLs) == 0 {
+		return nil, false
+	}
+
+	proxyURL := strings.TrimSpace(proxyURLs[rand.IntN(len(proxyURLs))])
+	if proxyURL == "" {
+		return nil, false
+	}
+
+	parsedProxyURL, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, false
+	}
+
+	return &http.Client{
+		Timeout: config.PerSiteTimeout,
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(parsedProxyURL),
+		},
+	}, true
 }
 
 func fetchSuggestProducts(ctx context.Context, client *http.Client, baseURL, searchStr string) ([]storefrontProduct, error) {

@@ -184,31 +184,60 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 }
 
 func TestApplyProxyForRetryAttemptWithPinnedDedicatedBinderpos(t *testing.T) {
-	c := colly.NewCollector()
-	t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
-	t.Setenv("PROXY_URL", "http://shared:8080")
+	t.Run("default strategy uses dedicated then direct", func(t *testing.T) {
+		c := colly.NewCollector()
+		t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
+		t.Setenv("PROXY_URL", "http://shared:8080")
+		t.Setenv("USE_BINDERPOS_SHARED_PROXY_FALLBACK", "false")
 
-	pinned := "http://pinned:1234"
-	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
-	if mode != "dedicated" || proxyURL != pinned {
-		t.Fatalf("expected dedicated on attempt 0, got mode=%q url=%q", mode, proxyURL)
-	}
+		pinned := "http://pinned:1234"
+		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+		if mode != "dedicated" || proxyURL != pinned {
+			t.Fatalf("expected dedicated on attempt 0, got mode=%q url=%q", mode, proxyURL)
+		}
 
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
-	if mode != "shared" {
-		t.Fatalf("expected PROXY_URL on attempt 1, got mode %q", mode)
-	}
-	if proxyURL != "http://shared:8080" {
-		t.Fatalf("expected shared proxy url on attempt 1, got %q", proxyURL)
-	}
+		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+		if mode != "dedicated" || proxyURL != pinned {
+			t.Fatalf("expected dedicated on attempt 1, got mode=%q url=%q", mode, proxyURL)
+		}
 
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
-	if mode != "direct" {
-		t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
-	}
-	if proxyURL != "" {
-		t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
-	}
+		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+		if mode != "direct" {
+			t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
+		}
+		if proxyURL != "" {
+			t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
+		}
+	})
+
+	t.Run("rollback strategy uses shared fallback", func(t *testing.T) {
+		c := colly.NewCollector()
+		t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
+		t.Setenv("PROXY_URL", "http://shared:8080")
+		t.Setenv("USE_BINDERPOS_SHARED_PROXY_FALLBACK", "true")
+
+		pinned := "http://pinned:1234"
+		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+		if mode != "dedicated" || proxyURL != pinned {
+			t.Fatalf("expected dedicated on attempt 0, got mode=%q url=%q", mode, proxyURL)
+		}
+
+		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+		if mode != "shared" {
+			t.Fatalf("expected PROXY_URL on attempt 1, got mode %q", mode)
+		}
+		if proxyURL != "http://shared:8080" {
+			t.Fatalf("expected shared proxy url on attempt 1, got %q", proxyURL)
+		}
+
+		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+		if mode != "direct" {
+			t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
+		}
+		if proxyURL != "" {
+			t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
+		}
+	})
 }
 
 func TestDedicatedProxyLeasePoolAcquireRelease(t *testing.T) {
