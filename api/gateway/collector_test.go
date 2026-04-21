@@ -1,7 +1,9 @@
 package gateway
 
 import (
+	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -220,4 +222,75 @@ func TestDedicatedProxyURLHelpers(t *testing.T) {
 			t.Fatalf("unexpected proxy url: %q", proxyURL)
 		}
 	})
+}
+
+func TestFormatProxyContext(t *testing.T) {
+	t.Run("empty mode and proxy default values", func(t *testing.T) {
+		got := formatProxyContext("", "")
+		if got != "proxy_mode=unknown proxy=none" {
+			t.Fatalf("unexpected proxy context: %q", got)
+		}
+	})
+
+	t.Run("uses dedicated proxy env label when mapped", func(t *testing.T) {
+		t.Setenv("DEDICATED_PROXY_1", "4.4.4.4|8080|user|pass")
+		got := formatProxyContext("dedicated", "http://user:pass@4.4.4.4:8080")
+		if got != "proxy_mode=dedicated proxy=DEDICATED_PROXY_1" {
+			t.Fatalf("unexpected proxy context: %q", got)
+		}
+	})
+
+	t.Run("uses shared proxy env label", func(t *testing.T) {
+		t.Setenv("PROXY_URL", "http://shared-proxy:8080")
+		got := formatProxyContext("shared", "http://shared-proxy:8080")
+		if got != "proxy_mode=shared proxy=PROXY_URL" {
+			t.Fatalf("unexpected proxy context: %q", got)
+		}
+	})
+}
+
+func TestResolveProxyLabel(t *testing.T) {
+	t.Run("returns none for empty proxy", func(t *testing.T) {
+		if got := resolveProxyLabel("dedicated", ""); got != "none" {
+			t.Fatalf("expected none, got %q", got)
+		}
+	})
+
+	t.Run("matches dedicated env key by URL", func(t *testing.T) {
+		t.Setenv("DEDICATED_PROXY_1", "10.0.0.1|1111|u1|p1")
+		t.Setenv("DEDICATED_PROXY_2", "10.0.0.2|2222|u2|p2")
+		if got := resolveProxyLabel("dedicated", "http://u2:p2@10.0.0.2:2222"); got != "DEDICATED_PROXY_2" {
+			t.Fatalf("expected DEDICATED_PROXY_2, got %q", got)
+		}
+	})
+
+	t.Run("matches shared env key by URL", func(t *testing.T) {
+		t.Setenv("PROXY_URL", "http://shared:3333")
+		if got := resolveProxyLabel("shared", "http://shared:3333"); got != "PROXY_URL" {
+			t.Fatalf("expected PROXY_URL, got %q", got)
+		}
+	})
+
+	t.Run("falls back to mode label when unmapped", func(t *testing.T) {
+		if got := resolveProxyLabel("dedicated", "http://unknown:4444"); got != "dedicated-configured" {
+			t.Fatalf("expected dedicated-configured fallback, got %q", got)
+		}
+		if got := resolveProxyLabel("shared", "http://unknown:5555"); got != "shared-configured" {
+			t.Fatalf("expected shared-configured fallback, got %q", got)
+		}
+		if got := resolveProxyLabel("unknown", "http://unknown:6666"); got != "configured" {
+			t.Fatalf("expected configured fallback, got %q", got)
+		}
+	})
+}
+
+func TestVisitWithProxyInfo(t *testing.T) {
+	c := NewOptimizedCollectorNoRetry(context.Background())
+	err := VisitWithProxyInfo(c, "http://[::1")
+	if err == nil {
+		t.Fatalf("expected visit error for malformed URL")
+	}
+	if !strings.Contains(err.Error(), "proxy_mode=") {
+		t.Fatalf("expected proxy context in error, got %q", err)
+	}
 }
