@@ -114,21 +114,25 @@ func searchWithFallback(
 	scrapDirectFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
+	apiDedicatedErr = annotateAttemptError(1, "api-dedicated", apiDedicatedErr)
 	if len(apiDedicatedCards) > 0 && apiDedicatedErr == nil {
 		return apiDedicatedCards, nil
 	}
 
 	scrapedCards, scrapErr := scrapDedicatedFn()
+	scrapErr = annotateAttemptError(2, "scrap-dedicated", scrapErr)
 	if len(scrapedCards) > 0 && scrapErr == nil {
 		return scrapedCards, nil
 	}
 
 	apiSharedCards, apiSharedErr := searchAPISharedFn()
+	apiSharedErr = annotateAttemptError(3, "api-shared", apiSharedErr)
 	if len(apiSharedCards) > 0 && apiSharedErr == nil {
 		return apiSharedCards, nil
 	}
 
 	scrapedDirectCards, scrapDirectErr := scrapDirectFn()
+	scrapDirectErr = annotateAttemptError(4, "scrap-direct", scrapDirectErr)
 	if len(scrapedDirectCards) > 0 && scrapDirectErr == nil {
 		return scrapedDirectCards, nil
 	}
@@ -147,6 +151,13 @@ func searchWithFallback(
 	}
 
 	return []gateway.Card{}, nil
+}
+
+func annotateAttemptError(attempt int, strategy string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("attempt %d (%s): %w", attempt, strategy, err)
 }
 
 func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {

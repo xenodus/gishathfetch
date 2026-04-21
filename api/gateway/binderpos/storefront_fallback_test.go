@@ -83,6 +83,10 @@ func TestSearchWithFallback(t *testing.T) {
 		if !errors.Is(err, directErr) {
 			t.Fatalf("expected direct scraper error, got %v", err)
 		}
+		expectedError := "attempt 4 (scrap-direct): direct scraper failed"
+		if err == nil || err.Error() != expectedError {
+			t.Fatalf("expected final error %q, got %v", expectedError, err)
+		}
 	})
 
 	t.Run("runs attempts in the requested order", func(t *testing.T) {
