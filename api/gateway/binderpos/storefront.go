@@ -3,13 +3,10 @@ package binderpos
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
-	"net"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"strings"
@@ -23,14 +20,6 @@ import (
 const (
 	storefrontSuggestPath   = "/search/suggest.json"
 	binderposAttemptTimeout = 4 * time.Second
-	storefrontMaxRetries    = 2
-
-	storefrontRetryBaseDelay = 120 * time.Millisecond
-	storefrontRetryJitter    = 180 * time.Millisecond
-	storefrontRetryDelayCap  = 700 * time.Millisecond
-
-	storefrontDetailPauseBase   = 20 * time.Millisecond
-	storefrontDetailPauseJitter = 45 * time.Millisecond
 )
 
 type storefrontSuggestResponse struct {
@@ -57,12 +46,6 @@ type storefrontProductStock struct {
 	Title     string `json:"title"`
 	Available bool   `json:"available"`
 	Price     int    `json:"price"`
-}
-
-type storefrontRequestProfile struct {
-	userAgent      string
-	acceptLanguage string
-	referer        string
 }
 
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
@@ -178,11 +161,7 @@ func annotateAttemptError(attempt int, strategy string, err error) error {
 }
 
 func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
-	requestProfile := newStorefrontRequestProfile(baseURL)
-	client = withStorefrontCookieJar(client)
-	_ = warmUpStorefrontSession(ctx, client, requestProfile, baseURL)
-
-	products, err := fetchSuggestProducts(ctx, client, requestProfile, baseURL, searchStr)
+	products, err := fetchSuggestProducts(ctx, client, baseURL, searchStr)
 	if err != nil {
 		return nil, err
 	}
@@ -192,19 +171,13 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 
 	cards := make([]gateway.Card, 0, len(products)*4)
 	seen := map[string]struct{}{}
-	for idx, product := range products {
+	for _, product := range products {
 		productURL := product.URL
 		if productURL == "" {
 			continue
 		}
 
-		if idx > 0 {
-			if err := pauseStorefrontDetailRequests(ctx); err != nil {
-				break
-			}
-		}
-
-		detail, err := fetchProductDetail(ctx, client, requestProfile, baseURL, productURL)
+		detail, err := fetchProductDetail(ctx, client, baseURL, productURL)
 		if err != nil {
 			continue
 		}
@@ -281,112 +254,7 @@ func newHTTPClientWithProxyURL(proxyURL string) (*http.Client, error) {
 	}, nil
 }
 
-func newStorefrontRequestProfile(baseURL string) storefrontRequestProfile {
-	acceptLanguageOptions := []string{
-		"en-SG,en;q=0.9,en-US;q=0.8",
-		"en-US,en;q=0.9",
-		"en-GB,en;q=0.9,en-US;q=0.8",
-	}
-
-	return storefrontRequestProfile{
-		userAgent:      gateway.RandomBrowserUserAgent(),
-		acceptLanguage: acceptLanguageOptions[rand.IntN(len(acceptLanguageOptions))],
-		referer:        normalizeStorefrontReferer(baseURL),
-	}
-}
-
-func withStorefrontCookieJar(client *http.Client) *http.Client {
-	if client == nil {
-		jar, _ := cookiejar.New(nil)
-		return &http.Client{
-			Timeout: binderposAttemptTimeout,
-			Jar:     jar,
-		}
-	}
-	if client.Jar != nil {
-		return client
-	}
-
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		return client
-	}
-
-	cloned := *client
-	cloned.Jar = jar
-	return &cloned
-}
-
-func normalizeStorefrontReferer(baseURL string) string {
-	parsedBaseURL, err := url.Parse(baseURL)
-	if err != nil {
-		return strings.TrimSpace(baseURL)
-	}
-
-	parsedBaseURL.RawQuery = ""
-	parsedBaseURL.Fragment = ""
-	if parsedBaseURL.Path == "" {
-		parsedBaseURL.Path = "/"
-	}
-
-	return parsedBaseURL.String()
-}
-
-func resolveStorefrontProductPageURL(baseURL, productPath string) string {
-	base, err := url.Parse(baseURL)
-	if err != nil {
-		return normalizeStorefrontReferer(baseURL)
-	}
-	pathURL, err := url.Parse(productPath)
-	if err != nil {
-		return normalizeStorefrontReferer(baseURL)
-	}
-
-	resolved := base.ResolveReference(pathURL)
-	resolved.RawQuery = ""
-	resolved.Fragment = ""
-	return resolved.String()
-}
-
-func pauseStorefrontDetailRequests(ctx context.Context) error {
-	wait := storefrontDetailPauseBase + time.Duration(rand.Int64N(int64(storefrontDetailPauseJitter)+1))
-	timer := time.NewTimer(wait)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
-}
-
-func warmUpStorefrontSession(ctx context.Context, client *http.Client, profile storefrontRequestProfile, baseURL string) error {
-	homeURL := normalizeStorefrontReferer(baseURL)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, homeURL, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("User-Agent", profile.userAgent)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	req.Header.Set("Accept-Language", profile.acceptLanguage)
-	req.Header.Set("Cache-Control", "no-cache")
-	req.Header.Set("Pragma", "no-cache")
-	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
-		return err
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 2048))
-
-	return nil
-}
-
-func fetchSuggestProducts(ctx context.Context, client *http.Client, profile storefrontRequestProfile, baseURL, searchStr string) ([]storefrontProduct, error) {
+func fetchSuggestProducts(ctx context.Context, client *http.Client, baseURL, searchStr string) ([]storefrontProduct, error) {
 	suggestURL, err := url.Parse(baseURL + storefrontSuggestPath)
 	if err != nil {
 		return nil, err
@@ -399,20 +267,23 @@ func fetchSuggestProducts(ctx context.Context, client *http.Client, profile stor
 	query.Set("resources[options][unavailable_products]", "hide")
 	suggestURL.RawQuery = query.Encode()
 
-	profile.referer = normalizeStorefrontReferer(baseURL)
-	res, err := doStorefrontGETWithRetry(ctx, client, suggestURL.String(), profile)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, suggestURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
+	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
+		return nil, err
+	}
+
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
-		return nil, fmt.Errorf(
-			"storefront suggest request returned status %d body=%s",
-			res.StatusCode,
-			strings.TrimSpace(string(body)),
-		)
+		return nil, fmt.Errorf("storefront suggest request returned status %d", res.StatusCode)
 	}
 
 	var payload storefrontSuggestResponse
@@ -423,14 +294,22 @@ func fetchSuggestProducts(ctx context.Context, client *http.Client, profile stor
 	return payload.Resources.Results.Products, nil
 }
 
-func fetchProductDetail(ctx context.Context, client *http.Client, profile storefrontRequestProfile, baseURL, productPath string) (*storefrontProductDetail, error) {
+func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, productPath string) (*storefrontProductDetail, error) {
 	productJSONURL, err := productPathToJSONURL(baseURL, productPath)
 	if err != nil {
 		return nil, err
 	}
 
-	profile.referer = resolveStorefrontProductPageURL(baseURL, productPath)
-	res, err := doStorefrontGETWithRetry(ctx, client, productJSONURL, profile)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, productJSONURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
+	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
+		return nil, err
+	}
+
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -447,114 +326,6 @@ func fetchProductDetail(ctx context.Context, client *http.Client, profile storef
 	}
 
 	return &detail, nil
-}
-
-func doStorefrontGETWithRetry(ctx context.Context, client *http.Client, requestURL string, profile storefrontRequestProfile) (*http.Response, error) {
-	var lastErr error
-
-	for attempt := 0; attempt <= storefrontMaxRetries; attempt++ {
-		if attempt > 0 {
-			if err := waitStorefrontRetryDelay(ctx, attempt); err != nil {
-				return nil, err
-			}
-		}
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
-		if err != nil {
-			return nil, err
-		}
-		applyStorefrontHeaders(req, profile)
-
-		if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
-			return nil, err
-		}
-
-		res, err := client.Do(req)
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-			if attempt >= storefrontMaxRetries || !shouldRetryStorefrontTransportError(err) {
-				return nil, err
-			}
-			lastErr = err
-			continue
-		}
-
-		if shouldRetryStorefrontStatus(res.StatusCode) && attempt < storefrontMaxRetries {
-			io.Copy(io.Discard, res.Body)
-			res.Body.Close()
-			lastErr = fmt.Errorf("transient storefront status %d", res.StatusCode)
-			continue
-		}
-
-		return res, nil
-	}
-
-	if lastErr != nil {
-		return nil, lastErr
-	}
-	return nil, fmt.Errorf("storefront request failed after retries")
-}
-
-func applyStorefrontHeaders(req *http.Request, profile storefrontRequestProfile) {
-	req.Header.Set("User-Agent", profile.userAgent)
-	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
-	req.Header.Set("Accept-Language", profile.acceptLanguage)
-	req.Header.Set("Cache-Control", "no-cache")
-	req.Header.Set("Pragma", "no-cache")
-	req.Header.Set("X-Requested-With", "XMLHttpRequest")
-	if profile.referer != "" {
-		req.Header.Set("Referer", profile.referer)
-	}
-	if req.URL != nil {
-		req.Header.Set("Origin", req.URL.Scheme+"://"+req.URL.Host)
-	}
-}
-
-func shouldRetryStorefrontStatus(statusCode int) bool {
-	switch statusCode {
-	case http.StatusTooManyRequests, http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout, 520, 521, 522, 524:
-		return true
-	default:
-		return false
-	}
-}
-
-func shouldRetryStorefrontTransportError(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		return false
-	}
-
-	var networkErr net.Error
-	if errors.As(err, &networkErr) {
-		return true
-	}
-	return true
-}
-
-func waitStorefrontRetryDelay(ctx context.Context, attempt int) error {
-	if attempt <= 0 {
-		return nil
-	}
-
-	wait := storefrontRetryBaseDelay*time.Duration(attempt) + time.Duration(rand.Int64N(int64(storefrontRetryJitter)+1))
-	if wait > storefrontRetryDelayCap {
-		wait = storefrontRetryDelayCap
-	}
-
-	timer := time.NewTimer(wait)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
 }
 
 func productPathToJSONURL(baseURL, productPath string) (string, error) {
