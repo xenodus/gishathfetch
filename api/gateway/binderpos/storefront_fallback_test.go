@@ -54,26 +54,26 @@ func TestSearchWithFallback(t *testing.T) {
 		}
 	})
 
-	t.Run("falls back to direct api when dedicated api, scraper and shared api fail", func(t *testing.T) {
+	t.Run("falls back to direct scraper when dedicated api, scraper and shared api fail", func(t *testing.T) {
 		cards, err := searchWithFallback(
 			func() ([]gateway.Card, error) { return nil, errors.New("dedicated api failed") },
 			func() ([]gateway.Card, error) { return nil, errors.New("scraper failed") },
 			func() ([]gateway.Card, error) { return nil, errors.New("shared api failed") },
-			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "api-direct"}}, nil },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "scrap-direct"}}, nil },
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
-		if len(cards) != 1 || cards[0].Name != "api-direct" {
-			t.Fatalf("expected direct api card, got %+v", cards)
+		if len(cards) != 1 || cards[0].Name != "scrap-direct" {
+			t.Fatalf("expected direct scraper card, got %+v", cards)
 		}
 	})
 
-	t.Run("returns final direct api error when all fail", func(t *testing.T) {
+	t.Run("returns final direct scraper error when all fail", func(t *testing.T) {
 		dedicatedErr := errors.New("dedicated api failed")
 		scrapErr := errors.New("scraper failed")
 		sharedErr := errors.New("shared api failed")
-		directErr := errors.New("direct api failed")
+		directErr := errors.New("direct scraper failed")
 		_, err := searchWithFallback(
 			func() ([]gateway.Card, error) { return nil, dedicatedErr },
 			func() ([]gateway.Card, error) { return nil, scrapErr },
@@ -81,7 +81,7 @@ func TestSearchWithFallback(t *testing.T) {
 			func() ([]gateway.Card, error) { return nil, directErr },
 		)
 		if !errors.Is(err, directErr) {
-			t.Fatalf("expected direct api error, got %v", err)
+			t.Fatalf("expected direct scraper error, got %v", err)
 		}
 	})
 
@@ -98,12 +98,12 @@ func TestSearchWithFallback(t *testing.T) {
 			fail("api-dedicated"),
 			fail("scrap-dedicated"),
 			fail("api-shared"),
-			fail("direct"),
+			fail("scrap-direct"),
 		)
 		if err == nil {
 			t.Fatalf("expected fallback chain to return the final error")
 		}
-		expected := []string{"api-dedicated", "scrap-dedicated", "api-shared", "direct"}
+		expected := []string{"api-dedicated", "scrap-dedicated", "api-shared", "scrap-direct"}
 		if len(sequence) != len(expected) {
 			t.Fatalf("expected %d attempts, got %d (%v)", len(expected), len(sequence), sequence)
 		}

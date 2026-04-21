@@ -67,7 +67,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return searchByStorefrontAPIDirect(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+				return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			})
 		},
 	)
@@ -111,7 +111,7 @@ func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
 	scrapDedicatedFn func() ([]gateway.Card, error),
 	searchAPISharedFn func() ([]gateway.Card, error),
-	searchAPIDirectFn func() ([]gateway.Card, error),
+	scrapDirectFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
 	if len(apiDedicatedCards) > 0 && apiDedicatedErr == nil {
@@ -128,13 +128,13 @@ func searchWithFallback(
 		return apiSharedCards, nil
 	}
 
-	apiDirectCards, apiDirectErr := searchAPIDirectFn()
-	if len(apiDirectCards) > 0 && apiDirectErr == nil {
-		return apiDirectCards, nil
+	scrapedDirectCards, scrapDirectErr := scrapDirectFn()
+	if len(scrapedDirectCards) > 0 && scrapDirectErr == nil {
+		return scrapedDirectCards, nil
 	}
 
-	if apiDirectErr != nil {
-		return apiDirectCards, apiDirectErr
+	if scrapDirectErr != nil {
+		return scrapedDirectCards, scrapDirectErr
 	}
 	if apiSharedErr != nil {
 		return apiSharedCards, apiSharedErr
