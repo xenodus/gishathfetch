@@ -346,3 +346,36 @@ func TestVisitWithProxyInfo(t *testing.T) {
 		t.Fatalf("expected proxy context in error, got %q", err)
 	}
 }
+
+func TestSeedProxyContextIfMissing(t *testing.T) {
+	t.Run("initializes mode and url when missing", func(t *testing.T) {
+		ctx := colly.NewContext()
+		seedProxyContextIfMissing(ctx, "dedicated", "http://proxy:8080")
+
+		if got := ctx.Get("last_proxy_mode"); got != "dedicated" {
+			t.Fatalf("expected dedicated mode, got %q", got)
+		}
+		if got := ctx.Get("last_proxy_url"); got != "http://proxy:8080" {
+			t.Fatalf("expected proxy URL to be seeded, got %q", got)
+		}
+	})
+
+	t.Run("does not overwrite direct context with empty url", func(t *testing.T) {
+		ctx := colly.NewContext()
+		ctx.Put("last_proxy_mode", "direct")
+		ctx.Put("last_proxy_url", "")
+
+		seedProxyContextIfMissing(ctx, "shared", "http://shared:8080")
+
+		if got := ctx.Get("last_proxy_mode"); got != "direct" {
+			t.Fatalf("expected direct mode to remain, got %q", got)
+		}
+		if got := ctx.Get("last_proxy_url"); got != "" {
+			t.Fatalf("expected direct mode proxy URL to stay empty, got %q", got)
+		}
+	})
+
+	t.Run("ignores nil context", func(t *testing.T) {
+		seedProxyContextIfMissing(nil, "dedicated", "http://proxy:8080")
+	})
+}
