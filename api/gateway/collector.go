@@ -152,10 +152,6 @@ func configureRequestOptimizationsWithDedicatedThreshold(c *colly.Collector, ena
 func applyCollectorDefaults(c *colly.Collector) {
 	c.DisableCookies()
 	c.SetRequestTimeout(config.PerSiteTimeout)
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*",
-		RandomDelay: 2 * time.Second, // adds 0-2s jitter between matching-domain requests
-	})
 }
 
 // Dedicated proxy lease lifecycle helpers.
@@ -182,6 +178,14 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func(
 func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, dedicatedRetryThreshold, maxRetries int) {
 	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
 	c.OnRequest(func(r *colly.Request) {
+		if r == nil || r.URL == nil {
+			return
+		}
+		if err := waitForDomainRequestSlot(c.Context, r.URL); err != nil {
+			log.Printf("Skipping request pacing for %s due to context cancellation: %v", r.URL, err)
+			r.Abort()
+			return
+		}
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
 		r.Headers.Set("User-Agent", browserUserAgents[rand.IntN(len(browserUserAgents))])
