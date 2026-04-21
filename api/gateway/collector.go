@@ -28,16 +28,19 @@ var browserUserAgents = []string{
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
 const (
-	// Allow three retries after the initial request.
-	// Retry flow:
+	// Default flow allows three retries after the initial request:
 	// - first retry (attempt 1): dedicated proxy
 	// - second retry (attempt 2): shared PROXY_URL
 	// - third/final retry (attempt 3): direct (no proxy)
-	maxRetries = 3
+	defaultMaxRetries = 3
+	// Binderpos uses two retries:
+	// - first retry (attempt 1): shared/dynamic PROXY_URL
+	// - second/final retry (attempt 2): direct (no proxy)
+	binderposMaxRetries = 2
 	// Dedicated (leased or random pool) is used while retryAttempt <= this value (initial request is attempt 0).
 	// First retry = attempt 1 (still dedicated).
 	dedicatedProxyRetryThreshold          = 1
-	binderposDedicatedProxyRetryThreshold = dedicatedProxyRetryThreshold
+	binderposDedicatedProxyRetryThreshold = 0
 )
 
 type dedicatedProxyLeasePool struct {
@@ -112,7 +115,7 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizationsWithDedicatedThreshold(c, true, true, binderposDedicatedProxyRetryThreshold)
+	configureRequestOptimizationsWithDedicatedThreshold(c, true, true, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
 	return c
 }
 
@@ -126,14 +129,14 @@ func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 
 // Core request optimization pipeline.
 func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool) {
-	configureRequestOptimizationsWithDedicatedThreshold(c, enableRetry, enforceDedicatedProxyLease, dedicatedProxyRetryThreshold)
+	configureRequestOptimizationsWithDedicatedThreshold(c, enableRetry, enforceDedicatedProxyLease, dedicatedProxyRetryThreshold, defaultMaxRetries)
 }
 
-func configureRequestOptimizationsWithDedicatedThreshold(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool, dedicatedRetryThreshold int) {
+func configureRequestOptimizationsWithDedicatedThreshold(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool, dedicatedRetryThreshold, maxRetries int) {
 	applyCollectorDefaults(c)
 
 	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease)
-	registerRequestHandler(c, leasedDedicatedProxyURL, dedicatedRetryThreshold)
+	registerRequestHandler(c, leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
 	registerScrapedHandler(c, releaseDedicatedProxy)
 
 	if !enableRetry {
@@ -141,7 +144,7 @@ func configureRequestOptimizationsWithDedicatedThreshold(c *colly.Collector, ena
 		return
 	}
 
-	registerRetryErrorHandler(c, leasedDedicatedProxyURL, releaseDedicatedProxy, dedicatedRetryThreshold)
+	registerRetryErrorHandler(c, leasedDedicatedProxyURL, releaseDedicatedProxy, dedicatedRetryThreshold, maxRetries)
 }
 
 // Base collector defaults used by all optimized collectors.
@@ -175,8 +178,8 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func(
 }
 
 // Colly callback registration helpers.
-func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, dedicatedRetryThreshold int) {
-	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL, dedicatedRetryThreshold)
+func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, dedicatedRetryThreshold, maxRetries int) {
+	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
 	c.OnRequest(func(r *colly.Request) {
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
@@ -200,7 +203,7 @@ func registerNoRetryErrorHandler(c *colly.Collector, releaseDedicatedProxy func(
 	})
 }
 
-func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL string, releaseDedicatedProxy func(), dedicatedRetryThreshold int) {
+func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL string, releaseDedicatedProxy func(), dedicatedRetryThreshold, maxRetries int) {
 	c.OnError(func(r *colly.Response, err error) {
 		// Colly may call OnError without a full response/request on network/proxy failures.
 		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
@@ -217,7 +220,7 @@ func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL strin
 			nextRetry := retries + 1
 			r.Ctx.Put("retries", nextRetry)
 			previousProxyURL := r.Ctx.Get("last_proxy_url")
-			proxyMode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, nextRetry, previousProxyURL, leasedDedicatedProxyURL, dedicatedRetryThreshold)
+			proxyMode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, nextRetry, previousProxyURL, leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
 			r.Ctx.Put("last_proxy_mode", proxyMode)
 			r.Ctx.Put("last_proxy_url", proxyURL)
 
@@ -245,7 +248,7 @@ func retryAfterHeaderValue(r *colly.Response) string {
 
 // Proxy strategy helpers.
 func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int, avoidProxyURL string) (string, string) {
-	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "", dedicatedProxyRetryThreshold)
+	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "", dedicatedProxyRetryThreshold, defaultMaxRetries)
 }
 
 func clearProxy(c *colly.Collector) (string, string) {
@@ -257,17 +260,17 @@ func isDedicatedRetryAttempt(retryAttempt int, dedicatedRetryThreshold int) bool
 	return retryAttempt <= dedicatedRetryThreshold
 }
 
-func isFinalRetryAttempt(retryAttempt int) bool {
+func isFinalRetryAttempt(retryAttempt, maxRetries int) bool {
 	return retryAttempt >= maxRetries
 }
 
-func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string, dedicatedRetryThreshold int) (string, string) {
+func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string, dedicatedRetryThreshold, maxRetries int) (string, string) {
 	if !config.UseProxy {
 		return clearProxy(c)
 	}
 
 	// Final retry is always direct to bypass potentially bad proxy routes.
-	if isFinalRetryAttempt(retryAttempt) {
+	if isFinalRetryAttempt(retryAttempt, maxRetries) {
 		return clearProxy(c)
 	}
 

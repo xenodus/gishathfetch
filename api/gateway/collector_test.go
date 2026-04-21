@@ -111,7 +111,7 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 
 	pinned := "http://pinned:1234"
 	for attempt := 0; attempt <= 1; attempt++ {
-		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned, dedicatedProxyRetryThreshold)
+		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
 		if mode != "dedicated" {
 			t.Fatalf("expected dedicated mode for pinned proxy on attempt %d, got %q", attempt, mode)
 		}
@@ -120,7 +120,7 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 		}
 	}
 
-	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, dedicatedProxyRetryThreshold)
+	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
 	if mode != "shared" {
 		t.Fatalf("expected shared mode on attempt 2, got %q", mode)
 	}
@@ -128,7 +128,7 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 		t.Fatalf("expected shared proxy url on attempt 2, got %q", proxyURL)
 	}
 
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 3, "", pinned, dedicatedProxyRetryThreshold)
+	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 3, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
 	if mode != "direct" {
 		t.Fatalf("expected direct mode on final retry attempt 3, got %q", mode)
 	}
@@ -143,27 +143,25 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicatedBinderpos(t *testing.T) {
 	t.Setenv("PROXY_URL", "http://shared:8080")
 
 	pinned := "http://pinned:1234"
-	for attempt := 0; attempt <= 1; attempt++ {
-		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned, binderposDedicatedProxyRetryThreshold)
-		if mode != "dedicated" || proxyURL != pinned {
-			t.Fatalf("expected dedicated on attempt %d, got mode=%q url=%q", attempt, mode, proxyURL)
-		}
+	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
+	if mode != "dedicated" || proxyURL != pinned {
+		t.Fatalf("expected dedicated on attempt 0, got mode=%q url=%q", mode, proxyURL)
 	}
 
-	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedProxyRetryThreshold)
+	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
 	if mode != "shared" {
-		t.Fatalf("expected PROXY_URL on attempt 2, got mode %q", mode)
+		t.Fatalf("expected PROXY_URL on attempt 1, got mode %q", mode)
 	}
 	if proxyURL != "http://shared:8080" {
-		t.Fatalf("expected shared proxy url on attempt 2, got %q", proxyURL)
+		t.Fatalf("expected shared proxy url on attempt 1, got %q", proxyURL)
 	}
 
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 3, "", pinned, binderposDedicatedProxyRetryThreshold)
+	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
 	if mode != "direct" {
-		t.Fatalf("expected direct mode on final retry attempt 3, got %q", mode)
+		t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
 	}
 	if proxyURL != "" {
-		t.Fatalf("expected empty proxy url on final retry attempt 3, got %q", proxyURL)
+		t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
 	}
 }
 
