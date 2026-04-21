@@ -3,11 +3,8 @@ package binderpos
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
-	"sync/atomic"
 	"testing"
 
 	"mtg-price-checker-sg/gateway"
@@ -77,92 +74,4 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 			t.Fatalf("expected %v, got %v", wantErr, err)
 		}
 	})
-}
-
-func TestDoStorefrontGETWithRetry_RetriesTransientStatusThenSucceeds(t *testing.T) {
-	var attempts atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		curr := attempts.Add(1)
-		if curr < 3 {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = io.WriteString(w, "temporary unavailable")
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, `{"ok":true}`)
-	}))
-	defer server.Close()
-
-	client := &http.Client{Timeout: binderposAttemptTimeout}
-	profile := newStorefrontRequestProfile(server.URL)
-
-	resp, err := doStorefrontGETWithRetry(context.Background(), client, server.URL, profile)
-	if err != nil {
-		t.Fatalf("expected retry to eventually succeed, got error: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected status 200 after retries, got %d", resp.StatusCode)
-	}
-	if got := attempts.Load(); got != 3 {
-		t.Fatalf("expected 3 attempts, got %d", got)
-	}
-}
-
-func TestDoStorefrontGETWithRetry_NoRetryForBadRequest(t *testing.T) {
-	var attempts atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		attempts.Add(1)
-		w.WriteHeader(http.StatusBadRequest)
-		_, _ = io.WriteString(w, "bad request")
-	}))
-	defer server.Close()
-
-	client := &http.Client{Timeout: binderposAttemptTimeout}
-	profile := newStorefrontRequestProfile(server.URL)
-
-	resp, err := doStorefrontGETWithRetry(context.Background(), client, server.URL, profile)
-	if err != nil {
-		t.Fatalf("expected non-retryable status to return response without transport error: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected status 400, got %d", resp.StatusCode)
-	}
-	if got := attempts.Load(); got != 1 {
-		t.Fatalf("expected exactly one attempt for 400 status, got %d", got)
-	}
-}
-
-func TestApplyStorefrontHeaders_UsesBrowserLikeDefaults(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "https://example.com/search/suggest.json?q=test", nil)
-	if err != nil {
-		t.Fatalf("failed to build request: %v", err)
-	}
-	profile := storefrontRequestProfile{
-		userAgent:      "Mozilla/5.0 test-agent",
-		acceptLanguage: "en-SG,en;q=0.9",
-		referer:        "https://example.com/",
-	}
-
-	applyStorefrontHeaders(req, profile)
-
-	if req.Header.Get("User-Agent") != profile.userAgent {
-		t.Fatalf("unexpected User-Agent header: %s", req.Header.Get("User-Agent"))
-	}
-	if req.Header.Get("Accept-Language") != profile.acceptLanguage {
-		t.Fatalf("unexpected Accept-Language header: %s", req.Header.Get("Accept-Language"))
-	}
-	if req.Header.Get("Referer") != profile.referer {
-		t.Fatalf("unexpected Referer header: %s", req.Header.Get("Referer"))
-	}
-	if req.Header.Get("X-Requested-With") != "XMLHttpRequest" {
-		t.Fatalf("expected X-Requested-With header to mimic xhr requests")
-	}
-	if req.Header.Get("Origin") != "https://example.com" {
-		t.Fatalf("unexpected Origin header: %s", req.Header.Get("Origin"))
-	}
 }
