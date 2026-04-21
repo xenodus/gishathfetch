@@ -185,11 +185,23 @@ func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, 
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
 		r.Headers.Set("User-Agent", browserUserAgents[rand.IntN(len(browserUserAgents))])
-		if r.Ctx != nil && r.Ctx.Get("last_proxy_url") == "" {
-			r.Ctx.Put("last_proxy_mode", initialProxyMode)
-			r.Ctx.Put("last_proxy_url", initialProxyURL)
-		}
+		seedProxyContextIfMissing(r.Ctx, initialProxyMode, initialProxyURL)
 	})
+}
+
+func seedProxyContextIfMissing(ctx *colly.Context, initialProxyMode, initialProxyURL string) {
+	if ctx == nil {
+		return
+	}
+
+	// Proxy context is considered initialized once mode exists.
+	// Direct mode intentionally uses an empty proxy URL.
+	if ctx.Get("last_proxy_mode") != "" {
+		return
+	}
+
+	ctx.Put("last_proxy_mode", initialProxyMode)
+	ctx.Put("last_proxy_url", initialProxyURL)
 }
 
 func registerScrapedHandler(c *colly.Collector, releaseDedicatedProxy func()) {
