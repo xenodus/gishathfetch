@@ -11,6 +11,8 @@ import (
 	"mtg-price-checker-sg/gateway/gog"
 	"mtg-price-checker-sg/gateway/hideout"
 	"mtg-price-checker-sg/gateway/tefuda"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -344,5 +346,76 @@ func TestFetchCardsConcurrently_BinderposGate(t *testing.T) {
 	_, _ = fetchCardsConcurrently(context.Background(), "Abrade", shops)
 	if atomic.LoadInt32(&maxActiveBinderpos) > binderposMaxConcurrent {
 		t.Fatalf("expected at most %d concurrent binderpos searches, got %d", binderposMaxConcurrent, maxActiveBinderpos)
+	}
+}
+
+func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"ErrorShopA": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, fmt.Errorf("shop A failed")
+			},
+		},
+		"ErrorShopB": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, fmt.Errorf("shop B failed")
+			},
+		},
+		"PanicShop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				panic("shop panic")
+			},
+		},
+	}
+
+	var mu sync.Mutex
+	alertMessages := make([]string, 0, 1)
+	alertDone := make(chan struct{}, 1)
+
+	originalSendDiscordAlert := sendDiscordAlert
+	sendDiscordAlert = func(message string) {
+		mu.Lock()
+		alertMessages = append(alertMessages, message)
+		mu.Unlock()
+		select {
+		case alertDone <- struct{}{}:
+		default:
+		}
+	}
+	t.Cleanup(func() {
+		sendDiscordAlert = originalSendDiscordAlert
+	})
+
+	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	if len(siteErrors) != 3 {
+		t.Fatalf("expected 3 site errors, got %d", len(siteErrors))
+	}
+
+	select {
+	case <-alertDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for collated discord alert")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(alertMessages) != 1 {
+		t.Fatalf("expected exactly 1 collated alert, got %d", len(alertMessages))
+	}
+
+	got := alertMessages[0]
+	if !strings.Contains(got, "Encountered 3 error(s) while searching [Abrade]:") {
+		t.Fatalf("expected collated summary header, got: %s", got)
+	}
+	if !strings.Contains(got, "Error encountered searching [ErrorShopA] for [Abrade]: shop A failed") {
+		t.Fatalf("expected ErrorShopA details in alert, got: %s", got)
+	}
+	if !strings.Contains(got, "Error encountered searching [ErrorShopB] for [Abrade]: shop B failed") {
+		t.Fatalf("expected ErrorShopB details in alert, got: %s", got)
+	}
+	if !strings.Contains(got, "Recovered from panic in shop [PanicShop]: shop panic") {
+		t.Fatalf("expected PanicShop details in alert, got: %s", got)
 	}
 }

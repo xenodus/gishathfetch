@@ -53,6 +53,8 @@ type Card struct {
 
 const binderposMaxConcurrent = 5
 
+var sendDiscordAlert = alert.SendDiscordAlert
+
 func Search(ctx context.Context, input SearchInput) ([]Card, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
 	return searchShops(ctx, input, shopNameToLGSMap)
@@ -97,6 +99,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	var mu sync.Mutex
 	var errMu sync.Mutex
 	siteErrors := make(map[string]error, len(shops))
+	discordErrorMessages := make([]string, 0, len(shops))
 	binderposGate := make(chan struct{}, binderposMaxConcurrent)
 
 	log.Printf("Start checking shops for [%s]...", searchString)
@@ -107,9 +110,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 				if r := recover(); r != nil {
 					errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
 					log.Println(errMsg)
-					go alert.SendDiscordAlert(errMsg) // Send asynchronously
 					errMu.Lock()
 					siteErrors[shopName] = fmt.Errorf("panic: %v", r)
+					discordErrorMessages = append(discordErrorMessages, errMsg)
 					errMu.Unlock()
 				}
 			}()
@@ -129,7 +132,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 					errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
 					log.Println(errMsg)
-					go alert.SendDiscordAlert(errMsg)
+					errMu.Lock()
+					discordErrorMessages = append(discordErrorMessages, errMsg)
+					errMu.Unlock()
 				}
 				errMu.Lock()
 				siteErrors[shopName] = err
@@ -147,11 +152,26 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	}
 
 	wg.Wait()
+	if len(discordErrorMessages) > 0 {
+		go sendDiscordAlert(formatDiscordErrorSummary(searchString, discordErrorMessages))
+	}
 	if len(siteErrors) > 0 {
 		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
 	}
 	log.Println("End checking shops...")
 	return cards, siteErrors
+}
+
+func formatDiscordErrorSummary(searchString string, errorMessages []string) string {
+	sortedMessages := append([]string(nil), errorMessages...)
+	sort.Strings(sortedMessages)
+
+	return fmt.Sprintf(
+		"Encountered %d error(s) while searching [%s]:\n%s",
+		len(sortedMessages),
+		searchString,
+		strings.Join(sortedMessages, "\n"),
+	)
 }
 
 func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHasResultMap map[string]bool) []Card {
