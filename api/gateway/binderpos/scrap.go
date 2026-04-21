@@ -28,6 +28,10 @@ func (i impl) scrapDedicatedProxy(ctx context.Context, scrapVariant int, storeNa
 	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDedicatedNoRetryCollector)
 }
 
+func (i impl) scrapDirect(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDirectNoRetryCollector)
+}
+
 func (i impl) scrapWithCollectorFactory(
 	ctx context.Context,
 	scrapVariant int,
@@ -52,6 +56,13 @@ func (i impl) scrapWithCollectorFactory(
 func newDedicatedNoRetryCollector(ctx context.Context) *colly.Collector {
 	c := gateway.NewOptimizedCollectorNoRetry(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
+	return c
+}
+
+func newDirectNoRetryCollector(ctx context.Context) *colly.Collector {
+	c := gateway.NewOptimizedCollectorNoRetry(ctx)
+	c.SetRequestTimeout(binderposAttemptTimeout)
+	c.SetProxyFunc(nil)
 	return c
 }
 
