@@ -1,5 +1,5 @@
 ---
-name: patch-dependabot-cves
+name: fix-cves
 description: Triage and patch open Dependabot CVEs with tested dependency upgrades.
 ---
 
