@@ -47,7 +47,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 	}
 
-	cards, err := searchByStorefrontAPI(ctx, storeName, baseURL, searchStr)
+	cards, err := searchByStorefrontAPI(ctx, scrapVariant, storeName, baseURL, searchStr)
 	if err != nil || len(cards) == 0 {
 		return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 	}
@@ -55,7 +55,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 	return cards, nil
 }
 
-func searchByStorefrontAPI(ctx context.Context, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
 	client := &http.Client{Timeout: config.PerSiteTimeout}
 
 	products, err := fetchSuggestProducts(ctx, client, baseURL, searchStr)
@@ -90,15 +90,20 @@ func searchByStorefrontAPI(ctx context.Context, storeName, baseURL, searchStr st
 				continue
 			}
 
+			setName := extractSetName(detail.Title)
+			image := buildCardImageURL(product.Image, detail.Title)
 			card := gateway.Card{
-				Name:    strings.TrimSpace(detail.Title),
+				Name:    formatCardName(scrapVariant, detail.Title, variant.Title),
 				Url:     cardURL,
-				Img:     strings.TrimSpace(product.Image),
+				Img:     image,
 				Price:   float64(variant.Price) / 100,
 				InStock: variant.Available,
 				IsFoil:  strings.Contains(strings.ToLower(variant.Title), "foil"),
 				Source:  storeName,
 				Quality: util.MapQuality(quality),
+			}
+			if scrapVariant == 3 && setName != "" {
+				card.ExtraInfo = []string{setName}
 			}
 
 			key := fmt.Sprintf("%s|%.2f|%t", card.Url, card.Price, card.InStock)
@@ -212,10 +217,59 @@ func buildProductURLWithVariant(baseURL, productPath string, variantID int64) (s
 		return "", err
 	}
 
+	u.RawQuery = ""
 	query := u.Query()
 	query.Set("variant", fmt.Sprint(variantID))
 	query.Set("utm_source", config.UtmSource)
 	u.RawQuery = query.Encode()
 
 	return u.String(), nil
+}
+
+func formatCardName(scrapVariant int, productTitle, variantTitle string) string {
+	productTitle = strings.TrimSpace(productTitle)
+	variantTitle = strings.TrimSpace(variantTitle)
+
+	switch scrapVariant {
+	case 2:
+		if variantTitle == "" {
+			return productTitle
+		}
+		return strings.TrimSpace(productTitle + " - " + variantTitle)
+	case 3:
+		return stripTrailingSet(productTitle)
+	default:
+		return productTitle
+	}
+}
+
+func stripTrailingSet(productTitle string) string {
+	title := strings.TrimSpace(productTitle)
+	open := strings.LastIndex(title, "[")
+	close := strings.LastIndex(title, "]")
+	if open >= 0 && close > open && close == len(title)-1 {
+		return strings.TrimSpace(title[:open])
+	}
+	return title
+}
+
+func extractSetName(productTitle string) string {
+	title := strings.TrimSpace(productTitle)
+	open := strings.LastIndex(title, "[")
+	close := strings.LastIndex(title, "]")
+	if open >= 0 && close > open && close == len(title)-1 {
+		return strings.TrimSpace(title[open+1 : close])
+	}
+	return ""
+}
+
+func buildCardImageURL(rawImageURL, cardTitle string) string {
+	img := strings.TrimSpace(rawImageURL)
+	if strings.HasPrefix(img, "//") {
+		return "https:" + img
+	}
+	if strings.HasPrefix(img, "http://") || strings.HasPrefix(img, "https://") {
+		return img
+	}
+	return fmt.Sprintf("https://placehold.co/304x424?text=%s", url.QueryEscape(strings.TrimSpace(cardTitle)))
 }
