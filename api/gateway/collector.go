@@ -25,6 +25,13 @@ var browserUserAgents = []string{
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/135.0.3179.98 Chrome/135.0.0.0 Safari/537.36",
 }
 
+func RandomBrowserUserAgent() string {
+	if len(browserUserAgents) == 0 {
+		return "Mozilla/5.0"
+	}
+	return browserUserAgents[rand.IntN(len(browserUserAgents))]
+}
+
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
 const (
@@ -188,7 +195,7 @@ func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, 
 		}
 		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 		r.Headers.Set("Accept-Encoding", "gzip")
-		r.Headers.Set("User-Agent", browserUserAgents[rand.IntN(len(browserUserAgents))])
+		r.Headers.Set("User-Agent", RandomBrowserUserAgent())
 		seedProxyContextIfMissing(r.Ctx, initialProxyMode, initialProxyURL)
 	})
 }

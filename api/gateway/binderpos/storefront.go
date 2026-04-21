@@ -134,7 +134,7 @@ func fetchSuggestProducts(ctx context.Context, client *http.Client, baseURL, sea
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "mtg-price-checker-sg-storefront-api")
+	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
 	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, produ
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "mtg-price-checker-sg-storefront-api")
+	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
 	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
 		return nil, err
 	}

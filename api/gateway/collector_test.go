@@ -379,3 +379,21 @@ func TestSeedProxyContextIfMissing(t *testing.T) {
 		seedProxyContextIfMissing(nil, "dedicated", "http://proxy:8080")
 	})
 }
+
+func TestRandomBrowserUserAgent(t *testing.T) {
+	got := RandomBrowserUserAgent()
+	if strings.TrimSpace(got) == "" {
+		t.Fatalf("expected random browser user-agent to be non-empty")
+	}
+
+	found := false
+	for _, candidate := range browserUserAgents {
+		if got == candidate {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected user-agent to be chosen from browserUserAgents list, got %q", got)
+	}
+}
