@@ -7,10 +7,8 @@ import (
 	"math/rand/v2"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
-	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -392,38 +390,45 @@ func formatProxyContext(mode, proxyURL string) string {
 		mode = "unknown"
 	}
 
-	safeProxy := sanitizeProxyURL(proxyURL)
-	if safeProxy == "" {
-		safeProxy = "none"
-	}
-
-	return fmt.Sprintf("proxy_mode=%s proxy=%s", mode, safeProxy)
+	return fmt.Sprintf("proxy_mode=%s proxy=%s", mode, resolveProxyLabel(mode, proxyURL))
 }
 
-func sanitizeProxyURL(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
+func resolveProxyLabel(mode, proxyURL string) string {
+	if proxyURL == "" {
+		return "none"
 	}
 
-	parsed, err := url.Parse(raw)
-	if err == nil && parsed.Host != "" {
-		parsed.User = nil
-		parsed.Path = ""
-		parsed.RawPath = ""
-		parsed.RawQuery = ""
-		parsed.Fragment = ""
-		return parsed.String()
-	}
-
-	if at := strings.LastIndex(raw, "@"); at != -1 {
-		if schemeIdx := strings.Index(raw, "://"); schemeIdx != -1 && at > schemeIdx+3 {
-			return raw[:schemeIdx+3] + raw[at+1:]
+	switch mode {
+	case "direct":
+		return "none"
+	case "shared":
+		if sharedProxyURL := os.Getenv("PROXY_URL"); sharedProxyURL != "" && sharedProxyURL == proxyURL {
+			return "PROXY_URL"
 		}
-		return raw[at+1:]
+		return "shared-configured"
+	case "dedicated":
+		if label := dedicatedProxyEnvLabel(proxyURL); label != "" {
+			return label
+		}
+		return "dedicated-configured"
+	default:
+		return "configured"
+	}
+}
+
+func dedicatedProxyEnvLabel(proxyURL string) string {
+	dedicatedProxies := util.GetDedicatedProxy()
+	for idx, proxy := range dedicatedProxies {
+		candidateURL, ok := util.BuildDedicatedProxyURL(proxy)
+		if !ok {
+			continue
+		}
+		if candidateURL == proxyURL {
+			return fmt.Sprintf("DEDICATED_PROXY_%d", idx+1)
+		}
 	}
 
-	return raw
+	return ""
 }
 
 func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Duration {
