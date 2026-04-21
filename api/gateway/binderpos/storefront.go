@@ -44,10 +44,6 @@ type storefrontProductStock struct {
 }
 
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
-	if !config.UseBinderposStorefrontAPI() {
-		return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
-	}
-
 	return searchWithFallback(
 		func() ([]gateway.Card, error) {
 			return searchByStorefrontAPI(ctx, scrapVariant, storeName, baseURL, searchStr)
