@@ -39,14 +39,14 @@ const (
 	// - first retry (attempt 1): dedicated proxy
 	// - second/final retry (attempt 2): direct (no proxy)
 	defaultMaxRetries = 2
-	// Binderpos also uses two retries after the initial request, but with a different first retry path:
-	// - first retry (attempt 1): shared/dynamic PROXY_URL
-	// - second/final retry (attempt 2): direct (no proxy)
+	// Binderpos also uses two retries after the initial request.
+	// Strategy is selected at runtime:
+	// - default: dedicated -> dedicated -> direct
+	// - optional rollback: dedicated -> shared(PROXY_URL) -> direct
 	binderposMaxRetries = defaultMaxRetries
 	// Dedicated (leased or random pool) is used while retryAttempt <= this value (initial request is attempt 0).
 	// First retry = attempt 1 (still dedicated).
-	dedicatedProxyRetryThreshold          = 1
-	binderposDedicatedProxyRetryThreshold = 0
+	dedicatedProxyRetryThreshold = 1
 	// Keep a small reserve so a retry request can still be dispatched before context cancellation.
 	retryExecutionBuffer = 300 * time.Millisecond
 )
@@ -123,8 +123,16 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizationsWithDedicatedThreshold(c, true, true, binderposDedicatedProxyRetryThreshold, binderposMaxRetries)
+	configureRequestOptimizationsWithDedicatedThreshold(c, true, true, binderposDedicatedRetryThreshold(), binderposMaxRetries)
 	return c
+}
+
+func binderposDedicatedRetryThreshold() int {
+	if config.UseBinderposSharedProxyFallback() {
+		// Rollback mode keeps shared proxy on retry attempt 1.
+		return 0
+	}
+	return dedicatedProxyRetryThreshold
 }
 
 func ConfigureRequestOptimizations(c *colly.Collector) {

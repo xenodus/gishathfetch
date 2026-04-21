@@ -2,8 +2,10 @@ package binderpos
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
@@ -22,9 +24,10 @@ type binderposStoreSearchCase struct {
 }
 
 func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
+	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
-			cards, err := searchByStorefrontAPI(context.Background(), testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.query)
+			cards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.query)
 			require.NoError(t, err)
 			require.NotEmpty(t, cards)
 
@@ -40,9 +43,10 @@ func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
 }
 
 func Test_SearchByStorefrontAPI_OverlapsLegacyScrapeResults(t *testing.T) {
+	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
-			storefrontCards, err := searchByStorefrontAPI(context.Background(), testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.query)
+			storefrontCards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.query)
 			require.NoError(t, err)
 			require.NotEmpty(t, storefrontCards)
 
