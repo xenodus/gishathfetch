@@ -111,7 +111,7 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		})
 	})
 
-	return cards, c.Visit(searchURL)
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
 
 // tefuda
@@ -158,7 +158,7 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		})
 	})
 
-	return cards, c.Visit(searchURL)
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
 
 type pagination struct {
@@ -228,7 +228,7 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		})
 	})
 
-	return cards, c.Visit(searchURL)
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
 
 // card affinity
@@ -292,7 +292,7 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 		})
 	})
 
-	return cards, c.Visit(searchURL)
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
 
 // cards citadel
@@ -361,7 +361,7 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 			}
 		})
 	})
-	return cards, c.Visit(searchURL)
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
 
 func parsePriceAndQuality(priceQualityStr string) (float64, string, error) {

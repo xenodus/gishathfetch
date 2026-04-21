@@ -1,7 +1,9 @@
 package gateway
 
 import (
+	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -220,4 +222,54 @@ func TestDedicatedProxyURLHelpers(t *testing.T) {
 			t.Fatalf("unexpected proxy url: %q", proxyURL)
 		}
 	})
+}
+
+func TestSanitizeProxyURL(t *testing.T) {
+	t.Run("removes credentials and path query from valid URL", func(t *testing.T) {
+		got := sanitizeProxyURL("http://user:pass@1.1.1.1:8080/path?q=v")
+		if got != "http://1.1.1.1:8080" {
+			t.Fatalf("expected sanitized proxy URL without credentials/path/query, got %q", got)
+		}
+	})
+
+	t.Run("handles URL without credentials", func(t *testing.T) {
+		got := sanitizeProxyURL("http://2.2.2.2:9090")
+		if got != "http://2.2.2.2:9090" {
+			t.Fatalf("expected unchanged host-only URL, got %q", got)
+		}
+	})
+
+	t.Run("handles non URL input by stripping auth section", func(t *testing.T) {
+		got := sanitizeProxyURL("user:pass@3.3.3.3:1234")
+		if got != "3.3.3.3:1234" {
+			t.Fatalf("expected auth section stripped from raw proxy string, got %q", got)
+		}
+	})
+}
+
+func TestFormatProxyContext(t *testing.T) {
+	t.Run("empty mode and proxy default values", func(t *testing.T) {
+		got := formatProxyContext("", "")
+		if got != "proxy_mode=unknown proxy=none" {
+			t.Fatalf("unexpected proxy context: %q", got)
+		}
+	})
+
+	t.Run("includes sanitized proxy URL", func(t *testing.T) {
+		got := formatProxyContext("dedicated", "http://user:pass@4.4.4.4:8080")
+		if got != "proxy_mode=dedicated proxy=http://4.4.4.4:8080" {
+			t.Fatalf("unexpected proxy context: %q", got)
+		}
+	})
+}
+
+func TestVisitWithProxyInfo(t *testing.T) {
+	c := NewOptimizedCollectorNoRetry(context.Background())
+	err := VisitWithProxyInfo(c, "http://[::1")
+	if err == nil {
+		t.Fatalf("expected visit error for malformed URL")
+	}
+	if !strings.Contains(err.Error(), "proxy_mode=") {
+		t.Fatalf("expected proxy context in error, got %q", err)
+	}
 }

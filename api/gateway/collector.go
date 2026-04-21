@@ -7,8 +7,10 @@ import (
 	"math/rand/v2"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -207,7 +209,11 @@ func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL strin
 		// Colly may call OnError without a full response/request on network/proxy failures.
 		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
 		if r == nil || r.Ctx == nil || r.Request == nil || r.Request.URL == nil {
-			fmt.Printf("Request failed before response was available: %v\n", err)
+			mode := "unknown"
+			if leasedDedicatedProxyURL != "" {
+				mode = "dedicated"
+			}
+			log.Printf("Request failed before response was available: %v (%s)", err, formatProxyContext(mode, leasedDedicatedProxyURL))
 			releaseDedicatedProxy()
 			return
 		}
@@ -224,17 +230,67 @@ func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL strin
 			r.Ctx.Put("last_proxy_url", proxyURL)
 
 			waitDuration := retryDelay(statusCode, retryAfterHeaderValue(r), retries)
-			log.Printf("Retrying %s (attempt=%d status=%d wait=%s proxy_mode=%s)", r.Request.URL, nextRetry, statusCode, waitDuration, proxyMode)
+			log.Printf(
+				"Retrying %s (attempt=%d status=%d wait=%s %s)",
+				r.Request.URL,
+				nextRetry,
+				statusCode,
+				waitDuration,
+				formatProxyContext(proxyMode, proxyURL),
+			)
 			time.Sleep(waitDuration)
 			if retryErr := r.Request.Retry(); retryErr != nil {
-				log.Printf("Retry failed for %s (attempt=%d status=%d): %v", r.Request.URL, nextRetry, statusCode, retryErr)
+				log.Printf(
+					"Retry failed for %s (attempt=%d status=%d): %v (%s)",
+					r.Request.URL,
+					nextRetry,
+					statusCode,
+					retryErr,
+					formatProxyContext(proxyMode, proxyURL),
+				)
 				releaseDedicatedProxy()
 			}
 		} else {
-			log.Printf("Failed after %d retries: %s (status=%d)", maxRetries, r.Request.URL, statusCode)
+			log.Printf(
+				"Failed after %d retries: %s (status=%d %s)",
+				maxRetries,
+				r.Request.URL,
+				statusCode,
+				formatProxyContext(r.Ctx.Get("last_proxy_mode"), r.Ctx.Get("last_proxy_url")),
+			)
 			releaseDedicatedProxy()
 		}
 	})
+}
+
+// VisitWithProxyInfo wraps collector visit errors with the selected proxy context.
+func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
+	var proxyMu sync.Mutex
+	var lastProxyMode string
+	var lastProxyURL string
+
+	c.OnRequest(func(r *colly.Request) {
+		if r == nil || r.Ctx == nil {
+			return
+		}
+
+		proxyMu.Lock()
+		lastProxyMode = r.Ctx.Get("last_proxy_mode")
+		lastProxyURL = r.Ctx.Get("last_proxy_url")
+		proxyMu.Unlock()
+	})
+
+	err := c.Visit(targetURL)
+	if err == nil {
+		return nil
+	}
+
+	proxyMu.Lock()
+	mode := lastProxyMode
+	proxyURL := lastProxyURL
+	proxyMu.Unlock()
+
+	return fmt.Errorf("%w (%s)", err, formatProxyContext(mode, proxyURL))
 }
 
 // Retry metadata helpers.
@@ -329,6 +385,45 @@ func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
 	p := candidates[rand.IntN(len(candidates))]
 	proxyURL, ok := util.BuildDedicatedProxyURL(p)
 	return proxyURL, ok
+}
+
+func formatProxyContext(mode, proxyURL string) string {
+	if mode == "" {
+		mode = "unknown"
+	}
+
+	safeProxy := sanitizeProxyURL(proxyURL)
+	if safeProxy == "" {
+		safeProxy = "none"
+	}
+
+	return fmt.Sprintf("proxy_mode=%s proxy=%s", mode, safeProxy)
+}
+
+func sanitizeProxyURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(raw)
+	if err == nil && parsed.Host != "" {
+		parsed.User = nil
+		parsed.Path = ""
+		parsed.RawPath = ""
+		parsed.RawQuery = ""
+		parsed.Fragment = ""
+		return parsed.String()
+	}
+
+	if at := strings.LastIndex(raw, "@"); at != -1 {
+		if schemeIdx := strings.Index(raw, "://"); schemeIdx != -1 && at > schemeIdx+3 {
+			return raw[:schemeIdx+3] + raw[at+1:]
+		}
+		return raw[at+1:]
+	}
+
+	return raw
 }
 
 func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Duration {

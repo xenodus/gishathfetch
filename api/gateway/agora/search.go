@@ -118,5 +118,5 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		})
 	})
 
-	return cards, c.Visit(searchURL)
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
