@@ -27,7 +27,7 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Scrap(ctx,
+	return s.BinderposGwy.Search(ctx,
 		3,
 		s.Name,
 		s.BaseUrl,
