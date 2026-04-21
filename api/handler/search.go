@@ -17,7 +17,8 @@ import (
 )
 
 type WebResponse struct {
-	Data []controller.Card `json:"data"`
+	Data   []controller.Card       `json:"data"`
+	Errors []controller.StoreError `json:"errors"`
 }
 
 var searchFunc = controller.Search
@@ -60,7 +61,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		lgs = strings.Split(lgsString, ",")
 	}
 
-	inStockCards, err := searchFunc(ctx, controller.SearchInput{
+	inStockCards, storeErrors, err := searchFunc(ctx, controller.SearchInput{
 		SearchString: searchString,
 		Lgs:          lgs,
 	})
@@ -72,6 +73,11 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 
 	apiRes.StatusCode = http.StatusOK
 	webRes.Data = inStockCards
+	if storeErrors == nil {
+		webRes.Errors = []controller.StoreError{}
+	} else {
+		webRes.Errors = storeErrors
+	}
 
 	return lambdaApiResponse(apiRes, webRes, origin)
 }

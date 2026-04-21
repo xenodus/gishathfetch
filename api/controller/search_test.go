@@ -274,9 +274,12 @@ func TestSearchShops(t *testing.T) {
 				}
 			}
 
-			results, err := searchShops(context.Background(), tt.input, mockMap)
+			results, storeErrors, err := searchShops(context.Background(), tt.input, mockMap)
 			if err != nil {
 				t.Fatalf("searchShops returned unexpected error: %v", err)
+			}
+			if len(storeErrors) != 0 {
+				t.Fatalf("expected no store errors, got %d", len(storeErrors))
 			}
 
 			if len(results) != tt.expectedCount {
@@ -287,6 +290,40 @@ func TestSearchShops(t *testing.T) {
 				tt.verifyFunc(t, results)
 			}
 		})
+	}
+}
+
+func TestSearchShops_IncludesStoreErrors(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"Failing Shop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, fmt.Errorf("simulated failure")
+			},
+		},
+		"Good Shop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return []gateway.Card{
+					{Name: searchStr, Price: 1.0, InStock: true, Source: "Good Shop"},
+				}, nil
+			},
+		},
+	}
+
+	results, storeErrors, err := searchShops(context.Background(), SearchInput{SearchString: "Card A"}, shops)
+	if err != nil {
+		t.Fatalf("searchShops returned unexpected error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result card, got %d", len(results))
+	}
+	if len(storeErrors) != 1 {
+		t.Fatalf("expected 1 store error, got %d", len(storeErrors))
+	}
+	if storeErrors[0].Store != "Failing Shop" {
+		t.Fatalf("expected store error for 'Failing Shop', got %q", storeErrors[0].Store)
+	}
+	if storeErrors[0].Error != "simulated failure" {
+		t.Fatalf("expected 'simulated failure', got %q", storeErrors[0].Error)
 	}
 }
 

@@ -19,9 +19,11 @@ func Test_Search_Success(t *testing.T) {
 	type args struct {
 		givenAPIGatewayProxyRequest events.APIGatewayProxyRequest
 		mockSearchResponse          []controller.Card
+		mockStoreErrors             []controller.StoreError
 		mockSearchErr               error
 		expStatusCode               int
 		expBodyData                 []controller.Card
+		expBodyErrors               []controller.StoreError
 	}
 	tcs := map[string]args{
 		"success with results": {
@@ -39,6 +41,7 @@ func Test_Search_Success(t *testing.T) {
 			expBodyData: []controller.Card{
 				{Name: "Abrade", Price: 1.5, Source: "Flagship Games", InStock: true},
 			},
+			expBodyErrors: []controller.StoreError{},
 		},
 		"success, no results": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
@@ -51,6 +54,29 @@ func Test_Search_Success(t *testing.T) {
 			mockSearchErr:      nil,
 			expStatusCode:      http.StatusOK,
 			expBodyData:        nil, // key: "data": null
+			expBodyErrors:      []controller.StoreError{},
+		},
+		"success with store errors": {
+			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
+				QueryStringParameters: map[string]string{
+					"s":   "abrade",
+					"lgs": "Flagship%20Games",
+				},
+			},
+			mockSearchResponse: []controller.Card{
+				{Name: "Abrade", Price: 1.5, Source: "Flagship Games", InStock: true},
+			},
+			mockStoreErrors: []controller.StoreError{
+				{Store: "Flagship Games", Error: "timeout"},
+			},
+			mockSearchErr: nil,
+			expStatusCode: http.StatusOK,
+			expBodyData: []controller.Card{
+				{Name: "Abrade", Price: 1.5, Source: "Flagship Games", InStock: true},
+			},
+			expBodyErrors: []controller.StoreError{
+				{Store: "Flagship Games", Error: "timeout"},
+			},
 		},
 	}
 	for s, tc := range tcs {
@@ -58,8 +84,8 @@ func Test_Search_Success(t *testing.T) {
 			// Setup Mock
 			originalSearchFunc := searchFunc
 			defer func() { searchFunc = originalSearchFunc }()
-			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, error) {
-				return tc.mockSearchResponse, tc.mockSearchErr
+			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
+				return tc.mockSearchResponse, tc.mockStoreErrors, tc.mockSearchErr
 			}
 
 			err := os.Setenv("ENV", config.EnvStaging)
@@ -74,6 +100,7 @@ func Test_Search_Success(t *testing.T) {
 			err = json.Unmarshal([]byte(result.Body), &webRes)
 			require.NoError(t, err)
 			require.Equal(t, tc.expBodyData, webRes.Data)
+			require.Equal(t, tc.expBodyErrors, webRes.Errors)
 		})
 	}
 }
@@ -82,8 +109,8 @@ func Test_Search_CORS(t *testing.T) {
 	// Setup Mock
 	originalSearchFunc := searchFunc
 	defer func() { searchFunc = originalSearchFunc }()
-	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, error) {
-		return []controller.Card{}, nil
+	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
+		return []controller.Card{}, []controller.StoreError{}, nil
 	}
 
 	err := os.Setenv("ENV", config.EnvStaging)
@@ -164,8 +191,8 @@ func Test_Search_Err(t *testing.T) {
 			// Setup Mock
 			originalSearchFunc := searchFunc
 			defer func() { searchFunc = originalSearchFunc }()
-			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, error) {
-				return tc.mockSearchResponse, tc.mockSearchErr
+			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
+				return tc.mockSearchResponse, nil, tc.mockSearchErr
 			}
 
 			err := os.Setenv("ENV", config.EnvStaging)
