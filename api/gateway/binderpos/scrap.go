@@ -17,19 +17,46 @@ import (
 )
 
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, gateway.NewOptimizedCollectorForBinderpos)
+}
+
+func (i impl) scrapDedicatedProxy(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	if !dedicatedProxyConfigured() {
+		return nil, fmt.Errorf("no dedicated proxy configured for binderpos scraper")
+	}
+
+	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDedicatedNoRetryCollector)
+}
+
+func (i impl) scrapWithCollectorFactory(
+	ctx context.Context,
+	scrapVariant int,
+	storeName, baseUrl, searchUrl, searchStr string,
+	collectorFactory func(context.Context) *colly.Collector,
+) ([]gateway.Card, error) {
 	switch scrapVariant {
 	case 1:
-		return scrapVariant1(ctx, storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant1(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 2:
-		return scrapVariant2(ctx, storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant2(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 3:
-		return scrapVariant3(ctx, storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant3(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 4:
-		return scrapVariant4(ctx, storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant4(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 5:
-		return scrapVariant5(ctx, storeName, baseUrl, searchUrl, searchStr)
+		return scrapVariant5(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	}
 	return []gateway.Card{}, fmt.Errorf("invalid scrap variant: %d", scrapVariant)
+}
+
+func newDedicatedNoRetryCollector(ctx context.Context) *colly.Collector {
+	c := gateway.NewOptimizedCollectorNoRetry(ctx)
+	c.SetRequestTimeout(binderposAttemptTimeout)
+	return c
+}
+
+func dedicatedProxyConfigured() bool {
+	return len(util.GetDedicatedProxyURLs()) > 0
 }
 
 // buildSafeSearchURL safely constructs the URL using url.URL and url.Values to isolate user string input.
@@ -65,11 +92,11 @@ func buildSafeSearchURL(baseUrl, searchUrlTemplate, searchStr string) string {
 }
 
 // arcane sanctum
-func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
+	c := collectorFactory(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -115,11 +142,11 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 }
 
 // tefuda
-func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
+	c := collectorFactory(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -169,11 +196,11 @@ type pagination struct {
 // games haven
 // gog
 // hideout
-func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
 	var cards []gateway.Card
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 
-	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
+	c := collectorFactory(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		// get cards
@@ -237,11 +264,11 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 // onemtg
 // manapro
 // mtgasia
-func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
+	c := collectorFactory(ctx)
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
@@ -296,11 +323,11 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 }
 
 // cards citadel
-func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
+	c := collectorFactory(ctx)
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {

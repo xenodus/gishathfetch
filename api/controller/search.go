@@ -51,7 +51,7 @@ type Card struct {
 	ExtraInfo string  `json:"extraInfo"`
 }
 
-const binderposMaxConcurrent = 10
+const binderposMaxConcurrent = 5
 
 var sendDiscordAlert = alert.SendDiscordAlert
 
