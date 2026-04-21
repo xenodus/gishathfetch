@@ -12,7 +12,6 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -32,12 +31,7 @@ const (
 
 	storefrontDetailPauseBase   = 20 * time.Millisecond
 	storefrontDetailPauseJitter = 45 * time.Millisecond
-
-	storefrontErrorBodyReadLimit = 1024
-	storefrontErrorBodyMaxLen    = 220
 )
-
-var storefrontHTMLTitlePattern = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
 
 type storefrontSuggestResponse struct {
 	Resources struct {
@@ -413,7 +407,12 @@ func fetchSuggestProducts(ctx context.Context, client *http.Client, profile stor
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, storefrontStatusError(res, "storefront suggest request")
+		body, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
+		return nil, fmt.Errorf(
+			"storefront suggest request returned status %d body=%s",
+			res.StatusCode,
+			strings.TrimSpace(string(body)),
+		)
 	}
 
 	var payload storefrontSuggestResponse
@@ -438,7 +437,8 @@ func fetchProductDetail(ctx context.Context, client *http.Client, profile storef
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, storefrontStatusError(res, "product detail request")
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("product detail request failed status=%d body=%s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var detail storefrontProductDetail
@@ -481,7 +481,7 @@ func doStorefrontGETWithRetry(ctx context.Context, client *http.Client, requestU
 			continue
 		}
 
-		if shouldRetryStorefrontResponse(res) && attempt < storefrontMaxRetries {
+		if shouldRetryStorefrontStatus(res.StatusCode) && attempt < storefrontMaxRetries {
 			io.Copy(io.Discard, res.Body)
 			res.Body.Close()
 			lastErr = fmt.Errorf("transient storefront status %d", res.StatusCode)
@@ -497,32 +497,18 @@ func doStorefrontGETWithRetry(ctx context.Context, client *http.Client, requestU
 	return nil, fmt.Errorf("storefront request failed after retries")
 }
 
-func shouldRetryStorefrontResponse(res *http.Response) bool {
-	if res == nil {
-		return false
-	}
-	if !shouldRetryStorefrontStatus(res.StatusCode) {
-		return false
-	}
-
-	// HTML 429s from bot-protection pages are not solved by immediate retries.
-	if res.StatusCode == http.StatusTooManyRequests {
-		if looksLikeHTMLResponse("", res.Header.Get("Content-Type")) {
-			return false
-		}
-	}
-
-	return true
-}
-
 func applyStorefrontHeaders(req *http.Request, profile storefrontRequestProfile) {
 	req.Header.Set("User-Agent", profile.userAgent)
 	req.Header.Set("Accept", "application/json, text/javascript, */*; q=0.01")
-	if profile.acceptLanguage != "" {
-		req.Header.Set("Accept-Language", profile.acceptLanguage)
-	}
+	req.Header.Set("Accept-Language", profile.acceptLanguage)
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Pragma", "no-cache")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	if profile.referer != "" {
 		req.Header.Set("Referer", profile.referer)
+	}
+	if req.URL != nil {
+		req.Header.Set("Origin", req.URL.Scheme+"://"+req.URL.Host)
 	}
 }
 
@@ -569,63 +555,6 @@ func waitStorefrontRetryDelay(ctx context.Context, attempt int) error {
 	case <-timer.C:
 		return nil
 	}
-}
-
-func storefrontStatusError(res *http.Response, requestName string) error {
-	body, _ := io.ReadAll(io.LimitReader(res.Body, storefrontErrorBodyReadLimit))
-	bodySummary := summarizeStorefrontErrorBody(body, res.Header.Get("Content-Type"))
-	retryAfter := strings.TrimSpace(res.Header.Get("Retry-After"))
-	if retryAfter != "" {
-		return fmt.Errorf("%s returned status %d retry_after=%s body=%s", requestName, res.StatusCode, retryAfter, bodySummary)
-	}
-
-	return fmt.Errorf("%s returned status %d body=%s", requestName, res.StatusCode, bodySummary)
-}
-
-func summarizeStorefrontErrorBody(body []byte, contentType string) string {
-	trimmed := strings.TrimSpace(string(body))
-	if trimmed == "" {
-		return "<empty>"
-	}
-
-	collapsed := strings.Join(strings.Fields(trimmed), " ")
-	if looksLikeHTMLResponse(collapsed, contentType) {
-		if title := extractHTMLTitle(collapsed); title != "" {
-			return fmt.Sprintf("<html response title=%q>", truncateString(title, storefrontErrorBodyMaxLen))
-		}
-		return "<html response>"
-	}
-
-	return truncateString(collapsed, storefrontErrorBodyMaxLen)
-}
-
-func looksLikeHTMLResponse(body, contentType string) bool {
-	lowerContentType := strings.ToLower(contentType)
-	if strings.Contains(lowerContentType, "text/html") || strings.Contains(lowerContentType, "application/xhtml+xml") {
-		return true
-	}
-
-	lowerBody := strings.ToLower(body)
-	return strings.Contains(lowerBody, "<!doctype html") || strings.Contains(lowerBody, "<html")
-}
-
-func extractHTMLTitle(body string) string {
-	matches := storefrontHTMLTitlePattern.FindStringSubmatch(body)
-	if len(matches) < 2 {
-		return ""
-	}
-
-	return strings.Join(strings.Fields(strings.TrimSpace(matches[1])), " ")
-}
-
-func truncateString(value string, maxLen int) string {
-	if maxLen <= 0 || len(value) <= maxLen {
-		return value
-	}
-	if maxLen <= 3 {
-		return value[:maxLen]
-	}
-	return value[:maxLen-3] + "..."
 }
 
 func productPathToJSONURL(baseURL, productPath string) (string, error) {
