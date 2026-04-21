@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import "./index.css";
 
 import Footer from "./components/Footer";
@@ -16,6 +16,8 @@ import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
 // --- Hooks ---
 import useCart from "./hooks/useCart";
 import useSearch from "./hooks/useSearch";
+
+const THEME_STORAGE_KEY = "gishathfetch-theme";
 
 export default function App() {
   const {
@@ -51,6 +53,37 @@ export default function App() {
   } = useSearch();
 
   const [modalType, setModalType] = useState(null);
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === "undefined") {
+      return "light";
+    }
+
+    try {
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (savedTheme === "light" || savedTheme === "dark") {
+        return savedTheme;
+      }
+    } catch {
+      // Ignore storage access issues and fall back to system preference.
+    }
+
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-bs-theme", theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Ignore storage access issues and keep in-memory theme state only.
+    }
+  }, [theme]);
+
+  const handleThemeToggle = useCallback(() => {
+    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+  }, []);
 
   // --- Handlers ---
   const handleCardSearch = useCallback(
@@ -86,7 +119,7 @@ export default function App() {
   // --- Main Render ---
   return (
     <div id="top" className="container-xl my-3 px-3 pb-3">
-      <Header />
+      <Header theme={theme} onToggleTheme={handleThemeToggle} />
 
       <SearchForm
         searchQuery={searchQuery}

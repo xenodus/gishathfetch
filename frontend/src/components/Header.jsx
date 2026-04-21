@@ -1,7 +1,23 @@
-const Header = () => {
+import { Moon, Sun } from "react-feather";
+
+const Header = ({ theme, onToggleTheme }) => {
+  const isDarkMode = theme === "dark";
+
   return (
     <div className="mb-3 text-center">
-      <div className="d-flex flex-row align-items-center justify-content-center mb-1">
+      <div className="d-flex flex-row align-items-center justify-content-center mb-1 position-relative">
+        <div className="position-absolute top-0 end-0">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2"
+            onClick={onToggleTheme}
+            aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+            title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+          >
+            {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
+            <span>{isDarkMode ? "Light" : "Dark"} mode</span>
+          </button>
+        </div>
         <div>
           <a href="/">
             <img
