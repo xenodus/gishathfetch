@@ -3,14 +3,16 @@ package binderpos
 import (
 	"errors"
 	"testing"
+
+	"mtg-price-checker-sg/gateway"
 )
 
 func TestSearchWithFallback(t *testing.T) {
 	t.Run("returns dedicated api results first", func(t *testing.T) {
 		cards, err := searchWithFallback(
-			func() ([]cardLike, error) { return []cardLike{{Name: "api-dedicated"}}, nil },
-			func() ([]cardLike, error) { return []cardLike{{Name: "scrap"}}, nil },
-			func() ([]cardLike, error) { return []cardLike{{Name: "api-direct"}}, nil },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "api-dedicated"}}, nil },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "scrap"}}, nil },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "api-direct"}}, nil },
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
@@ -22,9 +24,9 @@ func TestSearchWithFallback(t *testing.T) {
 
 	t.Run("falls back to scraper before direct api", func(t *testing.T) {
 		cards, err := searchWithFallback(
-			func() ([]cardLike, error) { return nil, errors.New("dedicated api failed") },
-			func() ([]cardLike, error) { return []cardLike{{Name: "scrap"}}, nil },
-			func() ([]cardLike, error) { return []cardLike{{Name: "api-direct"}}, nil },
+			func() ([]gateway.Card, error) { return nil, errors.New("dedicated api failed") },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "scrap"}}, nil },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "api-direct"}}, nil },
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
@@ -36,9 +38,9 @@ func TestSearchWithFallback(t *testing.T) {
 
 	t.Run("falls back to direct api when dedicated api and scraper fail", func(t *testing.T) {
 		cards, err := searchWithFallback(
-			func() ([]cardLike, error) { return nil, errors.New("dedicated api failed") },
-			func() ([]cardLike, error) { return nil, errors.New("scraper failed") },
-			func() ([]cardLike, error) { return []cardLike{{Name: "api-direct"}}, nil },
+			func() ([]gateway.Card, error) { return nil, errors.New("dedicated api failed") },
+			func() ([]gateway.Card, error) { return nil, errors.New("scraper failed") },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "api-direct"}}, nil },
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
@@ -53,16 +55,12 @@ func TestSearchWithFallback(t *testing.T) {
 		scrapErr := errors.New("scraper failed")
 		directErr := errors.New("direct api failed")
 		_, err := searchWithFallback(
-			func() ([]cardLike, error) { return nil, dedicatedErr },
-			func() ([]cardLike, error) { return nil, scrapErr },
-			func() ([]cardLike, error) { return nil, directErr },
+			func() ([]gateway.Card, error) { return nil, dedicatedErr },
+			func() ([]gateway.Card, error) { return nil, scrapErr },
+			func() ([]gateway.Card, error) { return nil, directErr },
 		)
 		if !errors.Is(err, directErr) {
 			t.Fatalf("expected direct api error, got %v", err)
 		}
 	})
-}
-
-type cardLike struct {
-	Name string
 }
