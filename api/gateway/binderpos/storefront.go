@@ -8,14 +8,19 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"time"
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 )
 
-const storefrontSuggestPath = "/search/suggest.json"
+const (
+	storefrontSuggestPath   = "/search/suggest.json"
+	binderposAttemptTimeout = 4 * time.Second
+)
 
 type storefrontSuggestResponse struct {
 	Resources struct {
@@ -46,15 +51,32 @@ type storefrontProductStock struct {
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
 	return searchWithFallback(
 		func() ([]gateway.Card, error) {
-			return searchByStorefrontAPI(ctx, scrapVariant, storeName, baseURL, searchStr)
+			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return searchByStorefrontAPI(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+			})
 		},
 		func() ([]gateway.Card, error) {
-			return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return i.scrapDedicatedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+			})
 		},
 		func() ([]gateway.Card, error) {
-			return searchByStorefrontAPIDirect(ctx, scrapVariant, storeName, baseURL, searchStr)
+			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return searchByStorefrontAPISharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+			})
+		},
+		func() ([]gateway.Card, error) {
+			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return searchByStorefrontAPIDirect(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+			})
 		},
 	)
+}
+
+func runWithAttemptTimeout(ctx context.Context, fn func(context.Context) ([]gateway.Card, error)) ([]gateway.Card, error) {
+	attemptCtx, cancel := context.WithTimeout(ctx, binderposAttemptTimeout)
+	defer cancel()
+	return fn(attemptCtx)
 }
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
@@ -67,13 +89,28 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 }
 
 func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
-	client := &http.Client{Timeout: config.PerSiteTimeout}
+	client := &http.Client{Timeout: binderposAttemptTimeout}
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+}
+
+func searchByStorefrontAPISharedProxy(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+	sharedProxyURL := strings.TrimSpace(os.Getenv("PROXY_URL"))
+	if sharedProxyURL == "" {
+		return nil, fmt.Errorf("no shared proxy configured for binderpos storefront api")
+	}
+
+	client, err := newHTTPClientWithProxyURL(sharedProxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid shared proxy configured for binderpos storefront api: %w", err)
+	}
+
 	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
 }
 
 func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
 	scrapDedicatedFn func() ([]gateway.Card, error),
+	searchAPISharedFn func() ([]gateway.Card, error),
 	searchAPIDirectFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
@@ -86,6 +123,11 @@ func searchWithFallback(
 		return scrapedCards, nil
 	}
 
+	apiSharedCards, apiSharedErr := searchAPISharedFn()
+	if len(apiSharedCards) > 0 && apiSharedErr == nil {
+		return apiSharedCards, nil
+	}
+
 	apiDirectCards, apiDirectErr := searchAPIDirectFn()
 	if len(apiDirectCards) > 0 && apiDirectErr == nil {
 		return apiDirectCards, nil
@@ -93,6 +135,9 @@ func searchWithFallback(
 
 	if apiDirectErr != nil {
 		return apiDirectCards, apiDirectErr
+	}
+	if apiSharedErr != nil {
+		return apiSharedCards, apiSharedErr
 	}
 	if scrapErr != nil {
 		return scrapedCards, scrapErr
@@ -176,17 +221,26 @@ func newDedicatedProxyHTTPClient() (*http.Client, bool) {
 		return nil, false
 	}
 
-	parsedProxyURL, err := url.Parse(proxyURL)
+	client, err := newHTTPClientWithProxyURL(proxyURL)
 	if err != nil {
 		return nil, false
 	}
 
+	return client, true
+}
+
+func newHTTPClientWithProxyURL(proxyURL string) (*http.Client, error) {
+	parsedProxyURL, err := url.Parse(proxyURL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &http.Client{
-		Timeout: config.PerSiteTimeout,
+		Timeout: binderposAttemptTimeout,
 		Transport: &http.Transport{
 			Proxy: http.ProxyURL(parsedProxyURL),
 		},
-	}, true
+	}, nil
 }
 
 func fetchSuggestProducts(ctx context.Context, client *http.Client, baseURL, searchStr string) ([]storefrontProduct, error) {
