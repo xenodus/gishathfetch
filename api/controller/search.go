@@ -166,12 +166,52 @@ func formatDiscordErrorSummary(searchString string, errorMessages []string) stri
 	sortedMessages := append([]string(nil), errorMessages...)
 	sort.Strings(sortedMessages)
 
+	formattedLines := make([]string, 0, len(sortedMessages))
+	for _, message := range sortedMessages {
+		shopName, details, ok := parseSearchErrorMessage(message, searchString)
+		if ok {
+			formattedLines = append(formattedLines, fmt.Sprintf("- [%s] %s", shopName, details))
+			continue
+		}
+
+		formattedLines = append(formattedLines, fmt.Sprintf("- %s", message))
+	}
+
 	return fmt.Sprintf(
 		"Encountered %d error(s) while searching [%s]:\n%s",
 		len(sortedMessages),
 		searchString,
-		strings.Join(sortedMessages, "\n"),
+		strings.Join(formattedLines, "\n"),
 	)
+}
+
+func parseSearchErrorMessage(message, searchString string) (shopName, details string, ok bool) {
+	const prefix = "Error encountered searching ["
+	if !strings.HasPrefix(message, prefix) {
+		return "", "", false
+	}
+
+	withoutPrefix := strings.TrimPrefix(message, prefix)
+	const shopSuffix = "] for ["
+	shopSuffixIndex := strings.Index(withoutPrefix, shopSuffix)
+	if shopSuffixIndex == -1 {
+		return "", "", false
+	}
+
+	shopName = withoutPrefix[:shopSuffixIndex]
+	withoutShop := withoutPrefix[shopSuffixIndex+len(shopSuffix):]
+
+	searchSuffix := fmt.Sprintf("%s]: ", searchString)
+	if !strings.HasPrefix(withoutShop, searchSuffix) {
+		return "", "", false
+	}
+
+	details = strings.TrimPrefix(withoutShop, searchSuffix)
+	if strings.TrimSpace(details) == "" {
+		return "", "", false
+	}
+
+	return shopName, details, true
 }
 
 func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHasResultMap map[string]bool) []Card {

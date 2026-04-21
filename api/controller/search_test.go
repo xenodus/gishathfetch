@@ -409,13 +409,34 @@ func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 	if !strings.Contains(got, "Encountered 3 error(s) while searching [Abrade]:") {
 		t.Fatalf("expected collated summary header, got: %s", got)
 	}
-	if !strings.Contains(got, "Error encountered searching [ErrorShopA] for [Abrade]: shop A failed") {
+	if !strings.Contains(got, "- [ErrorShopA] shop A failed") {
 		t.Fatalf("expected ErrorShopA details in alert, got: %s", got)
 	}
-	if !strings.Contains(got, "Error encountered searching [ErrorShopB] for [Abrade]: shop B failed") {
+	if !strings.Contains(got, "- [ErrorShopB] shop B failed") {
 		t.Fatalf("expected ErrorShopB details in alert, got: %s", got)
 	}
-	if !strings.Contains(got, "Recovered from panic in shop [PanicShop]: shop panic") {
+	if !strings.Contains(got, "- Recovered from panic in shop [PanicShop]: shop panic") {
 		t.Fatalf("expected PanicShop details in alert, got: %s", got)
+	}
+}
+
+func TestFormatDiscordErrorSummary(t *testing.T) {
+	got := formatDiscordErrorSummary("Uro, Titan of Nature's Wrath", []string{
+		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 4 (scrap-direct): Service Unavailable (proxy_mode=dedicated proxy=DEDICATED_PROXY_5)",
+		"Error encountered searching [Arcane Sanctum] for [Uro, Titan of Nature's Wrath]: attempt 4 (scrap-direct): Service Unavailable (proxy_mode=dedicated proxy=DEDICATED_PROXY_2)",
+		"Recovered from panic in shop [ShopPanic]: panic value",
+	})
+
+	if !strings.Contains(got, "Encountered 3 error(s) while searching [Uro, Titan of Nature's Wrath]:") {
+		t.Fatalf("expected summary header, got: %s", got)
+	}
+	if !strings.Contains(got, "- [Arcane Sanctum] attempt 4 (scrap-direct): Service Unavailable (proxy_mode=dedicated proxy=DEDICATED_PROXY_2)") {
+		t.Fatalf("expected Arcane Sanctum concise line, got: %s", got)
+	}
+	if !strings.Contains(got, "- [Tefuda] attempt 4 (scrap-direct): Service Unavailable (proxy_mode=dedicated proxy=DEDICATED_PROXY_5)") {
+		t.Fatalf("expected Tefuda concise line, got: %s", got)
+	}
+	if !strings.Contains(got, "- Recovered from panic in shop [ShopPanic]: panic value") {
+		t.Fatalf("expected fallback line for non-search error, got: %s", got)
 	}
 }
