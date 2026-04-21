@@ -1,6 +1,6 @@
 ---
-name: fix-go-version
-description: Check, upgrade, and validate the repository's Go version across configs.
+name: update-go
+description: Check, upgrade, and validate Go version, then run tidy and vendor.
 ---
 
 Check and update this repository's Go version end-to-end.
@@ -34,7 +34,8 @@ Keep Go version declarations consistent across all relevant files (module, CI, D
    - Update `go.mod` `go` and/or `toolchain` directives as needed.
    - Update CI setup (for example `actions/setup-go` inputs or `go-version-file` usage).
    - Update Docker/base image tags and any other pinned Go runtime references.
-   - Run module maintenance commands required by the ecosystem (for example `go mod tidy`; if vendoring is used, run `go mod vendor` as needed).
+   - Run `go mod tidy`.
+   - Run `go mod vendor`.
 
 4. Validate:
    - Run formatting/lint/build/test checks appropriate for the repo.
