@@ -240,10 +240,10 @@ func TestFormatProxyContext(t *testing.T) {
 		}
 	})
 
-	t.Run("uses shared proxy env label", func(t *testing.T) {
-		t.Setenv("PROXY_URL", "http://shared-proxy:8080")
-		got := formatProxyContext("shared", "http://shared-proxy:8080")
-		if got != "proxy_mode=shared proxy=PROXY_URL" {
+	t.Run("uses sanitized shared proxy URL", func(t *testing.T) {
+		t.Setenv("PROXY_URL", "http://user:pass@shared-proxy:8080/path?q=1")
+		got := formatProxyContext("shared", "http://user:pass@shared-proxy:8080/path?q=1")
+		if got != "proxy_mode=shared proxy=http://shared-proxy:8080" {
 			t.Fatalf("unexpected proxy context: %q", got)
 		}
 	})
@@ -264,10 +264,10 @@ func TestResolveProxyLabel(t *testing.T) {
 		}
 	})
 
-	t.Run("matches shared env key by URL", func(t *testing.T) {
-		t.Setenv("PROXY_URL", "http://shared:3333")
-		if got := resolveProxyLabel("shared", "http://shared:3333"); got != "PROXY_URL" {
-			t.Fatalf("expected PROXY_URL, got %q", got)
+	t.Run("returns sanitized shared proxy URL", func(t *testing.T) {
+		t.Setenv("PROXY_URL", "http://user:pass@shared:3333/path?x=1")
+		if got := resolveProxyLabel("shared", "http://user:pass@shared:3333/path?x=1"); got != "http://shared:3333" {
+			t.Fatalf("expected sanitized shared proxy URL, got %q", got)
 		}
 	})
 
@@ -280,6 +280,29 @@ func TestResolveProxyLabel(t *testing.T) {
 		}
 		if got := resolveProxyLabel("unknown", "http://unknown:6666"); got != "configured" {
 			t.Fatalf("expected configured fallback, got %q", got)
+		}
+	})
+}
+
+func TestSanitizeProxyURL(t *testing.T) {
+	t.Run("removes credentials and path query from valid URL", func(t *testing.T) {
+		got := sanitizeProxyURL("http://user:pass@1.1.1.1:8080/path?q=v")
+		if got != "http://1.1.1.1:8080" {
+			t.Fatalf("expected sanitized proxy URL without credentials/path/query, got %q", got)
+		}
+	})
+
+	t.Run("handles URL without credentials", func(t *testing.T) {
+		got := sanitizeProxyURL("http://2.2.2.2:9090")
+		if got != "http://2.2.2.2:9090" {
+			t.Fatalf("expected unchanged host-only URL, got %q", got)
+		}
+	})
+
+	t.Run("handles non URL input by stripping auth section", func(t *testing.T) {
+		got := sanitizeProxyURL("user:pass@3.3.3.3:1234")
+		if got != "3.3.3.3:1234" {
+			t.Fatalf("expected auth section stripped from raw proxy string, got %q", got)
 		}
 	})
 }

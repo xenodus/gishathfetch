@@ -7,8 +7,10 @@ import (
 	"math/rand/v2"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -403,7 +405,9 @@ func resolveProxyLabel(mode, proxyURL string) string {
 		return "none"
 	case "shared":
 		if sharedProxyURL := os.Getenv("PROXY_URL"); sharedProxyURL != "" && sharedProxyURL == proxyURL {
-			return "PROXY_URL"
+			if sanitized := sanitizeProxyURL(proxyURL); sanitized != "" {
+				return sanitized
+			}
 		}
 		return "shared-configured"
 	case "dedicated":
@@ -429,6 +433,32 @@ func dedicatedProxyEnvLabel(proxyURL string) string {
 	}
 
 	return ""
+}
+
+func sanitizeProxyURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(raw)
+	if err == nil && parsed.Host != "" {
+		parsed.User = nil
+		parsed.Path = ""
+		parsed.RawPath = ""
+		parsed.RawQuery = ""
+		parsed.Fragment = ""
+		return parsed.String()
+	}
+
+	if at := strings.LastIndex(raw, "@"); at != -1 {
+		if schemeIdx := strings.Index(raw, "://"); schemeIdx != -1 && at > schemeIdx+3 {
+			return raw[:schemeIdx+3] + raw[at+1:]
+		}
+		return raw[at+1:]
+	}
+
+	return raw
 }
 
 func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Duration {
