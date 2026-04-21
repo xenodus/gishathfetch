@@ -93,7 +93,11 @@ body {
 }
 
 #suggestions div:nth-child(even) {
-  background-color: color-mix(in srgb, var(--bs-body-bg) 92%, var(--bs-body-color) 8%);
+  background-color: color-mix(
+    in srgb,
+    var(--bs-body-bg) 92%,
+    var(--bs-body-color) 8%
+  );
 }
 
 #suggestions div:not(:last-child) {
