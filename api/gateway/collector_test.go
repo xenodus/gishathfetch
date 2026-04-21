@@ -53,6 +53,58 @@ func TestRetryDelay(t *testing.T) {
 	})
 }
 
+func TestAdjustRetryDelayForContextDeadline(t *testing.T) {
+	t.Run("nil context keeps wait duration", func(t *testing.T) {
+		wait := 2 * time.Second
+		got := adjustRetryDelayForContextDeadline(wait, nil, 1, defaultMaxRetries)
+		if got != wait {
+			t.Fatalf("expected wait to remain %s, got %s", wait, got)
+		}
+	})
+
+	t.Run("final retry is immediate", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		got := adjustRetryDelayForContextDeadline(2*time.Second, ctx, defaultMaxRetries, defaultMaxRetries)
+		if got != 0 {
+			t.Fatalf("expected no wait for final retry, got %s", got)
+		}
+	})
+
+	t.Run("no deadline keeps wait duration", func(t *testing.T) {
+		ctx := context.Background()
+		wait := 1500 * time.Millisecond
+		got := adjustRetryDelayForContextDeadline(wait, ctx, 1, defaultMaxRetries)
+		if got != wait {
+			t.Fatalf("expected wait to remain %s, got %s", wait, got)
+		}
+	})
+
+	t.Run("caps wait when deadline is near", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
+		defer cancel()
+
+		got := adjustRetryDelayForContextDeadline(3*time.Second, ctx, 1, defaultMaxRetries)
+		if got <= 0 {
+			t.Fatalf("expected a reduced but positive wait, got %s", got)
+		}
+		if got >= 3*time.Second {
+			t.Fatalf("expected capped wait below original duration, got %s", got)
+		}
+	})
+
+	t.Run("returns zero when remaining time is too short", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		got := adjustRetryDelayForContextDeadline(1*time.Second, ctx, 1, defaultMaxRetries)
+		if got != 0 {
+			t.Fatalf("expected zero wait when deadline is too close, got %s", got)
+		}
+	})
+}
+
 func TestApplyProxyForRetryAttempt(t *testing.T) {
 	c := colly.NewCollector()
 	t.Setenv("DEDICATED_PROXY_1", "")

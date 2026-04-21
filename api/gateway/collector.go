@@ -40,6 +40,8 @@ const (
 	// First retry = attempt 1 (still dedicated).
 	dedicatedProxyRetryThreshold          = 1
 	binderposDedicatedProxyRetryThreshold = 0
+	// Keep a small reserve so a retry request can still be dispatched before context cancellation.
+	retryExecutionBuffer = 300 * time.Millisecond
 )
 
 type dedicatedProxyLeasePool struct {
@@ -228,6 +230,7 @@ func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL strin
 			r.Ctx.Put("last_proxy_url", proxyURL)
 
 			waitDuration := retryDelay(statusCode, retryAfterHeaderValue(r), retries)
+			waitDuration = adjustRetryDelayForContextDeadline(waitDuration, c.Context, nextRetry, maxRetries)
 			log.Printf(
 				"Retrying %s (attempt=%d status=%d wait=%s %s)",
 				r.Request.URL,
@@ -446,6 +449,34 @@ func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Durat
 	base := time.Duration(retries+1) * time.Second
 	jitter := time.Duration(rand.IntN(500)) * time.Millisecond
 	return base + jitter
+}
+
+func adjustRetryDelayForContextDeadline(waitDuration time.Duration, requestCtx context.Context, nextRetry, maxRetries int) time.Duration {
+	if requestCtx == nil {
+		return waitDuration
+	}
+
+	if isFinalRetryAttempt(nextRetry, maxRetries) {
+		// Prioritize issuing the final retry (which is direct/no proxy) before the context expires.
+		return 0
+	}
+
+	deadline, hasDeadline := requestCtx.Deadline()
+	if !hasDeadline {
+		return waitDuration
+	}
+
+	remaining := time.Until(deadline)
+	if remaining <= retryExecutionBuffer {
+		return 0
+	}
+
+	maxWait := remaining - retryExecutionBuffer
+	if waitDuration > maxWait {
+		return maxWait
+	}
+
+	return waitDuration
 }
 
 func parseRetryAfter(value string) (time.Duration, bool) {
