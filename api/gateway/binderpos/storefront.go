@@ -263,7 +263,8 @@ func fetchSuggestProducts(ctx context.Context, client *http.Client, baseURL, sea
 	query := suggestURL.Query()
 	query.Set("q", strings.TrimSpace(searchStr+" mtg"))
 	query.Set("resources[type]", "product")
-	query.Set("resources[limit]", "20")
+	query.Set("resources[limit]", "8")
+	query.Set("resources[options][unavailable_products]", "hide")
 	suggestURL.RawQuery = query.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, suggestURL.String(), nil)
