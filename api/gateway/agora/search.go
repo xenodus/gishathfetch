@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"mtg-price-checker-sg/gateway"
-	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/gocolly/colly/v2"
@@ -111,7 +110,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 					Price:     price,
 					Source:    s.Name,
 					Img:       strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
-					Quality:   util.MapQuality(quality),
+					Quality:   quality,
 					ExtraInfo: extraInfo,
 				})
 			}
