@@ -70,9 +70,9 @@ func TestApplyProxyForRetryAttempt(t *testing.T) {
 		}
 	})
 
-	t.Run("retry 3 uses direct on final retry", func(t *testing.T) {
+	t.Run("retry 2 uses direct on final retry", func(t *testing.T) {
 		t.Setenv("PROXY_URL", "http://shared:8080")
-		mode, proxyURL := applyProxyForRetryAttempt(c, 3, "")
+		mode, proxyURL := applyProxyForRetryAttempt(c, 2, "")
 		if mode != "direct" {
 			t.Fatalf("expected direct mode on final retry, got %q", mode)
 		}
@@ -81,14 +81,14 @@ func TestApplyProxyForRetryAttempt(t *testing.T) {
 		}
 	})
 
-	t.Run("retry 2 uses shared proxy", func(t *testing.T) {
-		t.Setenv("PROXY_URL", "http://shared:8080")
-		mode, proxyURL := applyProxyForRetryAttempt(c, 2, "")
-		if mode != "shared" {
-			t.Fatalf("expected shared mode, got %q", mode)
+	t.Run("retry 1 still uses dedicated proxy", func(t *testing.T) {
+		t.Setenv("DEDICATED_PROXY_1", "2.2.2.2|9090|u1|p1")
+		mode, proxyURL := applyProxyForRetryAttempt(c, 1, "")
+		if mode != "dedicated" {
+			t.Fatalf("expected dedicated mode, got %q", mode)
 		}
-		if proxyURL != "http://shared:8080" {
-			t.Fatalf("unexpected shared proxy url: %q", proxyURL)
+		if proxyURL != "http://u1:p1@2.2.2.2:9090" {
+			t.Fatalf("unexpected dedicated proxy url: %q", proxyURL)
 		}
 	})
 
@@ -121,19 +121,11 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 	}
 
 	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
-	if mode != "shared" {
-		t.Fatalf("expected shared mode on attempt 2, got %q", mode)
-	}
-	if proxyURL != "http://shared:8080" {
-		t.Fatalf("expected shared proxy url on attempt 2, got %q", proxyURL)
-	}
-
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 3, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
 	if mode != "direct" {
-		t.Fatalf("expected direct mode on final retry attempt 3, got %q", mode)
+		t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
 	}
 	if proxyURL != "" {
-		t.Fatalf("expected empty proxy url on final retry attempt 3, got %q", proxyURL)
+		t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
 	}
 }
 

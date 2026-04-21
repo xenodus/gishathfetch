@@ -28,15 +28,14 @@ var browserUserAgents = []string{
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
 const (
-	// Default flow allows three retries after the initial request:
+	// Default flow allows two retries after the initial request:
 	// - first retry (attempt 1): dedicated proxy
-	// - second retry (attempt 2): shared PROXY_URL
-	// - third/final retry (attempt 3): direct (no proxy)
-	defaultMaxRetries = 3
-	// Binderpos uses two retries:
+	// - second/final retry (attempt 2): direct (no proxy)
+	defaultMaxRetries = 2
+	// Binderpos also uses two retries after the initial request, but with a different first retry path:
 	// - first retry (attempt 1): shared/dynamic PROXY_URL
 	// - second/final retry (attempt 2): direct (no proxy)
-	binderposMaxRetries = 2
+	binderposMaxRetries = defaultMaxRetries
 	// Dedicated (leased or random pool) is used while retryAttempt <= this value (initial request is attempt 0).
 	// First retry = attempt 1 (still dedicated).
 	dedicatedProxyRetryThreshold          = 1
