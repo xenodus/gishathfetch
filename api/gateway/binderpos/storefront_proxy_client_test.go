@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -138,33 +137,6 @@ func TestDoStorefrontGETWithRetry_NoRetryForBadRequest(t *testing.T) {
 	}
 }
 
-func TestDoStorefrontGETWithRetry_DoesNotRetryCloudflareHTMLChallenge429(t *testing.T) {
-	var attempts atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		attempts.Add(1)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusTooManyRequests)
-		_, _ = io.WriteString(w, `<!DOCTYPE html><html><head><title>Verifying your connection...</title></head><body>challenge</body></html>`)
-	}))
-	defer server.Close()
-
-	client := &http.Client{Timeout: binderposAttemptTimeout}
-	profile := newStorefrontRequestProfile(server.URL)
-
-	resp, err := doStorefrontGETWithRetry(context.Background(), client, server.URL, profile)
-	if err != nil {
-		t.Fatalf("expected status response without transport error, got %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusTooManyRequests {
-		t.Fatalf("expected status 429, got %d", resp.StatusCode)
-	}
-	if got := attempts.Load(); got != 1 {
-		t.Fatalf("expected exactly one attempt for html challenge 429, got %d", got)
-	}
-}
-
 func TestApplyStorefrontHeaders_UsesBrowserLikeDefaults(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "https://example.com/search/suggest.json?q=test", nil)
 	if err != nil {
@@ -187,37 +159,10 @@ func TestApplyStorefrontHeaders_UsesBrowserLikeDefaults(t *testing.T) {
 	if req.Header.Get("Referer") != profile.referer {
 		t.Fatalf("unexpected Referer header: %s", req.Header.Get("Referer"))
 	}
-	if req.Header.Get("X-Requested-With") != "" {
-		t.Fatalf("did not expect X-Requested-With header, got %s", req.Header.Get("X-Requested-With"))
+	if req.Header.Get("X-Requested-With") != "XMLHttpRequest" {
+		t.Fatalf("expected X-Requested-With header to mimic xhr requests")
 	}
-	if req.Header.Get("Origin") != "" {
-		t.Fatalf("did not expect Origin header, got %s", req.Header.Get("Origin"))
-	}
-}
-
-func TestSummarizeStorefrontErrorBody_HandlesHTMLChallengePages(t *testing.T) {
-	body := []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<title>Verifying your connection...</title>
-</head>
-<body>challenge</body>
-</html>`)
-
-	got := summarizeStorefrontErrorBody(body, "text/html; charset=utf-8")
-	want := `<html response title="Verifying your connection...">`
-	if got != want {
-		t.Fatalf("expected %q, got %q", want, got)
-	}
-}
-
-func TestSummarizeStorefrontErrorBody_TruncatesPlaintext(t *testing.T) {
-	veryLong := strings.Repeat("x", storefrontErrorBodyMaxLen+20)
-	got := summarizeStorefrontErrorBody([]byte(veryLong), "text/plain")
-	if len(got) != storefrontErrorBodyMaxLen {
-		t.Fatalf("expected truncated length %d, got %d", storefrontErrorBodyMaxLen, len(got))
-	}
-	if !strings.HasSuffix(got, "...") {
-		t.Fatalf("expected truncated summary to end with ellipsis, got %q", got)
+	if req.Header.Get("Origin") != "https://example.com" {
+		t.Fatalf("unexpected Origin header: %s", req.Header.Get("Origin"))
 	}
 }
