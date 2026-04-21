@@ -48,12 +48,17 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 	}
 
-	cards, err := searchByStorefrontAPI(ctx, scrapVariant, storeName, baseURL, searchStr)
-	if err != nil || len(cards) == 0 {
-		return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
-	}
-
-	return cards, nil
+	return searchWithFallback(
+		func() ([]gateway.Card, error) {
+			return searchByStorefrontAPI(ctx, scrapVariant, storeName, baseURL, searchStr)
+		},
+		func() ([]gateway.Card, error) {
+			return i.Scrap(ctx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+		},
+		func() ([]gateway.Card, error) {
+			return searchByStorefrontAPIDirect(ctx, scrapVariant, storeName, baseURL, searchStr)
+		},
+	)
 }
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
@@ -63,6 +68,44 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 	}
 
 	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+}
+
+func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+	client := &http.Client{Timeout: config.PerSiteTimeout}
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+}
+
+func searchWithFallback(
+	searchAPIDedicatedFn func() ([]gateway.Card, error),
+	scrapDedicatedFn func() ([]gateway.Card, error),
+	searchAPIDirectFn func() ([]gateway.Card, error),
+) ([]gateway.Card, error) {
+	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
+	if len(apiDedicatedCards) > 0 && apiDedicatedErr == nil {
+		return apiDedicatedCards, nil
+	}
+
+	scrapedCards, scrapErr := scrapDedicatedFn()
+	if len(scrapedCards) > 0 && scrapErr == nil {
+		return scrapedCards, nil
+	}
+
+	apiDirectCards, apiDirectErr := searchAPIDirectFn()
+	if len(apiDirectCards) > 0 && apiDirectErr == nil {
+		return apiDirectCards, nil
+	}
+
+	if apiDirectErr != nil {
+		return apiDirectCards, apiDirectErr
+	}
+	if scrapErr != nil {
+		return scrapedCards, scrapErr
+	}
+	if apiDedicatedErr != nil {
+		return apiDedicatedCards, apiDedicatedErr
+	}
+
+	return []gateway.Card{}, nil
 }
 
 func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
