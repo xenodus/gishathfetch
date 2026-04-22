@@ -26,6 +26,15 @@ body {
   width: 120px;
 }
 
+.theme-toggle-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .map-item iframe {
   float: left;
   min-height: 450px;
