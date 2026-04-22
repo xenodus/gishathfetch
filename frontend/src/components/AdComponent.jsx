@@ -51,7 +51,11 @@ const AdComponent = ({ variant = "leaderboard" }) => {
       if (cancelled) return;
       if (hasFilledAd()) setCollapsed(false);
     });
-    observer.observe(insEl, { childList: true, subtree: true, attributes: true });
+    observer.observe(insEl, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
 
     return () => {
       cancelled = true;

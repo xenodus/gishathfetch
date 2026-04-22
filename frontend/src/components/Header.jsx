@@ -1,7 +1,23 @@
-const Header = () => {
+const Header = ({ theme, onToggleTheme }) => {
+  const isDarkMode = theme === "dark";
+
   return (
     <div className="mb-3 text-center">
-      <div className="d-flex flex-row align-items-center justify-content-center mb-1">
+      <div className="d-flex flex-row align-items-center justify-content-center mb-1 position-relative">
+        <div className="position-absolute top-0 end-0">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary theme-toggle-btn"
+            onClick={onToggleTheme}
+            aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+            title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+            aria-pressed={isDarkMode}
+          >
+            <span className="theme-toggle-icon" aria-hidden="true">
+              💡
+            </span>
+          </button>
+        </div>
         <div>
           <a href="/">
             <img

@@ -14,10 +14,25 @@
 
 body {
   font-family: "Barlow", serif;
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+#root {
+  min-height: 100vh;
 }
 
 #logo {
   width: 120px;
+}
+
+.theme-toggle-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .map-item iframe {
@@ -69,7 +84,7 @@ body {
 }
 
 #suggestions {
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   border-radius: 5px;
   display: none;
   margin-top: 5px;
@@ -77,7 +92,7 @@ body {
   overflow-y: scroll;
   position: absolute;
   z-index: 2;
-  background: #fff;
+  background: var(--bs-body-bg);
   width: 100%;
 }
 
@@ -87,11 +102,15 @@ body {
 }
 
 #suggestions div:nth-child(even) {
-  background-color: #fbfbfb;
+  background-color: color-mix(
+    in srgb,
+    var(--bs-body-bg) 92%,
+    var(--bs-body-color) 8%
+  );
 }
 
 #suggestions div:not(:last-child) {
-  border-bottom: 1px solid #f3f3f3;
+  border-bottom: 1px solid var(--bs-border-color-translucent);
 }
 
 #suggestions div.suggestion-item:hover,
