@@ -3,6 +3,7 @@ package binderpos
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand/v2"
@@ -46,6 +47,19 @@ type storefrontProductStock struct {
 	Title     string `json:"title"`
 	Available bool   `json:"available"`
 	Price     int    `json:"price"`
+}
+
+type httpStatusError struct {
+	operation string
+	status    int
+	body      string
+}
+
+func (e *httpStatusError) Error() string {
+	if strings.TrimSpace(e.body) == "" {
+		return fmt.Sprintf("%s request failed status=%d", e.operation, e.status)
+	}
+	return fmt.Sprintf("%s request failed status=%d body=%s", e.operation, e.status, e.body)
 }
 
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
@@ -199,6 +213,9 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 
 		detail, err := fetchProductDetail(ctx, client, baseURL, productURL)
 		if err != nil {
+			if isClientOrServerStatusError(err) {
+				return nil, err
+			}
 			continue
 		}
 
@@ -335,17 +352,33 @@ func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, produ
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("product detail request failed status=%d body=%s", res.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &httpStatusError{
+			operation: "product detail",
+			status:    res.StatusCode,
+			body:      strings.TrimSpace(string(body)),
+		}
 	}
 
 	var detail storefrontProductDetail
 	if err := json.NewDecoder(res.Body).Decode(&detail); err != nil {
+		if errors.Is(err, io.EOF) {
+			return &detail, nil
+		}
 		return nil, err
 	}
 
 	return &detail, nil
+}
+
+func isClientOrServerStatusError(err error) bool {
+	var statusErr *httpStatusError
+	if !errors.As(err, &statusErr) {
+		return false
+	}
+
+	return statusErr.status >= http.StatusBadRequest && statusErr.status <= 599
 }
 
 func productPathToJSONURL(baseURL, productPath string) (string, error) {

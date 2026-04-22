@@ -3,8 +3,11 @@ package binderpos
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http/httptest"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"mtg-price-checker-sg/gateway"
@@ -74,4 +77,78 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 			t.Fatalf("expected %v, got %v", wantErr, err)
 		}
 	})
+}
+
+func TestFetchProductDetail_AcceptsAny2xxStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/products/test-card.js" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(server.Close)
+
+	detail, err := fetchProductDetail(context.Background(), server.Client(), server.URL, "/products/test-card")
+	if err != nil {
+		t.Fatalf("expected nil error for 2xx response, got %v", err)
+	}
+	if detail == nil {
+		t.Fatalf("expected detail struct for 2xx response")
+	}
+}
+
+func TestFetchProductDetail_ReturnsErrorFor4xxAnd5xx(t *testing.T) {
+	tests := []int{http.StatusNotFound, http.StatusServiceUnavailable}
+
+	for _, status := range tests {
+		t.Run(fmt.Sprintf("status-%d", status), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/products/test-card.js" {
+					t.Fatalf("unexpected path: %s", r.URL.Path)
+				}
+				w.WriteHeader(status)
+				_, _ = w.Write([]byte("detail endpoint failed"))
+			}))
+			t.Cleanup(server.Close)
+
+			_, err := fetchProductDetail(context.Background(), server.Client(), server.URL, "/products/test-card")
+			if err == nil {
+				t.Fatalf("expected error for %d response", status)
+			}
+			var statusErr *httpStatusError
+			if !errors.As(err, &statusErr) {
+				t.Fatalf("expected httpStatusError, got %T (%v)", err, err)
+			}
+			if statusErr.status != status {
+				t.Fatalf("expected status %d, got %d", status, statusErr.status)
+			}
+		})
+	}
+}
+
+func TestSearchByStorefrontAPIWithClient_PropagatesDetail4xx5xxErrors(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/search/suggest.json":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"resources":{"results":{"products":[{"title":"Test Card","url":"/products/test-card","image":"//example.com/image.png"}]}}}`))
+		case "/products/test-card.js":
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("temporarily unavailable"))
+		default:
+			t.Fatalf("unexpected request path: %s", r.URL.Path)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	cards, err := searchByStorefrontAPIWithClient(context.Background(), server.Client(), 2, "Test Shop", server.URL, "test card")
+	if err == nil {
+		t.Fatalf("expected detail 5xx error to be propagated")
+	}
+	if len(cards) != 0 {
+		t.Fatalf("expected no cards when detail endpoint fails, got %+v", cards)
+	}
+	if !strings.Contains(err.Error(), "status=503") {
+		t.Fatalf("expected status code in error, got %v", err)
+	}
 }
