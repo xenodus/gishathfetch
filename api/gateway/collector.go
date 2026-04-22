@@ -381,9 +381,17 @@ func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttem
 		return clearProxy(c)
 	}
 
-	// Keep pinned dedicated proxy only while retryAttempt <= dedicatedRetryThreshold (see constants).
-	// After that, prefer shared PROXY_URL fallback when available.
+	// Keep dedicated routing while retryAttempt <= dedicatedRetryThreshold (see constants).
+	// When pinned dedicated is present, keep it for attempt 0 and prefer rotating to a
+	// different dedicated proxy on retries.
+	// If no alternative dedicated proxy exists, fall back to pinned to preserve availability.
 	if pinnedDedicatedProxyURL != "" && isDedicatedRetryAttempt(retryAttempt, dedicatedRetryThreshold) {
+		if retryAttempt > 0 {
+			if proxyURL, ok := randomDedicatedProxyURL(pinnedDedicatedProxyURL); ok {
+				c.SetProxy(proxyURL)
+				return "dedicated", proxyURL
+			}
+		}
 		c.SetProxy(pinnedDedicatedProxyURL)
 		return "dedicated", pinnedDedicatedProxyURL
 	}
