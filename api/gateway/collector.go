@@ -119,6 +119,15 @@ func NewOptimizedCollectorNoRetry(ctx context.Context) *colly.Collector {
 	return c
 }
 
+func NewOptimizedCollectorNoRetryDirect(ctx context.Context) *colly.Collector {
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
+	configureRequestOptimizations(c, false, false)
+	forceCollectorDirectProxy(c)
+	return c
+}
+
 func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
@@ -141,6 +150,17 @@ func ConfigureRequestOptimizations(c *colly.Collector) {
 
 func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 	configureRequestOptimizations(c, false, false)
+}
+
+func forceCollectorDirectProxy(c *colly.Collector) {
+	c.SetProxyFunc(nil)
+	c.OnRequest(func(r *colly.Request) {
+		if r == nil || r.Ctx == nil {
+			return
+		}
+		r.Ctx.Put("last_proxy_mode", "direct")
+		r.Ctx.Put("last_proxy_url", "")
+	})
 }
 
 // Core request optimization pipeline.

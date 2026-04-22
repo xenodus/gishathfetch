@@ -60,9 +60,8 @@ func newDedicatedNoRetryCollector(ctx context.Context) *colly.Collector {
 }
 
 func newDirectNoRetryCollector(ctx context.Context) *colly.Collector {
-	c := gateway.NewOptimizedCollectorNoRetry(ctx)
+	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
-	c.SetProxyFunc(nil)
 	return c
 }
 
