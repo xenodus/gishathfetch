@@ -117,4 +117,19 @@ func TestSearchWithFallback(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("returns no error when a fallback attempt succeeds with empty cards", func(t *testing.T) {
+		cards, err := searchWithFallback(
+			func() ([]gateway.Card, error) { return nil, errors.New("dedicated api failed") },
+			func() ([]gateway.Card, error) { return []gateway.Card{}, nil },
+			func() ([]gateway.Card, error) { return nil, errors.New("shared api failed") },
+			func() ([]gateway.Card, error) { return nil, errors.New("direct scraper failed") },
+		)
+		if err != nil {
+			t.Fatalf("expected nil error when any attempt succeeds with empty result, got %v", err)
+		}
+		if len(cards) != 0 {
+			t.Fatalf("expected zero cards, got %+v", cards)
+		}
+	})
 }
