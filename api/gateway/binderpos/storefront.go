@@ -113,28 +113,48 @@ func searchWithFallback(
 	searchAPISharedFn func() ([]gateway.Card, error),
 	scrapDirectFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
+	// Some stores legitimately return no matches for the query.
+	// If any attempt completes without an error, do not surface earlier failures.
+	hasSuccessfulAttempt := false
+
 	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
 	apiDedicatedErr = annotateAttemptError(1, "api-dedicated", apiDedicatedErr)
+	if apiDedicatedErr == nil {
+		hasSuccessfulAttempt = true
+	}
 	if len(apiDedicatedCards) > 0 && apiDedicatedErr == nil {
 		return apiDedicatedCards, nil
 	}
 
 	scrapedCards, scrapErr := scrapDedicatedFn()
 	scrapErr = annotateAttemptError(2, "scrap-dedicated", scrapErr)
+	if scrapErr == nil {
+		hasSuccessfulAttempt = true
+	}
 	if len(scrapedCards) > 0 && scrapErr == nil {
 		return scrapedCards, nil
 	}
 
 	apiSharedCards, apiSharedErr := searchAPISharedFn()
 	apiSharedErr = annotateAttemptError(3, "api-shared", apiSharedErr)
+	if apiSharedErr == nil {
+		hasSuccessfulAttempt = true
+	}
 	if len(apiSharedCards) > 0 && apiSharedErr == nil {
 		return apiSharedCards, nil
 	}
 
 	scrapedDirectCards, scrapDirectErr := scrapDirectFn()
 	scrapDirectErr = annotateAttemptError(4, "scrap-direct", scrapDirectErr)
+	if scrapDirectErr == nil {
+		hasSuccessfulAttempt = true
+	}
 	if len(scrapedDirectCards) > 0 && scrapDirectErr == nil {
 		return scrapedDirectCards, nil
+	}
+
+	if hasSuccessfulAttempt {
+		return []gateway.Card{}, nil
 	}
 
 	if scrapDirectErr != nil {
