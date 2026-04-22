@@ -64,12 +64,10 @@ export default function App() {
         return savedTheme;
       }
     } catch {
-      // Ignore storage access issues and fall back to system preference.
+      // Ignore storage access issues and keep light mode as the default.
     }
 
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return "light";
   });
 
   useEffect(() => {
