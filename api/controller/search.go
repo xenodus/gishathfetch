@@ -51,20 +51,25 @@ type Card struct {
 	ExtraInfo string  `json:"extraInfo"`
 }
 
+type StoreError struct {
+	Store string `json:"store"`
+	Error string `json:"error"`
+}
+
 const binderposMaxConcurrent = 10
 
 var sendDiscordAlert = alert.SendDiscordAlert
 
-func Search(ctx context.Context, input SearchInput) ([]Card, error) {
+func Search(ctx context.Context, input SearchInput) ([]Card, []StoreError, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
 	return searchShops(ctx, input, shopNameToLGSMap)
 }
 
-func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, error) {
+func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, []StoreError, error) {
 	shopNameToHasResultMap := initShopHasResultMap(shopNameToLGSMap)
 
 	if len(shopNameToLGSMap) == 0 {
-		return nil, nil
+		return nil, []StoreError{}, nil
 	}
 
 	realStart := time.Now()
@@ -90,7 +95,7 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 		log.Printf("Sleeping for [%s]", sleepDuration)
 	}
 
-	return inStockCards, nil
+	return inStockCards, buildStoreErrors(siteErrors), nil
 }
 
 func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
@@ -183,6 +188,36 @@ func formatDiscordErrorSummary(searchString string, errorMessages []string) stri
 		searchString,
 		strings.Join(formattedLines, "\n"),
 	)
+}
+
+func buildStoreErrors(siteErrors map[string]error) []StoreError {
+	if len(siteErrors) == 0 {
+		return []StoreError{}
+	}
+
+	storeNames := make([]string, 0, len(siteErrors))
+	for storeName := range siteErrors {
+		storeNames = append(storeNames, storeName)
+	}
+	sort.Strings(storeNames)
+
+	storeErrors := make([]StoreError, 0, len(storeNames))
+	for _, storeName := range storeNames {
+		err := siteErrors[storeName]
+		if err == nil {
+			continue
+		}
+		storeErrors = append(storeErrors, StoreError{
+			Store: storeName,
+			Error: err.Error(),
+		})
+	}
+
+	if len(storeErrors) == 0 {
+		return []StoreError{}
+	}
+
+	return storeErrors
 }
 
 func parseSearchErrorMessage(message, searchString string) (shopName, details string, ok bool) {
