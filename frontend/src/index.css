@@ -102,6 +102,10 @@ body {
 }
 
 #suggestions div:nth-child(even) {
+  background-color: #fbfbfb;
+}
+
+[data-bs-theme="dark"] #suggestions div:nth-child(even) {
   background-color: color-mix(
     in srgb,
     var(--bs-body-bg) 92%,
