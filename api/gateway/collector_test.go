@@ -376,6 +376,22 @@ func TestVisitWithProxyInfo(t *testing.T) {
 	}
 }
 
+func TestVisitWithProxyInfoDirectCollector(t *testing.T) {
+	t.Setenv("DEDICATED_PROXY_1", "4.4.4.4|8080|user|pass")
+
+	c := NewOptimizedCollectorNoRetryDirect(context.Background())
+	err := VisitWithProxyInfo(c, "http://127.0.0.1:1")
+	if err == nil {
+		t.Fatalf("expected visit error for unreachable endpoint")
+	}
+	if !strings.Contains(err.Error(), "proxy_mode=direct") {
+		t.Fatalf("expected direct proxy context in error, got %q", err)
+	}
+	if !strings.Contains(err.Error(), "proxy=none") {
+		t.Fatalf("expected no proxy label for direct collector, got %q", err)
+	}
+}
+
 func TestSeedProxyContextIfMissing(t *testing.T) {
 	t.Run("initializes mode and url when missing", func(t *testing.T) {
 		ctx := colly.NewContext()
