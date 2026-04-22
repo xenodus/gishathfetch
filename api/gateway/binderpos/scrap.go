@@ -7,6 +7,7 @@ import (
 	"log"
 	"mtg-price-checker-sg/gateway/util"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,29 @@ func (i impl) scrapDedicatedProxy(ctx context.Context, scrapVariant int, storeNa
 
 func (i impl) scrapDirect(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDirectNoRetryCollector)
+}
+
+func (i impl) scrapSharedProxy(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	sharedProxyURL := strings.TrimSpace(os.Getenv("PROXY_URL"))
+	if sharedProxyURL == "" {
+		return nil, fmt.Errorf("no shared proxy configured for binderpos scraper")
+	}
+
+	if _, err := newHTTPClientWithProxyURL(sharedProxyURL); err != nil {
+		return nil, fmt.Errorf("invalid shared proxy configured for binderpos scraper: %w", err)
+	}
+
+	return i.scrapWithCollectorFactory(
+		ctx,
+		scrapVariant,
+		storeName,
+		baseUrl,
+		searchUrl,
+		searchStr,
+		func(ctx context.Context) *colly.Collector {
+			return newSharedNoRetryCollector(ctx, sharedProxyURL)
+		},
+	)
 }
 
 func (i impl) scrapWithCollectorFactory(
@@ -62,6 +86,20 @@ func newDedicatedNoRetryCollector(ctx context.Context) *colly.Collector {
 func newDirectNoRetryCollector(ctx context.Context) *colly.Collector {
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
+	return c
+}
+
+func newSharedNoRetryCollector(ctx context.Context, sharedProxyURL string) *colly.Collector {
+	c := gateway.NewOptimizedCollectorNoRetry(ctx)
+	c.SetRequestTimeout(binderposAttemptTimeout)
+	_ = c.SetProxy(sharedProxyURL)
+	c.OnRequest(func(r *colly.Request) {
+		if r == nil || r.Ctx == nil {
+			return
+		}
+		r.Ctx.Put("last_proxy_mode", "shared")
+		r.Ctx.Put("last_proxy_url", sharedProxyURL)
+	})
 	return c
 }
 

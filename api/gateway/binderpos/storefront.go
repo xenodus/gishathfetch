@@ -8,7 +8,6 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -62,7 +61,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return searchByStorefrontAPISharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+				return i.scrapSharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			})
 		},
 		func() ([]gateway.Card, error) {
@@ -93,24 +92,10 @@ func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeNam
 	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
 }
 
-func searchByStorefrontAPISharedProxy(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
-	sharedProxyURL := strings.TrimSpace(os.Getenv("PROXY_URL"))
-	if sharedProxyURL == "" {
-		return nil, fmt.Errorf("no shared proxy configured for binderpos storefront api")
-	}
-
-	client, err := newHTTPClientWithProxyURL(sharedProxyURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid shared proxy configured for binderpos storefront api: %w", err)
-	}
-
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
-}
-
 func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
 	scrapDedicatedFn func() ([]gateway.Card, error),
-	searchAPISharedFn func() ([]gateway.Card, error),
+	scrapSharedFn func() ([]gateway.Card, error),
 	scrapDirectFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	// Some stores legitimately return no matches for the query.
@@ -135,13 +120,13 @@ func searchWithFallback(
 		return scrapedCards, nil
 	}
 
-	apiSharedCards, apiSharedErr := searchAPISharedFn()
-	apiSharedErr = annotateAttemptError(3, "api-shared", apiSharedErr)
-	if apiSharedErr == nil {
+	scrapSharedCards, scrapSharedErr := scrapSharedFn()
+	scrapSharedErr = annotateAttemptError(3, "scrap-shared", scrapSharedErr)
+	if scrapSharedErr == nil {
 		hasSuccessfulAttempt = true
 	}
-	if len(apiSharedCards) > 0 && apiSharedErr == nil {
-		return apiSharedCards, nil
+	if len(scrapSharedCards) > 0 && scrapSharedErr == nil {
+		return scrapSharedCards, nil
 	}
 
 	scrapedDirectCards, scrapDirectErr := scrapDirectFn()
@@ -160,8 +145,8 @@ func searchWithFallback(
 	if scrapDirectErr != nil {
 		return scrapedDirectCards, scrapDirectErr
 	}
-	if apiSharedErr != nil {
-		return apiSharedCards, apiSharedErr
+	if scrapSharedErr != nil {
+		return scrapSharedCards, scrapSharedErr
 	}
 	if scrapErr != nil {
 		return scrapedCards, scrapErr
