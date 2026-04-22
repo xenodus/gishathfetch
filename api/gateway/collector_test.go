@@ -164,17 +164,26 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 	t.Setenv("PROXY_URL", "http://shared:8080")
 
 	pinned := "http://pinned:1234"
-	for attempt := 0; attempt <= 1; attempt++ {
-		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, attempt, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
-		if mode != "dedicated" {
-			t.Fatalf("expected dedicated mode for pinned proxy on attempt %d, got %q", attempt, mode)
-		}
-		if proxyURL != pinned {
-			t.Fatalf("expected pinned proxy url %q on attempt %d, got %q", pinned, attempt, proxyURL)
-		}
+	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
+	if mode != "dedicated" {
+		t.Fatalf("expected dedicated mode for pinned proxy on attempt 0, got %q", mode)
+	}
+	if proxyURL != pinned {
+		t.Fatalf("expected pinned proxy url %q on attempt 0, got %q", pinned, proxyURL)
 	}
 
-	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
+	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
+	if mode != "dedicated" {
+		t.Fatalf("expected dedicated mode for pinned proxy on attempt 1, got %q", mode)
+	}
+	if proxyURL == pinned {
+		t.Fatalf("expected attempt 1 to rotate away from pinned proxy %q", pinned)
+	}
+	if proxyURL != "http://user:pass@9.9.9.9:9000" {
+		t.Fatalf("expected retry to use configured dedicated proxy, got %q", proxyURL)
+	}
+
+	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
 	if mode != "direct" {
 		t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
 	}
@@ -197,8 +206,14 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicatedBinderpos(t *testing.T) {
 		}
 
 		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "dedicated" || proxyURL != pinned {
+		if mode != "dedicated" {
 			t.Fatalf("expected dedicated on attempt 1, got mode=%q url=%q", mode, proxyURL)
+		}
+		if proxyURL == pinned {
+			t.Fatalf("expected attempt 1 to rotate away from pinned proxy %q", pinned)
+		}
+		if proxyURL != "http://user:pass@9.9.9.9:9000" {
+			t.Fatalf("expected dedicated retry proxy on attempt 1, got %q", proxyURL)
 		}
 
 		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
