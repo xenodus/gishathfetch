@@ -28,7 +28,7 @@ const SearchResults = ({
         ) : (
           <div
             id="resultCount"
-            className="mb-3 text-center bg-warning-subtle text-dark rounded py-2"
+            className="mb-3 text-center bg-warning-subtle text-warning-emphasis rounded py-2"
           >
             {results?.length || 0} result{results?.length !== 1 ? "s" : ""}{" "}
             found
