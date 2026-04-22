@@ -153,7 +153,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 
 	wg.Wait()
 	if len(discordErrorMessages) > 0 {
-		go sendDiscordAlert(formatDiscordErrorSummary(searchString, discordErrorMessages))
+		// Send synchronously so alerts are not dropped when the Lambda invocation
+		// finishes before a detached goroutine gets scheduled.
+		sendDiscordAlert(formatDiscordErrorSummary(searchString, discordErrorMessages))
 	}
 	if len(siteErrors) > 0 {
 		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))

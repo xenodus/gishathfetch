@@ -190,6 +190,9 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 	}
 
 	cards := make([]gateway.Card, 0, len(products)*4)
+	detailAttempts := 0
+	detailFailures := 0
+	var lastDetailErr error
 	seen := map[string]struct{}{}
 	for _, product := range products {
 		productURL := product.URL
@@ -197,8 +200,11 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 			continue
 		}
 
+		detailAttempts++
 		detail, err := fetchProductDetail(ctx, client, baseURL, productURL)
 		if err != nil {
+			detailFailures++
+			lastDetailErr = err
 			continue
 		}
 
@@ -236,6 +242,10 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 			seen[key] = struct{}{}
 			cards = append(cards, card)
 		}
+	}
+
+	if detailAttempts > 0 && detailFailures == detailAttempts {
+		return nil, fmt.Errorf("storefront detail request failed for all %d candidate products: %w", detailAttempts, lastDetailErr)
 	}
 
 	return cards, nil
