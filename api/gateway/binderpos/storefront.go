@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,8 +20,25 @@ import (
 
 const (
 	storefrontSuggestPath   = "/search/suggest.json"
+	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
+	binderposDecklistType   = "mtg"
 	binderposAttemptTimeout = 4 * time.Second
 )
+
+var binderposShopifyDomainByStoreHost = map[string]string{
+	"cardscitadel.com":        "card-citadel.myshopify.com",
+	"card-affinity.com":       "563304-2.myshopify.com",
+	"cardboardcrackgames.com": "cardboardcrackgames.myshopify.com",
+	"flagshipgames.sg":        "flagship-games.myshopify.com",
+	"gameshaventcg.com":       "games-haven-sg.myshopify.com",
+	"greyogregames.com":       "grey-ogre-games-singapore.myshopify.com",
+	"hideoutcg.com":           "220022-20.myshopify.com",
+	"sg-manapro.com":          "mana-pro-sg.myshopify.com",
+	"mtg-asia.com":            "mtgasia.myshopify.com",
+	"onemtg.com.sg":           "one-mtg.myshopify.com",
+	"tefudagames.com":         "bacc1b-3.myshopify.com",
+	// arcanesanctumtcg.com intentionally omitted: BinderPOS decklist API returns 401.
+}
 
 type storefrontSuggestResponse struct {
 	Resources struct {
@@ -46,6 +64,32 @@ type storefrontProductStock struct {
 	Title     string `json:"title"`
 	Available bool   `json:"available"`
 	Price     int    `json:"price"`
+}
+
+type storefrontDecklistRequestItem struct {
+	Card     string `json:"card"`
+	Quantity int    `json:"quantity"`
+}
+
+type storefrontDecklistLine struct {
+	Products  []storefrontDecklistProduct `json:"products"`
+	ValidName string                      `json:"validName"`
+}
+
+type storefrontDecklistProduct struct {
+	Title    string                    `json:"title"`
+	Name     string                    `json:"name"`
+	Handle   string                    `json:"handle"`
+	SetName  string                    `json:"setName"`
+	Image    string                    `json:"img"`
+	Variants []storefrontDecklistStock `json:"variants"`
+}
+
+type storefrontDecklistStock struct {
+	ShopifyID int64   `json:"shopifyId"`
+	Title     string  `json:"title"`
+	Price     float64 `json:"price"`
+	Quantity  int     `json:"quantity"`
 }
 
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
@@ -181,6 +225,11 @@ func annotateAttemptError(attempt int, strategy string, err error) error {
 }
 
 func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+	decklistCards, err := searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+	if err == nil {
+		return decklistCards, nil
+	}
+
 	products, err := fetchSuggestProducts(ctx, client, baseURL, searchStr)
 	if err != nil {
 		return nil, err
@@ -239,6 +288,146 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 	}
 
 	return cards, nil
+}
+
+func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+	shopifyDomain, ok := storefrontShopifyDomainForBaseURL(baseURL)
+	if !ok {
+		return nil, fmt.Errorf("missing shopify domain mapping for binderpos storefront")
+	}
+
+	decklistURL, err := url.Parse(binderposDecklistAPIURL)
+	if err != nil {
+		return nil, err
+	}
+	query := decklistURL.Query()
+	query.Set("storeUrl", shopifyDomain)
+	query.Set("type", binderposDecklistType)
+	decklistURL.RawQuery = query.Encode()
+
+	payload := []storefrontDecklistRequestItem{
+		{
+			Card:     strings.TrimSpace(searchStr),
+			Quantity: 1,
+		},
+	}
+	payloadBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, decklistURL.String(), bytes.NewReader(payloadBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
+		return nil, err
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("binderpos decklist request failed status=%d body=%s", res.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var lines []storefrontDecklistLine
+	if err := json.NewDecoder(res.Body).Decode(&lines); err != nil {
+		return nil, err
+	}
+
+	return mapDecklistLinesToCards(scrapVariant, storeName, baseURL, lines), nil
+}
+
+func storefrontShopifyDomainForBaseURL(baseURL string) (string, bool) {
+	parsedURL, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil {
+		return "", false
+	}
+
+	host := strings.ToLower(strings.TrimSpace(parsedURL.Hostname()))
+	host = strings.TrimPrefix(host, "www.")
+	if host == "" {
+		return "", false
+	}
+
+	shopifyDomain, ok := binderposShopifyDomainByStoreHost[host]
+	return shopifyDomain, ok
+}
+
+func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines []storefrontDecklistLine) []gateway.Card {
+	cards := make([]gateway.Card, 0, len(lines)*4)
+	seen := map[string]struct{}{}
+
+	for _, line := range lines {
+		for _, product := range line.Products {
+			productTitle := strings.TrimSpace(product.Title)
+			if productTitle == "" {
+				productTitle = strings.TrimSpace(product.Name)
+			}
+			if productTitle == "" {
+				productTitle = strings.TrimSpace(line.ValidName)
+			}
+			if productTitle == "" {
+				continue
+			}
+
+			productPath := ""
+			if strings.TrimSpace(product.Handle) != "" {
+				productPath = "/products/" + strings.TrimSpace(product.Handle)
+			}
+
+			setName := strings.TrimSpace(product.SetName)
+			if setName == "" {
+				setName = extractSetName(productTitle)
+			}
+
+			image := buildCardImageURL(product.Image, productTitle)
+			for _, variant := range product.Variants {
+				if variant.Price <= 0 {
+					continue
+				}
+				if variant.ShopifyID <= 0 || productPath == "" {
+					continue
+				}
+
+				cardURL, err := buildProductURLWithVariant(baseURL, productPath, variant.ShopifyID)
+				if err != nil {
+					continue
+				}
+
+				quality := strings.TrimSpace(strings.ReplaceAll(variant.Title, "Foil", ""))
+				card := gateway.Card{
+					Name:    formatCardName(scrapVariant, productTitle, variant.Title),
+					Url:     cardURL,
+					Img:     image,
+					Price:   variant.Price,
+					InStock: variant.Quantity > 0,
+					IsFoil:  strings.Contains(strings.ToLower(variant.Title), "foil"),
+					Source:  storeName,
+					Quality: util.MapQuality(quality),
+				}
+				if scrapVariant == 3 && setName != "" {
+					card.ExtraInfo = []string{setName}
+				}
+
+				key := fmt.Sprintf("%s|%.2f|%t", card.Url, card.Price, card.InStock)
+				if _, exists := seen[key]; exists {
+					continue
+				}
+				seen[key] = struct{}{}
+				cards = append(cards, card)
+			}
+		}
+	}
+
+	return cards
 }
 
 func newDedicatedProxyHTTPClient() (*http.Client, bool) {
