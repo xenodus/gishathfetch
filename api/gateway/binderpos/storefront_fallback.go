@@ -9,7 +9,6 @@ import (
 func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
 	searchAPISharedFn func() ([]gateway.Card, error),
-	scrapDedicatedFn func() ([]gateway.Card, error),
 	scrapSharedFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	// Some stores legitimately return no matches for the query.
@@ -34,17 +33,8 @@ func searchWithFallback(
 		return apiSharedCards, nil
 	}
 
-	scrapedCards, scrapErr := scrapDedicatedFn()
-	scrapErr = annotateAttemptError(3, "scrap-dedicated", scrapErr)
-	if scrapErr == nil {
-		hasSuccessfulAttempt = true
-	}
-	if len(scrapedCards) > 0 && scrapErr == nil {
-		return scrapedCards, nil
-	}
-
 	scrapedSharedCards, scrapSharedErr := scrapSharedFn()
-	scrapSharedErr = annotateAttemptError(4, "scrap-shared", scrapSharedErr)
+	scrapSharedErr = annotateAttemptError(3, "scrap-shared", scrapSharedErr)
 	if scrapSharedErr == nil {
 		hasSuccessfulAttempt = true
 	}
@@ -58,9 +48,6 @@ func searchWithFallback(
 
 	if scrapSharedErr != nil {
 		return scrapedSharedCards, scrapSharedErr
-	}
-	if scrapErr != nil {
-		return scrapedCards, scrapErr
 	}
 	if apiSharedErr != nil {
 		return apiSharedCards, apiSharedErr

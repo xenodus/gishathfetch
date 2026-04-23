@@ -21,14 +21,6 @@ func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, s
 	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, gateway.NewOptimizedCollectorForBinderpos)
 }
 
-func (i impl) scrapDedicatedProxy(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
-	if !dedicatedProxyConfigured() {
-		return nil, fmt.Errorf("no dedicated proxy configured for binderpos scraper")
-	}
-
-	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDedicatedNoRetryCollector)
-}
-
 func (i impl) scrapDirect(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDirectNoRetryCollector)
 }
@@ -68,12 +60,6 @@ func (i impl) scrapWithCollectorFactory(
 	return []gateway.Card{}, fmt.Errorf("invalid scrap variant: %d", scrapVariant)
 }
 
-func newDedicatedNoRetryCollector(ctx context.Context) *colly.Collector {
-	c := gateway.NewOptimizedCollectorNoRetry(ctx)
-	c.SetRequestTimeout(binderposAttemptTimeout)
-	return c
-}
-
 func newDirectNoRetryCollector(ctx context.Context) *colly.Collector {
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
@@ -93,10 +79,6 @@ func newSharedNoRetryCollector(ctx context.Context, sharedProxyURL string) *coll
 		r.Ctx.Put("last_proxy_url", sharedProxyURL)
 	})
 	return c
-}
-
-func dedicatedProxyConfigured() bool {
-	return len(util.GetDedicatedProxyURLs()) > 0
 }
 
 // buildSafeSearchURL safely constructs the URL using url.URL and url.Values to isolate user string input.
