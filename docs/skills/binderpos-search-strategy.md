@@ -47,11 +47,9 @@ Notes:
 - Attempts 3/4 explicitly use no-retry collectors (`NewOptimizedCollectorNoRetry*`), with 2s request timeout.
 
 ### B) Retries for direct `Scrap` calls
-- `binderpos.impl.Scrap(...)` (not `Search`) uses `NewOptimizedCollectorForBinderpos(...)`, which enables collector retries.
-- Current collector retry policy: `maxRetries = 2` (two retries after initial request).
-- Proxy progression for direct `Scrap` retries:
-  - Default: `dedicated -> dedicated -> direct`.
-  - Rollback mode (`USE_BINDERPOS_SHARED_PROXY_FALLBACK=true`): `dedicated -> shared(PROXY_URL) -> direct`.
+- `binderpos.impl.Scrap(...)` now uses the no-retry dedicated collector.
+- Each scrape request path is single-attempt (no collector retry loop).
+- If a scrape attempt returns an error, `Search` fallback logic is responsible for advancing to the next strategy.
 
 ## 4) Proxy prerequisites and failure behavior
 
