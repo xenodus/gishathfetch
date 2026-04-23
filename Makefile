@@ -34,28 +34,33 @@ frontend-update-staging: frontend-build
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E33AK6HADX83U0 --paths "/*"
 
 lambda-create:
+	# --query: avoid full JSON (includes Environment.Variables) in CI logs
 	export AWS_PAGER="" && aws lambda create-function \
       --function-name mtg-price-scrapper \
       --package-type Image \
       --code ImageUri=206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
-      --role arn:aws:iam::206363131200:role/lambda-mtg
+      --role arn:aws:iam::206363131200:role/lambda-mtg \
+      --output text --query 'FunctionName'
 
 lambda-create-staging:
 	export AWS_PAGER="" && aws lambda create-function \
       --function-name mtg-price-scrapper-staging \
       --package-type Image \
       --code ImageUri=206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging \
-      --role arn:aws:iam::206363131200:role/lambda-mtg
+      --role arn:aws:iam::206363131200:role/lambda-mtg \
+      --output text --query 'FunctionName'
 
 lambda-update:
 	export AWS_PAGER="" && aws lambda update-function-code \
       --function-name mtg-price-scrapper \
-      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest
+      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
+      --output text --query 'FunctionName'
 
 lambda-update-staging:
 	export AWS_PAGER="" && aws lambda update-function-code \
       --function-name mtg-price-scrapper-staging \
-      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging
+      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging \
+      --output text --query 'FunctionName'
 
 aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com

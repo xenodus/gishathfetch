@@ -3,7 +3,7 @@ WORKDIR /mtg-price-checker
 # Copy dependencies list
 COPY api ./api
 WORKDIR /mtg-price-checker/api
-RUN go mod download -x
+RUN go mod download
 # Build
 RUN env GOOS=linux GOARCH=amd64 go build -tags lambda.norpc -ldflags="-s -w" -o main cmd/main.go
 
