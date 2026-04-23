@@ -99,64 +99,22 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 }
 
 func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
-	var cards []gateway.Card
 	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var errMu sync.Mutex
-	siteErrors := make(map[string]error, len(shops))
-	discordErrorMessages := make([]string, 0, len(shops))
+	aggregator := newFetchResultAggregator(len(shops))
 	binderposGate := make(chan struct{}, binderposMaxConcurrent)
 
 	log.Printf("Start checking shops for [%s]...", searchString)
 
 	for shopName, lgs := range shops {
+		shopName := shopName
+		lgs := lgs
 		wg.Go(func() {
-			defer func() {
-				if r := recover(); r != nil {
-					errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
-					log.Println(errMsg)
-					errMu.Lock()
-					siteErrors[shopName] = fmt.Errorf("panic: %v", r)
-					discordErrorMessages = append(discordErrorMessages, errMsg)
-					errMu.Unlock()
-				}
-			}()
-			start := time.Now()
-
-			ctx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
-			defer cancel()
-
-			if isBinderposStore(shopName) {
-				binderposGate <- struct{}{}
-				defer func() { <-binderposGate }()
-			}
-
-			c, err := lgs.Search(ctx, searchString)
-
-			if err != nil {
-				if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-					errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
-					log.Println(errMsg)
-					errMu.Lock()
-					discordErrorMessages = append(discordErrorMessages, errMsg)
-					errMu.Unlock()
-				}
-				errMu.Lock()
-				siteErrors[shopName] = err
-				errMu.Unlock()
-			}
-
-			if len(c) > 0 {
-				mu.Lock()
-				cards = append(cards, c...)
-				mu.Unlock()
-			}
-
-			log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
+			searchShop(ctx, searchString, shopName, lgs, binderposGate, aggregator)
 		})
 	}
 
 	wg.Wait()
+	cards, siteErrors, discordErrorMessages := aggregator.snapshot()
 	if len(discordErrorMessages) > 0 {
 		go sendDiscordAlert(formatDiscordErrorSummary(searchString, discordErrorMessages))
 	}
@@ -165,6 +123,101 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	}
 	log.Println("End checking shops...")
 	return cards, siteErrors
+}
+
+type fetchResultAggregator struct {
+	mu                   sync.Mutex
+	cards                []gateway.Card
+	siteErrors           map[string]error
+	discordErrorMessages []string
+}
+
+func newFetchResultAggregator(shopCount int) *fetchResultAggregator {
+	return &fetchResultAggregator{
+		cards:                []gateway.Card{},
+		siteErrors:           make(map[string]error, shopCount),
+		discordErrorMessages: make([]string, 0, shopCount),
+	}
+}
+
+func (f *fetchResultAggregator) addCards(cards []gateway.Card) {
+	if len(cards) == 0 {
+		return
+	}
+	f.mu.Lock()
+	f.cards = append(f.cards, cards...)
+	f.mu.Unlock()
+}
+
+func (f *fetchResultAggregator) addSiteError(shopName string, err error) {
+	f.mu.Lock()
+	f.siteErrors[shopName] = err
+	f.mu.Unlock()
+}
+
+func (f *fetchResultAggregator) addDiscordErrorMessage(message string) {
+	f.mu.Lock()
+	f.discordErrorMessages = append(f.discordErrorMessages, message)
+	f.mu.Unlock()
+}
+
+func (f *fetchResultAggregator) snapshot() ([]gateway.Card, map[string]error, []string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	cards := append([]gateway.Card(nil), f.cards...)
+	siteErrors := make(map[string]error, len(f.siteErrors))
+	for shopName, err := range f.siteErrors {
+		siteErrors[shopName] = err
+	}
+	discordErrorMessages := append([]string(nil), f.discordErrorMessages...)
+
+	return cards, siteErrors, discordErrorMessages
+}
+
+func searchShop(
+	ctx context.Context,
+	searchString string,
+	shopName string,
+	lgs gateway.LGS,
+	binderposGate chan struct{},
+	aggregator *fetchResultAggregator,
+) {
+	defer recoverShopPanic(shopName, aggregator)
+	start := time.Now()
+	defer log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
+
+	shopCtx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
+	defer cancel()
+
+	if isBinderposStore(shopName) {
+		binderposGate <- struct{}{}
+		defer func() { <-binderposGate }()
+	}
+
+	cards, err := lgs.Search(shopCtx, searchString)
+	if err != nil {
+		recordShopSearchError(searchString, shopName, err, aggregator)
+	}
+	aggregator.addCards(cards)
+}
+
+func recoverShopPanic(shopName string, aggregator *fetchResultAggregator) {
+	if r := recover(); r != nil {
+		errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
+		log.Println(errMsg)
+		aggregator.addSiteError(shopName, fmt.Errorf("panic: %v", r))
+		aggregator.addDiscordErrorMessage(errMsg)
+	}
+}
+
+func recordShopSearchError(searchString, shopName string, err error, aggregator *fetchResultAggregator) {
+	if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+		errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
+		log.Println(errMsg)
+		aggregator.addDiscordErrorMessage(errMsg)
+	}
+	aggregator.addSiteError(shopName, err)
 }
 
 func formatDiscordErrorSummary(searchString string, errorMessages []string) string {
