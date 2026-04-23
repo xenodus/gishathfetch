@@ -16,7 +16,7 @@ Resolve known vulnerabilities with the smallest safe dependency updates while pr
 2. Keep fixes focused on vulnerable dependencies; avoid unrelated refactors.
 3. Do not downgrade dependencies to suppress alerts.
 4. Apply repository priorities when trade-offs appear:
-   - data integrity > performance > clean code
+   - security > data integrity > performance > clean code
 
 ## Procedure
 

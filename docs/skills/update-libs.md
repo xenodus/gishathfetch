@@ -8,9 +8,10 @@ Upgrade project dependencies safely while preserving behavior and keeping scrape
 
 Apply this order when trade-offs exist:
 
-1. Data integrity (correct card data)
-2. Performance
-3. Clean code
+1. Security
+2. Data integrity (correct card data)
+3. Performance
+4. Clean code
 
 ## Scope
 

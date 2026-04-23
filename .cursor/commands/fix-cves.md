@@ -12,7 +12,7 @@ Mandatory constraints:
 1. Prefer patch/minor upgrades before major upgrades.
 2. Never downgrade dependencies to silence advisories.
 3. Respect repo trade-off priorities:
-   - data integrity (correct card data) > performance > clean code.
+   - security > data integrity (correct card data) > performance > clean code.
 4. Run tests before PR handoff:
    - `make test`
 5. If backend scraper/gateway dependencies are touched, also run:

@@ -4,9 +4,10 @@
 
 When trade-offs exist, prioritize in this strict order:
 
-1. Data integrity (correct card data)
-2. Performance
-3. Clean code
+1. Security
+2. Data integrity (correct card data)
+3. Performance
+4. Clean code
 
 ## Backend (Go) implementation standards
 
