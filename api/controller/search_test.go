@@ -18,6 +18,23 @@ import (
 	"time"
 )
 
+func TestInitAndMapShops_FiltersByRequestedLGS(t *testing.T) {
+	shops := initAndMapShops([]string{agora.StoreName, tefuda.StoreName})
+
+	if len(shops) != 2 {
+		t.Fatalf("expected 2 shops after filtering, got %d", len(shops))
+	}
+	if _, ok := shops[agora.StoreName]; !ok {
+		t.Fatalf("expected %q to be included", agora.StoreName)
+	}
+	if _, ok := shops[tefuda.StoreName]; !ok {
+		t.Fatalf("expected %q to be included", tefuda.StoreName)
+	}
+	if _, ok := shops[cardaffinity.StoreName]; ok {
+		t.Fatalf("did not expect %q to be included", cardaffinity.StoreName)
+	}
+}
+
 // MockLGS is a mock implementation of gateway.LGS
 type MockLGS struct {
 	SearchFunc func(ctx context.Context, searchStr string) ([]gateway.Card, error)
