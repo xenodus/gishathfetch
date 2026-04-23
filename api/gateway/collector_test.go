@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,245 +11,32 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func TestParseRetryAfter(t *testing.T) {
-	t.Run("seconds header", func(t *testing.T) {
-		wait, ok := parseRetryAfter("3")
-		if !ok {
-			t.Fatalf("expected retry-after seconds to parse")
-		}
-		if wait != 3*time.Second {
-			t.Fatalf("expected 3s wait, got %s", wait)
-		}
-	})
-
-	t.Run("invalid header", func(t *testing.T) {
-		if _, ok := parseRetryAfter("invalid"); ok {
-			t.Fatalf("expected invalid retry-after to fail parsing")
-		}
-	})
-}
-
-func TestRetryDelay(t *testing.T) {
-	t.Run("429 with retry-after", func(t *testing.T) {
-		wait := retryDelay(429, "2", 0)
-		if wait != 2*time.Second {
-			t.Fatalf("expected 2s wait for retry-after header, got %s", wait)
-		}
-	})
-
-	t.Run("429 without retry-after uses stronger base backoff", func(t *testing.T) {
-		wait := retryDelay(429, "", 0)
-		if wait < 2*time.Second || wait >= 3*time.Second {
-			t.Fatalf("expected wait in [2s,3s) for first 429 retry, got %s", wait)
-		}
-	})
-
-	t.Run("non-429 uses default base backoff", func(t *testing.T) {
-		wait := retryDelay(500, "", 0)
-		if wait < 1*time.Second || wait >= 1500*time.Millisecond {
-			t.Fatalf("expected wait in [1s,1.5s) for first generic retry, got %s", wait)
-		}
-	})
-}
-
-func TestAdjustRetryDelayForContextDeadline(t *testing.T) {
-	t.Run("nil context keeps wait duration", func(t *testing.T) {
-		wait := 2 * time.Second
-		got := adjustRetryDelayForContextDeadline(wait, nil, 1, defaultMaxRetries)
-		if got != wait {
-			t.Fatalf("expected wait to remain %s, got %s", wait, got)
-		}
-	})
-
-	t.Run("final retry is immediate", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		got := adjustRetryDelayForContextDeadline(2*time.Second, ctx, defaultMaxRetries, defaultMaxRetries)
-		if got != 0 {
-			t.Fatalf("expected no wait for final retry, got %s", got)
-		}
-	})
-
-	t.Run("no deadline keeps wait duration", func(t *testing.T) {
-		ctx := context.Background()
-		wait := 1500 * time.Millisecond
-		got := adjustRetryDelayForContextDeadline(wait, ctx, 1, defaultMaxRetries)
-		if got != wait {
-			t.Fatalf("expected wait to remain %s, got %s", wait, got)
-		}
-	})
-
-	t.Run("caps wait when deadline is near", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
-		defer cancel()
-
-		got := adjustRetryDelayForContextDeadline(3*time.Second, ctx, 1, defaultMaxRetries)
-		if got <= 0 {
-			t.Fatalf("expected a reduced but positive wait, got %s", got)
-		}
-		if got >= 3*time.Second {
-			t.Fatalf("expected capped wait below original duration, got %s", got)
-		}
-	})
-
-	t.Run("returns zero when remaining time is too short", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		defer cancel()
-
-		got := adjustRetryDelayForContextDeadline(1*time.Second, ctx, 1, defaultMaxRetries)
-		if got != 0 {
-			t.Fatalf("expected zero wait when deadline is too close, got %s", got)
-		}
-	})
-}
-
-func TestApplyProxyForRetryAttempt(t *testing.T) {
+func TestInitialProxy(t *testing.T) {
 	c := colly.NewCollector()
-	t.Setenv("DEDICATED_PROXY_1", "")
-	t.Setenv("DEDICATED_PROXY_2", "")
-	t.Setenv("DEDICATED_PROXY_3", "")
-	t.Setenv("DEDICATED_PROXY_4", "")
-	t.Setenv("DEDICATED_PROXY_5", "")
+	for i := 1; i <= 5; i++ {
+		t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
+	}
 
-	t.Run("retry 0 uses dedicated proxy when available", func(t *testing.T) {
+	t.Run("uses leased dedicated when provided", func(t *testing.T) {
+		leased := "http://lease:1"
+		mode, proxyURL := applyInitialProxy(c, leased)
+		if mode != "dedicated" || proxyURL != leased {
+			t.Fatalf("expected dedicated leased, got mode=%q url=%q", mode, proxyURL)
+		}
+	})
+
+	t.Run("picks random dedicated when no lease", func(t *testing.T) {
+		c2 := colly.NewCollector()
+		for i := 2; i <= 5; i++ {
+			t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
+		}
 		t.Setenv("DEDICATED_PROXY_1", "1.1.1.1|8080|user|pass")
-		mode, proxyURL := applyProxyForRetryAttempt(c, 0, "")
+		mode, proxyURL := applyInitialProxy(c2, "")
 		if mode != "dedicated" {
 			t.Fatalf("expected dedicated mode, got %q", mode)
 		}
 		if proxyURL != "http://user:pass@1.1.1.1:8080" {
 			t.Fatalf("unexpected dedicated proxy url: %q", proxyURL)
-		}
-	})
-
-	t.Run("retry 2 uses direct on final retry", func(t *testing.T) {
-		t.Setenv("PROXY_URL", "http://shared:8080")
-		mode, proxyURL := applyProxyForRetryAttempt(c, 2, "")
-		if mode != "direct" {
-			t.Fatalf("expected direct mode on final retry, got %q", mode)
-		}
-		if proxyURL != "" {
-			t.Fatalf("expected empty proxy url on final retry, got %q", proxyURL)
-		}
-	})
-
-	t.Run("retry 1 still uses dedicated proxy", func(t *testing.T) {
-		t.Setenv("DEDICATED_PROXY_1", "2.2.2.2|9090|u1|p1")
-		mode, proxyURL := applyProxyForRetryAttempt(c, 1, "")
-		if mode != "dedicated" {
-			t.Fatalf("expected dedicated mode, got %q", mode)
-		}
-		if proxyURL != "http://u1:p1@2.2.2.2:9090" {
-			t.Fatalf("unexpected dedicated proxy url: %q", proxyURL)
-		}
-	})
-
-	t.Run("retry 4 remains direct without shared proxy", func(t *testing.T) {
-		_ = os.Unsetenv("PROXY_URL")
-		mode, proxyURL := applyProxyForRetryAttempt(c, 4, "")
-		if mode != "direct" {
-			t.Fatalf("expected direct mode, got %q", mode)
-		}
-		if proxyURL != "" {
-			t.Fatalf("expected empty proxy url, got %q", proxyURL)
-		}
-	})
-}
-
-func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
-	c := colly.NewCollector()
-	t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
-	t.Setenv("PROXY_URL", "http://shared:8080")
-
-	pinned := "http://pinned:1234"
-	mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
-	if mode != "dedicated" {
-		t.Fatalf("expected dedicated mode for pinned proxy on attempt 0, got %q", mode)
-	}
-	if proxyURL != pinned {
-		t.Fatalf("expected pinned proxy url %q on attempt 0, got %q", pinned, proxyURL)
-	}
-
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
-	if mode != "dedicated" {
-		t.Fatalf("expected dedicated mode for pinned proxy on attempt 1, got %q", mode)
-	}
-	if proxyURL == pinned {
-		t.Fatalf("expected attempt 1 to rotate away from pinned proxy %q", pinned)
-	}
-	if proxyURL != "http://user:pass@9.9.9.9:9000" {
-		t.Fatalf("expected retry to use configured dedicated proxy, got %q", proxyURL)
-	}
-
-	mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, dedicatedProxyRetryThreshold, defaultMaxRetries)
-	if mode != "direct" {
-		t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
-	}
-	if proxyURL != "" {
-		t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
-	}
-}
-
-func TestApplyProxyForRetryAttemptWithPinnedDedicatedBinderpos(t *testing.T) {
-	t.Run("default strategy uses dedicated then direct", func(t *testing.T) {
-		c := colly.NewCollector()
-		t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
-		t.Setenv("PROXY_URL", "http://shared:8080")
-		t.Setenv("USE_BINDERPOS_SHARED_PROXY_FALLBACK", "false")
-
-		pinned := "http://pinned:1234"
-		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "dedicated" || proxyURL != pinned {
-			t.Fatalf("expected dedicated on attempt 0, got mode=%q url=%q", mode, proxyURL)
-		}
-
-		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "dedicated" {
-			t.Fatalf("expected dedicated on attempt 1, got mode=%q url=%q", mode, proxyURL)
-		}
-		if proxyURL == pinned {
-			t.Fatalf("expected attempt 1 to rotate away from pinned proxy %q", pinned)
-		}
-		if proxyURL != "http://user:pass@9.9.9.9:9000" {
-			t.Fatalf("expected dedicated retry proxy on attempt 1, got %q", proxyURL)
-		}
-
-		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "direct" {
-			t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
-		}
-		if proxyURL != "" {
-			t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
-		}
-	})
-
-	t.Run("rollback strategy uses shared fallback", func(t *testing.T) {
-		c := colly.NewCollector()
-		t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
-		t.Setenv("PROXY_URL", "http://shared:8080")
-		t.Setenv("USE_BINDERPOS_SHARED_PROXY_FALLBACK", "true")
-
-		pinned := "http://pinned:1234"
-		mode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "dedicated" || proxyURL != pinned {
-			t.Fatalf("expected dedicated on attempt 0, got mode=%q url=%q", mode, proxyURL)
-		}
-
-		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 1, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "shared" {
-			t.Fatalf("expected PROXY_URL on attempt 1, got mode %q", mode)
-		}
-		if proxyURL != "http://shared:8080" {
-			t.Fatalf("expected shared proxy url on attempt 1, got %q", proxyURL)
-		}
-
-		mode, proxyURL = applyProxyForRetryAttemptWithPinnedDedicated(c, 2, "", pinned, binderposDedicatedRetryThreshold(), binderposMaxRetries)
-		if mode != "direct" {
-			t.Fatalf("expected direct mode on final retry attempt 2, got %q", mode)
-		}
-		if proxyURL != "" {
-			t.Fatalf("expected empty proxy url on final retry attempt 2, got %q", proxyURL)
 		}
 	})
 }

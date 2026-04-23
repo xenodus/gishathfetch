@@ -9,7 +9,7 @@ const (
 	storefrontSuggestPath   = "/search/suggest.json"
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
-	binderposDecklistPct    = 100
+	binderposDecklistPct    = 70
 	binderposAttemptTimeout = 2 * time.Second
 )
 
