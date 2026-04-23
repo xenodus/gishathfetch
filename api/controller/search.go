@@ -55,14 +55,14 @@ type StoreError struct {
 	Error string `json:"error"`
 }
 
-const binderposMaxConcurrent = 2
+const binderposMaxConcurrent = 5
 
 var sendDiscordAlert = alert.SendDiscordAlert
 
 type shopSpec struct {
-	name         string
-	newLGS       func() gateway.LGS
-	isBinderpos  bool
+	name        string
+	newLGS      func() gateway.LGS
+	isBinderpos bool
 }
 
 var shopRegistry = []shopSpec{
