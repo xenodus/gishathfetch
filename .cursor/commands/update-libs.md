@@ -11,7 +11,7 @@ Follow this skill document exactly:
 Key must-do constraints:
 1. Preserve behavior while upgrading packages using the native package manager.
 2. Respect repo priorities for trade-offs:
-   - security > data integrity (correct card data) > performance > clean code.
+   - security > correctness > data integrity (correct card data) > performance > clean code.
 3. Always run tests before PR updates:
    - `make test`
 4. For backend or scraper/gateway touching updates, also run:

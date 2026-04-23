@@ -9,9 +9,10 @@ Diagnose and fix scraper/gateway breakages caused by downstream HTML/API changes
 When trade-offs appear, enforce:
 
 1. Security
-2. Data integrity (correct card data)
-3. Performance
-4. Clean code
+2. Correctness
+3. Data integrity (correct card data)
+4. Performance
+5. Clean code
 
 ## Triggers
 

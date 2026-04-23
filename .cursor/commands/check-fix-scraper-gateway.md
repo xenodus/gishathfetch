@@ -12,9 +12,10 @@ Use this skill document as the operational checklist:
 Non-negotiable priorities:
 
 1. Security
-2. Data integrity (correct card data)
-3. Performance
-4. Clean code / architecture
+2. Correctness
+3. Data integrity (correct card data)
+4. Performance
+5. Clean code / architecture
 
 Before PR handoff, you must:
 

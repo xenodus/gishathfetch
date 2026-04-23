@@ -5,9 +5,14 @@
 When trade-offs exist, prioritize in this strict order:
 
 1. Security
-2. Data integrity (correct card data)
-3. Performance
-4. Clean code
+2. Correctness
+3. Data integrity (correct card data)
+4. Performance
+5. Clean code
+
+Notes:
+- Correctness = expected functional behavior (search logic, filtering, sorting, and API behavior).
+- Data integrity = accuracy and consistency of card fields (name/set/finish/language/price).
 
 ## Backend (Go) implementation standards
 
