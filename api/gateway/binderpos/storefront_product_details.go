@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
@@ -88,31 +89,49 @@ func fetchSuggestProducts(ctx context.Context, client *http.Client, baseURL, sea
 	query.Set("resources[options][unavailable_products]", "hide")
 	suggestURL.RawQuery = query.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, suggestURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
-	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
-		return nil, err
-	}
+	var payload storefrontSuggestResponse
+	fullURL := suggestURL.String()
+	for attempt := 1; attempt <= 3; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
+		if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
+			return nil, err
+		}
 
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
+		res, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		if res.StatusCode == http.StatusOK {
+			if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+				res.Body.Close()
+				return nil, err
+			}
+			res.Body.Close()
+			return payload.Resources.Results.Products, nil
+		}
+		_, _ = io.Copy(io.Discard, res.Body)
+		res.Body.Close()
+		if attempt < 3 && isRetriableHTTPStatus(res.StatusCode) {
+			time.Sleep(400 * time.Duration(attempt) * time.Millisecond)
+			continue
+		}
 		return nil, fmt.Errorf("storefront suggest request returned status %d", res.StatusCode)
 	}
+	// 3 fixed iterations always return from inside the loop; keep for the compiler and linters.
+	return nil, fmt.Errorf("storefront suggest: exhausted transient retries")
+}
 
-	var payload storefrontSuggestResponse
-	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
-		return nil, err
+func isRetriableHTTPStatus(status int) bool {
+	switch status {
+	case http.StatusTooManyRequests, http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		return true
+	default:
+		return false
 	}
-
-	return payload.Resources.Results.Products, nil
 }
 
 func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, productPath string) (*storefrontProductDetail, error) {

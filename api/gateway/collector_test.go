@@ -160,6 +160,10 @@ func TestApplyProxyForRetryAttempt(t *testing.T) {
 
 func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 	c := colly.NewCollector()
+	t.Setenv("DEDICATED_PROXY_2", "")
+	t.Setenv("DEDICATED_PROXY_3", "")
+	t.Setenv("DEDICATED_PROXY_4", "")
+	t.Setenv("DEDICATED_PROXY_5", "")
 	t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
 	t.Setenv("PROXY_URL", "http://shared:8080")
 
@@ -195,6 +199,10 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicated(t *testing.T) {
 func TestApplyProxyForRetryAttemptWithPinnedDedicatedBinderpos(t *testing.T) {
 	t.Run("default strategy uses dedicated then direct", func(t *testing.T) {
 		c := colly.NewCollector()
+		t.Setenv("DEDICATED_PROXY_2", "")
+		t.Setenv("DEDICATED_PROXY_3", "")
+		t.Setenv("DEDICATED_PROXY_4", "")
+		t.Setenv("DEDICATED_PROXY_5", "")
 		t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
 		t.Setenv("PROXY_URL", "http://shared:8080")
 		t.Setenv("USE_BINDERPOS_SHARED_PROXY_FALLBACK", "false")
@@ -227,6 +235,10 @@ func TestApplyProxyForRetryAttemptWithPinnedDedicatedBinderpos(t *testing.T) {
 
 	t.Run("rollback strategy uses shared fallback", func(t *testing.T) {
 		c := colly.NewCollector()
+		t.Setenv("DEDICATED_PROXY_2", "")
+		t.Setenv("DEDICATED_PROXY_3", "")
+		t.Setenv("DEDICATED_PROXY_4", "")
+		t.Setenv("DEDICATED_PROXY_5", "")
 		t.Setenv("DEDICATED_PROXY_1", "9.9.9.9|9000|user|pass")
 		t.Setenv("PROXY_URL", "http://shared:8080")
 		t.Setenv("USE_BINDERPOS_SHARED_PROXY_FALLBACK", "true")

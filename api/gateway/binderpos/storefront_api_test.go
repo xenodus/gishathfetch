@@ -79,6 +79,32 @@ func Test_StorefrontSupportedGamesEndpoint_ExistsForGreyOgreAndMtgAsia(t *testin
 }
 
 func fetchShopifyShopDomain(ctx context.Context, client *http.Client, storeURL string) (string, error) {
+	// Storefronts occasionally return transient 5xx / rate limits; retry a few times for CI stability.
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		domain, err := fetchShopifyShopDomainOnce(ctx, client, storeURL)
+		if err == nil {
+			return domain, nil
+		}
+		lastErr = err
+		if attempt < 3 && shouldRetryShopifyFetchError(err) {
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		return "", err
+	}
+	return "", lastErr
+}
+
+func shouldRetryShopifyFetchError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "status 50") || strings.Contains(s, "status 429") || strings.Contains(s, "i/o timeout")
+}
+
+func fetchShopifyShopDomainOnce(ctx context.Context, client *http.Client, storeURL string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, storeURL, nil)
 	if err != nil {
 		return "", err
