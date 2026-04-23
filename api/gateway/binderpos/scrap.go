@@ -18,7 +18,7 @@ import (
 )
 
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
-	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, gateway.NewOptimizedCollectorForBinderpos)
+	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDedicatedNoRetryCollector)
 }
 
 func (i impl) scrapDedicatedProxy(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {

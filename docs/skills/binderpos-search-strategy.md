@@ -20,25 +20,24 @@ Entry point: `binderpos.impl.Search(...)`.
 Attempt order:
 1. `api-dedicated`: Storefront API with a dedicated proxy client.
 2. `api-shared`: Storefront API with shared proxy (`PROXY_URL`).
-3. `scrap-dedicated`: HTML scraping with dedicated proxy, no collector retries.
-4. `scrap-shared`: HTML scraping with shared proxy (`PROXY_URL`), no collector retries.
+3. `scrap-shared-primary`: HTML scraping with shared proxy (`PROXY_URL`), no collector retries.
+4. `scrap-shared-secondary`: HTML scraping with shared proxy (`PROXY_URL`), no collector retries.
 
 Per-attempt result handling:
-- If an attempt returns `err == nil` and `len(cards) > 0`, return immediately.
-- If an attempt returns `err == nil` and zero cards, continue to next attempt.
-- If at least one attempt ended with `err == nil` (even with zero cards), final result is `[]` with `nil` error.
+- If an attempt returns `err == nil` (including zero cards), return immediately.
+- Fallback to the next strategy only happens when the current attempt returns an error.
 - If all attempts fail, return the latest fallback error (priority: attempt 4 -> 3 -> 2 -> 1).
 - Errors are wrapped with attempt labels, e.g. `attempt 2 (api-shared): ...`.
 
 ## 2) Storefront API sub-strategy (inside attempts 1 and 2)
 
 `searchByStorefrontAPIWithClient(...)` does:
-- 70% path: BinderPOS decklist endpoint (`useDecklistForRoll(0..69)`).
-- 30% path: Shopify suggest + per-product details fallback (`useDecklistForRoll(70..99)`).
+- Current rollout is 100% decklist endpoint (`binderposDecklistPct = 100`), so `useDecklistForRoll(0..99)` routes to decklist.
+- Roll-based selector logic is intentionally preserved for runtime testing/rollback adjustments.
 
 Notes:
 - Decklist path depends on host-to-Shopify mapping in `binderposShopifyDomainByStoreHost`; unmapped hosts fail this path and rely on fallback attempts.
-- Product-details path tolerates individual product-detail fetch failures (skips failed products) and can still return partial success with `nil` error.
+- Product-details path code still exists but is currently not selected under the 100% decklist rollout.
 
 ## 3) Retry semantics (important distinction)
 
