@@ -64,8 +64,8 @@ type storefrontDecklistRequestItem struct {
 }
 
 type storefrontDecklistLine struct {
-	Products  []storefrontDecklistProduct `json:"products"`
-	ValidName string                      `json:"validName"`
+	// The API can send a boolean validName; binding it would break decode, so it is not mapped.
+	Products []storefrontDecklistProduct `json:"products"`
 }
 
 type storefrontDecklistProduct struct {

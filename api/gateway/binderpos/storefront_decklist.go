@@ -96,9 +96,6 @@ func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines 
 				productTitle = strings.TrimSpace(product.Name)
 			}
 			if productTitle == "" {
-				productTitle = strings.TrimSpace(line.ValidName)
-			}
-			if productTitle == "" {
 				continue
 			}
 
@@ -153,4 +150,3 @@ func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines 
 
 	return cards
 }
-

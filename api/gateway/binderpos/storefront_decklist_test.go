@@ -1,8 +1,45 @@
 package binderpos
 
 import (
+	"encoding/json"
 	"testing"
 )
+
+func TestDecklistResponseJSONDecodesWithBooleanValidName(t *testing.T) {
+	// Real API can include "validName": false (bool); older struct used string and broke unmarshal.
+	const sample = `[
+	  {
+		"requested": 1,
+		"found": 1,
+		"searchName": "Abrade",
+		"productDetails": null,
+		"products": [
+		  {
+			"title": "Abrade [LCI]",
+			"name": "Abrade",
+			"handle": "abrade-lci",
+			"setName": "The Lost Caverns of Ixalan",
+			"img": "https://images.binderpos.com/x.png",
+			"variants": [
+			  { "shopifyId": 123, "title": "Near Mint", "price": 0.4, "quantity": 1 }
+			]
+		  }
+		],
+		"validName": false
+	  }
+	]`
+	var lines []storefrontDecklistLine
+	if err := json.Unmarshal([]byte(sample), &lines); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(lines) != 1 || len(lines[0].Products) != 1 {
+		t.Fatalf("unexpected structure: %+v", lines)
+	}
+	cards := mapDecklistLinesToCards(2, "Test", "https://www.mtg-asia.com", lines)
+	if len(cards) != 1 {
+		t.Fatalf("expected 1 card from mapped response, got %d", len(cards))
+	}
+}
 
 func TestStorefrontShopifyDomainForBaseURL(t *testing.T) {
 	t.Run("returns mapped domain for known host with www", func(t *testing.T) {
@@ -26,7 +63,6 @@ func TestStorefrontShopifyDomainForBaseURL(t *testing.T) {
 func TestMapDecklistLinesToCards(t *testing.T) {
 	lines := []storefrontDecklistLine{
 		{
-			ValidName: "Abrade",
 			Products: []storefrontDecklistProduct{
 				{
 					Title:   "Abrade [Foundations]",
@@ -98,6 +134,25 @@ func TestMapDecklistLinesToCards(t *testing.T) {
 		cards := mapDecklistLinesToCards(2, "Store", "https://store.example", invalid)
 		if len(cards) != 0 {
 			t.Fatalf("expected no cards, got %+v", cards)
+		}
+	})
+
+	t.Run("skips product when title and name are empty", func(t *testing.T) {
+		skipName := []storefrontDecklistLine{
+			{
+				Products: []storefrontDecklistProduct{
+					{
+						Handle:  "some-handle",
+						SetName: "A Set",
+						Variants: []storefrontDecklistStock{
+							{ShopifyID: 1, Title: "Near Mint", Price: 1, Quantity: 1},
+						},
+					},
+				},
+			},
+		}
+		if n := len(mapDecklistLinesToCards(2, "Store", "https://store.example", skipName)); n != 0 {
+			t.Fatalf("expected 0 cards when product has no title/name, got %d", n)
 		}
 	})
 }
