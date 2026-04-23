@@ -8,9 +8,7 @@ import (
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 	"os"
-	"strconv"
 	"sync"
-	"time"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -33,23 +31,6 @@ func RandomBrowserUserAgent() string {
 }
 
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
-
-const (
-	// Default flow allows two retries after the initial request:
-	// - first retry (attempt 1): dedicated proxy
-	// - second/final retry (attempt 2): direct (no proxy)
-	defaultMaxRetries = 2
-	// Binderpos also uses two retries after the initial request.
-	// Strategy is selected at runtime:
-	// - default: dedicated -> dedicated -> direct
-	// - optional rollback: dedicated -> shared(PROXY_URL) -> direct
-	binderposMaxRetries = defaultMaxRetries
-	// Dedicated (leased or random pool) is used while retryAttempt <= this value (initial request is attempt 0).
-	// First retry = attempt 1 (still dedicated).
-	dedicatedProxyRetryThreshold = 1
-	// Keep a small reserve so a retry request can still be dispatched before context cancellation.
-	retryExecutionBuffer = 300 * time.Millisecond
-)
 
 type dedicatedProxyLeasePool struct {
 	mu    sync.Mutex
@@ -107,7 +88,7 @@ func NewOptimizedCollector(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, true, false)
+	configureRequestOptimizations(c, false)
 	return c
 }
 
@@ -115,7 +96,7 @@ func NewOptimizedCollectorNoRetry(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, false, false)
+	configureRequestOptimizations(c, false)
 	return c
 }
 
@@ -123,7 +104,7 @@ func NewOptimizedCollectorNoRetryDirect(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, false, false)
+	configureRequestOptimizations(c, false)
 	forceCollectorDirectProxy(c)
 	return c
 }
@@ -132,24 +113,16 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizationsWithDedicatedThreshold(c, true, true, binderposDedicatedRetryThreshold(), binderposMaxRetries)
+	configureRequestOptimizations(c, true)
 	return c
 }
 
-func binderposDedicatedRetryThreshold() int {
-	if config.UseBinderposSharedProxyFallback() {
-		// Rollback mode keeps shared proxy on retry attempt 1.
-		return 0
-	}
-	return dedicatedProxyRetryThreshold
-}
-
 func ConfigureRequestOptimizations(c *colly.Collector) {
-	configureRequestOptimizations(c, true, false)
+	configureRequestOptimizations(c, false)
 }
 
 func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
-	configureRequestOptimizations(c, false, false)
+	configureRequestOptimizations(c, false)
 }
 
 func forceCollectorDirectProxy(c *colly.Collector) {
@@ -163,24 +136,14 @@ func forceCollectorDirectProxy(c *colly.Collector) {
 	})
 }
 
-// Core request optimization pipeline.
-func configureRequestOptimizations(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool) {
-	configureRequestOptimizationsWithDedicatedThreshold(c, enableRetry, enforceDedicatedProxyLease, dedicatedProxyRetryThreshold, defaultMaxRetries)
-}
-
-func configureRequestOptimizationsWithDedicatedThreshold(c *colly.Collector, enableRetry, enforceDedicatedProxyLease bool, dedicatedRetryThreshold, maxRetries int) {
+// Core request optimization pipeline. Gateway colly requests do not retry; each lookup is a single attempt.
+func configureRequestOptimizations(c *colly.Collector, enforceDedicatedProxyLease bool) {
 	applyCollectorDefaults(c)
 
 	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease)
-	registerRequestHandler(c, leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
+	registerRequestHandler(c, leasedDedicatedProxyURL)
 	registerScrapedHandler(c, releaseDedicatedProxy)
-
-	if !enableRetry {
-		registerNoRetryErrorHandler(c, releaseDedicatedProxy)
-		return
-	}
-
-	registerRetryErrorHandler(c, leasedDedicatedProxyURL, releaseDedicatedProxy, dedicatedRetryThreshold, maxRetries)
+	registerNoRetryErrorHandler(c, releaseDedicatedProxy)
 }
 
 // Base collector defaults used by all optimized collectors.
@@ -209,9 +172,26 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func(
 	return leasedDedicatedProxyURL, releaseDedicatedProxy
 }
 
+// applyInitialProxy configures the transport for the first and only request for this collector, mirroring
+// the prior "initial attempt" proxy policy without any follow-up attempts.
+func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL string) (string, string) {
+	if !config.UseProxy {
+		return clearProxy(c)
+	}
+	if leasedDedicatedProxyURL != "" {
+		c.SetProxy(leasedDedicatedProxyURL)
+		return "dedicated", leasedDedicatedProxyURL
+	}
+	if proxyURL, ok := randomDedicatedProxyURL(""); ok {
+		c.SetProxy(proxyURL)
+		return "dedicated", proxyURL
+	}
+	return clearProxy(c)
+}
+
 // Colly callback registration helpers.
-func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string, dedicatedRetryThreshold, maxRetries int) {
-	initialProxyMode, initialProxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, 0, "", leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
+func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string) {
+	initialProxyMode, initialProxyURL := applyInitialProxy(c, leasedDedicatedProxyURL)
 	c.OnRequest(func(r *colly.Request) {
 		if r == nil || r.URL == nil {
 			return
@@ -255,66 +235,6 @@ func registerNoRetryErrorHandler(c *colly.Collector, releaseDedicatedProxy func(
 	})
 }
 
-func registerRetryErrorHandler(c *colly.Collector, leasedDedicatedProxyURL string, releaseDedicatedProxy func(), dedicatedRetryThreshold, maxRetries int) {
-	c.OnError(func(r *colly.Response, err error) {
-		// Colly may call OnError without a full response/request on network/proxy failures.
-		// Guard all dereferences to prevent intermittent panics that bubble up as 500s.
-		if r == nil || r.Ctx == nil || r.Request == nil || r.Request.URL == nil {
-			mode := "unknown"
-			if leasedDedicatedProxyURL != "" {
-				mode = "dedicated"
-			}
-			log.Printf("Request failed before response was available: %v (%s)", err, formatProxyContext(mode, leasedDedicatedProxyURL))
-			releaseDedicatedProxy()
-			return
-		}
-
-		retries, _ := r.Ctx.GetAny("retries").(int)
-		statusCode := r.StatusCode
-
-		if retries < maxRetries {
-			nextRetry := retries + 1
-			r.Ctx.Put("retries", nextRetry)
-			previousProxyURL := r.Ctx.Get("last_proxy_url")
-			proxyMode, proxyURL := applyProxyForRetryAttemptWithPinnedDedicated(c, nextRetry, previousProxyURL, leasedDedicatedProxyURL, dedicatedRetryThreshold, maxRetries)
-			r.Ctx.Put("last_proxy_mode", proxyMode)
-			r.Ctx.Put("last_proxy_url", proxyURL)
-
-			waitDuration := retryDelay(statusCode, retryAfterHeaderValue(r), retries)
-			waitDuration = adjustRetryDelayForContextDeadline(waitDuration, c.Context, nextRetry, maxRetries)
-			log.Printf(
-				"Retrying %s (attempt=%d status=%d wait=%s %s)",
-				r.Request.URL,
-				nextRetry,
-				statusCode,
-				waitDuration,
-				formatProxyContext(proxyMode, proxyURL),
-			)
-			time.Sleep(waitDuration)
-			if retryErr := r.Request.Retry(); retryErr != nil {
-				log.Printf(
-					"Retry failed for %s (attempt=%d status=%d): %v (%s)",
-					r.Request.URL,
-					nextRetry,
-					statusCode,
-					retryErr,
-					formatProxyContext(proxyMode, proxyURL),
-				)
-				releaseDedicatedProxy()
-			}
-		} else {
-			log.Printf(
-				"Failed after %d retries: %s (status=%d %s)",
-				maxRetries,
-				r.Request.URL,
-				statusCode,
-				formatProxyContext(r.Ctx.Get("last_proxy_mode"), r.Ctx.Get("last_proxy_url")),
-			)
-			releaseDedicatedProxy()
-		}
-	})
-}
-
 // VisitWithProxyInfo wraps collector visit errors with the selected proxy context.
 func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
 	var proxyMu sync.Mutex
@@ -345,71 +265,10 @@ func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
 	return fmt.Errorf("%w (%s)", err, formatProxyContext(mode, proxyURL))
 }
 
-// Retry metadata helpers.
-func retryAfterHeaderValue(r *colly.Response) string {
-	if r == nil || r.Headers == nil {
-		return ""
-	}
-	return r.Headers.Get("Retry-After")
-}
-
 // Proxy strategy helpers.
-func applyProxyForRetryAttempt(c *colly.Collector, retryAttempt int, avoidProxyURL string) (string, string) {
-	return applyProxyForRetryAttemptWithPinnedDedicated(c, retryAttempt, avoidProxyURL, "", dedicatedProxyRetryThreshold, defaultMaxRetries)
-}
-
 func clearProxy(c *colly.Collector) (string, string) {
 	c.SetProxyFunc(nil)
 	return "direct", ""
-}
-
-func isDedicatedRetryAttempt(retryAttempt int, dedicatedRetryThreshold int) bool {
-	return retryAttempt <= dedicatedRetryThreshold
-}
-
-func isFinalRetryAttempt(retryAttempt, maxRetries int) bool {
-	return retryAttempt >= maxRetries
-}
-
-func applyProxyForRetryAttemptWithPinnedDedicated(c *colly.Collector, retryAttempt int, avoidProxyURL, pinnedDedicatedProxyURL string, dedicatedRetryThreshold, maxRetries int) (string, string) {
-	if !config.UseProxy {
-		return clearProxy(c)
-	}
-
-	// Final retry is always direct to bypass potentially bad proxy routes.
-	if isFinalRetryAttempt(retryAttempt, maxRetries) {
-		return clearProxy(c)
-	}
-
-	// Keep dedicated routing while retryAttempt <= dedicatedRetryThreshold (see constants).
-	// When pinned dedicated is present, keep it for attempt 0 and prefer rotating to a
-	// different dedicated proxy on retries.
-	// If no alternative dedicated proxy exists, fall back to pinned to preserve availability.
-	if pinnedDedicatedProxyURL != "" && isDedicatedRetryAttempt(retryAttempt, dedicatedRetryThreshold) {
-		if retryAttempt > 0 {
-			if proxyURL, ok := randomDedicatedProxyURL(pinnedDedicatedProxyURL); ok {
-				c.SetProxy(proxyURL)
-				return "dedicated", proxyURL
-			}
-		}
-		c.SetProxy(pinnedDedicatedProxyURL)
-		return "dedicated", pinnedDedicatedProxyURL
-	}
-
-	if isDedicatedRetryAttempt(retryAttempt, dedicatedRetryThreshold) {
-		if proxyURL, ok := randomDedicatedProxyURL(avoidProxyURL); ok {
-			c.SetProxy(proxyURL)
-			return "dedicated", proxyURL
-		}
-		return clearProxy(c)
-	}
-
-	if proxyURL := os.Getenv("PROXY_URL"); proxyURL != "" {
-		c.SetProxy(proxyURL)
-		return "shared", proxyURL
-	}
-
-	return clearProxy(c)
 }
 
 func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
@@ -491,73 +350,4 @@ func dedicatedProxyEnvLabel(proxyURL string) string {
 	}
 
 	return ""
-}
-
-func retryDelay(statusCode int, retryAfterHeader string, retries int) time.Duration {
-	if statusCode == 429 {
-		if retryAfter, ok := parseRetryAfter(retryAfterHeader); ok {
-			return retryAfter
-		}
-
-		// Stronger backoff for explicit throttling.
-		base := time.Duration(retries+2) * time.Second
-		jitter := time.Duration(rand.IntN(1000)) * time.Millisecond
-		return base + jitter
-	}
-
-	base := time.Duration(retries+1) * time.Second
-	jitter := time.Duration(rand.IntN(500)) * time.Millisecond
-	return base + jitter
-}
-
-func adjustRetryDelayForContextDeadline(waitDuration time.Duration, requestCtx context.Context, nextRetry, maxRetries int) time.Duration {
-	if requestCtx == nil {
-		return waitDuration
-	}
-
-	if isFinalRetryAttempt(nextRetry, maxRetries) {
-		// Prioritize issuing the final retry (which is direct/no proxy) before the context expires.
-		return 0
-	}
-
-	deadline, hasDeadline := requestCtx.Deadline()
-	if !hasDeadline {
-		return waitDuration
-	}
-
-	remaining := time.Until(deadline)
-	if remaining <= retryExecutionBuffer {
-		return 0
-	}
-
-	maxWait := remaining - retryExecutionBuffer
-	if waitDuration > maxWait {
-		return maxWait
-	}
-
-	return waitDuration
-}
-
-func parseRetryAfter(value string) (time.Duration, bool) {
-	if value == "" {
-		return 0, false
-	}
-
-	seconds, err := strconv.Atoi(value)
-	if err == nil {
-		if seconds <= 0 {
-			return 0, false
-		}
-		return time.Duration(seconds) * time.Second, true
-	}
-
-	retryAt, err := time.Parse(time.RFC1123, value)
-	if err != nil {
-		return 0, false
-	}
-	wait := time.Until(retryAt)
-	if wait <= 0 {
-		return 0, false
-	}
-	return wait, true
 }
