@@ -23,7 +23,7 @@ const (
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
 	binderposDecklistPct    = 70
-	binderposAttemptTimeout = 4 * time.Second
+	binderposAttemptTimeout = 2 * time.Second
 )
 
 var binderposShopifyDomainByStoreHost = map[string]string{
