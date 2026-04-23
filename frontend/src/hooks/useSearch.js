@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE_URL, BASE_URL, LGS_OPTIONS } from "../constants";
+import {
+  API_BASE_URL,
+  BASE_URL,
+  LGS_OPTIONS,
+  MIN_SEARCH_LENGTH,
+} from "../constants";
 
 // Search configuration constants
-const MIN_SEARCH_LENGTH = 3;
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const SEARCH_PROGRESS_INTERVAL_MS = 1000;
 const MAX_PROGRESS_DOTS = 15;
@@ -56,6 +60,9 @@ export default function useSearch() {
     new URLSearchParams(window.location.search).has("s"),
   );
   const progressIntervalRef = useRef(null);
+  const searchAbortControllerRef = useRef(null);
+  const autocompleteAbortControllerRef = useRef(null);
+  const activeSearchRequestIdRef = useRef(0);
 
   const updateUrlAndTitle = useCallback((query) => {
     if (window.location.hostname !== "localhost") {
@@ -68,6 +75,19 @@ export default function useSearch() {
   const performSearch = useCallback(
     (query, stores) => {
       if (!query || query.length < MIN_SEARCH_LENGTH) return;
+
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+      }
+
+      const requestId = activeSearchRequestIdRef.current + 1;
+      activeSearchRequestIdRef.current = requestId;
+      const searchAbortController = new AbortController();
+      searchAbortControllerRef.current = searchAbortController;
 
       // Prevent suggestions from appearing after programmatic search
       skipSuggestionsRef.current = true;
@@ -84,15 +104,16 @@ export default function useSearch() {
 
       const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
 
-      progressIntervalRef.current = setInterval(() => {
+      const progressInterval = setInterval(() => {
         setSearchProgress((prev) => {
           const dots = (prev.match(/\./g) || []).length;
           if (dots >= MAX_PROGRESS_DOTS) return "Searching LGS";
           return `${prev} .`;
         });
       }, SEARCH_PROGRESS_INTERVAL_MS);
+      progressIntervalRef.current = progressInterval;
 
-      fetch(searchUrl)
+      fetch(searchUrl, { signal: searchAbortController.signal })
         .then((res) => {
           if (!res.ok) {
             throw new Error(`Server error: ${res.status} ${res.statusText}`);
@@ -100,6 +121,7 @@ export default function useSearch() {
           return res.json();
         })
         .then((result) => {
+          if (requestId !== activeSearchRequestIdRef.current) return;
           if (result && Object.hasOwn(result, "data")) {
             // Treat null data as empty array
             setSearchResults(result.data || []);
@@ -114,6 +136,8 @@ export default function useSearch() {
           }
         })
         .catch((err) => {
+          if (err.name === "AbortError") return;
+          if (requestId !== activeSearchRequestIdRef.current) return;
           console.error("Search error:", err);
           setSearchResults([]);
 
@@ -136,12 +160,18 @@ export default function useSearch() {
           }
         })
         .finally(() => {
-          setIsSearching(false);
-          setSearchProgress("Search");
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
+          clearInterval(progressInterval);
+          if (progressIntervalRef.current === progressInterval) {
             progressIntervalRef.current = null;
           }
+
+          if (searchAbortControllerRef.current === searchAbortController) {
+            searchAbortControllerRef.current = null;
+          }
+
+          if (requestId !== activeSearchRequestIdRef.current) return;
+          setIsSearching(false);
+          setSearchProgress("Search");
           skipSuggestionsRef.current = false;
         });
     },
@@ -163,8 +193,15 @@ export default function useSearch() {
       const timer = setTimeout(() => {
         if (skipSuggestionsRef.current) return;
 
+        if (autocompleteAbortControllerRef.current) {
+          autocompleteAbortControllerRef.current.abort();
+        }
+        const autocompleteAbortController = new AbortController();
+        autocompleteAbortControllerRef.current = autocompleteAbortController;
+
         fetch(
           `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`,
+          { signal: autocompleteAbortController.signal },
         )
           .then((res) => {
             if (!res.ok) {
@@ -173,6 +210,12 @@ export default function useSearch() {
             return res.json();
           })
           .then((res) => {
+            if (
+              autocompleteAbortControllerRef.current !==
+              autocompleteAbortController
+            ) {
+              return;
+            }
             if (res.data && res.data.length > 0) {
               setSuggestions(res.data);
               setShowSuggestions(true);
@@ -182,16 +225,48 @@ export default function useSearch() {
             }
           })
           .catch((err) => {
+            if (err.name === "AbortError") return;
             console.error("Autocomplete error:", err);
             // Silently fail for autocomplete - not critical
             setSuggestions([]);
             setShowSuggestions(false);
+          })
+          .finally(() => {
+            if (
+              autocompleteAbortControllerRef.current ===
+              autocompleteAbortController
+            ) {
+              autocompleteAbortControllerRef.current = null;
+            }
           });
       }, AUTOCOMPLETE_DEBOUNCE_MS);
       return () => clearTimeout(timer);
     }
-    // When searchQuery is too short, suggestions will naturally be empty from previous state
+
+    if (autocompleteAbortControllerRef.current) {
+      autocompleteAbortControllerRef.current.abort();
+      autocompleteAbortControllerRef.current = null;
+    }
+    setSuggestions([]);
+    setShowSuggestions(false);
   }, [searchQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      if (searchAbortControllerRef.current) {
+        searchAbortControllerRef.current.abort();
+        searchAbortControllerRef.current = null;
+      }
+      if (autocompleteAbortControllerRef.current) {
+        autocompleteAbortControllerRef.current.abort();
+        autocompleteAbortControllerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSuggestionClick = (suggestion) => {
     skipSuggestionsRef.current = true;
