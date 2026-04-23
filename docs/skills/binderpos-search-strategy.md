@@ -15,18 +15,17 @@ Canonical source files:
 
 Entry point: `binderpos.impl.Search(...)`.
 
-`Search` runs a fixed 4-attempt fallback chain via `searchWithFallback`, and each attempt is wrapped by `runWithAttemptTimeout` with `binderposAttemptTimeout = 2s`.
+`Search` runs a fixed 3-attempt fallback chain via `searchWithFallback`, and each attempt is wrapped by `runWithAttemptTimeout` with `binderposAttemptTimeout = 2s`.
 
 Attempt order:
 1. `api-dedicated`: Storefront API with a dedicated proxy client.
 2. `api-shared`: Storefront API with shared proxy (`PROXY_URL`).
-3. `scrap-shared-primary`: HTML scraping with shared proxy (`PROXY_URL`), no collector retries.
-4. `scrap-shared-secondary`: HTML scraping with shared proxy (`PROXY_URL`), no collector retries.
+3. `scrap-shared`: HTML scraping with shared proxy (`PROXY_URL`), no collector retries.
 
 Per-attempt result handling:
 - If an attempt returns `err == nil` (including zero cards), return immediately.
 - Fallback to the next strategy only happens when the current attempt returns an error.
-- If all attempts fail, return the latest fallback error (priority: attempt 4 -> 3 -> 2 -> 1).
+- If all attempts fail, return the latest fallback error (priority: attempt 3 -> 2 -> 1).
 - Errors are wrapped with attempt labels, e.g. `attempt 2 (api-shared): ...`.
 
 ## 2) Storefront API sub-strategy (inside attempts 1 and 2)
@@ -42,9 +41,9 @@ Notes:
 ## 3) Retry semantics (important distinction)
 
 ### A) Retries for `Search`
-- `Search` itself has **fallback attempts** (4 sequential strategies), not per-request backoff retries.
+- `Search` itself has **fallback attempts** (3 sequential strategies), not per-request backoff retries.
 - No internal HTTP retry loop is used in attempts 1/2 beyond normal client behavior.
-- Attempts 3/4 explicitly use no-retry collectors (`NewOptimizedCollectorNoRetry*`), with 2s request timeout.
+- Attempt 3 explicitly uses a no-retry collector (`NewOptimizedCollectorNoRetry*`), with 2s request timeout.
 
 ### B) Retries for direct `Scrap` calls
 - `binderpos.impl.Scrap(...)` now uses the no-retry dedicated collector.

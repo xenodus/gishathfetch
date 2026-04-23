@@ -9,8 +9,7 @@ import (
 func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
 	searchAPISharedFn func() ([]gateway.Card, error),
-	scrapSharedPrimaryFn func() ([]gateway.Card, error),
-	scrapSharedSecondaryFn func() ([]gateway.Card, error),
+	scrapSharedFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
 	apiDedicatedErr = annotateAttemptError(1, "api-dedicated", apiDedicatedErr)
@@ -24,20 +23,10 @@ func searchWithFallback(
 		return apiSharedCards, nil
 	}
 
-	scrapedCards, scrapErr := scrapSharedPrimaryFn()
-	scrapErr = annotateAttemptError(3, "scrap-shared-primary", scrapErr)
+	scrapedCards, scrapErr := scrapSharedFn()
+	scrapErr = annotateAttemptError(3, "scrap-shared", scrapErr)
 	if scrapErr == nil {
 		return scrapedCards, nil
-	}
-
-	scrapedSharedCards, scrapSharedErr := scrapSharedSecondaryFn()
-	scrapSharedErr = annotateAttemptError(4, "scrap-shared-secondary", scrapSharedErr)
-	if scrapSharedErr == nil {
-		return scrapedSharedCards, nil
-	}
-
-	if scrapSharedErr != nil {
-		return scrapedSharedCards, scrapSharedErr
 	}
 	if scrapErr != nil {
 		return scrapedCards, scrapErr
