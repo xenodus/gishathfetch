@@ -50,12 +50,14 @@ lambda-create-staging:
 lambda-update:
 	export AWS_PAGER="" && aws lambda update-function-code \
       --function-name mtg-price-scrapper \
-      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest
+      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
+      --output text > /dev/null
 
 lambda-update-staging:
 	export AWS_PAGER="" && aws lambda update-function-code \
       --function-name mtg-price-scrapper-staging \
-      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging
+      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:staging \
+	  --output text > /dev/null
 
 aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
