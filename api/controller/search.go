@@ -56,7 +56,7 @@ type StoreError struct {
 	Error string `json:"error"`
 }
 
-const binderposMaxConcurrent = 10
+const binderposMaxConcurrent = 12
 
 var sendDiscordAlert = alert.SendDiscordAlert
 
