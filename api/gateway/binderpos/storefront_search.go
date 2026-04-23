@@ -20,6 +20,11 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return i.scrapDedicatedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+			})
+		},
+		func() ([]gateway.Card, error) {
+			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
 				return i.scrapSharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			})
 		},

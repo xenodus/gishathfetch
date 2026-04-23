@@ -16,8 +16,8 @@ func TestUseDecklistForRoll(t *testing.T) {
 	}{
 		{name: "0 routes to decklist", roll: 0, want: true},
 		{name: "69 routes to decklist", roll: 69, want: true},
-		{name: "70 routes to decklist", roll: 70, want: true},
-		{name: "99 routes to decklist", roll: 99, want: true},
+		{name: "70 routes to product details fallback", roll: 70, want: false},
+		{name: "99 routes to product details fallback", roll: 99, want: false},
 	}
 
 	for _, test := range tests {
