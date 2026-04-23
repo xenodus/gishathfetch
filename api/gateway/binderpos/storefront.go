@@ -22,6 +22,7 @@ const (
 	storefrontSuggestPath   = "/search/suggest.json"
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
+	binderposDecklistPct    = 70
 	binderposAttemptTimeout = 4 * time.Second
 )
 
@@ -38,6 +39,10 @@ var binderposShopifyDomainByStoreHost = map[string]string{
 	"onemtg.com.sg":           "one-mtg.myshopify.com",
 	"tefudagames.com":         "bacc1b-3.myshopify.com",
 	// arcanesanctumtcg.com intentionally omitted: BinderPOS decklist API returns 401.
+}
+
+var shouldUseDecklistEndpoint = func() bool {
+	return useDecklistForRoll(rand.IntN(100))
 }
 
 type storefrontSuggestResponse struct {
@@ -225,11 +230,21 @@ func annotateAttemptError(attempt int, strategy string, err error) error {
 }
 
 func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
-	decklistCards, err := searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
-	if err == nil {
-		return decklistCards, nil
+	if shouldUseDecklistEndpoint() {
+		decklistCards, err := searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+		if err == nil {
+			return decklistCards, nil
+		}
 	}
 
+	return searchByStorefrontProductDetailsAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+}
+
+func useDecklistForRoll(roll int) bool {
+	return roll < binderposDecklistPct
+}
+
+func searchByStorefrontProductDetailsAPI(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
 	products, err := fetchSuggestProducts(ctx, client, baseURL, searchStr)
 	if err != nil {
 		return nil, err
