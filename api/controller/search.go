@@ -27,7 +27,6 @@ import (
 	"mtg-price-checker-sg/gateway/tefuda"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -59,6 +58,44 @@ type StoreError struct {
 const binderposMaxConcurrent = 12
 
 var sendDiscordAlert = alert.SendDiscordAlert
+
+type shopSpec struct {
+	name         string
+	newLGS       func() gateway.LGS
+	isBinderpos  bool
+}
+
+var shopRegistry = []shopSpec{
+	{name: agora.StoreName, newLGS: agora.NewLGS},
+	{name: arcanesanctum.StoreName, newLGS: arcanesanctum.NewLGS, isBinderpos: true},
+	{name: cardaffinity.StoreName, newLGS: cardaffinity.NewLGS, isBinderpos: true},
+	{name: cardboardcrackgames.StoreName, newLGS: cardboardcrackgames.NewLGS, isBinderpos: true},
+	{name: cardscitadel.StoreName, newLGS: cardscitadel.NewLGS, isBinderpos: true},
+	{name: cardsandcollection.StoreName, newLGS: cardsandcollection.NewLGS},
+	{name: duellerpoint.StoreName, newLGS: duellerpoint.NewLGS},
+	{name: fivemana.StoreName, newLGS: fivemana.NewLGS},
+	{name: flagship.StoreName, newLGS: flagship.NewLGS, isBinderpos: true},
+	{name: gameshaven.StoreName, newLGS: gameshaven.NewLGS, isBinderpos: true},
+	{name: gog.StoreName, newLGS: gog.NewLGS, isBinderpos: true},
+	{name: hideout.StoreName, newLGS: hideout.NewLGS, isBinderpos: true},
+	{name: manapro.StoreName, newLGS: manapro.NewLGS, isBinderpos: true},
+	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
+	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS, isBinderpos: true},
+	{name: onemtg.StoreName, newLGS: onemtg.NewLGS, isBinderpos: true},
+	{name: tefuda.StoreName, newLGS: tefuda.NewLGS, isBinderpos: true},
+	{name: tcgmarketplace.StoreName, newLGS: tcgmarketplace.NewLGS},
+	// {name: unsleeved.StoreName, newLGS: unsleeved.NewLGS},
+}
+
+var binderposStoreNames = func() map[string]struct{} {
+	storeNames := make(map[string]struct{}, len(shopRegistry))
+	for _, shop := range shopRegistry {
+		if shop.isBinderpos {
+			storeNames[shop.name] = struct{}{}
+		}
+	}
+	return storeNames
+}()
 
 func Search(ctx context.Context, input SearchInput) ([]Card, []StoreError, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
@@ -334,35 +371,21 @@ func reportNoResultMetrics(shopNameToHasResultMap map[string]bool, searchString 
 }
 
 func initAndMapShops(lgs []string) map[string]gateway.LGS {
-	lgsMap := map[string]gateway.LGS{
-		agora.StoreName:               agora.NewLGS(),
-		arcanesanctum.StoreName:       arcanesanctum.NewLGS(),
-		cardaffinity.StoreName:        cardaffinity.NewLGS(),
-		cardboardcrackgames.StoreName: cardboardcrackgames.NewLGS(),
-		cardscitadel.StoreName:        cardscitadel.NewLGS(),
-		cardsandcollection.StoreName:  cardsandcollection.NewLGS(),
-		duellerpoint.StoreName:        duellerpoint.NewLGS(),
-		fivemana.StoreName:            fivemana.NewLGS(),
-		flagship.StoreName:            flagship.NewLGS(),
-		gameshaven.StoreName:          gameshaven.NewLGS(),
-		gog.StoreName:                 gog.NewLGS(),
-		hideout.StoreName:             hideout.NewLGS(),
-		manapro.StoreName:             manapro.NewLGS(),
-		moxandlotus.StoreName:         moxandlotus.NewLGS(),
-		mtgasia.StoreName:             mtgasia.NewLGS(),
-		onemtg.StoreName:              onemtg.NewLGS(),
-		tefuda.StoreName:              tefuda.NewLGS(),
-		tcgmarketplace.StoreName:      tcgmarketplace.NewLGS(),
-		// unsleeved.StoreName:           unsleeved.NewLGS(),
+	selectedLGS := map[string]struct{}{}
+	for _, storeName := range lgs {
+		selectedLGS[storeName] = struct{}{}
 	}
 
-	if len(lgs) > 0 {
-		for storeName := range lgsMap {
-			if !slices.Contains(lgs, storeName) {
-				delete(lgsMap, storeName)
+	lgsMap := make(map[string]gateway.LGS, len(shopRegistry))
+	for _, shop := range shopRegistry {
+		if len(selectedLGS) > 0 {
+			if _, exists := selectedLGS[shop.name]; !exists {
+				continue
 			}
 		}
+		lgsMap[shop.name] = shop.newLGS()
 	}
+
 	return lgsMap
 }
 
@@ -375,23 +398,8 @@ func initShopHasResultMap(lgsMap map[string]gateway.LGS) map[string]bool {
 }
 
 func isBinderposStore(shopName string) bool {
-	switch shopName {
-	case cardaffinity.StoreName,
-		cardboardcrackgames.StoreName,
-		cardscitadel.StoreName,
-		flagship.StoreName,
-		gameshaven.StoreName,
-		gog.StoreName,
-		hideout.StoreName,
-		manapro.StoreName,
-		mtgasia.StoreName,
-		onemtg.StoreName,
-		tefuda.StoreName,
-		arcanesanctum.StoreName:
-		return true
-	default:
-		return false
-	}
+	_, ok := binderposStoreNames[shopName]
+	return ok
 }
 
 func isArtCard(s string) bool {
