@@ -8,6 +8,7 @@ import (
 
 const StoreName = "Hideout"
 const StoreBaseURL = "https://hideoutcg.com"
+const StoreShopifyDomain = "220022-20.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
 
 type Store struct {
@@ -31,6 +32,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		3,
 		s.Name,
 		s.BaseUrl,
+		StoreShopifyDomain,
 		s.SearchUrl,
 		searchStr,
 	)

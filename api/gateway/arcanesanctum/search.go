@@ -31,6 +31,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		5,
 		s.Name,
 		s.BaseUrl,
+		"",
 		s.SearchUrl,
 		searchStr,
 	)

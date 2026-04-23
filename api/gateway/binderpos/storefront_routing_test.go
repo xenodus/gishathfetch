@@ -44,6 +44,7 @@ func TestSearchByStorefrontAPIWithClient_UsesProductDetailPathWhenDecklistNotSel
 		2,
 		"Test Store",
 		server.URL,
+		"",
 		"Abrade",
 	)
 	if err != nil {
@@ -68,6 +69,7 @@ func TestSearchByStorefrontAPIWithClient_ReturnsDecklistErrorWhenSelected(t *tes
 		2,
 		"Test Store",
 		server.URL,
+		"",
 		"Abrade",
 	)
 	if err == nil {
