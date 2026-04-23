@@ -7,7 +7,6 @@ require (
 	github.com/aws/aws-lambda-go v1.52.0
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/joho/godotenv v1.5.1
-	github.com/sony/sonyflake v1.3.0
 	github.com/stretchr/testify v1.11.1
 )
 
