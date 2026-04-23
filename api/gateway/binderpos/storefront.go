@@ -9,9 +9,7 @@ const (
 	storefrontSuggestPath   = "/search/suggest.json"
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
-	// Keep the roll-based selector in place for production testing toggles.
-	// Current rollout is 100% decklist path.
-	binderposDecklistPct = 100
+	binderposDecklistPct    = 70
 	binderposAttemptTimeout = 2 * time.Second
 )
 
