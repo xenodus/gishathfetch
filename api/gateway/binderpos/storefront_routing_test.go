@@ -54,7 +54,7 @@ func TestSearchByStorefrontAPIWithClient_UsesProductDetailPathWhenDecklistNotSel
 	}
 }
 
-func TestSearchByStorefrontAPIWithClient_FallsBackAfterDecklistError(t *testing.T) {
+func TestSearchByStorefrontAPIWithClient_ReturnsDecklistErrorWhenSelected(t *testing.T) {
 	server := newStorefrontProductDetailFixtureServer()
 	defer server.Close()
 
@@ -70,11 +70,11 @@ func TestSearchByStorefrontAPIWithClient_FallsBackAfterDecklistError(t *testing.
 		server.URL,
 		"Abrade",
 	)
-	if err != nil {
-		t.Fatalf("expected nil error after decklist failure fallback, got %v", err)
+	if err == nil {
+		t.Fatalf("expected decklist request error, got nil")
 	}
-	if len(cards) != 1 {
-		t.Fatalf("expected 1 fallback card, got %d", len(cards))
+	if len(cards) != 0 {
+		t.Fatalf("expected 0 cards when decklist request fails, got %d", len(cards))
 	}
 }
 

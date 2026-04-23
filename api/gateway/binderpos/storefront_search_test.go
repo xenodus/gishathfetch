@@ -24,6 +24,10 @@ type binderposStoreSearchCase struct {
 }
 
 func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
+	previousSelector := shouldUseDecklistEndpoint
+	shouldUseDecklistEndpoint = func() bool { return false }
+	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
+
 	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
@@ -43,6 +47,10 @@ func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
 }
 
 func Test_SearchByStorefrontAPI_OverlapsLegacyScrapeResults(t *testing.T) {
+	previousSelector := shouldUseDecklistEndpoint
+	shouldUseDecklistEndpoint = func() bool { return false }
+	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
+
 	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {

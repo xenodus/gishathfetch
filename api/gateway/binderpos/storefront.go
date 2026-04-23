@@ -231,10 +231,7 @@ func annotateAttemptError(attempt int, strategy string, err error) error {
 
 func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
 	if shouldUseDecklistEndpoint() {
-		decklistCards, err := searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
-		if err == nil {
-			return decklistCards, nil
-		}
+		return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
 	}
 
 	return searchByStorefrontProductDetailsAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
