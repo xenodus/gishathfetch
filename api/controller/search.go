@@ -17,7 +17,6 @@ import (
 	"mtg-price-checker-sg/gateway/flagship"
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
-	"mtg-price-checker-sg/gateway/google"
 	"mtg-price-checker-sg/gateway/hideout"
 	"mtg-price-checker-sg/gateway/manapro"
 	"mtg-price-checker-sg/gateway/moxandlotus"
@@ -103,8 +102,6 @@ func Search(ctx context.Context, input SearchInput) ([]Card, []StoreError, error
 }
 
 func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, []StoreError, error) {
-	shopNameToHasResultMap := initShopHasResultMap(shopNameToLGSMap)
-
 	if len(shopNameToLGSMap) == 0 {
 		return nil, []StoreError{}, nil
 	}
@@ -119,13 +116,10 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	// 2. Filter and Sort
 	var inStockCards []Card
 	if len(cards) > 0 {
-		inStockCards = filterAndSortCards(cards, input.SearchString, shopNameToHasResultMap)
+		inStockCards = filterAndSortCards(cards, input.SearchString)
 	}
 
-	// 3. Report metrics for shops with no results
-	reportNoResultMetrics(shopNameToHasResultMap, input.SearchString)
-
-	// 4. Ensure request takes at least the threshold
+	// 3. Ensure request takes at least the threshold
 	if time.Since(realStart) < responseThreshold {
 		sleepDuration := responseThreshold - time.Since(realStart)
 		time.Sleep(sleepDuration)
@@ -222,7 +216,9 @@ func searchShop(
 ) {
 	defer recoverShopPanic(shopName, aggregator)
 	start := time.Now()
-	defer log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
+	defer func() {
+		log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
+	}()
 
 	shopCtx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
 	defer cancel()
@@ -339,7 +335,7 @@ func parseSearchErrorMessage(message, searchString string) (shopName, details st
 	return shopName, details, true
 }
 
-func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHasResultMap map[string]bool) []Card {
+func filterAndSortCards(cards []gateway.Card, searchString string) []Card {
 	var inStockCards, inStockExactMatchCards, inStockPartialMatchCards, inStockPrefixMatchCards []Card
 
 	// Sort by price ASC
@@ -377,10 +373,7 @@ func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHas
 
 			lowerName := strings.ToLower(cleanCardName)
 
-			// if in substring, mark lgs as having result
-			if strings.Contains(lowerName, lowerSearchString) {
-				shopNameToHasResultMap[c.Source] = true
-			} else {
+			if !strings.Contains(lowerName, lowerSearchString) {
 				// skip card if not in substring
 				continue
 			}
@@ -408,21 +401,6 @@ func filterAndSortCards(cards []gateway.Card, searchString string, shopNameToHas
 	return inStockCards
 }
 
-func reportNoResultMetrics(shopNameToHasResultMap map[string]bool, searchString string) {
-	for shopName, hasResult := range shopNameToHasResultMap {
-		if !hasResult {
-			log.Printf("Shop [%s] has no result for [%s]", shopName, searchString)
-
-			go func(lgs, searchString string) {
-				err := google.LGSNoResultMeasurement(lgs, searchString)
-				if err != nil {
-					log.Printf("Error sending measurement for [%s]: %v", lgs, err)
-				}
-			}(shopName, searchString)
-		}
-	}
-}
-
 func initAndMapShops(lgs []string) map[string]gateway.LGS {
 	selectedLGS := map[string]struct{}{}
 	for _, storeName := range lgs {
@@ -440,14 +418,6 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 	}
 
 	return lgsMap
-}
-
-func initShopHasResultMap(lgsMap map[string]gateway.LGS) map[string]bool {
-	shopNameToHasResultMap := make(map[string]bool, len(lgsMap))
-	for shopName := range lgsMap {
-		shopNameToHasResultMap[shopName] = false
-	}
-	return shopNameToHasResultMap
 }
 
 func isBinderposStore(shopName string) bool {
