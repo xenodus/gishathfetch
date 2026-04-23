@@ -31,3 +31,8 @@ Notes:
 ## UI deliverables
 
 - For any PR that includes UI changes, include screenshots of the updated UI at both desktop and mobile resolutions.
+
+## BinderPOS strategy memory (operational rule)
+
+- Canonical BinderPOS search/retry summary is tracked in `docs/skills/binderpos-search-strategy.md`.
+- If any BinderPOS search/fallback/retry behavior changes (including proxy routing or timeout behavior), update that summary file in the same PR.
