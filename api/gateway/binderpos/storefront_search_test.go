@@ -16,11 +16,12 @@ func init() {
 }
 
 type binderposStoreSearchCase struct {
-	storeName    string
-	baseURL      string
-	searchURL    string
-	scrapVariant int
-	query        string
+	storeName     string
+	baseURL       string
+	shopifyDomain string
+	searchURL     string
+	scrapVariant  int
+	query         string
 }
 
 func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
@@ -31,7 +32,7 @@ func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
 	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
-			cards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.query)
+			cards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.shopifyDomain, testCase.query)
 			require.NoError(t, err)
 			require.NotEmpty(t, cards)
 
@@ -54,7 +55,7 @@ func Test_SearchByStorefrontAPI_OverlapsLegacyScrapeResults(t *testing.T) {
 	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
-			storefrontCards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.query)
+			storefrontCards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.shopifyDomain, testCase.query)
 			require.NoError(t, err)
 			require.NotEmpty(t, storefrontCards)
 
@@ -90,88 +91,100 @@ func Test_SearchByStorefrontAPI_OverlapsLegacyScrapeResults(t *testing.T) {
 func binderposStoreSearchCases() []binderposStoreSearchCase {
 	return []binderposStoreSearchCase{
 		{
-			storeName:    "Cards Citadel",
-			baseURL:      "https://cardscitadel.com",
-			searchURL:    "/search?q=*%s*",
-			scrapVariant: 1,
-			query:        "Abrade",
+			storeName:     "Cards Citadel",
+			baseURL:       "https://cardscitadel.com",
+			shopifyDomain: "card-citadel.myshopify.com",
+			searchURL:     "/search?q=*%s*",
+			scrapVariant:  1,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Card Affinity",
-			baseURL:      "https://card-affinity.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 2,
-			query:        "Abrade",
+			storeName:     "Card Affinity",
+			baseURL:       "https://card-affinity.com",
+			shopifyDomain: "563304-2.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Cardboard Crack Games",
-			baseURL:      "https://www.cardboardcrackgames.com",
-			searchURL:    "/search?type=product&q=%s",
-			scrapVariant: 2,
-			query:        "Abrade",
+			storeName:     "Cardboard Crack Games",
+			baseURL:       "https://www.cardboardcrackgames.com",
+			shopifyDomain: "cardboardcrackgames.myshopify.com",
+			searchURL:     "/search?type=product&q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Flagship Games",
-			baseURL:      "https://www.flagshipgames.sg",
-			searchURL:    "/search?type=product&q=%s",
-			scrapVariant: 2,
-			query:        "Abrade",
+			storeName:     "Flagship Games",
+			baseURL:       "https://www.flagshipgames.sg",
+			shopifyDomain: "flagship-games.myshopify.com",
+			searchURL:     "/search?type=product&q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Games Haven",
-			baseURL:      "https://www.gameshaventcg.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 3,
-			query:        "Abrade",
+			storeName:     "Games Haven",
+			baseURL:       "https://www.gameshaventcg.com",
+			shopifyDomain: "games-haven-sg.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  3,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Grey Ogre Games",
-			baseURL:      "https://www.greyogregames.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 3,
-			query:        "Abrade",
+			storeName:     "Grey Ogre Games",
+			baseURL:       "https://www.greyogregames.com",
+			shopifyDomain: "grey-ogre-games-singapore.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  3,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Hideout",
-			baseURL:      "https://hideoutcg.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 3,
-			query:        "Abrade",
+			storeName:     "Hideout",
+			baseURL:       "https://hideoutcg.com",
+			shopifyDomain: "220022-20.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  3,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Mana Pro",
-			baseURL:      "https://sg-manapro.com",
-			searchURL:    "/search?type=product&q=%s",
-			scrapVariant: 2,
-			query:        "Abrade",
+			storeName:     "Mana Pro",
+			baseURL:       "https://sg-manapro.com",
+			shopifyDomain: "mana-pro-sg.myshopify.com",
+			searchURL:     "/search?type=product&q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "MTG Asia",
-			baseURL:      "https://www.mtg-asia.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 2,
-			query:        "Abrade",
+			storeName:     "MTG Asia",
+			baseURL:       "https://www.mtg-asia.com",
+			shopifyDomain: "mtgasia.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "OneMtg",
-			baseURL:      "https://onemtg.com.sg",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 2,
-			query:        "Abrade",
+			storeName:     "OneMtg",
+			baseURL:       "https://onemtg.com.sg",
+			shopifyDomain: "one-mtg.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
 		},
 		{
-			storeName:    "Tefuda",
-			baseURL:      "https://tefudagames.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 4,
-			query:        "smothering tithe",
+			storeName:     "Tefuda",
+			baseURL:       "https://tefudagames.com",
+			shopifyDomain: "bacc1b-3.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  4,
+			query:         "smothering tithe",
 		},
 		{
-			storeName:    "Arcane Sanctum",
-			baseURL:      "https://arcanesanctumtcg.com",
-			searchURL:    "/search?q=%s",
-			scrapVariant: 5,
-			query:        "signet",
+			storeName:     "Arcane Sanctum",
+			baseURL:       "https://arcanesanctumtcg.com",
+			shopifyDomain: "",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  5,
+			query:         "signet",
 		},
 	}
 }

@@ -14,9 +14,9 @@ import (
 	"mtg-price-checker-sg/gateway/util"
 )
 
-func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
-	shopifyDomain, ok := storefrontShopifyDomainForBaseURL(baseURL)
-	if !ok {
+func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
+	shopifyDomain = strings.TrimSpace(shopifyDomain)
+	if shopifyDomain == "" {
 		return nil, fmt.Errorf("missing shopify domain mapping for binderpos storefront")
 	}
 
@@ -67,22 +67,6 @@ func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scra
 	}
 
 	return mapDecklistLinesToCards(scrapVariant, storeName, baseURL, lines), nil
-}
-
-func storefrontShopifyDomainForBaseURL(baseURL string) (string, bool) {
-	parsedURL, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return "", false
-	}
-
-	host := strings.ToLower(strings.TrimSpace(parsedURL.Hostname()))
-	host = strings.TrimPrefix(host, "www.")
-	if host == "" {
-		return "", false
-	}
-
-	shopifyDomain, ok := binderposShopifyDomainByStoreHost[host]
-	return shopifyDomain, ok
 }
 
 func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines []storefrontDecklistLine) []gateway.Card {

@@ -8,6 +8,7 @@ import (
 
 const StoreName = "Cards Citadel"
 const StoreBaseURL = "https://cardscitadel.com"
+const StoreShopifyDomain = "card-citadel.myshopify.com"
 const StoreSearchURL = "/search?q=*%s*"
 
 type Store struct {
@@ -27,5 +28,5 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Search(ctx, 1, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
+	return s.BinderposGwy.Search(ctx, 1, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr)
 }

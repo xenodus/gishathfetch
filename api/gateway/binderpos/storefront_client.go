@@ -13,21 +13,21 @@ import (
 	"mtg-price-checker-sg/gateway/util"
 )
 
-func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	client, ok := newDedicatedProxyHTTPClient()
 	if !ok {
 		return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")
 	}
 
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
-func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	client := &http.Client{Timeout: binderposAttemptTimeout}
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
-func searchByStorefrontAPISharedProxy(ctx context.Context, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontAPISharedProxy(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	sharedProxyURL := strings.TrimSpace(os.Getenv("PROXY_URL"))
 	if sharedProxyURL == "" {
 		return nil, fmt.Errorf("no shared proxy configured for binderpos storefront api")
@@ -38,12 +38,12 @@ func searchByStorefrontAPISharedProxy(ctx context.Context, scrapVariant int, sto
 		return nil, fmt.Errorf("invalid shared proxy configured for binderpos storefront api: %w", err)
 	}
 
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
-func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	if shouldUseDecklistEndpoint() {
-		return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+		return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 	}
 
 	return searchByStorefrontProductDetailsAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)

@@ -2,20 +2,27 @@ package binderpos
 
 import (
 	"context"
+	"strings"
 
 	"mtg-price-checker-sg/gateway"
 )
 
-func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
+func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr string) ([]gateway.Card, error) {
+	if strings.TrimSpace(shopifyDomain) == "" {
+		return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+			return i.scrapSharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+		})
+	}
+
 	return searchWithFallback(
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return searchByStorefrontAPI(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+				return searchByStorefrontAPI(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 			})
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return searchByStorefrontAPISharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchStr)
+				return searchByStorefrontAPISharedProxy(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 			})
 		},
 		func() ([]gateway.Card, error) {

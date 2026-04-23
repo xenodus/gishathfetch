@@ -41,25 +41,6 @@ func TestDecklistResponseJSONDecodesWithBooleanValidName(t *testing.T) {
 	}
 }
 
-func TestStorefrontShopifyDomainForBaseURL(t *testing.T) {
-	t.Run("returns mapped domain for known host with www", func(t *testing.T) {
-		domain, ok := storefrontShopifyDomainForBaseURL("https://www.mtg-asia.com")
-		if !ok {
-			t.Fatalf("expected mapping to exist")
-		}
-		if domain != "mtgasia.myshopify.com" {
-			t.Fatalf("unexpected domain: %s", domain)
-		}
-	})
-
-	t.Run("returns false for unknown host", func(t *testing.T) {
-		_, ok := storefrontShopifyDomainForBaseURL("https://example.com")
-		if ok {
-			t.Fatalf("expected unknown host lookup to fail")
-		}
-	})
-}
-
 func TestMapDecklistLinesToCards(t *testing.T) {
 	lines := []storefrontDecklistLine{
 		{

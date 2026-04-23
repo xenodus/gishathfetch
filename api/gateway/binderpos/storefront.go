@@ -13,21 +13,6 @@ const (
 	binderposAttemptTimeout = 4 * time.Second
 )
 
-var binderposShopifyDomainByStoreHost = map[string]string{
-	"cardscitadel.com":        "card-citadel.myshopify.com",
-	"card-affinity.com":       "563304-2.myshopify.com",
-	"cardboardcrackgames.com": "cardboardcrackgames.myshopify.com",
-	"flagshipgames.sg":        "flagship-games.myshopify.com",
-	"gameshaventcg.com":       "games-haven-sg.myshopify.com",
-	"greyogregames.com":       "grey-ogre-games-singapore.myshopify.com",
-	"hideoutcg.com":           "220022-20.myshopify.com",
-	"sg-manapro.com":          "mana-pro-sg.myshopify.com",
-	"mtg-asia.com":            "mtgasia.myshopify.com",
-	"onemtg.com.sg":           "one-mtg.myshopify.com",
-	"tefudagames.com":         "bacc1b-3.myshopify.com",
-	// arcanesanctumtcg.com intentionally omitted: BinderPOS decklist API returns 401.
-}
-
 var shouldUseDecklistEndpoint = func() bool {
 	return useDecklistForRoll(rand.IntN(100))
 }

@@ -8,6 +8,7 @@ import (
 
 const StoreName = "Games Haven"
 const StoreBaseURL = "https://www.gameshaventcg.com"
+const StoreShopifyDomain = "games-haven-sg.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
 
 type Store struct {
@@ -31,6 +32,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		3,
 		s.Name,
 		s.BaseUrl,
+		StoreShopifyDomain,
 		s.SearchUrl,
 		searchStr,
 	)
