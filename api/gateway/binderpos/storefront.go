@@ -111,7 +111,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+				return i.scrapSharedProxy(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			})
 		},
 	)
@@ -155,7 +155,7 @@ func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
 	searchAPISharedFn func() ([]gateway.Card, error),
 	scrapDedicatedFn func() ([]gateway.Card, error),
-	scrapDirectFn func() ([]gateway.Card, error),
+	scrapSharedFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	// Some stores legitimately return no matches for the query.
 	// If any attempt completes without an error, do not surface earlier failures.
@@ -188,21 +188,21 @@ func searchWithFallback(
 		return scrapedCards, nil
 	}
 
-	scrapedDirectCards, scrapDirectErr := scrapDirectFn()
-	scrapDirectErr = annotateAttemptError(4, "scrap-direct", scrapDirectErr)
-	if scrapDirectErr == nil {
+	scrapedSharedCards, scrapSharedErr := scrapSharedFn()
+	scrapSharedErr = annotateAttemptError(4, "scrap-shared", scrapSharedErr)
+	if scrapSharedErr == nil {
 		hasSuccessfulAttempt = true
 	}
-	if len(scrapedDirectCards) > 0 && scrapDirectErr == nil {
-		return scrapedDirectCards, nil
+	if len(scrapedSharedCards) > 0 && scrapSharedErr == nil {
+		return scrapedSharedCards, nil
 	}
 
 	if hasSuccessfulAttempt {
 		return []gateway.Card{}, nil
 	}
 
-	if scrapDirectErr != nil {
-		return scrapedDirectCards, scrapDirectErr
+	if scrapSharedErr != nil {
+		return scrapedSharedCards, scrapSharedErr
 	}
 	if scrapErr != nil {
 		return scrapedCards, scrapErr
