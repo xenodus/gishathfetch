@@ -102,7 +102,6 @@ func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse W
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "    ")
 
 	if err := encoder.Encode(webResponse); err != nil {
 		apiResponse.StatusCode = http.StatusInternalServerError
