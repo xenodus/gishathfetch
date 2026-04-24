@@ -259,6 +259,12 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
+                Gishath Fetch uses search optimizations that do not play well
+                with partial card names for every shop. A short or incomplete
+                name may return no results on some stores even when others find
+                a match.
+              </p>
+              <p>
                 Use the <strong>auto-suggest</strong> to pick a card, or type
                 the <strong>full card name</strong>. This is the most reliable
                 way to get consistent, accurate results across the stores you
