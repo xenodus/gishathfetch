@@ -35,6 +35,11 @@ body {
   justify-content: center;
 }
 
+#lgsCheckboxes .form-check-input,
+#lgsCheckboxes .form-check-label {
+  cursor: pointer;
+}
+
 .map-item iframe {
   float: left;
   min-height: 450px;
