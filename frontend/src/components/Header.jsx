@@ -7,7 +7,7 @@ const Header = ({ theme, onToggleTheme }) => {
         <div className="position-absolute top-0 end-0">
           <button
             type="button"
-            className="btn btn-sm btn-outline-secondary theme-toggle-btn"
+            className="btn btn-sm btn-outline-primary theme-toggle-btn"
             onClick={onToggleTheme}
             aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
             title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
