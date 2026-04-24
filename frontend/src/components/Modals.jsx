@@ -121,6 +121,16 @@ const Modals = ({
                   Known issues
                 </a>
               </li>
+              <li>
+                <a href="#faq-q6" className="link-offset-2">
+                  Why do searches take longer with more stores selected?
+                </a>
+              </li>
+              <li>
+                <a href="#faq-q7" className="link-offset-2">
+                  How can I get accurate results from every store?
+                </a>
+              </li>
             </ol>
           </div>
 
@@ -130,10 +140,10 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch searches the selected local game stores' (LGS)
-                website concurrently in the background, performs filtering of
-                result for higher accuracy and returns the compiled result
-                sorted by price.
+                Gishath Fetch queries the local game stores (LGS) you have
+                selected, hitting their sites concurrently in the background.
+                It filters the combined results for higher accuracy and returns
+                them sorted by price.
               </p>
             </div>
           </div>
@@ -143,7 +153,7 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch is build as a project of passion for fellow MTG
+                Gishath Fetch is built as a project of passion for fellow MTG
                 enthusiasts. There are no plans currently nor in the foreseeable
                 future to paywall it.
               </p>
@@ -207,10 +217,10 @@ const Modals = ({
                 page of most LGSs' websites or the first 25 results.
               </p>
               <p>
-                This is generally not a problem as the most accurate results
-                would be on the initial pages unless it's cards with many
-                variations (e.g. basic lands). In such cases, you may want to
-                visit the LGSs' websites directly.
+                This is usually fine because the best matches appear on the
+                first page unless a card has many printings (for example, basic
+                lands). In those cases, you may need to check the LGS site
+                directly.
               </p>
             </div>
           </div>
@@ -226,6 +236,39 @@ const Modals = ({
                 Near Mint and then back to Lightly Played) to see the correct
                 item. This is a problem with the LGS's website and not Gishath
                 Fetch.
+              </p>
+            </div>
+          </div>
+          <div className="mb-4" id="faq-q6">
+            <div className="q-header">
+              <h5>6. Why do searches take longer with more stores selected?</h5>
+            </div>
+            <div className="q-answer">
+              <p>
+                The more LGSs you include, the more work each run has to do. We
+                must throttle how fast we call each store to stay within their
+                rate limits, so extra stores mean more time in the queue.
+                Choosing fewer stores speeds up a search, eases load on the
+                shops, and helps Gishath Fetch keep operating costs down.
+              </p>
+            </div>
+          </div>
+          <div className="mb-4" id="faq-q7">
+            <div className="q-header">
+              <h5>7. How can I get accurate results from every store?</h5>
+            </div>
+            <div className="q-answer">
+              <p>
+                Gishath Fetch uses search optimizations that do not play well
+                with partial card names for every shop. A short or incomplete
+                name may return no results on some stores even when others find
+                a match.
+              </p>
+              <p>
+                Use the <strong>auto-suggest</strong> to pick a card, or type
+                the <strong>full card name</strong>. This is the most reliable
+                way to get consistent, accurate results across the stores you
+                have selected.
               </p>
             </div>
           </div>
