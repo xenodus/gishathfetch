@@ -260,7 +260,7 @@ const Modals = ({
             <div className="q-answer">
               <p>
                 Use the <strong>auto-suggest</strong> to pick a card, or type
-                the <strong>full card name</strong>—that is the most reliable
+                the <strong>full card name</strong>. This is the most reliable
                 way to get consistent, accurate results across the stores you
                 have selected.
               </p>
