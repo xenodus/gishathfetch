@@ -128,7 +128,7 @@ const Modals = ({
               </li>
               <li>
                 <a href="#faq-q7" className="link-offset-2">
-                  Why do some stores show no results for partial card names?
+                  How can I get accurate results from every store?
                 </a>
               </li>
             </ol>
@@ -255,16 +255,14 @@ const Modals = ({
           </div>
           <div className="mb-4" id="faq-q7">
             <div className="q-header">
-              <h5>7. Why do some stores show no results for partial card names?</h5>
+              <h5>7. How can I get accurate results from every store?</h5>
             </div>
             <div className="q-answer">
               <p>
-                Search is tuned for performance and the constraints of each
-                store's backend, so a few LGSs may not match partial or fuzzy
-                text the way others do. When that happens, use the{" "}
-                <strong>auto-suggest</strong> to pick the exact card name and
-                run the search again—you will get more consistent results
-                across all selected stores.
+                Use the <strong>auto-suggest</strong> to pick a card, or type
+                the <strong>full card name</strong>—that is the most reliable
+                way to get consistent, accurate results across the stores you
+                have selected.
               </p>
             </div>
           </div>
