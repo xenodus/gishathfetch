@@ -6,7 +6,7 @@ import (
 	"mtg-price-checker-sg/gateway/binderpos"
 )
 
-const StoreName = "Arcane Sanctum"
+const StoreName = binderpos.ArcaneSanctumStoreName
 const StoreBaseURL = "https://arcanesanctumtcg.com"
 const StoreSearchURL = "/search?q=%s"
 

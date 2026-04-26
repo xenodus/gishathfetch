@@ -111,3 +111,46 @@ func TestSearchWithFallback(t *testing.T) {
 		}
 	})
 }
+
+func TestSearchWithScrapDedicatedThenDirect(t *testing.T) {
+	t.Run("returns dedicated scraper results on first success", func(t *testing.T) {
+		cards, err := searchWithScrapDedicatedThenDirect(
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "scrap-dedicated"}}, nil },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "scrap-direct"}}, nil },
+		)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if len(cards) != 1 || cards[0].Name != "scrap-dedicated" {
+			t.Fatalf("expected dedicated scraper card, got %+v", cards)
+		}
+	})
+
+	t.Run("falls back to direct when dedicated fails", func(t *testing.T) {
+		cards, err := searchWithScrapDedicatedThenDirect(
+			func() ([]gateway.Card, error) { return nil, errors.New("dedicated scrap failed") },
+			func() ([]gateway.Card, error) { return []gateway.Card{{Name: "scrap-direct"}}, nil },
+		)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if len(cards) != 1 || cards[0].Name != "scrap-direct" {
+			t.Fatalf("expected direct scraper card, got %+v", cards)
+		}
+	})
+
+	t.Run("returns final direct error when both fail", func(t *testing.T) {
+		dedErr := errors.New("dedicated failed")
+		dirErr := errors.New("direct failed")
+		_, err := searchWithScrapDedicatedThenDirect(
+			func() ([]gateway.Card, error) { return nil, dedErr },
+			func() ([]gateway.Card, error) { return nil, dirErr },
+		)
+		if !errors.Is(err, dirErr) {
+			t.Fatalf("expected direct scraper error, got %v", err)
+		}
+		if err == nil || err.Error() != "attempt 2 (scrap-direct): direct failed" {
+			t.Fatalf("unexpected final error: %v", err)
+		}
+	})
+}
