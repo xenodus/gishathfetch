@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -87,6 +89,47 @@ func TestDedicatedProxyLeasePoolAcquireRelease(t *testing.T) {
 
 	pool.release(second)
 	pool.release(first)
+}
+
+func TestLeaseDedicatedProxyURLGlobalPool(t *testing.T) {
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+	t.Setenv("DEDICATED_PROXY_1", "10.0.0.1|1111|lease-a|secret-a")
+
+	urls := util.GetDedicatedProxyURLs()
+	if len(urls) != 1 {
+		t.Fatalf("expected 1 dedicated proxy URL, got %d (%v)", len(urls), urls)
+	}
+
+	u, release, err := LeaseDedicatedProxyURL(context.Background(), urls)
+	if err != nil {
+		t.Fatalf("first lease: %v", err)
+	}
+	if u != urls[0] {
+		t.Fatalf("expected leased url %q, got %q", urls[0], u)
+	}
+
+	ctxWait, cancelWait := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancelWait()
+	_, _, errBlocked := LeaseDedicatedProxyURL(ctxWait, urls)
+	if errBlocked == nil {
+		t.Fatalf("expected second lease to fail while first is held")
+	}
+	if !errors.Is(errBlocked, context.DeadlineExceeded) {
+		t.Fatalf("expected deadline exceeded, got %v", errBlocked)
+	}
+
+	release()
+
+	u2, release2, err2 := LeaseDedicatedProxyURL(context.Background(), urls)
+	if err2 != nil {
+		t.Fatalf("after release: %v", err2)
+	}
+	if u2 != urls[0] {
+		t.Fatalf("expected same url after release, got %q", u2)
+	}
+	release2()
 }
 
 func TestDedicatedProxyURLHelpers(t *testing.T) {

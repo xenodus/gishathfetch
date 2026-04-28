@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -55,17 +56,64 @@ func (p *dedicatedProxyLeasePool) acquire(proxyURLs []string) (string, bool) {
 	defer p.mu.Unlock()
 
 	for {
-		for _, idx := range rand.Perm(len(proxyURLs)) {
-			proxyURL := proxyURLs[idx]
-			if proxyURL == "" {
-				continue
-			}
-			if !p.inUse[proxyURL] {
-				p.inUse[proxyURL] = true
-				return proxyURL, true
-			}
+		if proxyURL, ok := p.tryAcquireLocked(proxyURLs); ok {
+			return proxyURL, true
 		}
 		p.cond.Wait()
+	}
+}
+
+// tryAcquireLocked picks a free dedicated proxy in random order among proxyURLs.
+// Caller must hold p.mu.
+func (p *dedicatedProxyLeasePool) tryAcquireLocked(proxyURLs []string) (string, bool) {
+	for _, idx := range rand.Perm(len(proxyURLs)) {
+		proxyURL := proxyURLs[idx]
+		if proxyURL == "" {
+			continue
+		}
+		if !p.inUse[proxyURL] {
+			p.inUse[proxyURL] = true
+			return proxyURL, true
+		}
+	}
+	return "", false
+}
+
+// acquireCtx is like acquire but returns when ctx is cancelled or timed out if no slot is available.
+func (p *dedicatedProxyLeasePool) acquireCtx(ctx context.Context, proxyURLs []string) (string, error) {
+	if len(proxyURLs) == 0 {
+		return "", errors.New("no dedicated proxy URLs")
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
+	stop := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			p.mu.Lock()
+			p.cond.Broadcast()
+			p.mu.Unlock()
+		case <-stop:
+		}
+	}()
+	defer close(stop)
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for {
+		if proxyURL, ok := p.tryAcquireLocked(proxyURLs); ok {
+			return proxyURL, nil
+		}
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		p.cond.Wait()
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 	}
 }
 
@@ -81,6 +129,23 @@ func (p *dedicatedProxyLeasePool) release(proxyURL string) {
 		delete(p.inUse, proxyURL)
 		p.cond.Signal()
 	}
+}
+
+// LeaseDedicatedProxyURL acquires one free dedicated proxy URL from proxyURLs, trying URLs in a
+// random order until one is available. The caller must invoke release exactly once when finished.
+// If ctx is cancelled or times out before a slot is available, err is non-nil and release is a no-op.
+func LeaseDedicatedProxyURL(ctx context.Context, proxyURLs []string) (leasedURL string, release func(), err error) {
+	if len(proxyURLs) == 0 {
+		return "", func() {}, errors.New("no dedicated proxy URLs")
+	}
+	leasedURL, err = dedicatedProxyLeases.acquireCtx(ctx, proxyURLs)
+	if err != nil {
+		return "", func() {}, err
+	}
+	u := leasedURL
+	return leasedURL, func() {
+		dedicatedProxyLeases.release(u)
+	}, nil
 }
 
 // Collector constructors and top-level configuration.
