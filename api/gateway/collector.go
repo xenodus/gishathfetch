@@ -178,7 +178,7 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, config.UseLeasedDedicatedProxy())
+	configureRequestOptimizations(c, config.UseLeasedDedicatedProxy)
 	return c
 }
 
@@ -221,7 +221,7 @@ func applyCollectorDefaults(c *colly.Collector) {
 func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func()) {
 	var leasedDedicatedProxyURL string
 	releaseLeasedDedicatedProxy := func() {}
-	if enforceDedicatedProxyLease && config.UseProxy && config.UseLeasedDedicatedProxy() {
+	if enforceDedicatedProxyLease && config.UseProxy && config.UseLeasedDedicatedProxy {
 		if proxyURL, ok := dedicatedProxyLeases.acquire(util.GetDedicatedProxyURLs()); ok {
 			leasedDedicatedProxyURL = proxyURL
 			releaseLeasedDedicatedProxy = func() {
