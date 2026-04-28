@@ -178,7 +178,7 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, true)
+	configureRequestOptimizations(c, config.UseLeasedDedicatedProxy)
 	return c
 }
 
@@ -221,7 +221,7 @@ func applyCollectorDefaults(c *colly.Collector) {
 func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func()) {
 	var leasedDedicatedProxyURL string
 	releaseLeasedDedicatedProxy := func() {}
-	if enforceDedicatedProxyLease && config.UseProxy {
+	if enforceDedicatedProxyLease && config.UseProxy && config.UseLeasedDedicatedProxy {
 		if proxyURL, ok := dedicatedProxyLeases.acquire(util.GetDedicatedProxyURLs()); ok {
 			leasedDedicatedProxyURL = proxyURL
 			releaseLeasedDedicatedProxy = func() {
@@ -334,6 +334,11 @@ func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
 func clearProxy(c *colly.Collector) (string, string) {
 	c.SetProxyFunc(nil)
 	return "direct", ""
+}
+
+// RandomDedicatedProxyURL picks one configured dedicated proxy uniformly at random.
+func RandomDedicatedProxyURL() (string, bool) {
+	return randomDedicatedProxyURL("")
 }
 
 func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {

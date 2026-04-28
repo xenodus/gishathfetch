@@ -10,6 +10,7 @@ import (
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
@@ -17,13 +18,24 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 	if len(proxyURLs) == 0 {
 		return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")
 	}
-	leasedURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs)
-	if err != nil {
-		return nil, fmt.Errorf("dedicated proxy lease for binderpos storefront api: %w", err)
-	}
-	defer release()
 
-	client, err := newHTTPClientWithProxyURL(leasedURL)
+	var proxyURL string
+	if config.UseLeasedDedicatedProxy {
+		leasedURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs)
+		if err != nil {
+			return nil, fmt.Errorf("dedicated proxy lease for binderpos storefront api: %w", err)
+		}
+		defer release()
+		proxyURL = leasedURL
+	} else {
+		u, ok := gateway.RandomDedicatedProxyURL()
+		if !ok {
+			return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")
+		}
+		proxyURL = u
+	}
+
+	client, err := newHTTPClientWithProxyURL(proxyURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid dedicated proxy configured for binderpos storefront api: %w", err)
 	}

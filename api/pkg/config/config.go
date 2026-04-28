@@ -23,6 +23,10 @@ const (
 	UseBinderposSharedProxyFallbackEnv = "USE_BINDERPOS_SHARED_PROXY_FALLBACK"
 )
 
+// UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
+// When false, each request picks a random dedicated proxy instead of acquiring a lease.
+const UseLeasedDedicatedProxy = false
+
 func UseBinderposStorefrontAPI() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseBinderposStorefrontAPIEnv))
 	if rawValue == "" {
