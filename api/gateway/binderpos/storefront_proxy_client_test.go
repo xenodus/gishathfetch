@@ -10,6 +10,40 @@ import (
 	"mtg-price-checker-sg/gateway"
 )
 
+func TestNextBinderposStorefrontProxyURLRoundRobin(t *testing.T) {
+	binderposDedicatedProxySeq.Store(0)
+
+	urls := []string{"http://a:1", "http://b:2"}
+	want := []struct {
+		url    string
+		direct bool
+	}{
+		{url: "http://a:1", direct: false},
+		{url: "http://b:2", direct: false},
+		{url: "", direct: true},
+		{url: "http://a:1", direct: false},
+	}
+	for i, w := range want {
+		gotURL, gotDirect := nextBinderposStorefrontProxyURL(urls)
+		if gotURL != w.url || gotDirect != w.direct {
+			t.Fatalf("step %d: got (%q, %v), want (%q, %v)", i, gotURL, gotDirect, w.url, w.direct)
+		}
+	}
+}
+
+func TestNextBinderposStorefrontProxyURLSingleProxyIncludesDirect(t *testing.T) {
+	binderposDedicatedProxySeq.Store(0)
+	urls := []string{"http://only:8080"}
+	u0, d0 := nextBinderposStorefrontProxyURL(urls)
+	if d0 || u0 != "http://only:8080" {
+		t.Fatalf("first slot: got (%q, %v)", u0, d0)
+	}
+	u1, d1 := nextBinderposStorefrontProxyURL(urls)
+	if !d1 || u1 != "" {
+		t.Fatalf("second slot (direct): got (%q, %v)", u1, d1)
+	}
+}
+
 func TestNewHTTPClientWithProxyURL(t *testing.T) {
 	t.Run("returns error for invalid proxy URL", func(t *testing.T) {
 		_, err := newHTTPClientWithProxyURL("://invalid-proxy")

@@ -7,11 +7,29 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 )
+
+// binderposDedicatedProxySeq advances for each BinderPOS storefront API call that uses
+// non-leased dedicated routing, so traffic round-robins across each configured proxy
+// plus one direct (no proxy) slot.
+var binderposDedicatedProxySeq atomic.Uint32
+
+// nextBinderposStorefrontProxyURL returns the next proxy URL in round-robin order among
+// proxyURLs and a final direct slot (direct==true means use no HTTP proxy).
+func nextBinderposStorefrontProxyURL(proxyURLs []string) (proxyURL string, direct bool) {
+	n := len(proxyURLs) + 1
+	v := binderposDedicatedProxySeq.Add(1) - 1
+	slot := int(v % uint32(n))
+	if slot == len(proxyURLs) {
+		return "", true
+	}
+	return proxyURLs[slot], false
+}
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	proxyURLs := util.GetDedicatedProxyURLs()
@@ -28,9 +46,10 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 		defer release()
 		proxyURL = leasedURL
 	} else {
-		u, ok := gateway.RandomDedicatedProxyURL()
-		if !ok {
-			return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")
+		u, useDirect := nextBinderposStorefrontProxyURL(proxyURLs)
+		if useDirect {
+			client := &http.Client{Timeout: binderposAttemptTimeout}
+			return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 		}
 		proxyURL = u
 	}
