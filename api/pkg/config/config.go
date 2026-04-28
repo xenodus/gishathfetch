@@ -21,6 +21,9 @@ const (
 	// UseBinderposSharedProxyFallbackEnv is reserved for future BinderPOS proxy
 	// routing options. It no longer changes scraper behavior (lookups are single-attempt).
 	UseBinderposSharedProxyFallbackEnv = "USE_BINDERPOS_SHARED_PROXY_FALLBACK"
+	// UseLeasedDedicatedProxyEnv enables exclusive per-request leases from the dedicated proxy pool.
+	// When false (default), each request picks a random dedicated proxy instead of acquiring a lease.
+	UseLeasedDedicatedProxyEnv = "USE_LEASED_DEDICATED_PROXY"
 )
 
 func UseBinderposStorefrontAPI() bool {
@@ -39,6 +42,22 @@ func UseBinderposStorefrontAPI() bool {
 
 func UseBinderposSharedProxyFallback() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseBinderposSharedProxyFallbackEnv))
+	if rawValue == "" {
+		return false
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return false
+	}
+
+	return enabled
+}
+
+// UseLeasedDedicatedProxy returns whether dedicated proxy usage should acquire an exclusive lease
+// from the pool. Default is false (random selection among configured dedicated proxies).
+func UseLeasedDedicatedProxy() bool {
+	rawValue := strings.TrimSpace(os.Getenv(UseLeasedDedicatedProxyEnv))
 	if rawValue == "" {
 		return false
 	}

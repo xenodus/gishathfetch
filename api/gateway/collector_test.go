@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -40,6 +41,34 @@ func TestInitialProxy(t *testing.T) {
 		if proxyURL != "http://user:pass@1.1.1.1:8080" {
 			t.Fatalf("unexpected dedicated proxy url: %q", proxyURL)
 		}
+	})
+}
+
+func TestLeaseDedicatedProxyIfNeededConfig(t *testing.T) {
+	t.Run("skips lease when disabled", func(t *testing.T) {
+		t.Setenv(config.UseLeasedDedicatedProxyEnv, "false")
+		for i := 1; i <= 7; i++ {
+			t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+		}
+		t.Setenv("DEDICATED_PROXY_1", "10.0.0.1|1111|u|p")
+		u, release := leaseDedicatedProxyIfNeeded(true)
+		if u != "" {
+			t.Fatalf("expected no leased URL when %s=false, got %q", config.UseLeasedDedicatedProxyEnv, u)
+		}
+		release()
+	})
+
+	t.Run("acquires lease when enabled", func(t *testing.T) {
+		t.Setenv(config.UseLeasedDedicatedProxyEnv, "true")
+		for i := 1; i <= 7; i++ {
+			t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+		}
+		t.Setenv("DEDICATED_PROXY_1", "10.0.0.1|1111|u|p")
+		u, release := leaseDedicatedProxyIfNeeded(true)
+		if u == "" {
+			t.Fatalf("expected leased URL when %s=true", config.UseLeasedDedicatedProxyEnv)
+		}
+		release()
 	})
 }
 
