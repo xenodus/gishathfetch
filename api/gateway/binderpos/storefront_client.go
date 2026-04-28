@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"strings"
 	"sync/atomic"
 
 	"mtg-price-checker-sg/gateway"
@@ -64,20 +62,6 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 
 func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	client := &http.Client{Timeout: binderposAttemptTimeout}
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-}
-
-func searchByStorefrontAPISharedProxy(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
-	sharedProxyURL := strings.TrimSpace(os.Getenv("PROXY_URL"))
-	if sharedProxyURL == "" {
-		return nil, fmt.Errorf("no shared proxy configured for binderpos storefront api")
-	}
-
-	client, err := newHTTPClientWithProxyURL(sharedProxyURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid shared proxy configured for binderpos storefront api: %w", err)
-	}
-
 	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 

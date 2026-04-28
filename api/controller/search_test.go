@@ -476,7 +476,7 @@ func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 
 func TestFormatDiscordErrorSummary(t *testing.T) {
 	got := formatDiscordErrorSummary("Uro, Titan of Nature's Wrath", []string{
-		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 4 (scrap-shared): Service Unavailable (proxy_mode=shared proxy=PROXY_URL)",
+		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 3 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
 		"Error encountered searching [Arcane Sanctum] for [Uro, Titan of Nature's Wrath]: attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
 		"Recovered from panic in shop [ShopPanic]: panic value",
 	})
@@ -487,7 +487,7 @@ func TestFormatDiscordErrorSummary(t *testing.T) {
 	if !strings.Contains(got, "- [Arcane Sanctum] attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)") {
 		t.Fatalf("expected Arcane Sanctum concise line, got: %s", got)
 	}
-	if !strings.Contains(got, "- [Tefuda] attempt 4 (scrap-shared): Service Unavailable (proxy_mode=shared proxy=PROXY_URL)") {
+	if !strings.Contains(got, "- [Tefuda] attempt 3 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)") {
 		t.Fatalf("expected Tefuda concise line, got: %s", got)
 	}
 	if !strings.Contains(got, "- Recovered from panic in shop [ShopPanic]: panic value") {

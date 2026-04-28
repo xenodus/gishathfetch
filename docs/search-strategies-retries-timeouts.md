@@ -23,6 +23,16 @@ This document records **where** the app configures search behavior, **timeouts**
 | Minimum interval between requests to the **same host** | 300ms | `domainRequestMinInterval` in `api/gateway/domain_rate_limiter.go` | Added to the reservation for the next allowed time for that domain. |
 | Jitter (added on top of minimum interval) | uniform in **[0, 600ms)** | `domainRequestMaxJitter` + `randomDuration` in `api/gateway/domain_rate_limiter.go` | Per reservation: `reservedUntil = nextAllowed + minInterval + jitter`. If the wait is cancelled, the limiter can roll back that reservation. |
 
+---
+
+## Backend: BinderPOS api-dedicated proxy selection (`storefront_client.go`)
+
+| Item | Value | Source | Notes |
+|------|--------|--------|--------|
+| Lease vs round-robin for storefront HTTP client | `config.UseLeasedDedicatedProxy` in `api/pkg/config/config.go` | `searchByStorefrontAPI` | When **true**, `gateway.LeaseDedicatedProxyURL` holds one dedicated URL for the whole storefront attempt. When **false**, `nextBinderposStorefrontProxyURL` round-robins **proxy₁ → … → proxyₙ → direct (no HTTP proxy)** per call. Colly scrapes still use the collector lease path when `NewOptimizedCollectorForBinderpos` applies. |
+
+---
+
 ## Backend: dedicated proxy env (`api/gateway/util/dedicated_proxy.go`)
 
 | Item | Value | Notes |
@@ -43,14 +53,14 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **api-shared** → 3) **scrap-shared** (shared-proxy scrape) | **10s** per step: `binderposAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same `binderposAttemptTimeout`. |
-| `shopifyDomain` **empty** | Scrape only (**scrap-shared** path, single `runWithAttemptTimeout`) | **10s** (same constant). No API attempts. |
+| `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **scrap-dedicated** → 3) **scrap-direct** | **10s** per step: `binderposAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same `binderposAttemptTimeout`. |
+| `shopifyDomain` **empty** | **scrap-dedicated** → **scrap-direct** (`searchWithScrapDedicatedThenDirect`) | **10s** per step (same constant). No API attempts. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | **api-dedicated** proxy selection (storefront HTTP client) | Round-robin | `nextBinderposStorefrontProxyURL` + `binderposDedicatedProxySeq` in `api/gateway/binderpos/storefront_client.go` | When `UseLeasedDedicatedProxy` is **false** (default in `api/pkg/config/config.go`), each storefront API call cycles **proxy₁ → … → proxyₙ → direct (no HTTP proxy)** then repeats, using all URLs from `GetDedicatedProxyURLs()`. When `UseLeasedDedicatedProxy` is **true**, selection is unchanged: `LeaseDedicatedProxyURL` from the dedicated pool only (no direct slot in that path). |
 | Colly for BinderPOS scrapes | 10s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Tighter than generic `PerSiteTimeout` (20s) for binderpos scrape collectors. |
-| “Retries” | N/A (sequential fallbacks) | `searchWithFallback` | Stops on first **success**; returns last error if all three fail. This is **not** exponential backoff retry of a single request. |
+| “Retries” | N/A (sequential fallbacks) | `searchWithFallback` | Stops on first **success**; returns last error if api-dedicated, scrap-dedicated, and scrap-direct all fail. This is **not** exponential backoff retry of a single request. |
 
 ---
 
