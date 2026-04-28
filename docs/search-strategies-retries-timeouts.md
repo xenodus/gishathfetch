@@ -48,6 +48,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
+| **api-dedicated** proxy selection (storefront HTTP client) | Round-robin | `nextBinderposStorefrontProxyURL` + `binderposDedicatedProxySeq` in `api/gateway/binderpos/storefront_client.go` | When `UseLeasedDedicatedProxy` is **false** (default in `api/pkg/config/config.go`), each storefront API call cycles **proxy₁ → … → proxyₙ → direct (no HTTP proxy)** then repeats, using all URLs from `GetDedicatedProxyURLs()`. When `UseLeasedDedicatedProxy` is **true**, selection is unchanged: `LeaseDedicatedProxyURL` from the dedicated pool only (no direct slot in that path). |
 | Colly for BinderPOS scrapes | 10s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Tighter than generic `PerSiteTimeout` (20s) for binderpos scrape collectors. |
 | “Retries” | N/A (sequential fallbacks) | `searchWithFallback` | Stops on first **success**; returns last error if all three fail. This is **not** exponential backoff retry of a single request. |
 
