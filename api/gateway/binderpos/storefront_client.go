@@ -3,7 +3,6 @@ package binderpos
 import (
 	"context"
 	"fmt"
-	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,9 +13,19 @@ import (
 )
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
-	client, ok := newDedicatedProxyHTTPClient()
-	if !ok {
+	proxyURLs := util.GetDedicatedProxyURLs()
+	if len(proxyURLs) == 0 {
 		return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")
+	}
+	leasedURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs)
+	if err != nil {
+		return nil, fmt.Errorf("dedicated proxy lease for binderpos storefront api: %w", err)
+	}
+	defer release()
+
+	client, err := newHTTPClientWithProxyURL(leasedURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid dedicated proxy configured for binderpos storefront api: %w", err)
 	}
 
 	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
@@ -51,25 +60,6 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 
 func useDecklistForRoll(roll int) bool {
 	return roll < binderposDecklistPct
-}
-
-func newDedicatedProxyHTTPClient() (*http.Client, bool) {
-	proxyURLs := util.GetDedicatedProxyURLs()
-	if len(proxyURLs) == 0 {
-		return nil, false
-	}
-
-	proxyURL := strings.TrimSpace(proxyURLs[rand.IntN(len(proxyURLs))])
-	if proxyURL == "" {
-		return nil, false
-	}
-
-	client, err := newHTTPClientWithProxyURL(proxyURL)
-	if err != nil {
-		return nil, false
-	}
-
-	return client, true
 }
 
 func newHTTPClientWithProxyURL(proxyURL string) (*http.Client, error) {
