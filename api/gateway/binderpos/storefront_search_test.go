@@ -3,6 +3,7 @@ package binderpos
 import (
 	"context"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +26,9 @@ type binderposStoreSearchCase struct {
 }
 
 func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
+	if os.Getenv("RUN_BINDERPOS_LIVE_TESTS") != "1" {
+		t.Skip("set RUN_BINDERPOS_LIVE_TESTS=1 to run live storefront API checks against real stores")
+	}
 	previousSelector := shouldUseDecklistEndpoint
 	shouldUseDecklistEndpoint = func() bool { return false }
 	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
@@ -48,6 +52,9 @@ func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
 }
 
 func Test_SearchByStorefrontAPI_OverlapsLegacyScrapeResults(t *testing.T) {
+	if os.Getenv("RUN_BINDERPOS_LIVE_TESTS") != "1" {
+		t.Skip("set RUN_BINDERPOS_LIVE_TESTS=1 to run live storefront vs scrape overlap checks")
+	}
 	previousSelector := shouldUseDecklistEndpoint
 	shouldUseDecklistEndpoint = func() bool { return false }
 	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })

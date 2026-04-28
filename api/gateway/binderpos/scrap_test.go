@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/joho/godotenv"
@@ -15,6 +16,9 @@ func init() {
 }
 
 func Test_Scrap(t *testing.T) {
+	if os.Getenv("RUN_BINDERPOS_LIVE_TESTS") != "1" {
+		t.Skip("set RUN_BINDERPOS_LIVE_TESTS=1 to run live BinderPOS scrape checks")
+	}
 	type args struct {
 		scrapVariant int
 		storeName    string
