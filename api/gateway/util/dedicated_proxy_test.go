@@ -72,11 +72,15 @@ func TestGetDedicatedProxyReturnsEmptyStringsWhenEnvVarsAreEmpty(t *testing.T) {
 }
 
 func TestGetDedicatedProxyParsesPartialSegments(t *testing.T) {
-	t.Setenv("DEDICATED_PROXY_1", "host-1")             // missing port/username/password
-	t.Setenv("DEDICATED_PROXY_2", "host-2|2222")        // missing username/password
-	t.Setenv("DEDICATED_PROXY_3", "host-3|3333|user-3") // missing password
-	for i := 4; i <= 7; i++ {
-		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	// Slots 1–3: partial pipe segments; 4–7: unset (empty string).
+	raw := []string{
+		"host-1",             // missing port/username/password
+		"host-2|2222",        // missing username/password
+		"host-3|3333|user-3", // missing password
+		"", "", "", "",
+	}
+	for i, v := range raw {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i+1), v)
 	}
 
 	got := GetDedicatedProxy()
