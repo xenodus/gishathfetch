@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -23,6 +24,9 @@ type supportedGame struct {
 }
 
 func Test_StorefrontSupportedGamesEndpoint_ExistsForGreyOgreAndMtgAsia(t *testing.T) {
+	if os.Getenv("RUN_BINDERPOS_LIVE_TESTS") != "1" {
+		t.Skip("set RUN_BINDERPOS_LIVE_TESTS=1 to run live BinderPOS portal / store HTML checks")
+	}
 	client := &http.Client{Timeout: 20 * time.Second}
 
 	tests := []struct {

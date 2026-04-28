@@ -23,6 +23,18 @@ This document records **where** the app configures search behavior, **timeouts**
 | Minimum interval between requests to the **same host** | 300ms | `domainRequestMinInterval` in `api/gateway/domain_rate_limiter.go` | Added to the reservation for the next allowed time for that domain. |
 | Jitter (added on top of minimum interval) | uniform in **[0, 600ms)** | `domainRequestMaxJitter` + `randomDuration` in `api/gateway/domain_rate_limiter.go` | Per reservation: `reservedUntil = nextAllowed + minInterval + jitter`. If the wait is cancelled, the limiter can roll back that reservation. |
 
+## Backend: dedicated proxy env (`api/gateway/util/dedicated_proxy.go`)
+
+| Item | Value | Notes |
+|------|--------|--------|
+| Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
+
+---
+
+## Live BinderPOS integration tests
+
+Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. They run only when **`RUN_BINDERPOS_LIVE_TESTS=1`** is set (default `make test` skips them to avoid rate limits and flaky remote dependencies).
+
 ---
 
 ## Backend: BinderPOS (storefront + scraper fallbacks)

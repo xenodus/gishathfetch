@@ -13,7 +13,7 @@ import (
 
 func TestInitialProxy(t *testing.T) {
 	c := colly.NewCollector()
-	for i := 1; i <= 5; i++ {
+	for i := 1; i <= 7; i++ {
 		t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
 	}
 
@@ -27,7 +27,7 @@ func TestInitialProxy(t *testing.T) {
 
 	t.Run("picks random dedicated when no lease", func(t *testing.T) {
 		c2 := colly.NewCollector()
-		for i := 2; i <= 5; i++ {
+		for i := 2; i <= 7; i++ {
 			t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
 		}
 		t.Setenv("DEDICATED_PROXY_1", "1.1.1.1|8080|user|pass")
