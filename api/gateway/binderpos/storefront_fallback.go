@@ -28,8 +28,8 @@ func searchWithScrapDedicatedThenDirect(
 
 func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
-	searchAPISharedFn func() ([]gateway.Card, error),
-	scrapSharedFn func() ([]gateway.Card, error),
+	scrapDedicatedFn func() ([]gateway.Card, error),
+	scrapDirectFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	apiDedicatedCards, apiDedicatedErr := searchAPIDedicatedFn()
 	apiDedicatedErr = annotateAttemptError(1, "api-dedicated", apiDedicatedErr)
@@ -37,20 +37,20 @@ func searchWithFallback(
 		return apiDedicatedCards, nil
 	}
 
-	apiSharedCards, apiSharedErr := searchAPISharedFn()
-	apiSharedErr = annotateAttemptError(2, "api-shared", apiSharedErr)
-	if apiSharedErr == nil {
-		return apiSharedCards, nil
+	scrapDedicatedCards, scrapDedicatedErr := scrapDedicatedFn()
+	scrapDedicatedErr = annotateAttemptError(2, "scrap-dedicated", scrapDedicatedErr)
+	if scrapDedicatedErr == nil {
+		return scrapDedicatedCards, nil
 	}
 
-	scrapedSharedCards, scrapSharedErr := scrapSharedFn()
-	scrapSharedErr = annotateAttemptError(3, "scrap-shared", scrapSharedErr)
-	if scrapSharedErr == nil {
-		return scrapedSharedCards, nil
+	scrapDirectCards, scrapDirectErr := scrapDirectFn()
+	scrapDirectErr = annotateAttemptError(3, "scrap-direct", scrapDirectErr)
+	if scrapDirectErr == nil {
+		return scrapDirectCards, nil
 	}
 
 	// Reaching here means all three attempts errored.
-	return scrapedSharedCards, scrapSharedErr
+	return scrapDirectCards, scrapDirectErr
 }
 
 func annotateAttemptError(attempt int, strategy string, err error) error {

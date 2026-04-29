@@ -43,8 +43,8 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **api-shared** → 3) **scrap-shared** (shared-proxy scrape) | **10s** per step: `binderposAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same `binderposAttemptTimeout`. |
-| `shopifyDomain` **empty** | Scrape only (**scrap-shared** path, single `runWithAttemptTimeout`) | **10s** (same constant). No API attempts. |
+| `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **scrap-dedicated** → 3) **scrap-direct** | **10s** per step: `binderposAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same `binderposAttemptTimeout`. |
+| `shopifyDomain` **empty** | **scrap-dedicated** → **scrap-direct** (two `runWithAttemptTimeout` steps in `searchWithScrapDedicatedThenDirect`) | **10s** per step (same constant). No API attempts. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
