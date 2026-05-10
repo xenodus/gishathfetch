@@ -18,6 +18,9 @@ const (
 	// UseBinderposStorefrontAPIEnv toggles BinderPOS storefront API search mode.
 	// Default is enabled; set to "false" to force legacy scraping.
 	UseBinderposStorefrontAPIEnv = "USE_BINDERPOS_STOREFRONT_API"
+	// DynamicProxyEnv contains an authenticated proxy URL used as a fallback after
+	// dedicated proxy routing and before direct/no-proxy requests.
+	DynamicProxyEnv = "DYNAMIC_PROXY"
 	// UseBinderposSharedProxyFallbackEnv is reserved for future BinderPOS proxy
 	// routing options. It no longer changes scraper behavior (lookups are single-attempt).
 	UseBinderposSharedProxyFallbackEnv = "USE_BINDERPOS_SHARED_PROXY_FALLBACK"

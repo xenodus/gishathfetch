@@ -18,6 +18,7 @@ func TestInitialProxy(t *testing.T) {
 	for i := 1; i <= 7; i++ {
 		t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
 	}
+	t.Setenv("DYNAMIC_PROXY", "")
 
 	t.Run("uses leased dedicated when provided", func(t *testing.T) {
 		leased := "http://lease:1"
@@ -39,6 +40,19 @@ func TestInitialProxy(t *testing.T) {
 		}
 		if proxyURL != "http://user:pass@1.1.1.1:8080" {
 			t.Fatalf("unexpected dedicated proxy url: %q", proxyURL)
+		}
+	})
+
+	t.Run("falls back to dynamic when no dedicated proxy is configured", func(t *testing.T) {
+		c2 := colly.NewCollector()
+		t.Setenv("DYNAMIC_PROXY", "http://dynamic-user:dynamic-pass@dynamic-proxy:9000")
+
+		mode, proxyURL := applyInitialProxy(c2, "")
+		if mode != "dynamic" {
+			t.Fatalf("expected dynamic mode, got %q", mode)
+		}
+		if proxyURL != "http://dynamic-user:dynamic-pass@dynamic-proxy:9000" {
+			t.Fatalf("unexpected dynamic proxy url: %q", proxyURL)
 		}
 	})
 }
@@ -172,6 +186,14 @@ func TestFormatProxyContext(t *testing.T) {
 			t.Fatalf("unexpected proxy context: %q", got)
 		}
 	})
+
+	t.Run("uses dynamic proxy env label", func(t *testing.T) {
+		t.Setenv("DYNAMIC_PROXY", "http://dynamic-proxy:8080")
+		got := formatProxyContext("dynamic", "http://dynamic-proxy:8080")
+		if got != "proxy_mode=dynamic proxy=DYNAMIC_PROXY" {
+			t.Fatalf("unexpected proxy context: %q", got)
+		}
+	})
 }
 
 func TestResolveProxyLabel(t *testing.T) {
@@ -196,15 +218,41 @@ func TestResolveProxyLabel(t *testing.T) {
 		}
 	})
 
+	t.Run("matches dynamic env key by URL", func(t *testing.T) {
+		t.Setenv("DYNAMIC_PROXY", "http://dynamic:4444")
+		if got := resolveProxyLabel("dynamic", "http://dynamic:4444"); got != "DYNAMIC_PROXY" {
+			t.Fatalf("expected DYNAMIC_PROXY, got %q", got)
+		}
+	})
+
 	t.Run("falls back to mode label when unmapped", func(t *testing.T) {
 		if got := resolveProxyLabel("dedicated", "http://unknown:4444"); got != "dedicated-configured" {
 			t.Fatalf("expected dedicated-configured fallback, got %q", got)
+		}
+		if got := resolveProxyLabel("dynamic", "http://unknown-dynamic:5555"); got != "dynamic-configured" {
+			t.Fatalf("expected dynamic-configured fallback, got %q", got)
 		}
 		if got := resolveProxyLabel("shared", "http://unknown:5555"); got != "shared-configured" {
 			t.Fatalf("expected shared-configured fallback, got %q", got)
 		}
 		if got := resolveProxyLabel("unknown", "http://unknown:6666"); got != "configured" {
 			t.Fatalf("expected configured fallback, got %q", got)
+		}
+	})
+}
+
+func TestNewOptimizedCollectorNoRetryDynamic(t *testing.T) {
+	t.Run("returns error when DYNAMIC_PROXY is not configured", func(t *testing.T) {
+		t.Setenv("DYNAMIC_PROXY", "")
+		if _, err := NewOptimizedCollectorNoRetryDynamic(context.Background()); err == nil {
+			t.Fatalf("expected missing dynamic proxy to return error")
+		}
+	})
+
+	t.Run("returns error for invalid DYNAMIC_PROXY", func(t *testing.T) {
+		t.Setenv("DYNAMIC_PROXY", "://bad-dynamic-proxy")
+		if _, err := NewOptimizedCollectorNoRetryDynamic(context.Background()); err == nil {
+			t.Fatalf("expected invalid dynamic proxy to return error")
 		}
 	})
 }

@@ -9,6 +9,7 @@ import (
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/gocolly/colly/v2"
@@ -174,6 +175,22 @@ func NewOptimizedCollectorNoRetryDirect(ctx context.Context) *colly.Collector {
 	return c
 }
 
+func NewOptimizedCollectorNoRetryDynamic(ctx context.Context) (*colly.Collector, error) {
+	proxyURL := DynamicProxyURL()
+	if proxyURL == "" {
+		return nil, errors.New("no dynamic proxy configured")
+	}
+
+	c := colly.NewCollector(
+		colly.StdlibContext(ctx),
+	)
+	configureRequestOptimizations(c, false)
+	if err := forceCollectorProxy(c, "dynamic", proxyURL); err != nil {
+		return nil, fmt.Errorf("invalid dynamic proxy configured: %w", err)
+	}
+	return c, nil
+}
+
 func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
@@ -199,6 +216,20 @@ func forceCollectorDirectProxy(c *colly.Collector) {
 		r.Ctx.Put("last_proxy_mode", "direct")
 		r.Ctx.Put("last_proxy_url", "")
 	})
+}
+
+func forceCollectorProxy(c *colly.Collector, mode, proxyURL string) error {
+	if err := c.SetProxy(proxyURL); err != nil {
+		return err
+	}
+	c.OnRequest(func(r *colly.Request) {
+		if r == nil || r.Ctx == nil {
+			return
+		}
+		r.Ctx.Put("last_proxy_mode", mode)
+		r.Ctx.Put("last_proxy_url", proxyURL)
+	})
+	return nil
 }
 
 // Core request optimization pipeline. Gateway colly requests do not retry; each lookup is a single attempt.
@@ -250,6 +281,13 @@ func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL string) (stri
 	if proxyURL, ok := randomDedicatedProxyURL(""); ok {
 		c.SetProxy(proxyURL)
 		return "dedicated", proxyURL
+	}
+	if proxyURL := DynamicProxyURL(); proxyURL != "" {
+		if err := c.SetProxy(proxyURL); err == nil {
+			return "dynamic", proxyURL
+		} else {
+			log.Printf("invalid dynamic proxy configured: %v", err)
+		}
 	}
 	return clearProxy(c)
 }
@@ -336,6 +374,10 @@ func clearProxy(c *colly.Collector) (string, string) {
 	return "direct", ""
 }
 
+func DynamicProxyURL() string {
+	return strings.TrimSpace(os.Getenv(config.DynamicProxyEnv))
+}
+
 // RandomDedicatedProxyURL picks one configured dedicated proxy uniformly at random.
 func RandomDedicatedProxyURL() (string, bool) {
 	return randomDedicatedProxyURL("")
@@ -392,6 +434,11 @@ func resolveProxyLabel(mode, proxyURL string) string {
 	switch mode {
 	case "direct":
 		return "none"
+	case "dynamic":
+		if dynamicProxyURL := DynamicProxyURL(); dynamicProxyURL != "" && dynamicProxyURL == proxyURL {
+			return config.DynamicProxyEnv
+		}
+		return "dynamic-configured"
 	case "shared":
 		if sharedProxyURL := os.Getenv("PROXY_URL"); sharedProxyURL != "" && sharedProxyURL == proxyURL {
 			return "PROXY_URL"

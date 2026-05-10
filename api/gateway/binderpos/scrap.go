@@ -17,7 +17,11 @@ import (
 )
 
 func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
-	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, gateway.NewOptimizedCollectorForBinderpos)
+	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newBinderposCollector)
+}
+
+func (i impl) scrapDynamic(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
+	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDynamicNoRetryCollector)
 }
 
 func (i impl) scrapDirect(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
@@ -28,7 +32,7 @@ func (i impl) scrapWithCollectorFactory(
 	ctx context.Context,
 	scrapVariant int,
 	storeName, baseUrl, searchUrl, searchStr string,
-	collectorFactory func(context.Context) *colly.Collector,
+	collectorFactory func(context.Context) (*colly.Collector, error),
 ) ([]gateway.Card, error) {
 	switch scrapVariant {
 	case 1:
@@ -45,10 +49,25 @@ func (i impl) scrapWithCollectorFactory(
 	return []gateway.Card{}, fmt.Errorf("invalid scrap variant: %d", scrapVariant)
 }
 
-func newDirectNoRetryCollector(ctx context.Context) *colly.Collector {
+func newBinderposCollector(ctx context.Context) (*colly.Collector, error) {
+	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
+	c.SetRequestTimeout(binderposAttemptTimeout)
+	return c, nil
+}
+
+func newDynamicNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
+	c, err := gateway.NewOptimizedCollectorNoRetryDynamic(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c.SetRequestTimeout(binderposAttemptTimeout)
+	return c, nil
+}
+
+func newDirectNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
-	return c
+	return c, nil
 }
 
 // buildSafeSearchURL safely constructs the URL using url.URL and url.Values to isolate user string input.
@@ -84,11 +103,14 @@ func buildSafeSearchURL(baseUrl, searchUrlTemplate, searchStr string) string {
 }
 
 // arcane sanctum
-func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
+func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := collectorFactory(ctx)
+	c, err := collectorFactory(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -134,11 +156,14 @@ func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 }
 
 // tefuda
-func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
+func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := collectorFactory(ctx)
+	c, err := collectorFactory(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
@@ -188,11 +213,14 @@ type pagination struct {
 // games haven
 // gog
 // hideout
-func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
+func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
 	var cards []gateway.Card
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 
-	c := collectorFactory(ctx)
+	c, err := collectorFactory(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		// get cards
@@ -256,11 +284,14 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 // onemtg
 // manapro
 // mtgasia
-func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
+func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := collectorFactory(ctx)
+	c, err := collectorFactory(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
 		e.ForEach("div", func(_ int, el *colly.HTMLElement) {
@@ -315,11 +346,14 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 }
 
 // cards citadel
-func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) *colly.Collector) ([]gateway.Card, error) {
+func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
 	var cards []gateway.Card
 
-	c := collectorFactory(ctx)
+	c, err := collectorFactory(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	c.OnHTML("div.container", func(e *colly.HTMLElement) {
 		e.ForEach("div.Norm", func(_ int, el *colly.HTMLElement) {

@@ -13,20 +13,15 @@ import (
 )
 
 // binderposDedicatedProxySeq advances for each BinderPOS storefront API call that uses
-// non-leased dedicated routing, so traffic round-robins across each configured proxy
-// plus one direct (no proxy) slot.
+// non-leased dedicated routing, so traffic round-robins across configured dedicated proxies.
 var binderposDedicatedProxySeq atomic.Uint32
 
-// nextBinderposStorefrontProxyURL returns the next proxy URL in round-robin order among
-// proxyURLs and a final direct slot (direct==true means use no HTTP proxy).
-func nextBinderposStorefrontProxyURL(proxyURLs []string) (proxyURL string, direct bool) {
-	n := len(proxyURLs) + 1
+// nextBinderposStorefrontProxyURL returns the next dedicated proxy URL in round-robin order.
+func nextBinderposStorefrontProxyURL(proxyURLs []string) string {
+	n := len(proxyURLs)
 	v := binderposDedicatedProxySeq.Add(1) - 1
 	slot := int(v % uint32(n))
-	if slot == len(proxyURLs) {
-		return "", true
-	}
-	return proxyURLs[slot], false
+	return proxyURLs[slot]
 }
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
@@ -44,17 +39,26 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 		defer release()
 		proxyURL = leasedURL
 	} else {
-		u, useDirect := nextBinderposStorefrontProxyURL(proxyURLs)
-		if useDirect {
-			client := &http.Client{Timeout: binderposAttemptTimeout}
-			return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-		}
-		proxyURL = u
+		proxyURL = nextBinderposStorefrontProxyURL(proxyURLs)
 	}
 
 	client, err := newHTTPClientWithProxyURL(proxyURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid dedicated proxy configured for binderpos storefront api: %w", err)
+	}
+
+	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+}
+
+func searchByStorefrontAPIDynamic(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
+	proxyURL := gateway.DynamicProxyURL()
+	if proxyURL == "" {
+		return nil, fmt.Errorf("no dynamic proxy configured for binderpos storefront api")
+	}
+
+	client, err := newHTTPClientWithProxyURL(proxyURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid dynamic proxy configured for binderpos storefront api: %w", err)
 	}
 
 	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
