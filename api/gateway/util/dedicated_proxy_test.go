@@ -101,3 +101,23 @@ func TestGetDedicatedProxyParsesPartialSegments(t *testing.T) {
 	require.Equal(t, "user-3", got[2].Username)
 	require.Equal(t, "", got[2].Password)
 }
+
+func TestBuildProxyURL(t *testing.T) {
+	t.Run("builds url from pipe separated proxy config", func(t *testing.T) {
+		got, ok := BuildProxyURL("dc.com|10000|user-spsykhacft-country-sg|F+password")
+		require.True(t, ok)
+		require.Equal(t, "http://user-spsykhacft-country-sg:F+password@dc.com:10000", got)
+	})
+
+	t.Run("preserves fully formed proxy url", func(t *testing.T) {
+		got, ok := BuildProxyURL("http://user:pass@proxy.example:8080")
+		require.True(t, ok)
+		require.Equal(t, "http://user:pass@proxy.example:8080", got)
+	})
+
+	t.Run("rejects incomplete proxy config", func(t *testing.T) {
+		got, ok := BuildProxyURL("dc.com")
+		require.False(t, ok)
+		require.Equal(t, "", got)
+	})
+}

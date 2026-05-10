@@ -375,7 +375,11 @@ func clearProxy(c *colly.Collector) (string, string) {
 }
 
 func DynamicProxyURL() string {
-	return strings.TrimSpace(os.Getenv(config.DynamicProxyEnv))
+	proxyURL, ok := util.BuildProxyURL(os.Getenv(config.DynamicProxyEnv))
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(proxyURL)
 }
 
 // RandomDedicatedProxyURL picks one configured dedicated proxy uniformly at random.

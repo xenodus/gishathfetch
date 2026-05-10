@@ -45,7 +45,7 @@ func TestInitialProxy(t *testing.T) {
 
 	t.Run("falls back to dynamic when no dedicated proxy is configured", func(t *testing.T) {
 		c2 := colly.NewCollector()
-		t.Setenv("DYNAMIC_PROXY", "http://dynamic-user:dynamic-pass@dynamic-proxy:9000")
+		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|9000|dynamic-user|dynamic-pass")
 
 		mode, proxyURL := applyInitialProxy(c2, "")
 		if mode != "dynamic" {
@@ -188,7 +188,7 @@ func TestFormatProxyContext(t *testing.T) {
 	})
 
 	t.Run("uses dynamic proxy env label", func(t *testing.T) {
-		t.Setenv("DYNAMIC_PROXY", "http://dynamic-proxy:8080")
+		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|8080||")
 		got := formatProxyContext("dynamic", "http://dynamic-proxy:8080")
 		if got != "proxy_mode=dynamic proxy=DYNAMIC_PROXY" {
 			t.Fatalf("unexpected proxy context: %q", got)
@@ -219,7 +219,7 @@ func TestResolveProxyLabel(t *testing.T) {
 	})
 
 	t.Run("matches dynamic env key by URL", func(t *testing.T) {
-		t.Setenv("DYNAMIC_PROXY", "http://dynamic:4444")
+		t.Setenv("DYNAMIC_PROXY", "dynamic|4444||")
 		if got := resolveProxyLabel("dynamic", "http://dynamic:4444"); got != "DYNAMIC_PROXY" {
 			t.Fatalf("expected DYNAMIC_PROXY, got %q", got)
 		}
