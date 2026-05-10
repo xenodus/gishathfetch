@@ -35,6 +35,11 @@ body {
   justify-content: center;
 }
 
+.btn.btn-outline-primary.theme-toggle-btn:hover,
+.btn.btn-outline-primary.theme-toggle-btn:focus-visible {
+  background-color: rgba(13, 110, 253, 0.25);
+}
+
 #lgsCheckboxes .form-check-input,
 #lgsCheckboxes .form-check-label {
   cursor: pointer;
