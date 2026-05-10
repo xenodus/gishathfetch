@@ -23,7 +23,7 @@ import (
 	"mtg-price-checker-sg/gateway/mtgasia"
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
-	"mtg-price-checker-sg/gateway/tefuda"
+	// "mtg-price-checker-sg/gateway/tefuda"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
 	"sort"
@@ -81,7 +81,7 @@ var shopRegistry = []shopSpec{
 	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
 	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS, isBinderpos: true},
 	{name: onemtg.StoreName, newLGS: onemtg.NewLGS, isBinderpos: true},
-	{name: tefuda.StoreName, newLGS: tefuda.NewLGS, isBinderpos: true},
+	// {name: tefuda.StoreName, newLGS: tefuda.NewLGS, isBinderpos: true},
 	{name: tcgmarketplace.StoreName, newLGS: tcgmarketplace.NewLGS},
 	// {name: unsleeved.StoreName, newLGS: unsleeved.NewLGS},
 }
