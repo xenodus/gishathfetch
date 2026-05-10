@@ -145,14 +145,6 @@ export const LGS_MAP = [
   //     "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.740634996764!2d103.8765490749657!3d1.3317319986556433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da178ea031acdb%3A0xac7ea94397d6a870!2sTefuda!5e0!3m2!1sen!2ssg!4v1743179304416!5m2!1sen!2ssg",
   //   website: "https://tefudagames.com/",
   // },
-  {
-    id: "unsleeved-map",
-    name: "Unsleeved",
-    address: "17A Jln Klapa, #02-01, Singapore 199329",
-    iframe:
-      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7846024345927!2d103.85963729999999!3d1.3042818999999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da1963987b59bf%3A0xc1ed652c0bc65836!2sUnsalted%20by%20Lazy%20Potato!5e0!3m2!1sen!2ssg!4v1759481675787!5m2!1sen!2ssg",
-    website: "https://hitpay.shop/unsleeved/",
-  },
 ];
 
 export const MIN_SEARCH_LENGTH = 3;
