@@ -14,33 +14,34 @@ func TestNextBinderposStorefrontProxyURLRoundRobin(t *testing.T) {
 	binderposDedicatedProxySeq.Store(0)
 
 	urls := []string{"http://a:1", "http://b:2"}
-	want := []struct {
-		url    string
-		direct bool
-	}{
-		{url: "http://a:1", direct: false},
-		{url: "http://b:2", direct: false},
-		{url: "", direct: true},
-		{url: "http://a:1", direct: false},
-	}
+	want := []string{"http://a:1", "http://b:2", "http://a:1"}
 	for i, w := range want {
-		gotURL, gotDirect := nextBinderposStorefrontProxyURL(urls)
-		if gotURL != w.url || gotDirect != w.direct {
-			t.Fatalf("step %d: got (%q, %v), want (%q, %v)", i, gotURL, gotDirect, w.url, w.direct)
+		gotURL := nextBinderposStorefrontProxyURL(urls)
+		if gotURL != w {
+			t.Fatalf("step %d: got %q, want %q", i, gotURL, w)
 		}
 	}
 }
 
-func TestNextBinderposStorefrontProxyURLSingleProxyIncludesDirect(t *testing.T) {
+func TestNextBinderposStorefrontProxyURLSingleProxyRepeats(t *testing.T) {
 	binderposDedicatedProxySeq.Store(0)
 	urls := []string{"http://only:8080"}
-	u0, d0 := nextBinderposStorefrontProxyURL(urls)
-	if d0 || u0 != "http://only:8080" {
-		t.Fatalf("first slot: got (%q, %v)", u0, d0)
+	u0 := nextBinderposStorefrontProxyURL(urls)
+	if u0 != "http://only:8080" {
+		t.Fatalf("first slot: got %q", u0)
 	}
-	u1, d1 := nextBinderposStorefrontProxyURL(urls)
-	if !d1 || u1 != "" {
-		t.Fatalf("second slot (direct): got (%q, %v)", u1, d1)
+	u1 := nextBinderposStorefrontProxyURL(urls)
+	if u1 != "http://only:8080" {
+		t.Fatalf("second slot: got %q", u1)
+	}
+}
+
+func TestSearchByStorefrontAPIDynamicRequiresEnv(t *testing.T) {
+	t.Setenv("DYNAMIC_PROXY", "")
+
+	_, err := searchByStorefrontAPIDynamic(context.Background(), 1, "Store", "https://example.com", "shopify.example.com", "Abrade")
+	if err == nil || err.Error() != "no dynamic proxy configured for binderpos storefront api" {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
