@@ -7,7 +7,7 @@ import (
 	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
-	"mtg-price-checker-sg/gateway/arcanesanctum"
+	// "mtg-price-checker-sg/gateway/arcanesanctum"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardboardcrackgames"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
@@ -23,7 +23,7 @@ import (
 	"mtg-price-checker-sg/gateway/mtgasia"
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
-	"mtg-price-checker-sg/gateway/tefuda"
+	// "mtg-price-checker-sg/gateway/tefuda"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
 	"sort"
@@ -66,7 +66,7 @@ type shopSpec struct {
 
 var shopRegistry = []shopSpec{
 	{name: agora.StoreName, newLGS: agora.NewLGS},
-	{name: arcanesanctum.StoreName, newLGS: arcanesanctum.NewLGS, isBinderpos: true},
+	// {name: arcanesanctum.StoreName, newLGS: arcanesanctum.NewLGS, isBinderpos: true},
 	{name: cardaffinity.StoreName, newLGS: cardaffinity.NewLGS, isBinderpos: true},
 	{name: cardboardcrackgames.StoreName, newLGS: cardboardcrackgames.NewLGS, isBinderpos: true},
 	{name: cardscitadel.StoreName, newLGS: cardscitadel.NewLGS, isBinderpos: true},
@@ -81,7 +81,7 @@ var shopRegistry = []shopSpec{
 	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
 	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS, isBinderpos: true},
 	{name: onemtg.StoreName, newLGS: onemtg.NewLGS, isBinderpos: true},
-	{name: tefuda.StoreName, newLGS: tefuda.NewLGS, isBinderpos: true},
+	// {name: tefuda.StoreName, newLGS: tefuda.NewLGS, isBinderpos: true},
 	{name: tcgmarketplace.StoreName, newLGS: tcgmarketplace.NewLGS},
 	// {name: unsleeved.StoreName, newLGS: unsleeved.NewLGS},
 }

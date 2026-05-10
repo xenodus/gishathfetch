@@ -13,6 +13,7 @@ func init() {
 }
 
 func Test_Search(t *testing.T) {
+	t.Skip("Tefuda is temporarily disabled in controller; re-enable this test when the store is wired back in")
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "smothering tithe")
 	require.NoError(t, err)

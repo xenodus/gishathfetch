@@ -5,7 +5,7 @@ export const PAGE_TITLE =
 export const LGS_OPTIONS = [
   "5 Mana",
   "Agora Hobby",
-  "Arcane Sanctum",
+  // "Arcane Sanctum",
   "Card Affinity",
   "Cardboard Crack Games",
   "Cards Citadel",
@@ -19,7 +19,7 @@ export const LGS_OPTIONS = [
   "Mox & Lotus",
   "MTG Asia",
   "OneMtg",
-  "Tefuda",
+  // "Tefuda",
   "The TCG Marketplace",
 ];
 
@@ -40,14 +40,14 @@ export const LGS_MAP = [
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778050505021!2d103.85967687451628!3d1.3084089617085968!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19c9f7d7f74d%3A0xeaa1a66df7d4bcd6!2sAgora%20Hobby!5e0!3m2!1sen!2ssg!4v1702820213937!5m2!1sen!2ssg",
     website: "https://agorahobby.com/",
   },
-  {
-    id: "arcane-sanctum-map",
-    name: "Arcane Sanctum",
-    address: "809 French Rd, #02-36 Kitchener Complex, Singapore 200809",
-    iframe:
-      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778059032544!2d103.8596768749415!3d1.3084035986791807!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da197e8c761a49%3A0x8c56b7150064528b!2sArcane%20Sanctum!5e0!3m2!1sen!2ssg!4v1768317836907!5m2!1sen!2ssg",
-    website: "https://arcanesanctumtcg.com/",
-  },
+  // {
+  //   id: "arcane-sanctum-map",
+  //   name: "Arcane Sanctum",
+  //   address: "809 French Rd, #02-36 Kitchener Complex, Singapore 200809",
+  //   iframe:
+  //     "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778059032544!2d103.8596768749415!3d1.3084035986791807!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da197e8c761a49%3A0x8c56b7150064528b!2sArcane%20Sanctum!5e0!3m2!1sen!2ssg!4v1768317836907!5m2!1sen!2ssg",
+  //   website: "https://arcanesanctumtcg.com/",
+  // },
   {
     id: "cardboard-crack-games-map",
     name: "Cardboard Crack Games",
@@ -137,14 +137,14 @@ export const LGS_MAP = [
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7866900551694!2d103.85910407451628!3d1.3029641617257042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19180d91f3a1%3A0x75c807bf93d430a4!2sOne%20MTG!5e0!3m2!1sen!2ssg!4v1702821425238!5m2!1sen!2ssg",
     website: "https://onemtg.com.sg/",
   },
-  {
-    id: "tefuda-map",
-    name: "Tefuda",
-    address: "B1-02 Macpherson Mall, Singapore 368125",
-    iframe:
-      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.740634996764!2d103.8765490749657!3d1.3317319986556433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da178ea031acdb%3A0xac7ea94397d6a870!2sTefuda!5e0!3m2!1sen!2ssg!4v1743179304416!5m2!1sen!2ssg",
-    website: "https://tefudagames.com/",
-  },
+  // {
+  //   id: "tefuda-map",
+  //   name: "Tefuda",
+  //   address: "B1-02 Macpherson Mall, Singapore 368125",
+  //   iframe:
+  //     "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.740634996764!2d103.8765490749657!3d1.3317319986556433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da178ea031acdb%3A0xac7ea94397d6a870!2sTefuda!5e0!3m2!1sen!2ssg!4v1743179304416!5m2!1sen!2ssg",
+  //   website: "https://tefudagames.com/",
+  // },
   {
     id: "unsleeved-map",
     name: "Unsleeved",

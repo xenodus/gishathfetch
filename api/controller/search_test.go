@@ -10,7 +10,7 @@ import (
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
 	"mtg-price-checker-sg/gateway/hideout"
-	"mtg-price-checker-sg/gateway/tefuda"
+	"mtg-price-checker-sg/gateway/mtgasia"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,7 +19,7 @@ import (
 )
 
 func TestInitAndMapShops_FiltersByRequestedLGS(t *testing.T) {
-	shops := initAndMapShops([]string{agora.StoreName, tefuda.StoreName})
+	shops := initAndMapShops([]string{agora.StoreName, hideout.StoreName})
 
 	if len(shops) != 2 {
 		t.Fatalf("expected 2 shops after filtering, got %d", len(shops))
@@ -27,8 +27,8 @@ func TestInitAndMapShops_FiltersByRequestedLGS(t *testing.T) {
 	if _, ok := shops[agora.StoreName]; !ok {
 		t.Fatalf("expected %q to be included", agora.StoreName)
 	}
-	if _, ok := shops[tefuda.StoreName]; !ok {
-		t.Fatalf("expected %q to be included", tefuda.StoreName)
+	if _, ok := shops[hideout.StoreName]; !ok {
+		t.Fatalf("expected %q to be included", hideout.StoreName)
 	}
 	if _, ok := shops[cardaffinity.StoreName]; ok {
 		t.Fatalf("did not expect %q to be included", cardaffinity.StoreName)
@@ -347,7 +347,7 @@ func TestSearchShops_IncludesStoreErrors(t *testing.T) {
 func TestIsBinderposStore(t *testing.T) {
 	tests := map[string]bool{
 		cardscitadel.StoreName: true,
-		tefuda.StoreName:       true,
+		hideout.StoreName:      true,
 		agora.StoreName:        false,
 		"Unknown Shop":         false,
 	}
@@ -370,7 +370,7 @@ func TestFetchCardsConcurrently_BinderposGate(t *testing.T) {
 		cardaffinity.StoreName,
 		hideout.StoreName,
 		gameshaven.StoreName,
-		tefuda.StoreName,
+		mtgasia.StoreName,
 		gog.StoreName,
 	}
 	shops := make(map[string]gateway.LGS, len(binderposShops)+1)
