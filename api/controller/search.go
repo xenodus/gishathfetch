@@ -7,7 +7,7 @@ import (
 	"log"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
-	"mtg-price-checker-sg/gateway/arcanesanctum"
+	// "mtg-price-checker-sg/gateway/arcanesanctum"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardboardcrackgames"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
@@ -66,7 +66,7 @@ type shopSpec struct {
 
 var shopRegistry = []shopSpec{
 	{name: agora.StoreName, newLGS: agora.NewLGS},
-	{name: arcanesanctum.StoreName, newLGS: arcanesanctum.NewLGS, isBinderpos: true},
+	// {name: arcanesanctum.StoreName, newLGS: arcanesanctum.NewLGS, isBinderpos: true},
 	{name: cardaffinity.StoreName, newLGS: cardaffinity.NewLGS, isBinderpos: true},
 	{name: cardboardcrackgames.StoreName, newLGS: cardboardcrackgames.NewLGS, isBinderpos: true},
 	{name: cardscitadel.StoreName, newLGS: cardscitadel.NewLGS, isBinderpos: true},

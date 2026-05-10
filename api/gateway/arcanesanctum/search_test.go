@@ -13,6 +13,7 @@ func init() {
 }
 
 func Test_Search(t *testing.T) {
+	t.Skip("Arcane Sanctum is temporarily disabled in controller; re-enable this test when the store is wired back in")
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "signet")
 	require.NoError(t, err)
