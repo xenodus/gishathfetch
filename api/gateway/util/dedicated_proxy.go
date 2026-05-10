@@ -62,6 +62,19 @@ func BuildDedicatedProxyURL(proxy DedicatedProxy) (string, bool) {
 	return fmt.Sprintf("http://%s:%s", proxy.Host, proxy.Port), true
 }
 
+// BuildProxyURL supports either a fully-formed proxy URL or the pipe-separated
+// host|port|username|password format used by DEDICATED_PROXY_* env vars.
+func BuildProxyURL(raw string) (string, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", false
+	}
+	if strings.Contains(raw, "://") {
+		return raw, true
+	}
+	return BuildDedicatedProxyURL(parseDedicatedProxy(raw))
+}
+
 func GetDedicatedProxyURLs() []string {
 	proxies := GetDedicatedProxy()
 	proxyURLs := make([]string, 0, len(proxies))
