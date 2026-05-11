@@ -9,9 +9,11 @@ import (
 	"time"
 )
 
+// Global per-host pacing for all Colly and storefront HTTP requests. Larger gaps reduce
+// burstiness to upstream CDNs/WAFs (fewer 403s) at the cost of slightly slower multi-page scrapes.
 const (
-	domainRequestMinInterval = 300 * time.Millisecond
-	domainRequestMaxJitter   = 600 * time.Millisecond
+	domainRequestMinInterval = 600 * time.Millisecond
+	domainRequestMaxJitter   = 1200 * time.Millisecond
 )
 
 var sharedDomainRequestLimiter = newDomainRequestLimiter(domainRequestMinInterval, domainRequestMaxJitter)
