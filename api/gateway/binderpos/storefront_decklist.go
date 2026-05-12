@@ -44,6 +44,8 @@ func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scra
 	if err != nil {
 		return nil, err
 	}
+	storeBase, _ := url.Parse(baseURL)
+	gateway.ApplyBrowserLikeJSONFetchHeaders(&req.Header, storeBase)
 	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {

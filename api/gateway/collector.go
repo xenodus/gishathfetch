@@ -304,9 +304,12 @@ func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string) 
 			r.Abort()
 			return
 		}
-		// Keep gzip only. Go's default client does not transparently decode brotli ("br").
-		r.Headers.Set("Accept-Encoding", "gzip")
-		r.Headers.Set("User-Agent", RandomBrowserUserAgent())
+		if r.Headers != nil {
+			ApplyBrowserLikeHTMLHeaders(r.Headers, r.URL)
+			// Keep gzip only. Go's default client does not transparently decode brotli ("br").
+			r.Headers.Set("Accept-Encoding", "gzip")
+			r.Headers.Set("User-Agent", RandomBrowserUserAgent())
+		}
 		seedProxyContextIfMissing(r.Ctx, initialProxyMode, initialProxyURL)
 	})
 }
