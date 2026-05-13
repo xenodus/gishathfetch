@@ -11,33 +11,35 @@ type fallbackAttempt struct {
 	fn       func() ([]gateway.Card, error)
 }
 
-// searchWithScrapDedicatedThenDynamicThenDirect tries a scrape using dedicated-proxy routing first,
-// then dynamic proxy routing, then a direct (no proxy) scrape on failure.
-func searchWithScrapDedicatedThenDynamicThenDirect(
+// searchWithScrapDedicatedThenDirectThenDynamic tries a scrape using dedicated-proxy routing first,
+// then a direct (no proxy) scrape, and only uses the dynamic proxy as the last fallback.
+func searchWithScrapDedicatedThenDirectThenDynamic(
 	scrapDedicatedFn func() ([]gateway.Card, error),
-	scrapDynamicFn func() ([]gateway.Card, error),
 	scrapDirectFn func() ([]gateway.Card, error),
+	scrapDynamicFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	return runFallbackAttempts(
 		fallbackAttempt{strategy: "scrap-dedicated", fn: scrapDedicatedFn},
-		fallbackAttempt{strategy: "scrap-dynamic", fn: scrapDynamicFn},
 		fallbackAttempt{strategy: "scrap-direct", fn: scrapDirectFn},
+		fallbackAttempt{strategy: "scrap-dynamic", fn: scrapDynamicFn},
 	)
 }
 
 func searchWithFallback(
 	searchAPIDedicatedFn func() ([]gateway.Card, error),
-	searchAPIDynamicFn func() ([]gateway.Card, error),
+	searchAPIDirectFn func() ([]gateway.Card, error),
 	scrapDedicatedFn func() ([]gateway.Card, error),
-	scrapDynamicFn func() ([]gateway.Card, error),
 	scrapDirectFn func() ([]gateway.Card, error),
+	searchAPIDynamicFn func() ([]gateway.Card, error),
+	scrapDynamicFn func() ([]gateway.Card, error),
 ) ([]gateway.Card, error) {
 	return runFallbackAttempts(
 		fallbackAttempt{strategy: "api-dedicated", fn: searchAPIDedicatedFn},
-		fallbackAttempt{strategy: "api-dynamic", fn: searchAPIDynamicFn},
+		fallbackAttempt{strategy: "api-direct", fn: searchAPIDirectFn},
 		fallbackAttempt{strategy: "scrap-dedicated", fn: scrapDedicatedFn},
-		fallbackAttempt{strategy: "scrap-dynamic", fn: scrapDynamicFn},
 		fallbackAttempt{strategy: "scrap-direct", fn: scrapDirectFn},
+		fallbackAttempt{strategy: "api-dynamic", fn: searchAPIDynamicFn},
+		fallbackAttempt{strategy: "scrap-dynamic", fn: scrapDynamicFn},
 	)
 }
 
