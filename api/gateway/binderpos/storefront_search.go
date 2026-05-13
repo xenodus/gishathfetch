@@ -12,7 +12,7 @@ const ArcaneSanctumStoreName = "Arcane Sanctum"
 
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr string) ([]gateway.Card, error) {
 	if strings.TrimSpace(shopifyDomain) == "" {
-		return searchWithScrapDedicatedThenDynamicThenDirect(
+		return searchWithScrapDedicatedThenDirectThenDynamic(
 			func() ([]gateway.Card, error) {
 				return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
 					return i.Scrap(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
@@ -20,12 +20,12 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 			},
 			func() ([]gateway.Card, error) {
 				return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return i.scrapDynamic(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+					return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 				})
 			},
 			func() ([]gateway.Card, error) {
 				return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+					return i.scrapDynamic(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 				})
 			},
 		)
@@ -39,7 +39,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return searchByStorefrontAPIDynamic(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+				return searchByStorefrontAPIDirect(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 			})
 		},
 		func() ([]gateway.Card, error) {
@@ -49,12 +49,17 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return i.scrapDynamic(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+				return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			})
 		},
 		func() ([]gateway.Card, error) {
 			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+				return searchByStorefrontAPIDynamic(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+			})
+		},
+		func() ([]gateway.Card, error) {
+			return runWithAttemptTimeout(ctx, func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return i.scrapDynamic(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			})
 		},
 	)
