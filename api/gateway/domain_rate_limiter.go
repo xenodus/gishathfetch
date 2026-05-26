@@ -10,9 +10,12 @@ import (
 
 const domainRequestMinInterval = 300 * time.Millisecond
 
-var sharedDomainRequestLimiter = newDomainRequestLimiter(domainRequestMinInterval)
-
 type domainRequestPacingDisabledKey struct{}
+
+var (
+	sharedDomainRequestLimiter    = newDomainRequestLimiter(domainRequestMinInterval)
+	disableDomainRequestPacingKey = domainRequestPacingDisabledKey{}
+)
 
 type domainRequestLimiter struct {
 	mu          sync.Mutex
@@ -47,7 +50,7 @@ func WithDomainRequestPacingDisabled(ctx context.Context) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return context.WithValue(ctx, domainRequestPacingDisabledKey{}, true)
+	return context.WithValue(ctx, disableDomainRequestPacingKey, true)
 }
 
 func (l *domainRequestLimiter) wait(ctx context.Context, targetURL *url.URL) error {
@@ -115,6 +118,6 @@ func domainRequestPacingDisabled(ctx context.Context) bool {
 		return false
 	}
 
-	disabled, _ := ctx.Value(domainRequestPacingDisabledKey{}).(bool)
+	disabled, _ := ctx.Value(disableDomainRequestPacingKey).(bool)
 	return disabled
 }
