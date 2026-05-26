@@ -81,6 +81,30 @@ func TestDomainRequestLimiterRollbackOnCancellation(t *testing.T) {
 	}
 }
 
+func TestDomainRequestLimiterWaitBypassesDisabledPacing(t *testing.T) {
+	limiter := newDomainRequestLimiter(80 * time.Millisecond)
+	targetURL, err := url.Parse("https://example.com/items")
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+
+	disabledCtx := WithDomainRequestPacingDisabled(context.Background())
+	start := time.Now()
+	if err := limiter.wait(disabledCtx, targetURL); err != nil {
+		t.Fatalf("first disabled wait returned error: %v", err)
+	}
+	if err := limiter.wait(disabledCtx, targetURL); err != nil {
+		t.Fatalf("second disabled wait returned error: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed >= 40*time.Millisecond {
+		t.Fatalf("expected disabled pacing waits to return immediately, got elapsed=%s", elapsed)
+	}
+
+	if _, exists := limiter.nextAllowed["example.com"]; exists {
+		t.Fatalf("expected disabled pacing waits to avoid reserving a domain slot")
+	}
+}
+
 func TestDomainRequestLimiterReserveDelayFirstRequestImmediate(t *testing.T) {
 	limiter := newDomainRequestLimiter(300 * time.Millisecond)
 	now := time.Unix(100, 0)

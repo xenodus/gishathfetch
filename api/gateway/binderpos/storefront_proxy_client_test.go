@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"mtg-price-checker-sg/gateway"
 )
@@ -86,7 +87,7 @@ func TestNewHTTPClientWithProxyURL(t *testing.T) {
 
 func TestRunWithAttemptTimeout(t *testing.T) {
 	t.Run("returns callback result when callback succeeds", func(t *testing.T) {
-		got, err := runWithAttemptTimeout(context.Background(), func(attemptCtx context.Context) ([]gateway.Card, error) {
+		got, err := runWithAttemptTimeout(context.Background(), false, func(attemptCtx context.Context) ([]gateway.Card, error) {
 			if _, hasDeadline := attemptCtx.Deadline(); !hasDeadline {
 				t.Fatalf("expected attempt context to have deadline")
 			}
@@ -102,11 +103,59 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 
 	t.Run("propagates callback error", func(t *testing.T) {
 		wantErr := errors.New("boom")
-		_, err := runWithAttemptTimeout(context.Background(), func(_ context.Context) ([]gateway.Card, error) {
+		_, err := runWithAttemptTimeout(context.Background(), true, func(_ context.Context) ([]gateway.Card, error) {
 			return nil, wantErr
 		})
 		if !errors.Is(err, wantErr) {
 			t.Fatalf("expected %v, got %v", wantErr, err)
+		}
+	})
+
+	t.Run("skips shared request pacing for first attempts", func(t *testing.T) {
+		targetURL, err := url.Parse("https://initial-attempt.example.com/items")
+		if err != nil {
+			t.Fatalf("failed to parse target URL: %v", err)
+		}
+
+		start := time.Now()
+		_, err = runWithAttemptTimeout(context.Background(), false, func(attemptCtx context.Context) ([]gateway.Card, error) {
+			if err := gateway.WaitForDomainRequestSlot(attemptCtx, targetURL); err != nil {
+				return nil, err
+			}
+			if err := gateway.WaitForDomainRequestSlot(attemptCtx, targetURL); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		})
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if elapsed := time.Since(start); elapsed >= 120*time.Millisecond {
+			t.Fatalf("expected first attempts to skip pacing, got elapsed=%s", elapsed)
+		}
+	})
+
+	t.Run("keeps shared request pacing for fallbacks", func(t *testing.T) {
+		targetURL, err := url.Parse("https://fallback-attempt.example.com/items")
+		if err != nil {
+			t.Fatalf("failed to parse target URL: %v", err)
+		}
+
+		start := time.Now()
+		_, err = runWithAttemptTimeout(context.Background(), true, func(attemptCtx context.Context) ([]gateway.Card, error) {
+			if err := gateway.WaitForDomainRequestSlot(attemptCtx, targetURL); err != nil {
+				return nil, err
+			}
+			if err := gateway.WaitForDomainRequestSlot(attemptCtx, targetURL); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		})
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if elapsed := time.Since(start); elapsed < 250*time.Millisecond {
+			t.Fatalf("expected fallback attempts to keep pacing, got elapsed=%s", elapsed)
 		}
 	})
 }
