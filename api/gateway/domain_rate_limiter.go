@@ -10,7 +10,12 @@ import (
 
 const domainRequestMinInterval = 300 * time.Millisecond
 
-var sharedDomainRequestLimiter = newDomainRequestLimiter(domainRequestMinInterval)
+type domainRequestPacingDisabledKey struct{}
+
+var (
+	sharedDomainRequestLimiter    = newDomainRequestLimiter(domainRequestMinInterval)
+	disableDomainRequestPacingKey = domainRequestPacingDisabledKey{}
+)
 
 type domainRequestLimiter struct {
 	mu          sync.Mutex
@@ -39,12 +44,24 @@ func WaitForDomainRequestSlot(ctx context.Context, targetURL *url.URL) error {
 	return waitForDomainRequestSlot(ctx, targetURL)
 }
 
+// WithDomainRequestPacingDisabled bypasses shared per-domain pacing for work that
+// should not pay the inter-request delay, such as a BinderPOS store's first attempt.
+func WithDomainRequestPacingDisabled(ctx context.Context) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, disableDomainRequestPacingKey, true)
+}
+
 func (l *domainRequestLimiter) wait(ctx context.Context, targetURL *url.URL) error {
 	if l == nil || targetURL == nil {
 		return nil
 	}
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if domainRequestPacingDisabled(ctx) {
+		return nil
 	}
 
 	domain := canonicalDomain(targetURL)
@@ -94,4 +111,13 @@ func (l *domainRequestLimiter) rollbackReservation(domain string, reservedUntil 
 
 func canonicalDomain(targetURL *url.URL) string {
 	return strings.ToLower(strings.TrimSpace(targetURL.Hostname()))
+}
+
+func domainRequestPacingDisabled(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+
+	disabled, _ := ctx.Value(disableDomainRequestPacingKey).(bool)
+	return disabled
 }
