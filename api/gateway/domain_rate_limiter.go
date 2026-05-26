@@ -2,39 +2,30 @@ package gateway
 
 import (
 	"context"
-	"math/rand/v2"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 )
 
-const (
-	domainRequestMinInterval = 300 * time.Millisecond
-	domainRequestMaxJitter   = 600 * time.Millisecond
-)
+const domainRequestMinInterval = 300 * time.Millisecond
 
-var sharedDomainRequestLimiter = newDomainRequestLimiter(domainRequestMinInterval, domainRequestMaxJitter)
+var sharedDomainRequestLimiter = newDomainRequestLimiter(domainRequestMinInterval)
 
 type domainRequestLimiter struct {
 	mu          sync.Mutex
 	nextAllowed map[string]time.Time
 	minInterval time.Duration
-	maxJitter   time.Duration
 }
 
-func newDomainRequestLimiter(minInterval, maxJitter time.Duration) *domainRequestLimiter {
+func newDomainRequestLimiter(minInterval time.Duration) *domainRequestLimiter {
 	if minInterval < 0 {
 		minInterval = 0
-	}
-	if maxJitter < 0 {
-		maxJitter = 0
 	}
 
 	return &domainRequestLimiter{
 		nextAllowed: make(map[string]time.Time),
 		minInterval: minInterval,
-		maxJitter:   maxJitter,
 	}
 }
 
@@ -87,8 +78,7 @@ func (l *domainRequestLimiter) reserveDelay(domain string, now time.Time) (time.
 		nextAllowed = now
 	}
 
-	jitter := randomDuration(l.maxJitter)
-	reservedUntil := nextAllowed.Add(l.minInterval + jitter)
+	reservedUntil := nextAllowed.Add(l.minInterval)
 	l.nextAllowed[domain] = reservedUntil
 	return nextAllowed.Sub(now), reservedUntil
 }
@@ -104,12 +94,4 @@ func (l *domainRequestLimiter) rollbackReservation(domain string, reservedUntil 
 
 func canonicalDomain(targetURL *url.URL) string {
 	return strings.ToLower(strings.TrimSpace(targetURL.Hostname()))
-}
-
-func randomDuration(max time.Duration) time.Duration {
-	if max <= 0 {
-		return 0
-	}
-
-	return time.Duration(rand.Int64N(int64(max)))
 }

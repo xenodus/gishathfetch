@@ -1,6 +1,6 @@
 # Search strategies, retries, and timing
 
-This document records **where** the app configures search behavior, **timeouts**, **fallback/attempt ordering**, **concurrency limits**, and **jittered pacing**. It is meant for code agents and maintainers: when you change a constant, update this file in the same PR.
+This document records **where** the app configures search behavior, **timeouts**, **fallback/attempt ordering**, **concurrency limits**, and **request pacing**. It is meant for code agents and maintainers: when you change a constant, update this file in the same PR.
 
 ---
 
@@ -20,8 +20,7 @@ This document records **where** the app configures search behavior, **timeouts**
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| Minimum interval between requests to the **same host** | 300ms | `domainRequestMinInterval` in `api/gateway/domain_rate_limiter.go` | Added to the reservation for the next allowed time for that domain. |
-| Jitter (added on top of minimum interval) | uniform in **[0, 600ms)** | `domainRequestMaxJitter` + `randomDuration` in `api/gateway/domain_rate_limiter.go` | Per reservation: `reservedUntil = nextAllowed + minInterval + jitter`. If the wait is cancelled, the limiter can roll back that reservation. |
+| Minimum interval between requests to the **same host** | 300ms | `domainRequestMinInterval` in `api/gateway/domain_rate_limiter.go` | Per reservation: `reservedUntil = nextAllowed + minInterval`. The first request for a host is immediate; later requests wait until the prior reservation expires. If the wait is cancelled, the limiter can roll back that reservation. |
 
 ## Backend: dedicated proxy env (`api/gateway/util/dedicated_proxy.go`)
 

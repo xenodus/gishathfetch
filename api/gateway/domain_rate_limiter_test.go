@@ -8,7 +8,7 @@ import (
 )
 
 func TestDomainRequestLimiterWaitSameDomain(t *testing.T) {
-	limiter := newDomainRequestLimiter(40*time.Millisecond, 0)
+	limiter := newDomainRequestLimiter(40 * time.Millisecond)
 	targetURL, err := url.Parse("https://example.com/products")
 	if err != nil {
 		t.Fatalf("failed to parse URL: %v", err)
@@ -29,7 +29,7 @@ func TestDomainRequestLimiterWaitSameDomain(t *testing.T) {
 }
 
 func TestDomainRequestLimiterWaitDifferentDomains(t *testing.T) {
-	limiter := newDomainRequestLimiter(50*time.Millisecond, 0)
+	limiter := newDomainRequestLimiter(50 * time.Millisecond)
 	firstURL, err := url.Parse("https://example.com/a")
 	if err != nil {
 		t.Fatalf("failed to parse first URL: %v", err)
@@ -54,7 +54,7 @@ func TestDomainRequestLimiterWaitDifferentDomains(t *testing.T) {
 }
 
 func TestDomainRequestLimiterRollbackOnCancellation(t *testing.T) {
-	limiter := newDomainRequestLimiter(150*time.Millisecond, 0)
+	limiter := newDomainRequestLimiter(150 * time.Millisecond)
 	targetURL, err := url.Parse("https://example.com/items")
 	if err != nil {
 		t.Fatalf("failed to parse URL: %v", err)
@@ -78,5 +78,34 @@ func TestDomainRequestLimiterRollbackOnCancellation(t *testing.T) {
 
 	if elapsed >= 60*time.Millisecond {
 		t.Fatalf("expected rollback to clear pending reservation, got elapsed=%s", elapsed)
+	}
+}
+
+func TestDomainRequestLimiterReserveDelayFirstRequestImmediate(t *testing.T) {
+	limiter := newDomainRequestLimiter(300 * time.Millisecond)
+	now := time.Unix(100, 0)
+
+	delay, reservedUntil := limiter.reserveDelay("portal.binderpos.com", now)
+	if delay != 0 {
+		t.Fatalf("expected first request delay to be 0, got %s", delay)
+	}
+	if want := now.Add(300 * time.Millisecond); !reservedUntil.Equal(want) {
+		t.Fatalf("expected first reservation until %s, got %s", want, reservedUntil)
+	}
+}
+
+func TestDomainRequestLimiterReserveDelayUsesFixedMinimumInterval(t *testing.T) {
+	limiter := newDomainRequestLimiter(300 * time.Millisecond)
+	now := time.Unix(100, 0)
+
+	_, firstReservedUntil := limiter.reserveDelay("portal.binderpos.com", now)
+	secondNow := now.Add(150 * time.Millisecond)
+	delay, secondReservedUntil := limiter.reserveDelay("portal.binderpos.com", secondNow)
+
+	if want := 150 * time.Millisecond; delay != want {
+		t.Fatalf("expected second request delay %s, got %s", want, delay)
+	}
+	if want := firstReservedUntil.Add(300 * time.Millisecond); !secondReservedUntil.Equal(want) {
+		t.Fatalf("expected second reservation until %s, got %s", want, secondReservedUntil)
 	}
 }
