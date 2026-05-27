@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const domainRequestMinInterval = 300 * time.Millisecond
+const domainRequestMinInterval = 200 * time.Millisecond
 
 type domainRequestPacingDisabledKey struct{}
 

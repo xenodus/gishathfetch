@@ -106,30 +106,30 @@ func TestDomainRequestLimiterWaitBypassesDisabledPacing(t *testing.T) {
 }
 
 func TestDomainRequestLimiterReserveDelayFirstRequestImmediate(t *testing.T) {
-	limiter := newDomainRequestLimiter(300 * time.Millisecond)
+	limiter := newDomainRequestLimiter(200 * time.Millisecond)
 	now := time.Unix(100, 0)
 
 	delay, reservedUntil := limiter.reserveDelay("portal.binderpos.com", now)
 	if delay != 0 {
 		t.Fatalf("expected first request delay to be 0, got %s", delay)
 	}
-	if want := now.Add(300 * time.Millisecond); !reservedUntil.Equal(want) {
+	if want := now.Add(200 * time.Millisecond); !reservedUntil.Equal(want) {
 		t.Fatalf("expected first reservation until %s, got %s", want, reservedUntil)
 	}
 }
 
 func TestDomainRequestLimiterReserveDelayUsesFixedMinimumInterval(t *testing.T) {
-	limiter := newDomainRequestLimiter(300 * time.Millisecond)
+	limiter := newDomainRequestLimiter(200 * time.Millisecond)
 	now := time.Unix(100, 0)
 
 	_, firstReservedUntil := limiter.reserveDelay("portal.binderpos.com", now)
-	secondNow := now.Add(150 * time.Millisecond)
+	secondNow := now.Add(100 * time.Millisecond)
 	delay, secondReservedUntil := limiter.reserveDelay("portal.binderpos.com", secondNow)
 
-	if want := 150 * time.Millisecond; delay != want {
+	if want := 100 * time.Millisecond; delay != want {
 		t.Fatalf("expected second request delay %s, got %s", want, delay)
 	}
-	if want := firstReservedUntil.Add(300 * time.Millisecond); !secondReservedUntil.Equal(want) {
+	if want := firstReservedUntil.Add(200 * time.Millisecond); !secondReservedUntil.Equal(want) {
 		t.Fatalf("expected second reservation until %s, got %s", want, secondReservedUntil)
 	}
 }

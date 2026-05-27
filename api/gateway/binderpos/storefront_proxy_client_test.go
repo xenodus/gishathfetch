@@ -154,7 +154,7 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
-		if elapsed := time.Since(start); elapsed < 250*time.Millisecond {
+		if elapsed := time.Since(start); elapsed < 150*time.Millisecond {
 			t.Fatalf("expected fallback attempts to keep pacing, got elapsed=%s", elapsed)
 		}
 	})
