@@ -11,6 +11,7 @@ export const LGS_OPTIONS = [
   "Cards Citadel",
   "Cards & Collections",
   "Dueller's Point",
+  "Fyendal Hobby",
   "Flagship Games",
   "Games Haven",
   "Grey Ogre Games",
@@ -72,6 +73,14 @@ export const LGS_MAP = [
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.6621597567673!2d103.89300967489284!3d1.3793695614804176!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da163eecb250ff%3A0xc7c259e72671dc62!2sDueller's%20Point!5e0!3m2!1sen!2ssg!4v1771347706226!5m2!1sen!2ssg",
     website: "https://www.duellerspoint.com/",
+  },
+  {
+    id: "fyendal-hobby-map",
+    name: "Fyendal Hobby",
+    address: "86 Marine Parade Central, #04-305, Singapore 440086",
+    iframe:
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.789!2d103.904!3d1.302!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2sFyendal%20Hobby!5e0!3m2!1sen!2ssg!4v1702820000000!5m2!1sen!2ssg",
+    website: "https://fyendalhobby.com/",
   },
   {
     id: "flagship-games-map",
