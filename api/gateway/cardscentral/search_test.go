@@ -19,7 +19,8 @@ func Test_Search(t *testing.T) {
 			require.Contains(t, card.Url, StoreBaseURL+"/card/")
 			require.NotEmpty(t, card.Img)
 			require.Greater(t, card.Price, float64(0))
-			require.NotEmpty(t, card.Quality)
+			require.Equal(t, "Near Mint", card.Quality)
+			require.NotEmpty(t, card.ExtraInfo)
 		}
 	}
 }

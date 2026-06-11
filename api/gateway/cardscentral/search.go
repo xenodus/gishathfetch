@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 )
 
@@ -73,6 +74,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return cards, fmt.Errorf("unexpected status for %s: %s", s.Name, resp.Status)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -85,7 +89,8 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	for _, it := range items {
-		if !it.InStock || it.Price <= 0 {
+		name := strings.TrimSpace(it.Name)
+		if !it.InStock || it.Price <= 0 || name == "" {
 			continue
 		}
 
@@ -106,14 +111,14 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}
 
 		cards = append(cards, gateway.Card{
-			Name:      strings.TrimSpace(it.Name),
+			Name:      name,
 			Url:       strings.TrimSpace(productURL),
 			Img:       it.Img,
 			Price:     it.Price,
 			InStock:   true,
 			IsFoil:    it.IsFoil,
 			Source:    s.Name,
-			Quality:   it.Condition,
+			Quality:   util.MapQuality(it.Condition),
 			ExtraInfo: extra,
 		})
 	}

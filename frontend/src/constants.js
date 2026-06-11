@@ -7,9 +7,9 @@ export const LGS_OPTIONS = [
   "Agora Hobby",
   // "Arcane Sanctum",
   "Card Affinity",
-  "Cardboard Crack Games",
-  "Cards Citadel",
   "Cards & Collections",
+  "Cards Central",
+  "Cards Citadel",
   "Dueller's Point",
   "Flagship Games",
   "Games Haven",
@@ -49,13 +49,12 @@ export const LGS_MAP = [
   //   website: "https://arcanesanctumtcg.com/",
   // },
   {
-    id: "cardboard-crack-games-map",
-    name: "Cardboard Crack Games",
-    address:
-      "Upper Bukit Timah Rd, #03-28 Beauty World Centre, 144, Singapore 588177",
+    id: "cards-central-map",
+    name: "Cards Central",
+    address: "62A Smith Street, Chinatown, Singapore 058964",
     iframe:
-      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7233430292667!2d103.7736843749657!3d1.3423740986449086!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da1920d676db93%3A0xe7b298b897da7b52!2sCardboard%20Crack%20Games!5e0!3m2!1sen!2ssg!4v1731824736033!5m2!1sen!2ssg",
-    website: "https://www.cardboardcrackgames.com/",
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.8188188188!2d103.844359!3d1.282578!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190d6e6a1d4d%3A0x6e6e6e6e6e6e6e6e!2s62A%20Smith%20St%2C%20Singapore%20058964!5e0!3m2!1sen!2ssg!4v1731824736033!5m2!1sen!2ssg",
+    website: "https://cardscentral.com/",
   },
   {
     id: "cards-citadel-map",
