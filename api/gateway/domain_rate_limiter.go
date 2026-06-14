@@ -17,6 +17,37 @@ var (
 	disableDomainRequestPacingKey = domainRequestPacingDisabledKey{}
 )
 
+// alwaysPacedDomains holds shared upstream hosts that many stores funnel into.
+// For these, per-domain pacing is enforced even when a caller opts out via
+// WithDomainRequestPacingDisabled. That opt-out is intended only for per-store
+// hosts (a single store's first attempt), where skipping the inter-request
+// delay is safe. On a shared host it would let concurrent callers burst the
+// same upstream and trigger 429/503 responses.
+var (
+	alwaysPacedDomainsMu sync.RWMutex
+	alwaysPacedDomains   = map[string]struct{}{}
+)
+
+// RegisterAlwaysPacedDomain marks host so per-domain pacing is enforced even when
+// a caller disables pacing via WithDomainRequestPacingDisabled. It is safe for
+// concurrent use and idempotent.
+func RegisterAlwaysPacedDomain(host string) {
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" {
+		return
+	}
+	alwaysPacedDomainsMu.Lock()
+	alwaysPacedDomains[host] = struct{}{}
+	alwaysPacedDomainsMu.Unlock()
+}
+
+func isAlwaysPacedDomain(domain string) bool {
+	alwaysPacedDomainsMu.RLock()
+	_, ok := alwaysPacedDomains[domain]
+	alwaysPacedDomainsMu.RUnlock()
+	return ok
+}
+
 type domainRequestLimiter struct {
 	mu          sync.Mutex
 	nextAllowed map[string]time.Time
@@ -60,12 +91,14 @@ func (l *domainRequestLimiter) wait(ctx context.Context, targetURL *url.URL) err
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if domainRequestPacingDisabled(ctx) {
-		return nil
-	}
 
 	domain := canonicalDomain(targetURL)
 	if domain == "" {
+		return nil
+	}
+	// A caller may disable pacing for per-store hosts, but shared upstream hosts
+	// always stay paced to avoid concurrent callers bursting the same endpoint.
+	if domainRequestPacingDisabled(ctx) && !isAlwaysPacedDomain(domain) {
 		return nil
 	}
 
