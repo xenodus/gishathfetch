@@ -105,6 +105,38 @@ func TestDomainRequestLimiterWaitBypassesDisabledPacing(t *testing.T) {
 	}
 }
 
+func TestDomainRequestLimiterEnforcesPacingForAlwaysPacedDomain(t *testing.T) {
+	limiter := newDomainRequestLimiter(80 * time.Millisecond)
+	targetURL, err := url.Parse("https://always-paced.example.com/decklist")
+	if err != nil {
+		t.Fatalf("failed to parse URL: %v", err)
+	}
+	RegisterAlwaysPacedDomain("always-paced.example.com")
+
+	disabledCtx := WithDomainRequestPacingDisabled(context.Background())
+	start := time.Now()
+	if err := limiter.wait(disabledCtx, targetURL); err != nil {
+		t.Fatalf("first wait returned error: %v", err)
+	}
+	if err := limiter.wait(disabledCtx, targetURL); err != nil {
+		t.Fatalf("second wait returned error: %v", err)
+	}
+
+	if elapsed := time.Since(start); elapsed < 70*time.Millisecond {
+		t.Fatalf("expected always-paced domain to stay throttled despite disabled pacing, got elapsed=%s", elapsed)
+	}
+}
+
+func TestRegisterAlwaysPacedDomainNormalizesHost(t *testing.T) {
+	RegisterAlwaysPacedDomain("  Mixed-Case.Example.COM ")
+	if !isAlwaysPacedDomain("mixed-case.example.com") {
+		t.Fatalf("expected registered host to be normalized to lowercase and trimmed")
+	}
+	if isAlwaysPacedDomain("unregistered.example.com") {
+		t.Fatalf("did not expect unregistered host to be reported as always paced")
+	}
+}
+
 func TestDomainRequestLimiterReserveDelayFirstRequestImmediate(t *testing.T) {
 	limiter := newDomainRequestLimiter(200 * time.Millisecond)
 	now := time.Unix(100, 0)

@@ -13,6 +13,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
 | BinderPOS store concurrency | 12 | `binderposMaxConcurrent` in `api/controller/search.go` | Semaphore limits how many binderpos-backed shops run at once. Non-binderpos stores are not limited by this gate. |
+| BinderPOS shared portal-host concurrency | 4 | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Separate semaphore limiting concurrent decklist requests to the single shared host `portal.binderpos.com`. Every binderpos store's primary lookup funnels into this one host, so this caps the per-host burst independently of the per-store gate above. Acquired in `searchByBinderposDecklistAPI`; respects context cancellation. |
 
 ---
 
@@ -21,6 +22,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Minimum interval between requests to the **same host** | 200ms | `domainRequestMinInterval` in `api/gateway/domain_rate_limiter.go` | Per reservation: `reservedUntil = nextAllowed + minInterval`. The first request for a host is immediate; later requests wait until the prior reservation expires. If the wait is cancelled, the limiter can roll back that reservation. |
+| Always-paced (shared) hosts | `portal.binderpos.com` | `RegisterAlwaysPacedDomain` / `alwaysPacedDomains` in `api/gateway/domain_rate_limiter.go`; registered in `api/gateway/binderpos/storefront_portal_gate.go` `init` | Hosts in this set stay paced **even when a caller opts out** via `WithDomainRequestPacingDisabled`. The opt-out is meant for per-store hosts (a store's first attempt), where skipping the inter-request delay is safe; on a shared host it would let concurrent stores burst the same upstream and cause 429/503. |
 
 ## Backend: dedicated proxy env (`api/gateway/util/dedicated_proxy.go`)
 
