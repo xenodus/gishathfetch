@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -40,14 +39,19 @@ func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scra
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, decklistURL.String(), bytes.NewReader(payloadBody))
-	if err != nil {
-		return nil, err
-	}
 	storeBase, _ := url.Parse(baseURL)
-	gateway.ApplyBrowserLikeJSONFetchHeaders(&req.Header, storeBase)
-	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	// Rebuilt per send so each retry carries a fresh User-Agent and a
+	// re-readable body, which also helps evade naive fingerprint throttling.
+	newRequest := func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, decklistURL.String(), bytes.NewReader(payloadBody))
+		if err != nil {
+			return nil, err
+		}
+		gateway.ApplyBrowserLikeJSONFetchHeaders(&req.Header, storeBase)
+		req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		return req, nil
+	}
 
 	releasePortalSlot, err := acquireBinderposPortalSlot(ctx)
 	if err != nil {
@@ -55,20 +59,11 @@ func searchByBinderposDecklistAPI(ctx context.Context, client *http.Client, scra
 	}
 	defer releasePortalSlot()
 
-	if err := gateway.WaitForDomainRequestSlot(ctx, req.URL); err != nil {
-		return nil, err
-	}
-
-	res, err := client.Do(req)
+	res, err := doDecklistRequestWithRetry(ctx, client, newRequest)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(res.Body)
-		return nil, fmt.Errorf("binderpos decklist request failed status=%d body=%s", res.StatusCode, strings.TrimSpace(string(body)))
-	}
 
 	var lines []storefrontDecklistLine
 	if err := json.NewDecoder(res.Body).Decode(&lines); err != nil {
