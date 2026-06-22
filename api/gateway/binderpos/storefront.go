@@ -11,6 +11,19 @@ const (
 	binderposDecklistType   = "mtg"
 	binderposDecklistPct    = 100
 	binderposAttemptTimeout = 10 * time.Second
+
+	// binderposDecklistMaxAttempts bounds how many times a single decklist call
+	// is sent (initial try plus retries) when the shared portal host responds
+	// with a transient rate-limit/5xx status or a network error. Retries stay
+	// within the per-attempt timeout budget and back off between sends so a
+	// struggling upstream is not hammered.
+	binderposDecklistMaxAttempts = 3
+	// binderposDecklistRetryBaseDelay is the first backoff step; subsequent
+	// retries grow it exponentially with equal jitter.
+	binderposDecklistRetryBaseDelay = 300 * time.Millisecond
+	// binderposDecklistRetryMaxDelay caps a single backoff/Retry-After wait so a
+	// large or hostile Retry-After value cannot stall the attempt.
+	binderposDecklistRetryMaxDelay = 2500 * time.Millisecond
 )
 
 var shouldUseDecklistEndpoint = func() bool {
