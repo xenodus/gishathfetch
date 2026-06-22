@@ -59,9 +59,9 @@ export const LGS_MAP = [
   {
     id: "cards-citadel-map",
     name: "Cards Citadel",
-    address: "464 Crawford Ln, #02-01, Singapore 190464",
+    address: "Blk 10 North Bridge Road, #02-5117, Singapore 190010",
     iframe:
-      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.783678524258!2d103.85966947451631!3d1.3048646617197366!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190c9e183751%3A0xa2119a95d1e683f2!2sCards%20Citadel!5e0!3m2!1sen!2ssg!4v1702820792196!5m2!1sen!2ssg",
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.783678524258!2d103.863559!3d1.305557!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190c9e183751%3A0xa2119a95d1e683f2!2sCards%20Citadel!5e0!3m2!1sen!2ssg!4v1782086400000!5m2!1sen!2ssg",
     website: "https://cardscitadel.com/",
   },
   {
