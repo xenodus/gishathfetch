@@ -16,6 +16,12 @@ import (
 // non-leased dedicated routing, so traffic round-robins across configured dedicated proxies.
 var binderposDedicatedProxySeq atomic.Uint32
 
+// binderposDecklistRouteSeq advances once per first-attempt storefront routing
+// decision so that decklist vs. product-details selection round-robins evenly
+// across the stores in a search instead of every store converging on the shared
+// portal host.
+var binderposDecklistRouteSeq atomic.Uint32
+
 // nextBinderposStorefrontProxyURL returns the next dedicated proxy URL in round-robin order.
 func nextBinderposStorefrontProxyURL(proxyURLs []string) string {
 	n := len(proxyURLs)
@@ -77,8 +83,11 @@ func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, s
 	return searchByStorefrontProductDetailsAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
 }
 
-func useDecklistForRoll(roll int) bool {
-	return roll < binderposDecklistPct
+// useDecklistForRoute returns true for even sequence numbers, yielding a 50/50
+// split between the shared decklist portal and the per-store product-details
+// path across consecutive routing decisions.
+func useDecklistForRoute(seq uint32) bool {
+	return seq%2 == 0
 }
 
 func newHTTPClientWithProxyURL(proxyURL string) (*http.Client, error) {

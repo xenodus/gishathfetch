@@ -8,25 +8,47 @@ import (
 	"testing"
 )
 
-func TestUseDecklistForRoll(t *testing.T) {
+func TestUseDecklistForRoute(t *testing.T) {
 	tests := []struct {
 		name string
-		roll int
+		seq  uint32
 		want bool
 	}{
-		{name: "0 routes to decklist", roll: 0, want: true},
-		{name: "50 routes to decklist", roll: 50, want: true},
-		{name: "99 routes to decklist", roll: 99, want: true},
-		{name: "100 routes to product details fallback", roll: 100, want: false},
+		{name: "even seq 0 routes to decklist", seq: 0, want: true},
+		{name: "odd seq 1 routes to product details", seq: 1, want: false},
+		{name: "even seq 2 routes to decklist", seq: 2, want: true},
+		{name: "odd seq 3 routes to product details", seq: 3, want: false},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := useDecklistForRoll(test.roll)
+			got := useDecklistForRoute(test.seq)
 			if got != test.want {
-				t.Fatalf("expected useDecklistForRoll(%d)=%t, got %t", test.roll, test.want, got)
+				t.Fatalf("expected useDecklistForRoute(%d)=%t, got %t", test.seq, test.want, got)
 			}
 		})
+	}
+}
+
+// TestShouldUseDecklistEndpoint_SplitsConsecutiveCallsEvenly verifies that the
+// round-robin selector hands half of the first attempts to the decklist portal
+// and half to the per-store product-details path, which is what reduces the
+// concurrent load on the shared portal host.
+func TestShouldUseDecklistEndpoint_SplitsConsecutiveCallsEvenly(t *testing.T) {
+	previousSeq := binderposDecklistRouteSeq.Load()
+	binderposDecklistRouteSeq.Store(0)
+	t.Cleanup(func() { binderposDecklistRouteSeq.Store(previousSeq) })
+
+	const calls = 10
+	decklistCount := 0
+	for i := 0; i < calls; i++ {
+		if shouldUseDecklistEndpoint() {
+			decklistCount++
+		}
+	}
+
+	if decklistCount != calls/2 {
+		t.Fatalf("expected %d of %d first attempts routed to decklist, got %d", calls/2, calls, decklistCount)
 	}
 }
 
