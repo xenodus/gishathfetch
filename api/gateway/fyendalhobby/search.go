@@ -23,6 +23,13 @@ const StoreSearchPath = "/search/suggest.json"
 // search endpoint will return per request (the platform caps this at 10).
 const predictiveSearchLimit = "10"
 
+// mtgSingleProductType scopes the predictive search to Magic: The Gathering
+// single cards. Fyendal Hobby stocks several TCGs (Flesh and Blood, Grand
+// Archive, etc.), so the search query is filtered with
+// product_type:"MTG Single Cards" to keep results MTG-only and prevent the
+// 10-result predictive limit from being consumed by non-MTG products.
+const mtgSingleProductType = "MTG Single Cards"
+
 // foilTitlePrefix is the prefix Fyendal Hobby uses on foil single listings, e.g.
 // "[Foil] Cauldron of Essence". The non-foil counterpart has no prefix.
 const foilTitlePrefix = "[foil]"
@@ -67,12 +74,14 @@ type suggestProduct struct {
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
 
+	searchQuery := fmt.Sprintf("product_type:%q AND %s", mtgSingleProductType, searchStr)
+
 	apiURL := &url.URL{
 		Scheme: "https",
 		Host:   "fyendalhobby.com",
 		Path:   s.SearchPath,
 		RawQuery: url.Values{
-			"q":                {searchStr},
+			"q":                {searchQuery},
 			"resources[type]":  {"product"},
 			"resources[limit]": {predictiveSearchLimit},
 		}.Encode(),
@@ -174,8 +183,9 @@ func resolveImage(product suggestProduct) string {
 }
 
 // isMagicProduct reports whether a storefront product belongs to Magic: The
-// Gathering. Fyendal Hobby stocks multiple TCGs (Flesh and Blood, Grand Archive,
-// etc.), so non-MTG products must be filtered out.
+// Gathering. The search query already scopes results to MTG single cards
+// server-side; this acts as a defensive secondary guard so non-MTG products are
+// never surfaced even if the upstream filter behaviour changes.
 func isMagicProduct(productType, vendor string, tags []string) bool {
 	pt := strings.ToLower(productType)
 	if strings.Contains(pt, "mtg") || strings.Contains(pt, "magic the gathering") {
