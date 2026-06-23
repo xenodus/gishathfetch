@@ -29,14 +29,14 @@ func Test_SearchByStorefrontAPI_SupportsAllBinderposStores(t *testing.T) {
 	if os.Getenv("RUN_BINDERPOS_LIVE_TESTS") != "1" {
 		t.Skip("set RUN_BINDERPOS_LIVE_TESTS=1 to run live storefront API checks against real stores")
 	}
-	previousSelector := shouldUseDecklistEndpoint
-	shouldUseDecklistEndpoint = func() bool { return false }
-	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
 
 	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
-			cards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.shopifyDomain, testCase.query)
+			if strings.TrimSpace(testCase.shopifyDomain) == "" {
+				t.Skip("decklist API requires a shopify domain mapping")
+			}
+			cards, err := searchByBinderposDecklistAPI(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.shopifyDomain, testCase.query)
 			require.NoError(t, err)
 			require.NotEmpty(t, cards)
 
@@ -55,14 +55,14 @@ func Test_SearchByStorefrontAPI_OverlapsLegacyScrapeResults(t *testing.T) {
 	if os.Getenv("RUN_BINDERPOS_LIVE_TESTS") != "1" {
 		t.Skip("set RUN_BINDERPOS_LIVE_TESTS=1 to run live storefront vs scrape overlap checks")
 	}
-	previousSelector := shouldUseDecklistEndpoint
-	shouldUseDecklistEndpoint = func() bool { return false }
-	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
 
 	client := &http.Client{Timeout: 20 * time.Second}
 	for _, testCase := range binderposStoreSearchCases() {
 		t.Run(testCase.storeName, func(t *testing.T) {
-			storefrontCards, err := searchByStorefrontAPIWithClient(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.shopifyDomain, testCase.query)
+			if strings.TrimSpace(testCase.shopifyDomain) == "" {
+				t.Skip("decklist API requires a shopify domain mapping")
+			}
+			storefrontCards, err := searchByBinderposDecklistAPI(context.Background(), client, testCase.scrapVariant, testCase.storeName, testCase.baseURL, testCase.shopifyDomain, testCase.query)
 			require.NoError(t, err)
 			require.NotEmpty(t, storefrontCards)
 

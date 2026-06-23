@@ -16,10 +16,9 @@ import (
 // non-leased dedicated routing, so traffic round-robins across configured dedicated proxies.
 var binderposDedicatedProxySeq atomic.Uint32
 
-// binderposDecklistRouteSeq advances once per first-attempt storefront routing
-// decision so that decklist vs. product-details selection round-robins evenly
-// across the stores in a search instead of every store converging on the shared
-// portal host.
+// binderposDecklistRouteSeq advances once per storefront lead decision so that
+// the decklist-vs-scrap lead selection round-robins evenly across the stores in
+// a search instead of every store converging on the shared portal host first.
 var binderposDecklistRouteSeq atomic.Uint32
 
 // nextBinderposStorefrontProxyURL returns the next dedicated proxy URL in round-robin order.
@@ -53,7 +52,7 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 		return nil, fmt.Errorf("invalid dedicated proxy configured for binderpos storefront api: %w", err)
 	}
 
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+	return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
 func searchByStorefrontAPIDynamic(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
@@ -67,25 +66,17 @@ func searchByStorefrontAPIDynamic(ctx context.Context, scrapVariant int, storeNa
 		return nil, fmt.Errorf("invalid dynamic proxy configured for binderpos storefront api: %w", err)
 	}
 
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+	return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
 func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	client := &http.Client{Timeout: binderposAttemptTimeout}
-	return searchByStorefrontAPIWithClient(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-}
-
-func searchByStorefrontAPIWithClient(ctx context.Context, client *http.Client, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
-	if shouldUseDecklistEndpoint() {
-		return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-	}
-
-	return searchByStorefrontProductDetailsAPI(ctx, client, scrapVariant, storeName, baseURL, searchStr)
+	return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
 // useDecklistForRoute returns true for even sequence numbers, yielding a 50/50
-// split between the shared decklist portal and the per-store product-details
-// path across consecutive routing decisions.
+// split that decides whether a store leads with the shared decklist portal or
+// with its own storefront scrape across consecutive lead decisions.
 func useDecklistForRoute(seq uint32) bool {
 	return seq%2 == 0
 }
