@@ -12,6 +12,7 @@ export const LGS_OPTIONS = [
   "Cards Citadel",
   "Dueller's Point",
   "Flagship Games",
+  "Fyendal Hobby",
   "Games Haven",
   "Grey Ogre Games",
   "Hideout",
