@@ -19,6 +19,7 @@ import (
 	"mtg-price-checker-sg/gateway/duellerpoint"
 	"mtg-price-checker-sg/gateway/fivemana"
 	"mtg-price-checker-sg/gateway/flagship"
+	"mtg-price-checker-sg/gateway/fyendalhobby"
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
 	"mtg-price-checker-sg/gateway/hideout"
@@ -79,6 +80,7 @@ var shopRegistry = []shopSpec{
 	{name: duellerpoint.StoreName, newLGS: duellerpoint.NewLGS},
 	{name: fivemana.StoreName, newLGS: fivemana.NewLGS},
 	{name: flagship.StoreName, newLGS: flagship.NewLGS, isBinderpos: true},
+	{name: fyendalhobby.StoreName, newLGS: fyendalhobby.NewLGS},
 	{name: gameshaven.StoreName, newLGS: gameshaven.NewLGS, isBinderpos: true},
 	{name: gog.StoreName, newLGS: gog.NewLGS, isBinderpos: true},
 	{name: hideout.StoreName, newLGS: hideout.NewLGS, isBinderpos: true},
