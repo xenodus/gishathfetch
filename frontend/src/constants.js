@@ -82,6 +82,14 @@ export const LGS_MAP = [
     website: "https://www.flagshipgames.sg/",
   },
   {
+    id: "fyendal-hobby-map",
+    name: "Fyendal Hobby",
+    address: "86 Marine Parade Central, #04-305, Singapore 440086",
+    iframe:
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.79!2d103.9067387!3d1.3017381!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19a72dacf6d1%3A0x5ff49c2fc4a11159!2sFyendal%20Hobby!5e0!3m2!1sen!2ssg!4v1782000000000!5m2!1sen!2ssg",
+    website: "https://fyendalhobby.com/",
+  },
+  {
     id: "games-haven-pl-map",
     name: "Games Haven - Paya Lebar",
     address: "736 Geylang Rd, Singapore 389647",
