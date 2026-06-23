@@ -1,10 +1,6 @@
 package binderpos
 
 import (
-	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -14,10 +10,10 @@ func TestUseDecklistForRoute(t *testing.T) {
 		seq  uint32
 		want bool
 	}{
-		{name: "even seq 0 routes to decklist", seq: 0, want: true},
-		{name: "odd seq 1 routes to product details", seq: 1, want: false},
-		{name: "even seq 2 routes to decklist", seq: 2, want: true},
-		{name: "odd seq 3 routes to product details", seq: 3, want: false},
+		{name: "even seq 0 leads with decklist", seq: 0, want: true},
+		{name: "odd seq 1 leads with scrap", seq: 1, want: false},
+		{name: "even seq 2 leads with decklist", seq: 2, want: true},
+		{name: "odd seq 3 leads with scrap", seq: 3, want: false},
 	}
 
 	for _, test := range tests {
@@ -30,11 +26,11 @@ func TestUseDecklistForRoute(t *testing.T) {
 	}
 }
 
-// TestShouldUseDecklistEndpoint_SplitsConsecutiveCallsEvenly verifies that the
-// round-robin selector hands half of the first attempts to the decklist portal
-// and half to the per-store product-details path, which is what reduces the
-// concurrent load on the shared portal host.
-func TestShouldUseDecklistEndpoint_SplitsConsecutiveCallsEvenly(t *testing.T) {
+// TestShouldStartWithDecklist_SplitsConsecutiveCallsEvenly verifies that the
+// round-robin selector lets half of the stores lead with the decklist portal
+// and half lead with their own storefront scrape, which is what reduces the
+// concurrent first-attempt load on the shared portal host.
+func TestShouldStartWithDecklist_SplitsConsecutiveCallsEvenly(t *testing.T) {
 	previousSeq := binderposDecklistRouteSeq.Load()
 	binderposDecklistRouteSeq.Store(0)
 	t.Cleanup(func() { binderposDecklistRouteSeq.Store(previousSeq) })
@@ -42,99 +38,73 @@ func TestShouldUseDecklistEndpoint_SplitsConsecutiveCallsEvenly(t *testing.T) {
 	const calls = 10
 	decklistCount := 0
 	for i := 0; i < calls; i++ {
-		if shouldUseDecklistEndpoint() {
+		if shouldStartWithDecklist() {
 			decklistCount++
 		}
 	}
 
 	if decklistCount != calls/2 {
-		t.Fatalf("expected %d of %d first attempts routed to decklist, got %d", calls/2, calls, decklistCount)
+		t.Fatalf("expected %d of %d stores leading with decklist, got %d", calls/2, calls, decklistCount)
 	}
 }
 
-func TestSearchByStorefrontAPIWithClient_UsesProductDetailPathWhenDecklistNotSelected(t *testing.T) {
-	server := newStorefrontProductDetailFixtureServer()
-	defer server.Close()
-
-	previousSelector := shouldUseDecklistEndpoint
-	shouldUseDecklistEndpoint = func() bool { return false }
-	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
-
-	cards, err := searchByStorefrontAPIWithClient(
-		context.Background(),
-		server.Client(),
-		2,
-		"Test Store",
-		server.URL,
-		"",
-		"Abrade",
-	)
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
+func TestOrderDecklistAndScrap(t *testing.T) {
+	decklist := [3]storefrontStrategy{
+		{name: "decklist-dedicated"},
+		{name: "decklist-direct"},
+		{name: "decklist-dynamic"},
 	}
-	if len(cards) != 1 {
-		t.Fatalf("expected 1 card from product details path, got %d", len(cards))
+	scrap := [3]storefrontStrategy{
+		{name: "scrap-dedicated"},
+		{name: "scrap-direct"},
+		{name: "scrap-dynamic"},
 	}
-}
 
-func TestSearchByStorefrontAPIWithClient_ReturnsDecklistErrorWhenSelected(t *testing.T) {
-	server := newStorefrontProductDetailFixtureServer()
-	defer server.Close()
+	t.Run("decklist lead runs both dedicated/direct before any dynamic", func(t *testing.T) {
+		previousSelector := shouldStartWithDecklist
+		shouldStartWithDecklist = func() bool { return true }
+		t.Cleanup(func() { shouldStartWithDecklist = previousSelector })
 
-	previousSelector := shouldUseDecklistEndpoint
-	shouldUseDecklistEndpoint = func() bool { return true }
-	t.Cleanup(func() { shouldUseDecklistEndpoint = previousSelector })
-
-	cards, err := searchByStorefrontAPIWithClient(
-		context.Background(),
-		server.Client(),
-		2,
-		"Test Store",
-		server.URL,
-		"",
-		"Abrade",
-	)
-	if err == nil {
-		t.Fatalf("expected decklist request error, got nil")
-	}
-	if len(cards) != 0 {
-		t.Fatalf("expected 0 cards when decklist request fails, got %d", len(cards))
-	}
-}
-
-func newStorefrontProductDetailFixtureServer() *httptest.Server {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case storefrontSuggestPath:
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"resources": map[string]any{
-					"results": map[string]any{
-						"products": []map[string]any{
-							{
-								"title": "Abrade [Foundations]",
-								"url":   "/products/abrade",
-								"image": "https://images.example/abrade.png",
-							},
-						},
-					},
-				},
-			})
-		case "/products/abrade.js":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"title": "Abrade [Foundations]",
-				"variants": []map[string]any{
-					{
-						"id":        int64(12345),
-						"title":     "Near Mint",
-						"available": true,
-						"price":     199,
-					},
-				},
-			})
-		default:
-			http.NotFound(w, r)
+		got := strategyNames(orderDecklistAndScrap(decklist, scrap))
+		want := []string{
+			"decklist-dedicated", "decklist-direct",
+			"scrap-dedicated", "scrap-direct",
+			"decklist-dynamic", "scrap-dynamic",
 		}
+		assertStrategyOrder(t, want, got)
 	})
 
-	return httptest.NewServer(handler)
+	t.Run("scrap lead runs both dedicated/direct before any dynamic", func(t *testing.T) {
+		previousSelector := shouldStartWithDecklist
+		shouldStartWithDecklist = func() bool { return false }
+		t.Cleanup(func() { shouldStartWithDecklist = previousSelector })
+
+		got := strategyNames(orderDecklistAndScrap(decklist, scrap))
+		want := []string{
+			"scrap-dedicated", "scrap-direct",
+			"decklist-dedicated", "decklist-direct",
+			"scrap-dynamic", "decklist-dynamic",
+		}
+		assertStrategyOrder(t, want, got)
+	})
+}
+
+func strategyNames(strategies []storefrontStrategy) []string {
+	names := make([]string, len(strategies))
+	for idx, strategy := range strategies {
+		names[idx] = strategy.name
+	}
+	return names
+}
+
+func assertStrategyOrder(t *testing.T, want, got []string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("expected %d strategies, got %d (%v)", len(want), len(got), got)
+	}
+	for idx := range want {
+		if got[idx] != want[idx] {
+			t.Fatalf("strategy %d: expected %q, got %q (full order %v)", idx+1, want[idx], got[idx], got)
+		}
+	}
 }

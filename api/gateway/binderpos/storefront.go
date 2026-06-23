@@ -5,7 +5,6 @@ import (
 )
 
 const (
-	storefrontSuggestPath   = "/search/suggest.json"
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
 	binderposAttemptTimeout = 10 * time.Second
@@ -24,42 +23,16 @@ const (
 	binderposDecklistRetryMaxDelay = 2500 * time.Millisecond
 )
 
-// shouldUseDecklistEndpoint decides whether one first-attempt storefront lookup
-// is routed through the shared BinderPOS decklist portal or the per-store
-// product-details path. It alternates deterministically (round-robin) so that,
-// across all selected stores in a single search, half of the first attempts hit
-// the shared portal host and half hit their own Shopify domains. Splitting the
-// load this way halves the concurrent burst on portal.binderpos.com, the host
-// most prone to 429/503 rate limiting because every BinderPOS store would
-// otherwise funnel into it at once.
-var shouldUseDecklistEndpoint = func() bool {
+// shouldStartWithDecklist decides whether a store leads its search with the
+// shared BinderPOS decklist portal or with its own storefront scrape. It
+// alternates deterministically (round-robin) so that, across all selected
+// stores in a single search, roughly half lead with the shared portal host and
+// half lead with their own domains. Splitting the load this way halves the
+// first-attempt burst on portal.binderpos.com, the host most prone to 429/503
+// rate limiting because every BinderPOS store would otherwise funnel into it at
+// once. The family not chosen as the lead still runs as a fallback.
+var shouldStartWithDecklist = func() bool {
 	return useDecklistForRoute(binderposDecklistRouteSeq.Add(1) - 1)
-}
-
-type storefrontSuggestResponse struct {
-	Resources struct {
-		Results struct {
-			Products []storefrontProduct `json:"products"`
-		} `json:"results"`
-	} `json:"resources"`
-}
-
-type storefrontProduct struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
-	Image string `json:"image"`
-}
-
-type storefrontProductDetail struct {
-	Title    string                   `json:"title"`
-	Variants []storefrontProductStock `json:"variants"`
-}
-
-type storefrontProductStock struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Available bool   `json:"available"`
-	Price     int    `json:"price"`
 }
 
 type storefrontDecklistRequestItem struct {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"mtg-price-checker-sg/pkg/config"
 )
 
 func formatCardName(scrapVariant int, productTitle, variantTitle string) string {
@@ -52,4 +54,19 @@ func buildCardImageURL(rawImageURL, cardTitle string) string {
 		return img
 	}
 	return fmt.Sprintf("https://placehold.co/304x424?text=%s", url.QueryEscape(strings.TrimSpace(cardTitle)))
+}
+
+func buildProductURLWithVariant(baseURL, productPath string, variantID int64) (string, error) {
+	u, err := url.Parse(baseURL + productPath)
+	if err != nil {
+		return "", err
+	}
+
+	u.RawQuery = ""
+	query := u.Query()
+	query.Set("variant", fmt.Sprint(variantID))
+	query.Set("utm_source", config.UtmSource)
+	u.RawQuery = query.Encode()
+
+	return u.String(), nil
 }
