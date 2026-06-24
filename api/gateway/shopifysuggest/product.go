@@ -1,6 +1,7 @@
 package shopifysuggest
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"strings"
@@ -30,12 +31,18 @@ func BuildProductURL(baseURL, handle, suggestURL string) (string, error) {
 	return cleanPageURL.String(), nil
 }
 
-// ResolveImage returns the best available image URL from a suggest product.
+// ResolveImage returns the best available image URL from a suggest product. When
+// the store provides no image (some listings, e.g. "The List" reprints, have
+// none), it falls back to a titled placeholder so a card never carries an empty
+// image, mirroring the BinderPOS scrape/decklist behavior.
 func ResolveImage(product Product) string {
 	if img := strings.TrimSpace(product.Image); img != "" {
 		return img
 	}
-	return strings.TrimSpace(product.FeaturedImage.URL)
+	if img := strings.TrimSpace(product.FeaturedImage.URL); img != "" {
+		return img
+	}
+	return fmt.Sprintf("https://placehold.co/304x424?text=%s", url.QueryEscape(strings.TrimSpace(product.Title)))
 }
 
 // IsMagicProduct reports whether a storefront product belongs to Magic: The

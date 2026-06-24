@@ -71,7 +71,7 @@ func TestRunSearchAttemptsFallsBackOnRateLimit(t *testing.T) {
 		{strategy: "dedicated", client: srv.Client()},
 	}
 
-	cards, err := runSearchAttempts(context.Background(), attempts, Config{StoreName: "Test"}, srv.URL, mapAllProducts)
+	cards, err := runSearchAttempts(context.Background(), attempts, Options{Config: Config{StoreName: "Test"}, MapProduct: mapAllProducts}, srv.URL)
 	require.NoError(t, err)
 	require.Len(t, cards, 1)
 	require.Equal(t, int32(2), hits.Load(), "expected fallback to retry after the first 429")
@@ -91,7 +91,7 @@ func TestRunSearchAttemptsReturnsLastError(t *testing.T) {
 		{strategy: "dynamic", client: srv.Client()},
 	}
 
-	cards, err := runSearchAttempts(context.Background(), attempts, Config{StoreName: "Test"}, srv.URL, mapAllProducts)
+	cards, err := runSearchAttempts(context.Background(), attempts, Options{Config: Config{StoreName: "Test"}, MapProduct: mapAllProducts}, srv.URL)
 	require.Error(t, err)
 	require.Empty(t, cards)
 	require.Contains(t, err.Error(), "attempt 3 (dynamic)")
@@ -118,7 +118,7 @@ func TestRunSearchAttemptsStopsAtFirstSuccess(t *testing.T) {
 		{strategy: "dedicated", client: shouldNotBeHit.Client()},
 	}
 
-	cards, err := runSearchAttempts(context.Background(), attempts, Config{StoreName: "Test"}, healthy.URL, mapAllProducts)
+	cards, err := runSearchAttempts(context.Background(), attempts, Options{Config: Config{StoreName: "Test"}, MapProduct: mapAllProducts}, healthy.URL)
 	require.NoError(t, err)
 	require.Len(t, cards, 1)
 	require.Zero(t, secondHits.Load(), "second transport should not be tried after first success")

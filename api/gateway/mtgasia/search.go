@@ -28,9 +28,10 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 			StoreName: s.Name,
 			BaseURL:   s.BaseUrl,
 		},
-		SearchStr:   searchStr,
-		BuildQuery:  shopifysuggest.PlainQuery,
-		QueryValues: shopifysuggest.BinderposQueryValues,
-		MapProduct:  shopifysuggest.MapBinderposFullTitleProduct,
+		SearchStr:       searchStr,
+		BuildQuery:      shopifysuggest.PlainQuery,
+		QueryValues:     shopifysuggest.BinderposQueryValues,
+		MapProduct:      shopifysuggest.MapBinderposFullTitleProduct,
+		ResolveVariants: true,
 	})
 }
