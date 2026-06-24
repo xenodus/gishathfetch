@@ -114,14 +114,6 @@ func binderposStoreSearchCases() []binderposStoreSearchCase {
 			query:         "Abrade",
 		},
 		{
-			storeName:     "Cardboard Crack Games",
-			baseURL:       "https://www.cardboardcrackgames.com",
-			shopifyDomain: "cardboardcrackgames.myshopify.com",
-			searchURL:     "/search?type=product&q=%s",
-			scrapVariant:  2,
-			query:         "Abrade",
-		},
-		{
 			storeName:     "Flagship Games",
 			baseURL:       "https://www.flagshipgames.sg",
 			shopifyDomain: "flagship-games.myshopify.com",
@@ -176,14 +168,6 @@ func binderposStoreSearchCases() []binderposStoreSearchCase {
 			searchURL:     "/search?q=%s",
 			scrapVariant:  2,
 			query:         "Abrade",
-		},
-		{
-			storeName:     "Tefuda",
-			baseURL:       "https://tefudagames.com",
-			shopifyDomain: "bacc1b-3.myshopify.com",
-			searchURL:     "/search?q=%s",
-			scrapVariant:  4,
-			query:         "smothering tithe",
 		},
 		{
 			storeName:     "Arcane Sanctum",

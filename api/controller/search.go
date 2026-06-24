@@ -9,10 +9,6 @@ import (
 	"mtg-price-checker-sg/gateway/agora"
 	// "mtg-price-checker-sg/gateway/arcanesanctum"
 	"mtg-price-checker-sg/gateway/cardaffinity"
-	// Cardboard Crack Games retired its standalone Shopify storefront and
-	// redirected to the Cards Central platform; its singles are searchable
-	// via the cardscentral gateway below.
-	// "mtg-price-checker-sg/gateway/cardboardcrackgames"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
 	"mtg-price-checker-sg/gateway/cardscentral"
 	"mtg-price-checker-sg/gateway/cardscitadel"
@@ -28,7 +24,6 @@ import (
 	"mtg-price-checker-sg/gateway/mtgasia"
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
-	// "mtg-price-checker-sg/gateway/tefuda"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
 	"sort"
@@ -73,7 +68,6 @@ var shopRegistry = []shopSpec{
 	{name: agora.StoreName, newLGS: agora.NewLGS},
 	// {name: arcanesanctum.StoreName, newLGS: arcanesanctum.NewLGS, isBinderpos: true},
 	{name: cardaffinity.StoreName, newLGS: cardaffinity.NewLGS, isBinderpos: true},
-	// {name: cardboardcrackgames.StoreName, newLGS: cardboardcrackgames.NewLGS, isBinderpos: true}, // retired → cardscentral
 	{name: cardscentral.StoreName, newLGS: cardscentral.NewLGS},
 	{name: cardscitadel.StoreName, newLGS: cardscitadel.NewLGS, isBinderpos: true},
 	{name: cardsandcollection.StoreName, newLGS: cardsandcollection.NewLGS},
@@ -88,9 +82,7 @@ var shopRegistry = []shopSpec{
 	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
 	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS},
 	{name: onemtg.StoreName, newLGS: onemtg.NewLGS, isBinderpos: true},
-	// {name: tefuda.StoreName, newLGS: tefuda.NewLGS, isBinderpos: true},
 	{name: tcgmarketplace.StoreName, newLGS: tcgmarketplace.NewLGS},
-	// {name: unsleeved.StoreName, newLGS: unsleeved.NewLGS},
 }
 
 var binderposStoreNames = func() map[string]struct{} {

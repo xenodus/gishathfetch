@@ -56,13 +56,6 @@ func Test_Scrap(t *testing.T) {
 			searchUrl:    "/search?q=%s",
 			searchStr:    "Abrade",
 		},
-		"variant 4": {
-			scrapVariant: 4,
-			storeName:    "Tefuda",
-			baseUrl:      "https://tefudagames.com",
-			searchUrl:    "/search?q=%s",
-			searchStr:    "smothering tithe",
-		},
 		"variant 5": {
 			scrapVariant: 5,
 			storeName:    "Arcane Sanctum",
