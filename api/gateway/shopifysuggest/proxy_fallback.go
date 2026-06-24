@@ -29,10 +29,11 @@ type searchAttempt struct {
 }
 
 // searchWithProxyFallback runs the suggest request through an ordered set of
-// transports, returning the first successful result. Each attempt only runs
-// when the previous one errors, so a healthy direct connection never incurs
-// proxy cost while a rate-limited endpoint still resolves via dedicated and
-// then dynamic proxies.
+// transports, returning the first successful result. Each transport retries
+// transient rate-limit/5xx responses on the same connection (honoring
+// Retry-After) before the chain advances, so a healthy direct connection never
+// incurs proxy cost while a rate-limited endpoint still resolves via dedicated
+// and then dynamic proxies.
 func searchWithProxyFallback(ctx context.Context, opts Options, apiURL string) ([]gateway.Card, error) {
 	return runSearchAttempts(ctx, buildSearchAttempts(), opts, apiURL)
 }

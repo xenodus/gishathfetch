@@ -27,7 +27,9 @@ const sampleSuggestBody = `{
 }`
 
 func TestFetchProductsRateLimited(t *testing.T) {
+	var calls atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
 		w.WriteHeader(http.StatusTooManyRequests)
 	}))
 	defer srv.Close()
@@ -35,6 +37,7 @@ func TestFetchProductsRateLimited(t *testing.T) {
 	_, err := fetchProducts(context.Background(), srv.Client(), srv.URL)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "429")
+	require.Equal(t, int32(suggestRetryMaxAttempts), calls.Load())
 }
 
 func TestFetchProductsSuccess(t *testing.T) {
@@ -50,15 +53,13 @@ func TestFetchProductsSuccess(t *testing.T) {
 	require.Equal(t, "Opt", products[0].Title)
 }
 
-// TestRunSearchAttemptsFallsBackOnRateLimit verifies that a rate-limited first
-// attempt falls through to the next transport, which succeeds. All attempts hit
-// the same endpoint (as they do in production), so the server returns 429 on
-// the first request and a valid body afterwards.
+// TestRunSearchAttemptsFallsBackOnRateLimit verifies that when one transport
+// exhausts its Retry-After/backoff retries, the next transport succeeds.
 func TestRunSearchAttemptsFallsBackOnRateLimit(t *testing.T) {
 	var hits atomic.Int32
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if hits.Add(1) == 1 {
+		if hits.Add(1) <= int32(suggestRetryMaxAttempts) {
 			w.WriteHeader(http.StatusTooManyRequests)
 			return
 		}
@@ -74,7 +75,7 @@ func TestRunSearchAttemptsFallsBackOnRateLimit(t *testing.T) {
 	cards, err := runSearchAttempts(context.Background(), attempts, Options{Config: Config{StoreName: "Test"}, MapProduct: mapAllProducts}, srv.URL)
 	require.NoError(t, err)
 	require.Len(t, cards, 1)
-	require.Equal(t, int32(2), hits.Load(), "expected fallback to retry after the first 429")
+	require.Equal(t, int32(suggestRetryMaxAttempts+1), hits.Load(), "expected direct retries then dedicated success")
 }
 
 // TestRunSearchAttemptsReturnsLastError verifies that when every transport
