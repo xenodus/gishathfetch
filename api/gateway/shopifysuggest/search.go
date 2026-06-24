@@ -64,11 +64,33 @@ type suggestResponse struct {
 
 // Search queries a Shopify storefront's predictive search endpoint and maps
 // products into cards using the supplied options.
+//
+// Shopify's predictive search endpoint can rate limit (HTTP 429) or otherwise
+// throttle direct traffic, so the request is attempted through an ordered
+// fallback chain: a direct connection first, then a dedicated proxy, and
+// finally the shared dynamic proxy. The first attempt that succeeds wins;
+// later attempts only run when the previous one errors (network failure,
+// non-200 status such as 429, or an unparsable body).
 func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
-	cfg := opts.Config
-	host, err := hostFromBaseURL(cfg.BaseURL)
+	mapProduct := opts.MapProduct
+	if mapProduct == nil {
+		return nil, fmt.Errorf("shopifysuggest: MapProduct is required")
+	}
+
+	apiURL, err := buildSuggestURL(opts)
 	if err != nil {
 		return nil, err
+	}
+
+	return searchWithProxyFallback(ctx, opts.Config, apiURL, mapProduct)
+}
+
+// buildSuggestURL assembles the full predictive search endpoint URL from the
+// store config and query-shaping options.
+func buildSuggestURL(opts Options) (string, error) {
+	host, err := hostFromBaseURL(opts.Config.BaseURL)
+	if err != nil {
+		return "", err
 	}
 
 	searchQuery := strings.TrimSpace(opts.SearchStr)
@@ -88,15 +110,21 @@ func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
 		Path:     SearchPath,
 		RawQuery: values.Encode(),
 	}
+	return apiURL.String(), nil
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
+// fetchProducts performs a single suggest request with the supplied client and
+// returns the raw products. A non-200 status (e.g. 429 Too Many Requests) is
+// reported as an error so the caller can fall back to another transport.
+func fetchProducts(ctx context.Context, client *http.Client, apiURL string) ([]Product, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -107,18 +135,22 @@ func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("shopifysuggest: unexpected status %d", resp.StatusCode)
+	}
+
 	var res suggestResponse
 	if err := json.Unmarshal(body, &res); err != nil {
 		return nil, err
 	}
+	return res.Resources.Results.Products, nil
+}
 
-	mapProduct := opts.MapProduct
-	if mapProduct == nil {
-		return nil, fmt.Errorf("shopifysuggest: MapProduct is required")
-	}
-
-	cards := make([]gateway.Card, 0, len(res.Resources.Results.Products))
-	for _, product := range res.Resources.Results.Products {
+// mapProducts filters the suggest products down to in-stock Magic cards and
+// maps them into gateway cards using the supplied mapper.
+func mapProducts(cfg Config, products []Product, mapProduct func(cfg Config, product Product) (gateway.Card, bool)) []gateway.Card {
+	cards := make([]gateway.Card, 0, len(products))
+	for _, product := range products {
 		if !product.Available {
 			continue
 		}
@@ -132,8 +164,7 @@ func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
 		}
 		cards = append(cards, card)
 	}
-
-	return cards, nil
+	return cards
 }
 
 func hostFromBaseURL(baseURL string) (string, error) {
