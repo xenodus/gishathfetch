@@ -33,21 +33,21 @@ type searchAttempt struct {
 // when the previous one errors, so a healthy direct connection never incurs
 // proxy cost while a rate-limited endpoint still resolves via dedicated and
 // then dynamic proxies.
-func searchWithProxyFallback(ctx context.Context, cfg Config, apiURL string, mapProduct func(cfg Config, product Product) (gateway.Card, bool)) ([]gateway.Card, error) {
-	return runSearchAttempts(ctx, buildSearchAttempts(), cfg, apiURL, mapProduct)
+func searchWithProxyFallback(ctx context.Context, opts Options, apiURL string) ([]gateway.Card, error) {
+	return runSearchAttempts(ctx, buildSearchAttempts(), opts, apiURL)
 }
 
 // runSearchAttempts executes the ordered attempts, returning the first result
 // that succeeds (a nil error, even with zero cards). Each attempt's error is
 // annotated with its position and strategy name so the final error reflects the
 // last transport tried.
-func runSearchAttempts(ctx context.Context, attempts []searchAttempt, cfg Config, apiURL string, mapProduct func(cfg Config, product Product) (gateway.Card, bool)) ([]gateway.Card, error) {
+func runSearchAttempts(ctx context.Context, attempts []searchAttempt, opts Options, apiURL string) ([]gateway.Card, error) {
 	var (
 		cards []gateway.Card
 		err   error
 	)
 	for idx, attempt := range attempts {
-		cards, err = fetchAndMapProducts(ctx, attempt.client, apiURL, cfg, mapProduct)
+		cards, err = fetchAndMapProducts(ctx, attempt.client, apiURL, opts)
 		err = annotateSuggestAttemptError(idx+1, attempt.strategy, err)
 		if err == nil {
 			return cards, nil
@@ -128,12 +128,12 @@ func newProxyClient(proxyURL string) (*http.Client, error) {
 	}, nil
 }
 
-func fetchAndMapProducts(ctx context.Context, client *http.Client, apiURL string, cfg Config, mapProduct func(cfg Config, product Product) (gateway.Card, bool)) ([]gateway.Card, error) {
+func fetchAndMapProducts(ctx context.Context, client *http.Client, apiURL string, opts Options) ([]gateway.Card, error) {
 	products, err := fetchProducts(ctx, client, apiURL)
 	if err != nil {
 		return nil, err
 	}
-	return mapProducts(cfg, products, mapProduct), nil
+	return mapProducts(ctx, client, opts, products), nil
 }
 
 func annotateSuggestAttemptError(attempt int, strategy string, err error) error {

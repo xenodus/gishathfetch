@@ -36,6 +36,16 @@ type Options struct {
 	QueryValues func(searchStr string) url.Values
 	// MapProduct converts one suggest product into a card. Return false to skip.
 	MapProduct func(cfg Config, product Product) (gateway.Card, bool)
+	// ResolveVariants, when true, follows each suggest product with a request to
+	// its Shopify product JSON endpoint (/products/<handle>.js) to emit one card
+	// per in-stock variant using the variant's real price and condition.
+	//
+	// Shopify's predictive search reports a product-level price equal to the
+	// cheapest variant regardless of stock (price_min), so a product whose only
+	// cheap variants are sold out surfaces a price that cannot be purchased.
+	// Variant resolution reads per-variant price and availability (absent from
+	// predictive search) so the cheapest *in-stock* price is reported instead.
+	ResolveVariants bool
 }
 
 // Product is one item from Shopify's /search/suggest.json response.
@@ -72,8 +82,7 @@ type suggestResponse struct {
 // later attempts only run when the previous one errors (network failure,
 // non-200 status such as 429, or an unparsable body).
 func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
-	mapProduct := opts.MapProduct
-	if mapProduct == nil {
+	if opts.MapProduct == nil {
 		return nil, fmt.Errorf("shopifysuggest: MapProduct is required")
 	}
 
@@ -82,7 +91,7 @@ func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
 		return nil, err
 	}
 
-	return searchWithProxyFallback(ctx, opts.Config, apiURL, mapProduct)
+	return searchWithProxyFallback(ctx, opts, apiURL)
 }
 
 // buildSuggestURL assembles the full predictive search endpoint URL from the
@@ -147,8 +156,14 @@ func fetchProducts(ctx context.Context, client *http.Client, apiURL string) ([]P
 }
 
 // mapProducts filters the suggest products down to in-stock Magic cards and
-// maps them into gateway cards using the supplied mapper.
-func mapProducts(cfg Config, products []Product, mapProduct func(cfg Config, product Product) (gateway.Card, bool)) []gateway.Card {
+// maps them into gateway cards. When opts.ResolveVariants is set, each product
+// is expanded into one card per in-stock variant (see resolveVariantCards);
+// otherwise a single card is emitted from the predictive-search fields.
+//
+// The HTTP client is threaded through so variant resolution reuses the same
+// transport that won the suggest fallback (direct, dedicated, or dynamic
+// proxy), avoiding a fresh, possibly-throttled connection per product.
+func mapProducts(ctx context.Context, client *http.Client, opts Options, products []Product) []gateway.Card {
 	cards := make([]gateway.Card, 0, len(products))
 	for _, product := range products {
 		if !product.Available {
@@ -158,11 +173,17 @@ func mapProducts(cfg Config, products []Product, mapProduct func(cfg Config, pro
 			continue
 		}
 
-		card, ok := mapProduct(cfg, product)
+		base, ok := opts.MapProduct(opts.Config, product)
 		if !ok {
 			continue
 		}
-		cards = append(cards, card)
+
+		if !opts.ResolveVariants {
+			cards = append(cards, base)
+			continue
+		}
+
+		cards = append(cards, resolveVariantCards(ctx, client, opts.Config, product, base)...)
 	}
 	return cards
 }
