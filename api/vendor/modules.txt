@@ -53,6 +53,25 @@ github.com/joho/godotenv
 # github.com/kennygrant/sanitize v1.2.4
 ## explicit
 github.com/kennygrant/sanitize
+# github.com/lestrrat-go/blackmagic v1.0.4
+## explicit; go 1.23
+github.com/lestrrat-go/blackmagic
+# github.com/lestrrat-go/dsig v1.0.0
+## explicit; go 1.23.0
+github.com/lestrrat-go/dsig
+github.com/lestrrat-go/dsig/internal/ecutil
+# github.com/lestrrat-go/htmsig v1.0.0
+## explicit; go 1.24.4
+github.com/lestrrat-go/htmsig
+github.com/lestrrat-go/htmsig/component
+github.com/lestrrat-go/htmsig/input
+# github.com/lestrrat-go/option v1.0.1
+## explicit; go 1.16
+github.com/lestrrat-go/option
+# github.com/lestrrat-go/sfv v1.0.0
+## explicit; go 1.23.0
+github.com/lestrrat-go/sfv
+github.com/lestrrat-go/sfv/internal/tokens
 # github.com/nlnwa/whatwg-url v0.6.2
 ## explicit; go 1.16
 github.com/nlnwa/whatwg-url/errors

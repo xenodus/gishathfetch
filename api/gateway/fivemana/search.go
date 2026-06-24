@@ -50,6 +50,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	if err != nil {
 		return cards, err
 	}
+	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
+		Style:   gateway.OutboundStyleHTML,
+		PageURL: apiURL,
+	}); err != nil {
+		return cards, err
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return cards, err

@@ -1,0 +1,125 @@
+package sfv
+
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/lestrrat-go/blackmagic"
+)
+
+type Parameters struct {
+	keys []string
+
+	// Values are a map of parameters to their values, where values are
+	// bare items
+	Values map[string]BareItem
+}
+
+// NewParameters creates a new empty Parameters object. Parameters
+// represent the optional parameters that can be attached to Items
+// and InnerLists in Structured Field Values.
+func NewParameters() *Parameters {
+	return &Parameters{
+		keys:   make([]string, 0),
+		Values: make(map[string]BareItem),
+	}
+}
+
+// Len returns the number of parameters in the Parameters object.
+// Returns 0 if the Parameters object is nil.
+func (p *Parameters) Len() int {
+	if p == nil {
+		return 0
+	}
+	// Use Values map length if keys slice is empty but Values has data
+	if len(p.keys) == 0 && len(p.Values) > 0 {
+		return len(p.Values)
+	}
+	return len(p.keys)
+}
+
+// Keys returns a copy of the parameter keys in the order they were added.
+// The returned slice is safe to modify without affecting the original Parameters.
+func (p *Parameters) Keys() []string {
+	ret := make([]string, len(p.keys))
+	copy(ret, p.keys)
+	return ret
+}
+
+// Get retrieves the value of a parameter by key and assigns it to dst.
+// Returns an error if the parameter is not found or if assignment fails.
+func (p *Parameters) Get(key string, dst any) error {
+	value, exists := p.Values[key]
+	if !exists {
+		return fmt.Errorf("parameter %q not found", key)
+	}
+	return blackmagic.AssignIfCompatible(dst, value)
+}
+
+// Set adds or updates a parameter with the given key and value.
+// The value must be a BareItem. Returns an error if the Parameters
+// object is nil or if the value is nil.
+func (p *Parameters) Set(key string, value BareItem) error {
+	if p == nil {
+		return fmt.Errorf("cannot set parameter on nil Parameters")
+	}
+
+	if value == nil {
+		return fmt.Errorf("value cannot be nil")
+	}
+
+	if _, exists := p.Values[key]; !exists {
+		p.keys = append(p.keys, key)
+	}
+	p.Values[key] = value
+	return nil
+}
+
+// MarshalSFV implements the Marshaler interface for Parameters.
+// It encodes the parameters in the SFV format as semicolon-separated
+// key-value pairs with proper spacing.
+func (p *Parameters) MarshalSFV() ([]byte, error) {
+	if p == nil || p.Len() == 0 {
+		return []byte{}, nil
+	}
+
+	var buf bytes.Buffer
+	// Ensure keys slice is populated from Values map if needed
+	if len(p.keys) == 0 && len(p.Values) > 0 {
+		for key := range p.Values {
+			p.keys = append(p.keys, key)
+		}
+	}
+
+	for _, key := range p.keys {
+		buf.WriteByte(';')
+		buf.WriteByte(' ') // Always add space after semicolon for consistency
+		buf.WriteString(key)
+
+		value, exists := p.Values[key]
+		if !exists {
+			continue
+		}
+
+		// Only add '=' if the value is not Boolean true
+		if value.Type() == BooleanType {
+			var boolVal bool
+			if err := value.GetValue(&boolVal); err != nil {
+				return nil, fmt.Errorf("error getting boolean value for parameter %q: %w", key, err)
+			}
+			if boolVal {
+				// Boolean true parameters can be represented as bare keys
+				continue
+			}
+		}
+
+		buf.WriteByte('=')
+		marshaledParam, err := value.MarshalSFV()
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling parameter value %q: %w", key, err)
+		}
+		buf.Write(marshaledParam)
+	}
+
+	return buf.Bytes(), nil
+}

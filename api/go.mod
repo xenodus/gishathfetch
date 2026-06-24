@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-lambda-go v1.52.0
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/joho/godotenv v1.5.1
+	github.com/lestrrat-go/htmsig v1.0.0
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -21,6 +22,10 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
+	github.com/lestrrat-go/dsig v1.0.0 // indirect
+	github.com/lestrrat-go/option v1.0.1 // indirect
+	github.com/lestrrat-go/sfv v1.0.0 // indirect
 	github.com/nlnwa/whatwg-url v0.6.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect

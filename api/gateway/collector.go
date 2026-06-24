@@ -308,7 +308,10 @@ func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string) 
 			ApplyBrowserLikeHTMLHeaders(r.Headers, r.URL)
 			// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 			r.Headers.Set("Accept-Encoding", "gzip")
-			r.Headers.Set("User-Agent", RandomBrowserUserAgent())
+			r.Headers.Set("User-Agent", OutboundUserAgent())
+			if err := SignWebBotAuthCollyRequest(r); err != nil {
+				log.Printf("Web Bot Auth signing failed for %s: %v", r.URL, err)
+			}
 		}
 		seedProxyContextIfMissing(r.Ctx, initialProxyMode, initialProxyURL)
 	})
