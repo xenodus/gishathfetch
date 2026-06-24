@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -94,26 +93,9 @@ func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, handl
 	detailURL.RawQuery = ""
 	detailURL.Fragment = ""
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, detailURL.String(), nil)
+	body, err := doSuggestGETWithRetry(ctx, client, detailURL.String())
 	if err != nil {
 		return productDetail{}, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return productDetail{}, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return productDetail{}, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return productDetail{}, fmt.Errorf("shopifysuggest: unexpected status %d for %s", resp.StatusCode, detailURL.String())
 	}
 
 	var detail productDetail

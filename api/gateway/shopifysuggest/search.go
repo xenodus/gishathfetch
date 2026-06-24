@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -76,11 +75,13 @@ type suggestResponse struct {
 // products into cards using the supplied options.
 //
 // Shopify's predictive search endpoint can rate limit (HTTP 429) or otherwise
-// throttle direct traffic, so the request is attempted through an ordered
-// fallback chain: a direct connection first, then a dedicated proxy, and
-// finally the shared dynamic proxy. The first attempt that succeeds wins;
-// later attempts only run when the previous one errors (network failure,
-// non-200 status such as 429, or an unparsable body).
+// throttle direct traffic. Each transport retries transient failures on the
+// same connection, honoring Retry-After when present, before the request is
+// attempted through an ordered fallback chain: a direct connection first, then
+// a dedicated proxy, and finally the shared dynamic proxy. The first transport
+// that succeeds wins; later transports only run when the previous one exhausts
+// its retries (network failure, persistent non-200 status such as 429, or an
+// unparsable body).
 func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
 	if opts.MapProduct == nil {
 		return nil, fmt.Errorf("shopifysuggest: MapProduct is required")
@@ -122,30 +123,14 @@ func buildSuggestURL(opts Options) (string, error) {
 	return apiURL.String(), nil
 }
 
-// fetchProducts performs a single suggest request with the supplied client and
-// returns the raw products. A non-200 status (e.g. 429 Too Many Requests) is
-// reported as an error so the caller can fall back to another transport.
+// fetchProducts performs a suggest request with the supplied client and returns
+// the raw products. Transient rate-limit/5xx responses are retried on the same
+// transport, honoring Retry-After when Shopify provides it. Persistent failures
+// are reported as errors so the caller can fall back to another transport.
 func fetchProducts(ctx context.Context, client *http.Client, apiURL string) ([]Product, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	body, err := doSuggestGETWithRetry(ctx, client, apiURL)
 	if err != nil {
 		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("shopifysuggest: unexpected status %d", resp.StatusCode)
 	}
 
 	var res suggestResponse
