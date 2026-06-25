@@ -3,6 +3,9 @@ import { Form } from "react-bootstrap";
 const ResultFilters = ({
   sortBy,
   onSortChange,
+  qualityFilter,
+  onQualityFilterChange,
+  availableQualities,
   foilOnly,
   onFoilOnlyChange,
   hasActiveFilters,
@@ -11,7 +14,7 @@ const ResultFilters = ({
   return (
     <div className="mb-3 text-start result-filters">
       <div className="row g-2 align-items-end">
-        <div className="col-12 col-md-6">
+        <div className="col-12 col-md-4">
           <Form.Label htmlFor="result-sort" className="small fw-semibold mb-1">
             Sort by
           </Form.Label>
@@ -26,7 +29,30 @@ const ResultFilters = ({
             <option value="store-asc">Store name</option>
           </Form.Select>
         </div>
-        <div className="col-12 col-md-6 d-flex flex-wrap align-items-center gap-3">
+        {availableQualities.length > 0 && (
+          <div className="col-12 col-md-4">
+            <Form.Label
+              htmlFor="quality-filter"
+              className="small fw-semibold mb-1"
+            >
+              Condition
+            </Form.Label>
+            <Form.Select
+              id="quality-filter"
+              size="sm"
+              value={qualityFilter}
+              onChange={(e) => onQualityFilterChange(e.target.value)}
+            >
+              <option value="all">All conditions</option>
+              {availableQualities.map((quality) => (
+                <option key={quality} value={quality}>
+                  {quality}
+                </option>
+              ))}
+            </Form.Select>
+          </div>
+        )}
+        <div className="col-12 col-md-4 d-flex flex-wrap align-items-center gap-3">
           <Form.Check
             type="checkbox"
             id="foil-only"

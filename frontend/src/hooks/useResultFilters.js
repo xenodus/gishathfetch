@@ -4,19 +4,37 @@ const DEFAULT_SORT = "price-asc";
 
 export default function useResultFilters(results, searchQuery) {
   const [sortBy, setSortBy] = useState(DEFAULT_SORT);
+  const [qualityFilter, setQualityFilter] = useState("all");
   const [foilOnly, setFoilOnly] = useState(false);
 
   // Reset filters when the user runs a new search.
   // biome-ignore lint/correctness/useExhaustiveDependencies: searchQuery triggers filter reset on new search
   useEffect(() => {
     setSortBy(DEFAULT_SORT);
+    setQualityFilter("all");
     setFoilOnly(false);
   }, [searchQuery]);
 
+  const availableQualities = useMemo(() => {
+    const qualities = new Set();
+    for (const card of results) {
+      if (card.quality) {
+        qualities.add(card.quality);
+      }
+    }
+    return [...qualities].sort();
+  }, [results]);
+
   const filteredResults = useMemo(() => {
-    const filtered = foilOnly
-      ? results.filter((card) => card.isFoil)
-      : [...results];
+    let filtered = [...results];
+
+    if (qualityFilter !== "all") {
+      filtered = filtered.filter((card) => card.quality === qualityFilter);
+    }
+
+    if (foilOnly) {
+      filtered = filtered.filter((card) => card.isFoil);
+    }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -30,9 +48,12 @@ export default function useResultFilters(results, searchQuery) {
     });
 
     return filtered;
-  }, [results, sortBy, foilOnly]);
+  }, [results, sortBy, qualityFilter, foilOnly]);
+
+  const hasActiveFilters = qualityFilter !== "all" || foilOnly;
 
   const clearFilters = () => {
+    setQualityFilter("all");
     setFoilOnly(false);
   };
 
@@ -40,9 +61,12 @@ export default function useResultFilters(results, searchQuery) {
     filteredResults,
     sortBy,
     setSortBy,
+    qualityFilter,
+    setQualityFilter,
+    availableQualities,
     foilOnly,
     setFoilOnly,
-    hasActiveFilters: foilOnly,
+    hasActiveFilters,
     clearFilters,
   };
 }

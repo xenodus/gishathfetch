@@ -20,9 +20,9 @@ const EmptySearchState = () => (
 
 const EmptyFilteredState = ({ onClearFilters }) => (
   <div className="mb-3 text-center py-4 px-3">
-    <div className="fw-semibold mb-2">No foil results found</div>
+    <div className="fw-semibold mb-2">No results match your filters</div>
     <p className="small text-muted mb-3">
-      Try turning off foil only to see all printings.
+      Try a different condition, turning off foil only, or clear your filters.
     </p>
     <button
       type="button"
@@ -50,6 +50,9 @@ const SearchResults = ({
     filteredResults,
     sortBy,
     setSortBy,
+    qualityFilter,
+    setQualityFilter,
+    availableQualities,
     foilOnly,
     setFoilOnly,
     hasActiveFilters,
@@ -86,6 +89,9 @@ const SearchResults = ({
             <ResultFilters
               sortBy={sortBy}
               onSortChange={setSortBy}
+              qualityFilter={qualityFilter}
+              onQualityFilterChange={setQualityFilter}
+              availableQualities={availableQualities}
               foilOnly={foilOnly}
               onFoilOnlyChange={setFoilOnly}
               hasActiveFilters={hasActiveFilters}
