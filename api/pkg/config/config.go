@@ -11,10 +11,10 @@ const (
 	UtmSource        = "gishathfetch"
 	// MinSearchStringLength is the minimum number of characters required for a search.
 	MinSearchStringLength = 3
-	// MaxSearchStringLength caps card name searches. The longest tournament-legal
-	// MTG card names are ~41 characters; 64 allows partial names with headroom
-	// while rejecting bot paragraph spam.
-	MaxSearchStringLength = 64
+	// MaxSearchStringLength caps card name searches. The longest MTG card name is
+	// ~141 characters (Unhinged); 150 allows any real card name while rejecting
+	// bot paragraph spam.
+	MaxSearchStringLength = 150
 	MaxPagesToSearch      = 3
 	EnvProd          = "prod"
 	EnvStaging       = "staging"

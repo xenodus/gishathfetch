@@ -181,11 +181,11 @@ func Test_Search_Err(t *testing.T) {
 		"search string too long": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
 				QueryStringParameters: map[string]string{
-					"s": strings.Repeat("a", 65),
+					"s": strings.Repeat("a", 151),
 				},
 			},
 			expStatusCode: http.StatusBadRequest,
-			expBody:       `{"error":"card name is too long (maximum 64 characters)"}` + "\n",
+			expBody:       `{"error":"card name is too long (maximum 150 characters)"}` + "\n",
 		},
 		"controller error": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -66,7 +67,10 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		return validationErrorResponse(
 			apiRes,
 			origin,
-			"card name is too long (maximum 64 characters)",
+			fmt.Sprintf(
+				"card name is too long (maximum %d characters)",
+				config.MaxSearchStringLength,
+			),
 		)
 	}
 
