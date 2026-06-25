@@ -3,8 +3,11 @@ import {
   API_BASE_URL,
   BASE_URL,
   LGS_OPTIONS,
+  MAX_SEARCH_LENGTH,
   MIN_SEARCH_LENGTH,
 } from "../constants";
+
+const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
 
 // Search configuration constants
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
@@ -76,6 +79,13 @@ export default function useSearch() {
     (query, stores) => {
       if (!query || query.length < MIN_SEARCH_LENGTH) return;
 
+      if (query.length > MAX_SEARCH_LENGTH) {
+        setHasSearched(true);
+        setSearchResults([]);
+        setSearchError(SEARCH_TOO_LONG_ERROR);
+        return;
+      }
+
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -114,8 +124,24 @@ export default function useSearch() {
       progressIntervalRef.current = progressInterval;
 
       fetch(searchUrl, { signal: searchAbortController.signal })
-        .then((res) => {
+        .then(async (res) => {
           if (!res.ok) {
+            let validationMessage = null;
+            if (res.status === 400) {
+              try {
+                const errorBody = await res.json();
+                if (typeof errorBody?.error === "string" && errorBody.error) {
+                  validationMessage = errorBody.error;
+                }
+              } catch {
+                // Ignore malformed validation responses.
+              }
+            }
+
+            if (validationMessage) {
+              throw new Error(`Validation error: ${validationMessage}`);
+            }
+
             throw new Error(`Server error: ${res.status} ${res.statusText}`);
           }
           return res.json();
@@ -149,6 +175,8 @@ export default function useSearch() {
             setSearchError(
               "Unable to connect to the server. Please check your internet connection and try again.",
             );
+          } else if (err.message.startsWith("Validation error: ")) {
+            setSearchError(err.message.slice("Validation error: ".length));
           } else if (err.message.includes("Server error")) {
             setSearchError(
               "The server is experiencing issues. Please try again later.",
@@ -189,7 +217,10 @@ export default function useSearch() {
       return;
     }
 
-    if (searchQuery.length > MIN_SEARCH_LENGTH - 1) {
+    if (
+      searchQuery.length > MIN_SEARCH_LENGTH - 1 &&
+      searchQuery.length <= MAX_SEARCH_LENGTH
+    ) {
       const timer = setTimeout(() => {
         if (skipSuggestionsRef.current) return;
 

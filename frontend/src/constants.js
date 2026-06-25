@@ -147,6 +147,9 @@ export const LGS_MAP = [
 ];
 
 export const MIN_SEARCH_LENGTH = 3;
+// Covers the longest MTG card name (~141 characters) with a small buffer while
+// rejecting bot paragraph spam.
+export const MAX_SEARCH_LENGTH = 150;
 
 export const API_BASE_URL =
   window.location.hostname === "staging.gishathfetch.com" ||

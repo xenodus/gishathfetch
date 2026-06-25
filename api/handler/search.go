@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +20,10 @@ import (
 type WebResponse struct {
 	Data   []controller.Card       `json:"data"`
 	Errors []controller.StoreError `json:"errors"`
+}
+
+type ValidationErrorResponse struct {
+	Error string `json:"error"`
 }
 
 var searchFunc = controller.Search
@@ -52,9 +57,21 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		lgsString, _ = url.QueryUnescape("Flagship%20Games%2CGames%20Haven%2CGrey%20Ogre%20Games%2CHideout%2CMana%20Pro%2CMox%20%26%20Lotus%2COneMtg%2CSanctuary%20Gaming")
 	}
 
-	if searchString == "" || len(searchString) < 3 {
+	if searchString == "" || len(searchString) < config.MinSearchStringLength {
 		apiRes.StatusCode = http.StatusBadRequest
 		return lambdaApiResponse(apiRes, webRes, origin)
+	}
+
+	if len(searchString) > config.MaxSearchStringLength {
+		apiRes.StatusCode = http.StatusBadRequest
+		return validationErrorResponse(
+			apiRes,
+			origin,
+			fmt.Sprintf(
+				"card name is too long (maximum %d characters)",
+				config.MaxSearchStringLength,
+			),
+		)
 	}
 
 	if lgsString != "" {
@@ -80,6 +97,25 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	return lambdaApiResponse(apiRes, webRes, origin)
+}
+
+func validationErrorResponse(
+	apiResponse events.APIGatewayProxyResponse,
+	origin string,
+	message string,
+) (events.APIGatewayProxyResponse, error) {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+
+	if err := encoder.Encode(ValidationErrorResponse{Error: message}); err != nil {
+		apiResponse.StatusCode = http.StatusInternalServerError
+		apiResponse.Body = "err marshalling validation error"
+		return lambdaApiResponse(apiResponse, WebResponse{}, origin)
+	}
+
+	apiResponse.Body = buf.String()
+	return lambdaApiResponse(apiResponse, WebResponse{}, origin)
 }
 
 func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse, origin string) (events.APIGatewayProxyResponse, error) {
