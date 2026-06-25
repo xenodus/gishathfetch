@@ -9,7 +9,7 @@ import SkeletonCard from "./SkeletonCard";
 const AD_DISPLAY_INTERVAL = 8;
 
 const EmptySearchState = () => (
-  <div className="mb-3 text-center bg-body-secondary border rounded py-4 px-3">
+  <div className="mb-3 text-center py-4 px-3">
     <div className="fw-semibold mb-2">No results found</div>
     <p className="small text-muted mb-0">
       Try picking a card from the auto-suggest, using the full card name, or
@@ -19,7 +19,7 @@ const EmptySearchState = () => (
 );
 
 const EmptyFilteredState = ({ onClearFilters }) => (
-  <div className="mb-3 text-center bg-body-secondary border rounded py-4 px-3">
+  <div className="mb-3 text-center py-4 px-3">
     <div className="fw-semibold mb-2">No foil results found</div>
     <p className="small text-muted mb-3">
       Try turning off foil only to see all printings.
