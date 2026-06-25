@@ -5,23 +5,13 @@ const ResultFilters = ({
   onSortChange,
   foilOnly,
   onFoilOnlyChange,
-  qualityFilter,
-  onQualityFilterChange,
-  availableQualities,
-  priceMin,
-  onPriceMinChange,
-  priceMax,
-  onPriceMaxChange,
-  availableStores,
-  isStoreSelected,
-  onToggleStore,
   hasActiveFilters,
   onClearFilters,
 }) => {
   return (
     <div className="mb-3 text-start result-filters">
-      <div className="row g-2 align-items-end mb-2">
-        <div className="col-12 col-md-4">
+      <div className="row g-2 align-items-end">
+        <div className="col-12 col-md-6">
           <Form.Label htmlFor="result-sort" className="small fw-semibold mb-1">
             Sort by
           </Form.Label>
@@ -36,37 +26,7 @@ const ResultFilters = ({
             <option value="store-asc">Store name</option>
           </Form.Select>
         </div>
-        <div className="col-6 col-md-2">
-          <Form.Label htmlFor="price-min" className="small fw-semibold mb-1">
-            Min price
-          </Form.Label>
-          <Form.Control
-            id="price-min"
-            type="number"
-            size="sm"
-            min="0"
-            step="0.01"
-            placeholder="S$"
-            value={priceMin}
-            onChange={(e) => onPriceMinChange(e.target.value)}
-          />
-        </div>
-        <div className="col-6 col-md-2">
-          <Form.Label htmlFor="price-max" className="small fw-semibold mb-1">
-            Max price
-          </Form.Label>
-          <Form.Control
-            id="price-max"
-            type="number"
-            size="sm"
-            min="0"
-            step="0.01"
-            placeholder="S$"
-            value={priceMax}
-            onChange={(e) => onPriceMaxChange(e.target.value)}
-          />
-        </div>
-        <div className="col-12 col-md-4 d-flex flex-wrap align-items-center gap-3">
+        <div className="col-12 col-md-6 d-flex flex-wrap align-items-center gap-3">
           <Form.Check
             type="checkbox"
             id="foil-only"
@@ -86,52 +46,6 @@ const ResultFilters = ({
           )}
         </div>
       </div>
-
-      {availableQualities.length > 0 && (
-        <div className="mb-2">
-          <Form.Label
-            htmlFor="quality-filter"
-            className="small fw-semibold mb-1"
-          >
-            Condition
-          </Form.Label>
-          <Form.Select
-            id="quality-filter"
-            size="sm"
-            value={qualityFilter}
-            onChange={(e) => onQualityFilterChange(e.target.value)}
-          >
-            <option value="all">All conditions</option>
-            {availableQualities.map((quality) => (
-              <option key={quality} value={quality}>
-                {quality}
-              </option>
-            ))}
-          </Form.Select>
-        </div>
-      )}
-
-      {availableStores.length > 1 && (
-        <div>
-          <div className="small fw-semibold mb-1">Stores</div>
-          <div className="d-flex flex-wrap gap-1">
-            {availableStores.map((store) => {
-              const selected = isStoreSelected(store);
-              return (
-                <button
-                  key={store}
-                  type="button"
-                  className={`btn btn-sm ${selected ? "btn-primary" : "btn-outline-secondary"}`}
-                  onClick={() => onToggleStore(store)}
-                  aria-pressed={selected}
-                >
-                  {store}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

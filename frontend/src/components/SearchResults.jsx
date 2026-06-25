@@ -20,10 +20,9 @@ const EmptySearchState = () => (
 
 const EmptyFilteredState = ({ onClearFilters }) => (
   <div className="mb-3 text-center bg-body-secondary border rounded py-4 px-3">
-    <div className="fw-semibold mb-2">No results match your filters</div>
+    <div className="fw-semibold mb-2">No foil results found</div>
     <p className="small text-muted mb-3">
-      Try widening your price range, including more stores, or turning off foil
-      only.
+      Try turning off foil only to see all printings.
     </p>
     <button
       type="button"
@@ -53,16 +52,6 @@ const SearchResults = ({
     setSortBy,
     foilOnly,
     setFoilOnly,
-    qualityFilter,
-    setQualityFilter,
-    priceMin,
-    setPriceMin,
-    priceMax,
-    setPriceMax,
-    availableStores,
-    availableQualities,
-    toggleStore,
-    isStoreSelected,
     hasActiveFilters,
     clearFilters,
   } = useResultFilters(results, searchQuery);
@@ -99,16 +88,6 @@ const SearchResults = ({
               onSortChange={setSortBy}
               foilOnly={foilOnly}
               onFoilOnlyChange={setFoilOnly}
-              qualityFilter={qualityFilter}
-              onQualityFilterChange={setQualityFilter}
-              availableQualities={availableQualities}
-              priceMin={priceMin}
-              onPriceMinChange={setPriceMin}
-              priceMax={priceMax}
-              onPriceMaxChange={setPriceMax}
-              availableStores={availableStores}
-              isStoreSelected={isStoreSelected}
-              onToggleStore={toggleStore}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={clearFilters}
             />
