@@ -1,3 +1,5 @@
+import { Moon, Sun } from "react-feather";
+
 const Header = ({ theme, onToggleTheme }) => {
   const isDarkMode = theme === "dark";
 
@@ -13,9 +15,11 @@ const Header = ({ theme, onToggleTheme }) => {
             title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
             aria-pressed={isDarkMode}
           >
-            <span className="theme-toggle-icon" aria-hidden="true">
-              💡
-            </span>
+            {isDarkMode ? (
+              <Sun size={16} aria-hidden="true" />
+            ) : (
+              <Moon size={16} aria-hidden="true" />
+            )}
           </button>
         </div>
         <div>
