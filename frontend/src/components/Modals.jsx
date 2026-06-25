@@ -1,4 +1,5 @@
 import { Button, Modal } from "react-bootstrap";
+import LazyMapIframe from "./LazyMapIframe";
 
 const Modals = ({
   showMap,
@@ -40,15 +41,11 @@ const Modals = ({
                   {shop.website}
                 </a>
               </div>
-              <iframe
-                className="w-100 border border-dark mb-3"
-                style={{ minHeight: "450px" }}
+              <LazyMapIframe
                 src={shop.iframe}
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
                 title={shop.name}
-              ></iframe>
+                isActive={showMap}
+              />
               <div>
                 <Button
                   variant="primary"

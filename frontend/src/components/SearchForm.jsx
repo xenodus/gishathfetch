@@ -100,11 +100,11 @@ const SearchForm = ({
       <form id="searchForm" onSubmit={onSearchSubmit}>
         <div className="mb-3 position-relative">
           <div className="form-floating">
-            {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: Controlled input behaves like combobox */}
             <input
               type="search"
               className="form-control"
               id="search"
+              role="combobox"
               placeholder="lightning bolt"
               value={searchQuery}
               onChange={onQueryChange}
@@ -115,6 +115,9 @@ const SearchForm = ({
               aria-autocomplete="list"
               aria-controls="suggestions"
               aria-expanded={showSuggestions && suggestions.length > 0}
+              aria-activedescendant={
+                selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined
+              }
             />
             <label htmlFor="search">Card Name</label>
           </div>
@@ -139,6 +142,7 @@ const SearchForm = ({
                   // biome-ignore lint/a11y/useKeyWithClickEvents: Keyboard navigation is handled by input
                   <div
                     key={s}
+                    id={`suggestion-${suggestionIndex}`}
                     className={`suggestion-item${selectedIndex === suggestionIndex ? " selected" : ""}`}
                     onClick={() => {
                       onSuggestionClick(s);

@@ -13,7 +13,7 @@
 }
 
 body {
-  font-family: "Barlow", serif;
+  font-family: "Barlow", sans-serif;
   background-color: var(--bs-body-bg);
   color: var(--bs-body-color);
 }
@@ -112,15 +112,7 @@ body {
 }
 
 #suggestions div:nth-child(even) {
-  background-color: #fbfbfb;
-}
-
-[data-bs-theme="dark"] #suggestions div:nth-child(even) {
-  background-color: color-mix(
-    in srgb,
-    var(--bs-body-bg) 92%,
-    var(--bs-body-color) 8%
-  );
+  background-color: var(--bs-tertiary-bg);
 }
 
 #suggestions div:not(:last-child) {
@@ -129,13 +121,13 @@ body {
 
 #suggestions div.suggestion-item:hover,
 #suggestions div.suggestion-item.selected {
-  background: #0d6efd;
-  color: #fff;
+  background: var(--bs-primary);
+  color: var(--bs-white);
 }
 
-input#search:focus {
-  box-shadow: none;
-  border-color: #dee2e6;
+input#search:focus-visible {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
 }
 
 @media (min-width: 1400px) {

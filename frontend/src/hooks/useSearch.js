@@ -304,8 +304,9 @@ export default function useSearch() {
     setSearchQuery(suggestion);
     setShowSuggestions(false);
 
-    // Auto-select all stores if none selected (for when user clicks Search button)
+    let storesToSearch = selectedStores;
     if (selectedStores.length === 0) {
+      storesToSearch = LGS_OPTIONS;
       setSelectedStores(LGS_OPTIONS);
       try {
         localStorage.setItem(
@@ -316,7 +317,8 @@ export default function useSearch() {
         console.error("Failed to save selected stores:", err);
       }
     }
-    // Note: Search is NOT triggered automatically - user must click Search button or press Enter
+
+    performSearch(suggestion, storesToSearch);
   };
 
   const handleSearchSubmit = (e) => {
