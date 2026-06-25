@@ -172,3 +172,7 @@ ins.adsbygoogle {
 ins.adsbygoogle iframe {
   display: block;
 }
+
+.scroll-margin-top {
+  scroll-margin-top: 1rem;
+}
