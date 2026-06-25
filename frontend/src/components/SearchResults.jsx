@@ -1,13 +1,42 @@
 import React from "react";
+import useResultFilters from "../hooks/useResultFilters";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
+import ResultFilters from "./ResultFilters";
 import SkeletonCard from "./SkeletonCard";
 
 // Display ad after every N results
 const AD_DISPLAY_INTERVAL = 8;
 
+const EmptySearchState = () => (
+  <div className="mb-3 text-center py-4 px-3">
+    <div className="fw-semibold mb-2">No results found</div>
+    <p className="small text-muted mb-0">
+      Try picking a card from the auto-suggest, using the full card name, or
+      selecting fewer stores for a faster, more accurate search.
+    </p>
+  </div>
+);
+
+const EmptyFilteredState = ({ onClearFilters }) => (
+  <div className="mb-3 text-center py-4 px-3">
+    <div className="fw-semibold mb-2">No results match your filters</div>
+    <p className="small text-muted mb-3">
+      Try a different condition, turning off foil only, or clear your filters.
+    </p>
+    <button
+      type="button"
+      className="btn btn-outline-primary btn-sm"
+      onClick={onClearFilters}
+    >
+      Clear filters
+    </button>
+  </div>
+);
+
 const SearchResults = ({
   results,
+  searchQuery,
   isSearching,
   hasSearched,
   searchError,
@@ -17,58 +46,102 @@ const SearchResults = ({
   onSearchStore,
   baseUrl,
 }) => {
+  const {
+    filteredResults,
+    sortBy,
+    setSortBy,
+    qualityFilter,
+    setQualityFilter,
+    availableQualities,
+    foilOnly,
+    setFoilOnly,
+    hasActiveFilters,
+    clearFilters,
+  } = useResultFilters(results, searchQuery);
+
+  const resultCountLabel = hasActiveFilters
+    ? `Showing ${filteredResults.length} of ${results.length} result${results.length !== 1 ? "s" : ""}`
+    : `${results.length} result${results.length !== 1 ? "s" : ""} found`;
+
   return (
     <>
       {hasSearched &&
         !isSearching &&
         (searchError ? (
-          <div className="mb-3 text-center bg-danger-subtle text-dark rounded py-2">
+          <div
+            className="mb-3 text-center bg-danger-subtle text-dark rounded py-2"
+            role="alert"
+          >
             <strong>Error:</strong> {searchError}
           </div>
+        ) : results.length === 0 ? (
+          <EmptySearchState />
         ) : (
-          <div
-            id="resultCount"
-            className="mb-3 text-center bg-warning-subtle text-warning-emphasis rounded py-2"
-          >
-            {results?.length || 0} result{results?.length !== 1 ? "s" : ""}{" "}
-            found
-          </div>
+          <>
+            <div
+              id="resultCount"
+              className="mb-3 text-center bg-warning-subtle text-warning-emphasis rounded py-2"
+              aria-live="polite"
+            >
+              {resultCountLabel}
+            </div>
+
+            <ResultFilters
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              qualityFilter={qualityFilter}
+              onQualityFilterChange={setQualityFilter}
+              availableQualities={availableQualities}
+              foilOnly={foilOnly}
+              onFoilOnlyChange={setFoilOnly}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={clearFilters}
+            />
+
+            {filteredResults.length === 0 ? (
+              <EmptyFilteredState onClearFilters={clearFilters} />
+            ) : (
+              <div id="result" className="mb-3 text-center">
+                <div className="row">
+                  {filteredResults.map((card, i) => {
+                    const showAd =
+                      filteredResults.length > AD_DISPLAY_INTERVAL &&
+                      (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
+                      i + 1 !== filteredResults.length;
+                    return (
+                      <React.Fragment
+                        key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
+                      >
+                        <Card
+                          card={card}
+                          index={i}
+                          isCardInCart={isCardInCart}
+                          addToCart={addToCart}
+                          removeFromCart={removeFromCart}
+                          onSearchStore={onSearchStore}
+                          baseUrl={baseUrl}
+                        />
+                        {showAd && (
+                          <div className="col-12 mb-4">
+                            <AdComponent />
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         ))}
 
-      {((results && results.length > 0) || isSearching) && (
+      {isSearching && (
         <div id="result" className="mb-3 text-center">
           <div className="row">
-            {results.map((card, i) => {
-              const showAd =
-                results.length > AD_DISPLAY_INTERVAL &&
-                (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
-                i + 1 !== results.length;
-              return (
-                // biome-ignore lint/suspicious/noArrayIndexKey: List is derived from results which are stable for this render
-                <React.Fragment key={i}>
-                  <Card
-                    card={card}
-                    index={i}
-                    isCardInCart={isCardInCart}
-                    addToCart={addToCart}
-                    removeFromCart={removeFromCart}
-                    onSearchStore={onSearchStore}
-                    baseUrl={baseUrl}
-                  />
-                  {showAd && (
-                    <div className="col-12 mb-4">
-                      <AdComponent />
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-
-            {isSearching &&
-              [...Array(4)].map((_, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton loaders are static
-                <SkeletonCard key={`skeleton-${i}`} />
-              ))}
+            {[...Array(4)].map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton loaders are static
+              <SkeletonCard key={`skeleton-${i}`} />
+            ))}
           </div>
         </div>
       )}

@@ -152,6 +152,7 @@ export default function App() {
 
       <SearchResults
         results={searchResults}
+        searchQuery={searchQuery}
         isSearching={isSearching}
         hasSearched={hasSearched}
         searchError={searchError}
