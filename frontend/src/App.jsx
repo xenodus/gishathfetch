@@ -26,6 +26,7 @@ export default function App() {
     setShowCart,
     addToCart,
     removeFromCart,
+    removeFromCartByCard,
     clearCart,
     isCardInCart,
   } = useCart();
@@ -166,6 +167,7 @@ export default function App() {
         isCardInCart={isCardInCart}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
+        removeFromCartByCard={removeFromCartByCard}
         onSearchStore={handleCardSearch}
         baseUrl={BASE_URL}
       />

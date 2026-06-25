@@ -44,6 +44,7 @@ const SearchResults = ({
   isCardInCart,
   addToCart,
   removeFromCart,
+  removeFromCartByCard,
   onSearchStore,
   baseUrl,
 }) => {
@@ -145,6 +146,7 @@ const SearchResults = ({
                           isCardInCart={isCardInCart}
                           addToCart={addToCart}
                           removeFromCart={removeFromCart}
+                          removeFromCartByCard={removeFromCartByCard}
                           onSearchStore={onSearchStore}
                           baseUrl={baseUrl}
                         />

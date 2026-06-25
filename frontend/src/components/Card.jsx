@@ -4,6 +4,7 @@ import {
   Search as SearchIcon,
   Trash2,
 } from "react-feather";
+import { formatSavedAt } from "../hooks/useCart";
 
 const Card = ({
   card,
@@ -12,6 +13,7 @@ const Card = ({
   isCardInCart,
   addToCart,
   removeFromCart,
+  removeFromCartByCard,
   onSearchStore,
   baseUrl,
 }) => {
@@ -52,6 +54,11 @@ const Card = ({
           </div>
         )}
         <div className="fs-6 lh-sm">S$ {card.price.toFixed(2)}</div>
+        {isCart && card.savedAt && (
+          <div className="small text-muted mb-1">
+            {formatSavedAt(card.savedAt)}
+          </div>
+        )}
         <div className="mb-2">
           <a
             href={card.url}
@@ -83,8 +90,8 @@ const Card = ({
           ) : inCart ? (
             <button
               type="button"
-              className="btn btn-success btn-sm addCartBtn"
-              disabled
+              className="btn btn-outline-success btn-sm addCartBtn"
+              onClick={() => removeFromCartByCard(card)}
             >
               <CheckSquare size={12} className="cartIcon" /> Saved
             </button>
