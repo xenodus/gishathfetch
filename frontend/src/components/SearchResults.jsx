@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import useResultFilters from "../hooks/useResultFilters";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
+import CheapestByStore from "./CheapestByStore";
 import ResultFilters from "./ResultFilters";
 import SkeletonCard from "./SkeletonCard";
 
@@ -129,37 +130,41 @@ const SearchResults = ({
             {filteredResults.length === 0 ? (
               <EmptyFilteredState onClearFilters={clearFilters} />
             ) : (
-              <div id="result" className="mb-3 text-center">
-                <div className="row">
-                  {filteredResults.map((card, i) => {
-                    const showAd =
-                      filteredResults.length > AD_DISPLAY_INTERVAL &&
-                      (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
-                      i + 1 !== filteredResults.length;
-                    return (
-                      <React.Fragment
-                        key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
-                      >
-                        <Card
-                          card={card}
-                          index={i}
-                          isCardInCart={isCardInCart}
-                          addToCart={addToCart}
-                          removeFromCart={removeFromCart}
-                          removeFromCartByCard={removeFromCartByCard}
-                          onSearchStore={onSearchStore}
-                          baseUrl={baseUrl}
-                        />
-                        {showAd && (
-                          <div className="col-12 mb-4">
-                            <AdComponent />
-                          </div>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+              <>
+                <CheapestByStore results={filteredResults} />
+
+                <div id="result" className="mb-3 text-center">
+                  <div className="row">
+                    {filteredResults.map((card, i) => {
+                      const showAd =
+                        filteredResults.length > AD_DISPLAY_INTERVAL &&
+                        (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
+                        i + 1 !== filteredResults.length;
+                      return (
+                        <React.Fragment
+                          key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
+                        >
+                          <Card
+                            card={card}
+                            index={i}
+                            isCardInCart={isCardInCart}
+                            addToCart={addToCart}
+                            removeFromCart={removeFromCart}
+                            removeFromCartByCard={removeFromCartByCard}
+                            onSearchStore={onSearchStore}
+                            baseUrl={baseUrl}
+                          />
+                          {showAd && (
+                            <div className="col-12 mb-4">
+                              <AdComponent />
+                            </div>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </>
         ))}

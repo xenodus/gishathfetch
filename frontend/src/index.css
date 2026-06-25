@@ -176,3 +176,8 @@ ins.adsbygoogle iframe {
 .scroll-margin-top {
   scroll-margin-top: 1rem;
 }
+
+.cheapest-by-store-table th,
+.cheapest-by-store-table td {
+  vertical-align: middle;
+}
