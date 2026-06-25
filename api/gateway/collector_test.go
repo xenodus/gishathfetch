@@ -55,6 +55,17 @@ func TestInitialProxy(t *testing.T) {
 			t.Fatalf("unexpected dynamic proxy url: %q", proxyURL)
 		}
 	})
+
+	t.Run("skips dynamic when USE_DYNAMIC_PROXY is false", func(t *testing.T) {
+		c2 := colly.NewCollector()
+		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|9000|dynamic-user|dynamic-pass")
+		t.Setenv("USE_DYNAMIC_PROXY", "false")
+
+		mode, proxyURL := applyInitialProxy(c2, "")
+		if mode != "direct" || proxyURL != "" {
+			t.Fatalf("expected direct mode with no proxy, got mode=%q url=%q", mode, proxyURL)
+		}
+	})
 }
 
 func TestDedicatedProxyLeasePoolAcquireRelease(t *testing.T) {
@@ -253,6 +264,14 @@ func TestNewOptimizedCollectorNoRetryDynamic(t *testing.T) {
 		t.Setenv("DYNAMIC_PROXY", "://bad-dynamic-proxy")
 		if _, err := NewOptimizedCollectorNoRetryDynamic(context.Background()); err == nil {
 			t.Fatalf("expected invalid dynamic proxy to return error")
+		}
+	})
+
+	t.Run("returns error when USE_DYNAMIC_PROXY is false", func(t *testing.T) {
+		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|9000|dynamic-user|dynamic-pass")
+		t.Setenv("USE_DYNAMIC_PROXY", "false")
+		if _, err := NewOptimizedCollectorNoRetryDynamic(context.Background()); err == nil {
+			t.Fatalf("expected disabled dynamic proxy toggle to return error")
 		}
 	})
 }

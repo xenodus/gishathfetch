@@ -30,6 +30,7 @@ This document records **where** the app configures search behavior, **timeouts**
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
 | Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final fallback after dedicated and direct/no-proxy attempts. |
+| Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `false`, dynamic proxy fallback is disabled even if `DYNAMIC_PROXY` is set. Defaults to enabled when unset or invalid. |
 
 ---
 
