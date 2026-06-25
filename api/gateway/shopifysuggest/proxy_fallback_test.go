@@ -149,4 +149,10 @@ func TestBuildSearchAttemptsProxyConfiguration(t *testing.T) {
 	attempts = buildSearchAttempts()
 	require.Len(t, attempts, 3)
 	require.Equal(t, "dynamic", attempts[2].strategy)
+
+	t.Setenv("USE_DYNAMIC_PROXY", "false")
+	attempts = buildSearchAttempts()
+	require.Len(t, attempts, 2)
+	require.Equal(t, "direct", attempts[0].strategy)
+	require.Equal(t, "dedicated", attempts[1].strategy)
 }

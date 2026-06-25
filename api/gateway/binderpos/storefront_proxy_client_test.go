@@ -46,6 +46,16 @@ func TestSearchByStorefrontAPIDynamicRequiresEnv(t *testing.T) {
 	}
 }
 
+func TestSearchByStorefrontAPIDynamicDisabledByToggle(t *testing.T) {
+	t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|9000|dynamic-user|dynamic-pass")
+	t.Setenv("USE_DYNAMIC_PROXY", "false")
+
+	_, err := searchByStorefrontAPIDynamic(context.Background(), 1, "Store", "https://example.com", "shopify.example.com", "Abrade")
+	if err == nil || err.Error() != "no dynamic proxy configured for binderpos storefront api" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestNewHTTPClientWithProxyURL(t *testing.T) {
 	t.Run("returns error for invalid proxy URL", func(t *testing.T) {
 		_, err := newHTTPClientWithProxyURL("://invalid-proxy")

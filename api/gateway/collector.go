@@ -378,6 +378,10 @@ func clearProxy(c *colly.Collector) (string, string) {
 }
 
 func DynamicProxyURL() string {
+	if !config.UseDynamicProxy() {
+		return ""
+	}
+
 	proxyURL, ok := util.BuildProxyURL(os.Getenv(config.DynamicProxyEnv))
 	if !ok {
 		return ""

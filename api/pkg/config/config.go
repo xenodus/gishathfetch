@@ -22,6 +22,9 @@ const (
 	// dynamic-proxy fallback attempts, which BinderPOS now reserves for the
 	// final fallback after dedicated and direct/no-proxy attempts.
 	DynamicProxyEnv = "DYNAMIC_PROXY"
+	// UseDynamicProxyEnv toggles whether DYNAMIC_PROXY may be used for fallback
+	// attempts. When false, dynamic proxy is skipped even if configured.
+	UseDynamicProxyEnv = "USE_DYNAMIC_PROXY"
 	// UseBinderposSharedProxyFallbackEnv is reserved for future BinderPOS proxy
 	// routing options. It no longer changes scraper behavior (lookups are single-attempt).
 	UseBinderposSharedProxyFallbackEnv = "USE_BINDERPOS_SHARED_PROXY_FALLBACK"
@@ -33,6 +36,20 @@ const UseLeasedDedicatedProxy = false
 
 func UseBinderposStorefrontAPI() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseBinderposStorefrontAPIEnv))
+	if rawValue == "" {
+		return true
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return true
+	}
+
+	return enabled
+}
+
+func UseDynamicProxy() bool {
+	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
 	if rawValue == "" {
 		return true
 	}
