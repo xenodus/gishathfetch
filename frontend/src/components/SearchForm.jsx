@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MAX_SEARCH_LENGTH } from "../constants";
 import StoreSelector from "./StoreSelector";
 
 const TIP_DISMISSED_STORAGE_KEY = "search-form-tip-dismissed";
@@ -110,6 +111,7 @@ const SearchForm = ({
               onKeyDown={handleKeyDown}
               autoComplete="off"
               onFocus={onFocus}
+              maxLength={MAX_SEARCH_LENGTH}
               aria-autocomplete="list"
               aria-controls="suggestions"
               aria-expanded={showSuggestions && suggestions.length > 0}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"mtg-price-checker-sg/controller"
@@ -176,6 +177,15 @@ func Test_Search_Err(t *testing.T) {
 			},
 			expStatusCode: http.StatusBadRequest,
 			expBody:       "",
+		},
+		"search string too long": {
+			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
+				QueryStringParameters: map[string]string{
+					"s": strings.Repeat("a", 65),
+				},
+			},
+			expStatusCode: http.StatusBadRequest,
+			expBody:       `{"error":"card name is too long (maximum 64 characters)"}` + "\n",
 		},
 		"controller error": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{

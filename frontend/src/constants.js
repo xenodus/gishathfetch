@@ -147,6 +147,9 @@ export const LGS_MAP = [
 ];
 
 export const MIN_SEARCH_LENGTH = 3;
+// Longest tournament-legal MTG card names are ~41 characters; 64 allows partial
+// names with headroom while rejecting bot paragraph spam.
+export const MAX_SEARCH_LENGTH = 64;
 
 export const API_BASE_URL =
   window.location.hostname === "staging.gishathfetch.com" ||
