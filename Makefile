@@ -54,19 +54,5 @@ lambda-update:
 aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
 
-ck-dynamodb-create:
-	export AWS_PAGER="" && aws dynamodb create-table \
-		--table-name gishathfetch-ck-prices \
-		--attribute-definitions AttributeName=nameKey,AttributeType=S \
-		--key-schema AttributeName=nameKey,KeyType=HASH \
-		--billing-mode PAY_PER_REQUEST \
-		--region ap-southeast-1
-
-# Requires CK_REFRESH_API_KEY in the environment.
-ck-price-refresh:
-	@test -n "$$CK_REFRESH_API_KEY" || (echo "Set CK_REFRESH_API_KEY" && exit 1)
-	curl -fsS -X POST "https://api.gishathfetch.com/ck-price/refresh" \
-		-H "x-api-key: $$CK_REFRESH_API_KEY"
-
 test:
 	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...
