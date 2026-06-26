@@ -261,6 +261,10 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 				if err == nil {
 					if len(cardInfo) > 0 && len(pageUrl) > 0 && len(imgUrl) > 0 {
 						for _, card := range cardInfo {
+							if !card.Available {
+								continue
+							}
+
 							// url with variant (quality)
 							cleanPageURL, err := url.Parse(strings.TrimSpace(baseUrl + pageUrl))
 							if err != nil {
