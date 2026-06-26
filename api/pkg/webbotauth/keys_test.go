@@ -36,6 +36,7 @@ func TestParseEd25519PrivateKeyPEM_commonSecretFormats(t *testing.T) {
 MC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF
 -----END PRIVATE KEY-----`
 	singleLine := "-----BEGIN PRIVATE KEY-----MC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF-----END PRIVATE KEY-----"
+	spacedSingleLine := "-----BEGIN PRIVATE KEY----- MC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF -----END PRIVATE KEY-----"
 	escaped := `-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF\n-----END PRIVATE KEY-----`
 	quoted := `"-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF\n-----END PRIVATE KEY-----"`
 	base64PEM := base64.StdEncoding.EncodeToString([]byte(pem))
@@ -46,6 +47,7 @@ MC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF
 	}{
 		{name: "multiline pem", raw: pem},
 		{name: "single line pem", raw: singleLine},
+		{name: "spaced single line pem", raw: spacedSingleLine},
 		{name: "escaped newlines", raw: escaped},
 		{name: "quoted escaped pem", raw: quoted},
 		{name: "base64 encoded pem", raw: base64PEM},
