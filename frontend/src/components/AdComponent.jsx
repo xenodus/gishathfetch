@@ -95,7 +95,7 @@ const AdComponent = ({ variant = "leaderboard" }) => {
           data-full-width-responsive={isResponsive ? "true" : undefined}
         ></ins>
       </div>
-      <div className="text-secondary mt-2" style={{ fontSize: "11px" }}>
+      <div className="text-secondary" style={{ fontSize: "11px" }}>
         Advertisement
       </div>
     </div>

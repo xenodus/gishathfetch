@@ -45,7 +45,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             data-ad-slot="6707964257"
           ></ins>
         </div>
-        <div className="text-secondary mt-2" style={{ fontSize: "11px" }}>
+        <div className="text-secondary" style={{ fontSize: "11px" }}>
           Advertisement
         </div>
       </div>
