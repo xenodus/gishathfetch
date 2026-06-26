@@ -40,7 +40,7 @@ const Header = ({ theme, onToggleTheme }) => {
           {SITE_TAGLINE}
           <br />
           <span className="fs-6 fw-normal">
-            Search {LGS_OPTIONS.length} stores at once
+            Search {LGS_OPTIONS.length} LGS and online shops at once
           </span>
         </h1>
       </div>

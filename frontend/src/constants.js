@@ -1,6 +1,6 @@
 // --- App Constants ---
 export const PAGE_TITLE =
-  "Gishath Fetch: MTG Price Checker for Singapore's LGS";
+  "Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops";
 
 export const LGS_OPTIONS = [
   "5 Mana",
@@ -25,10 +25,10 @@ export const LGS_OPTIONS = [
 ];
 
 export const SITE_TAGLINE =
-  "Magic: The Gathering price checker for Singapore's LGS";
+  "Magic: The Gathering price checker for Singapore's LGS and online shops";
 
 // Keep in sync with meta/og descriptions in frontend/index.html.
-export const SITE_DESCRIPTION = `Compare MTG singles prices across ${LGS_OPTIONS.length} Singapore local game stores in one search. In-stock results sorted by price.`;
+export const SITE_DESCRIPTION = `Compare MTG singles prices across ${LGS_OPTIONS.length} Singapore local game stores and online shops in one search. In-stock results sorted by price.`;
 
 export const LGS_MAP = [
   {
