@@ -130,6 +130,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 					"utm_source": []string{config.UtmSource},
 				}.Encode()
 
+				extraInfo := []string{fmt.Sprintf("[%s]", card.Setname)}
 				cards = append(cards, gateway.Card{
 					Name:      strings.TrimSpace(name),
 					Url:       cleanPageURL.String(),
@@ -137,12 +138,25 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 					Price:     price,
 					Source:    s.Name,
 					Img:       img,
-					ExtraInfo: []string{fmt.Sprintf("[%s]", card.Setname)},
+					IsFoil:    isSurgeFoil(extraInfo, name),
+					ExtraInfo: extraInfo,
 				})
 			}
 		}
 	}
 	return cards, nil
+}
+
+func isSurgeFoil(extraInfo []string, name string) bool {
+	if strings.Contains(name, "Surge Foil") {
+		return true
+	}
+	for _, info := range extraInfo {
+		if strings.Contains(info, "Surge Foil") {
+			return true
+		}
+	}
+	return false
 }
 
 func getApiResponse(ctx context.Context, payload []byte) (response, error) {
