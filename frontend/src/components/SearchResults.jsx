@@ -4,6 +4,7 @@ import AdComponent from "./AdComponent";
 import Card from "./Card";
 import ResultFilters from "./ResultFilters";
 import SkeletonCard from "./SkeletonCard";
+import StoreErrorsBanner from "./StoreErrorsBanner";
 
 // Display ad after every N results
 const AD_DISPLAY_INTERVAL = 8;
@@ -40,6 +41,8 @@ const SearchResults = ({
   isSearching,
   hasSearched,
   searchError,
+  searchStoreErrors,
+  onDismissStoreErrors,
   onRetrySearch,
   isCardInCart,
   addToCart,
@@ -102,64 +105,77 @@ const SearchResults = ({
               </div>
             )}
           </div>
-        ) : results.length === 0 ? (
+        ) : results.length === 0 && searchStoreErrors.length === 0 ? (
           <EmptySearchState />
         ) : (
           <>
-            <div
-              id="resultCount"
-              className="mb-3 text-center bg-warning-subtle text-warning-emphasis rounded py-2"
-              aria-live="polite"
-            >
-              {resultCountLabel}
-            </div>
+            {searchStoreErrors.length > 0 && (
+              <StoreErrorsBanner
+                storeErrors={searchStoreErrors}
+                onDismiss={onDismissStoreErrors}
+              />
+            )}
 
-            <ResultFilters
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              qualityFilter={qualityFilter}
-              onQualityFilterChange={setQualityFilter}
-              availableQualities={availableQualities}
-              foilOnly={foilOnly}
-              onFoilOnlyChange={setFoilOnly}
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={clearFilters}
-            />
-
-            {filteredResults.length === 0 ? (
-              <EmptyFilteredState onClearFilters={clearFilters} />
+            {results.length === 0 ? (
+              <EmptySearchState />
             ) : (
-              <div id="result" className="mb-3 text-center">
-                <div className="row">
-                  {filteredResults.map((card, i) => {
-                    const showAd =
-                      filteredResults.length > AD_DISPLAY_INTERVAL &&
-                      (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
-                      i + 1 !== filteredResults.length;
-                    return (
-                      <React.Fragment
-                        key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
-                      >
-                        <Card
-                          card={card}
-                          index={i}
-                          isCardInCart={isCardInCart}
-                          addToCart={addToCart}
-                          removeFromCart={removeFromCart}
-                          removeFromCartByCard={removeFromCartByCard}
-                          onSearchStore={onSearchStore}
-                          baseUrl={baseUrl}
-                        />
-                        {showAd && (
-                          <div className="col-12 mb-4">
-                            <AdComponent />
-                          </div>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+              <>
+                <div
+                  id="resultCount"
+                  className="mb-3 text-center bg-warning-subtle text-warning-emphasis rounded py-2"
+                  aria-live="polite"
+                >
+                  {resultCountLabel}
                 </div>
-              </div>
+
+                <ResultFilters
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  qualityFilter={qualityFilter}
+                  onQualityFilterChange={setQualityFilter}
+                  availableQualities={availableQualities}
+                  foilOnly={foilOnly}
+                  onFoilOnlyChange={setFoilOnly}
+                  hasActiveFilters={hasActiveFilters}
+                  onClearFilters={clearFilters}
+                />
+
+                {filteredResults.length === 0 ? (
+                  <EmptyFilteredState onClearFilters={clearFilters} />
+                ) : (
+                  <div id="result" className="mb-3 text-center">
+                    <div className="row">
+                      {filteredResults.map((card, i) => {
+                        const showAd =
+                          filteredResults.length > AD_DISPLAY_INTERVAL &&
+                          (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
+                          i + 1 !== filteredResults.length;
+                        return (
+                          <React.Fragment
+                            key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
+                          >
+                            <Card
+                              card={card}
+                              index={i}
+                              isCardInCart={isCardInCart}
+                              addToCart={addToCart}
+                              removeFromCart={removeFromCart}
+                              removeFromCartByCard={removeFromCartByCard}
+                              onSearchStore={onSearchStore}
+                              baseUrl={baseUrl}
+                            />
+                            {showAd && (
+                              <div className="col-12 mb-4">
+                                <AdComponent />
+                              </div>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         ))}

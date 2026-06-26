@@ -39,6 +39,8 @@ export default function useSearch() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [searchStoreErrors, setSearchStoreErrors] = useState([]);
+  const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
   const [selectedStores, setSelectedStores] = useState(() => {
     // First check URL parameters for store override
@@ -152,6 +154,8 @@ export default function useSearch() {
       setSearchResults([]);
       setHasSearched(true);
       setSearchError(null);
+      setSearchStoreErrors([]);
+      setDismissedStoreErrorsKey(null);
 
       if (window.gtag) {
         window.gtag("event", "search", { search_term: query });
@@ -204,6 +208,11 @@ export default function useSearch() {
           if (result && Object.hasOwn(result, "data")) {
             // Treat null data as empty array
             setSearchResults(result.data || []);
+            const storeErrors = Array.isArray(result.errors)
+              ? result.errors
+              : [];
+            setSearchStoreErrors(storeErrors);
+            setDismissedStoreErrorsKey(null);
             updateUrlAndTitle(query);
             if (window.gtag) {
               window.gtag("event", "view_search_results", {
@@ -224,6 +233,8 @@ export default function useSearch() {
               setSearchResults(previousResults);
               setHasSearched(previousResults.length > 0);
               setSearchError(null);
+              setSearchStoreErrors([]);
+              setDismissedStoreErrorsKey(null);
               userCancelledRef.current = false;
             }
             return;
@@ -231,6 +242,8 @@ export default function useSearch() {
           if (requestId !== activeSearchRequestIdRef.current) return;
           console.error("Search error:", err);
           setSearchResults([]);
+          setSearchStoreErrors([]);
+          setDismissedStoreErrorsKey(null);
 
           // Set user-friendly error message
           if (
@@ -294,6 +307,18 @@ export default function useSearch() {
       performSearch(query, stores);
     }
   }, [performSearch]);
+
+  const storeErrorsKey = searchStoreErrors
+    .map((entry) => `${entry.store}:${entry.error}`)
+    .join("|");
+  const visibleStoreErrors =
+    searchStoreErrors.length > 0 && dismissedStoreErrorsKey !== storeErrorsKey
+      ? searchStoreErrors
+      : [];
+
+  const dismissStoreErrors = useCallback(() => {
+    setDismissedStoreErrorsKey(storeErrorsKey);
+  }, [storeErrorsKey]);
 
   // --- Handlers ---
   const handleQueryChange = (e) => {
@@ -477,6 +502,8 @@ export default function useSearch() {
     searchResults,
     searchProgress,
     searchError,
+    searchStoreErrors: visibleStoreErrors,
+    onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
     suggestions,
     showSuggestions,
