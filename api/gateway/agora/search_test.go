@@ -15,14 +15,13 @@ func Test_Search(t *testing.T) {
 	require.True(t, len(result) > 0)
 
 	for _, card := range result {
-		if card.InStock {
-			require.NotEmpty(t, card.Name)
-			require.NotEmpty(t, card.Source)
-			require.NotEmpty(t, card.Url)
-			require.NotEmpty(t, card.Img)
-			require.NotEmpty(t, card.Price)
-			require.Contains(t, card.Url, StoreBaseURL+"/store/search?category="+storeCategoryMTG+"&searchfield=")
-		}
+		require.True(t, card.InStock, "gateway should only return in-stock listings")
+		require.NotEmpty(t, card.Name)
+		require.NotEmpty(t, card.Source)
+		require.NotEmpty(t, card.Url)
+		require.NotEmpty(t, card.Img)
+		require.NotEmpty(t, card.Price)
+		require.Contains(t, card.Url, StoreBaseURL+"/store/search?category="+storeCategoryMTG+"&searchfield=")
 	}
 }
 
@@ -32,6 +31,7 @@ func Test_Search_FiltersMTGCategory(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, card := range result {
+		require.True(t, card.InStock, "gateway should only return in-stock listings")
 		require.Contains(t, card.Url, "category="+storeCategoryMTG,
 			"Agora product links should stay scoped to the MTG category")
 		lower := strings.ToLower(card.Name)
