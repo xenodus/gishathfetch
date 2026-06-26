@@ -51,8 +51,9 @@ type Card struct {
 }
 
 type StoreError struct {
-	Store string `json:"store"`
-	Error string `json:"error"`
+	Store      string `json:"store"`
+	Error      string `json:"error"`
+	StatusCode int    `json:"statusCode,omitempty"`
 }
 
 const binderposMaxConcurrent = 12
@@ -247,7 +248,12 @@ func recoverShopPanic(shopName string, aggregator *fetchResultAggregator) {
 
 func recordShopSearchError(searchString, shopName string, err error, aggregator *fetchResultAggregator) {
 	if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-		errMsg := fmt.Sprintf("Error encountered searching [%s] for [%s]: %v", shopName, searchString, err)
+		errMsg := fmt.Sprintf(
+			"Error encountered searching [%s] for [%s]: %s",
+			shopName,
+			searchString,
+			gateway.EnsureHTTPStatusInErrorMessage(err.Error()),
+		)
 		log.Println(errMsg)
 		aggregator.addDiscordErrorMessage(errMsg)
 	}
@@ -294,9 +300,11 @@ func buildStoreErrors(siteErrors map[string]error) []StoreError {
 		if err == nil {
 			continue
 		}
+		enrichedError := gateway.EnsureHTTPStatusInErrorMessage(err.Error())
 		storeErrors = append(storeErrors, StoreError{
-			Store: storeName,
-			Error: err.Error(),
+			Store:      storeName,
+			Error:      enrichedError,
+			StatusCode: gateway.ExtractHTTPStatusCode(enrichedError),
 		})
 	}
 
