@@ -1,6 +1,7 @@
 {
-  "name": "Gishath Fetch: MTG Price Checker for Singapore's LGS",
+  "name": "Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops",
   "short_name": "Gishath Fetch",
+  "description": "Compare MTG singles prices across 18 Singapore local game stores and online shops in one search. In-stock results sorted by price.",
   "icons": [
     {
       "src": "android-chrome-192x192.png",
