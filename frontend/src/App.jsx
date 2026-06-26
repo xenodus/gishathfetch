@@ -39,6 +39,8 @@ export default function App() {
     searchResults,
     searchProgress,
     searchError,
+    searchStoreErrors,
+    onDismissStoreErrors,
     storesWarning,
     suggestions,
     showSuggestions,
@@ -163,6 +165,8 @@ export default function App() {
         isSearching={isSearching}
         hasSearched={hasSearched}
         searchError={searchError}
+        searchStoreErrors={searchStoreErrors}
+        onDismissStoreErrors={onDismissStoreErrors}
         onRetrySearch={retrySearch}
         isCardInCart={isCardInCart}
         addToCart={addToCart}

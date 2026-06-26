@@ -6,6 +6,7 @@ export default function useResultFilters(results, searchQuery) {
   const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [qualityFilter, setQualityFilter] = useState("all");
   const [foilOnly, setFoilOnly] = useState(false);
+  const [cheapestPerStore, setCheapestPerStore] = useState(false);
 
   // Reset filters when the user runs a new search.
   // biome-ignore lint/correctness/useExhaustiveDependencies: searchQuery triggers filter reset on new search
@@ -13,6 +14,7 @@ export default function useResultFilters(results, searchQuery) {
     setSortBy(DEFAULT_SORT);
     setQualityFilter("all");
     setFoilOnly(false);
+    setCheapestPerStore(false);
   }, [searchQuery]);
 
   const availableQualities = useMemo(() => {
@@ -36,6 +38,18 @@ export default function useResultFilters(results, searchQuery) {
       filtered = filtered.filter((card) => card.isFoil);
     }
 
+    if (cheapestPerStore) {
+      const cheapestByStore = new Map();
+      for (const card of filtered) {
+        const storeName = card.src || "Unknown Store";
+        const existing = cheapestByStore.get(storeName);
+        if (!existing || card.price < existing.price) {
+          cheapestByStore.set(storeName, card);
+        }
+      }
+      filtered = [...cheapestByStore.values()];
+    }
+
     filtered.sort((a, b) => {
       if (sortBy === "price-desc") {
         return b.price - a.price;
@@ -44,13 +58,15 @@ export default function useResultFilters(results, searchQuery) {
     });
 
     return filtered;
-  }, [results, sortBy, qualityFilter, foilOnly]);
+  }, [results, sortBy, qualityFilter, foilOnly, cheapestPerStore]);
 
-  const hasActiveFilters = qualityFilter !== "all" || foilOnly;
+  const hasActiveFilters =
+    qualityFilter !== "all" || foilOnly || cheapestPerStore;
 
   const clearFilters = () => {
     setQualityFilter("all");
     setFoilOnly(false);
+    setCheapestPerStore(false);
   };
 
   return {
@@ -62,6 +78,8 @@ export default function useResultFilters(results, searchQuery) {
     availableQualities,
     foilOnly,
     setFoilOnly,
+    cheapestPerStore,
+    setCheapestPerStore,
     hasActiveFilters,
     clearFilters,
   };

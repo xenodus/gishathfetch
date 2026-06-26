@@ -5,7 +5,16 @@ import {
   LGS_OPTIONS,
   MAX_SEARCH_LENGTH,
   MIN_SEARCH_LENGTH,
+  PAGE_TITLE,
 } from "../constants";
+import {
+  buildSearchHistoryState,
+  buildSearchUrl,
+  getInitialSelectedStores,
+  getStoresFromUrl,
+  isSearchHistoryState,
+  persistSelectedStores,
+} from "../utils/searchUrl";
 
 const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
 const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
@@ -39,35 +48,12 @@ export default function useSearch() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [searchStoreErrors, setSearchStoreErrors] = useState([]);
+  const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
-  const [selectedStores, setSelectedStores] = useState(() => {
-    // First check URL parameters for store override
-    const urlParams = new URLSearchParams(window.location.search);
-    if (
-      urlParams.has("src") &&
-      LGS_OPTIONS.includes(decodeURIComponent(urlParams.get("src")))
-    ) {
-      const stores = [decodeURIComponent(urlParams.get("src"))];
-      // Save to localStorage for URL-based navigation
-      try {
-        localStorage.setItem(
-          "lgsSelected",
-          encodeURIComponent(stores.join(",")),
-        );
-      } catch (err) {
-        console.error("Failed to save selected stores:", err);
-      }
-      return stores;
-    }
-
-    // Otherwise check localStorage
-    const storedLgs = localStorage.getItem("lgsSelected");
-    if (storedLgs !== null) {
-      const decoded = decodeURIComponent(storedLgs);
-      return decoded === "" ? [] : decoded.split(",");
-    }
-    return LGS_OPTIONS;
-  });
+  const [selectedStores, setSelectedStores] = useState(() =>
+    getInitialSelectedStores(),
+  );
 
   // --- Helpers ---
   const skipSuggestionsRef = useRef(
@@ -81,17 +67,30 @@ export default function useSearch() {
   const resultsBeforeSearchRef = useRef([]);
   const userCancelledRef = useRef(false);
   const lastSearchRef = useRef({ query: "", stores: [] });
+  const skipHistorySyncRef = useRef(false);
+  const restoringHistoryRef = useRef(false);
+  const performSearchRef = useRef(() => {});
 
   useEffect(() => {
     searchResultsRef.current = searchResults;
   }, [searchResults]);
 
-  const updateUrlAndTitle = useCallback((query) => {
-    if (window.location.hostname !== "localhost") {
-      const newUrl = `${BASE_URL}?s=${encodeURIComponent(query)}`;
-      window.history.pushState(query, `${query} @ Gishath Fetch`, newUrl);
-      document.title = `${query} @ Gishath Fetch`;
+  const syncSearchHistory = useCallback((snapshot) => {
+    if (window.location.hostname === "localhost") {
+      return;
     }
+
+    const newUrl = buildSearchUrl(BASE_URL, snapshot.query, snapshot.stores);
+    const title = snapshot.query
+      ? `${snapshot.query} @ Gishath Fetch`
+      : PAGE_TITLE;
+    const state = buildSearchHistoryState(snapshot);
+    const historyMethod = isSearchHistoryState(window.history.state)
+      ? "pushState"
+      : "replaceState";
+
+    window.history[historyMethod](state, title, newUrl);
+    document.title = title;
   }, []);
 
   const resolveStoresToSearch = useCallback((stores) => {
@@ -102,14 +101,7 @@ export default function useSearch() {
 
     setStoresWarning(NO_STORES_WARNING);
     setSelectedStores(LGS_OPTIONS);
-    try {
-      localStorage.setItem(
-        "lgsSelected",
-        encodeURIComponent(LGS_OPTIONS.join(",")),
-      );
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores(LGS_OPTIONS);
     return LGS_OPTIONS;
   }, []);
 
@@ -152,6 +144,8 @@ export default function useSearch() {
       setSearchResults([]);
       setHasSearched(true);
       setSearchError(null);
+      setSearchStoreErrors([]);
+      setDismissedStoreErrorsKey(null);
 
       if (window.gtag) {
         window.gtag("event", "search", { search_term: query });
@@ -204,7 +198,22 @@ export default function useSearch() {
           if (result && Object.hasOwn(result, "data")) {
             // Treat null data as empty array
             setSearchResults(result.data || []);
-            updateUrlAndTitle(query);
+            const storeErrors = Array.isArray(result.errors)
+              ? result.errors
+              : [];
+            setSearchStoreErrors(storeErrors);
+            setDismissedStoreErrorsKey(null);
+            if (!skipHistorySyncRef.current) {
+              syncSearchHistory({
+                query,
+                stores,
+                results: result.data || [],
+                storeErrors,
+                hasSearched: true,
+                searchError: null,
+              });
+            }
+            skipHistorySyncRef.current = false;
             if (window.gtag) {
               window.gtag("event", "view_search_results", {
                 search_term: query,
@@ -224,6 +233,8 @@ export default function useSearch() {
               setSearchResults(previousResults);
               setHasSearched(previousResults.length > 0);
               setSearchError(null);
+              setSearchStoreErrors([]);
+              setDismissedStoreErrorsKey(null);
               userCancelledRef.current = false;
             }
             return;
@@ -231,26 +242,39 @@ export default function useSearch() {
           if (requestId !== activeSearchRequestIdRef.current) return;
           console.error("Search error:", err);
           setSearchResults([]);
+          setSearchStoreErrors([]);
+          setDismissedStoreErrorsKey(null);
 
+          let nextSearchError;
           // Set user-friendly error message
           if (
             err.message.includes("Failed to fetch") ||
             err.name === "TypeError"
           ) {
-            setSearchError(
-              "Unable to connect to the server. Please check your internet connection and try again.",
-            );
+            nextSearchError =
+              "Unable to connect to the server. Please check your internet connection and try again.";
           } else if (err.message.startsWith("Error (")) {
-            setSearchError(err.message);
+            nextSearchError = err.message;
           } else if (err.message.includes("Server error")) {
-            setSearchError(
-              "The server is experiencing issues. Please try again later.",
-            );
+            nextSearchError =
+              "The server is experiencing issues. Please try again later.";
           } else {
-            setSearchError(
-              "An error occurred while searching. Please try again.",
-            );
+            nextSearchError =
+              "An error occurred while searching. Please try again.";
           }
+          setSearchError(nextSearchError);
+
+          if (!skipHistorySyncRef.current) {
+            syncSearchHistory({
+              query,
+              stores,
+              results: [],
+              storeErrors: [],
+              hasSearched: true,
+              searchError: nextSearchError,
+            });
+          }
+          skipHistorySyncRef.current = false;
         })
         .finally(() => {
           clearInterval(progressInterval);
@@ -268,8 +292,75 @@ export default function useSearch() {
           skipSuggestionsRef.current = false;
         });
     },
-    [updateUrlAndTitle],
+    [syncSearchHistory],
   );
+
+  performSearchRef.current = performSearch;
+
+  const applyHistoryState = useCallback((state) => {
+    restoringHistoryRef.current = true;
+    skipSuggestionsRef.current = true;
+    setShowSuggestions(false);
+
+    if (!isSearchHistoryState(state)) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const query =
+        urlParams.has("s") && urlParams.get("s") !== ""
+          ? decodeURIComponent(urlParams.get("s"))
+          : "";
+      const urlStores = getStoresFromUrl(urlParams);
+      const stores = urlStores ?? getInitialSelectedStores(urlParams);
+
+      setSearchQuery(query);
+      setSelectedStores(stores);
+      persistSelectedStores(stores);
+      setSearchResults([]);
+      setSearchStoreErrors([]);
+      setSearchError(null);
+      setDismissedStoreErrorsKey(null);
+      setHasSearched(false);
+      setIsSearching(false);
+      setSearchProgress("Search");
+      document.title = PAGE_TITLE;
+
+      if (
+        query.length >= MIN_SEARCH_LENGTH &&
+        query.length <= MAX_SEARCH_LENGTH
+      ) {
+        skipHistorySyncRef.current = true;
+        restoringHistoryRef.current = false;
+        performSearchRef.current(query, stores);
+        return;
+      }
+
+      restoringHistoryRef.current = false;
+      return;
+    }
+
+    setSearchQuery(state.query || "");
+    setSelectedStores(state.stores || LGS_OPTIONS);
+    persistSelectedStores(state.stores || LGS_OPTIONS);
+    setSearchResults(state.results || []);
+    setSearchStoreErrors(state.storeErrors || []);
+    setHasSearched(!!state.hasSearched);
+    setSearchError(state.searchError || null);
+    setDismissedStoreErrorsKey(null);
+    setIsSearching(false);
+    setSearchProgress("Search");
+    document.title = state.query
+      ? `${state.query} @ Gishath Fetch`
+      : PAGE_TITLE;
+    restoringHistoryRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    const onPopState = (event) => {
+      applyHistoryState(event.state);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applyHistoryState]);
 
   const cancelSearch = useCallback(() => {
     if (!searchAbortControllerRef.current) return;
@@ -294,6 +385,18 @@ export default function useSearch() {
       performSearch(query, stores);
     }
   }, [performSearch]);
+
+  const storeErrorsKey = searchStoreErrors
+    .map((entry) => `${entry.store}:${entry.error}`)
+    .join("|");
+  const visibleStoreErrors =
+    searchStoreErrors.length > 0 && dismissedStoreErrorsKey !== storeErrorsKey
+      ? searchStoreErrors
+      : [];
+
+  const dismissStoreErrors = useCallback(() => {
+    setDismissedStoreErrorsKey(storeErrorsKey);
+  }, [storeErrorsKey]);
 
   // --- Handlers ---
   const handleQueryChange = (e) => {
@@ -411,37 +514,19 @@ export default function useSearch() {
       ? selectedStores.filter((s) => s !== store)
       : [...selectedStores, store];
     setSelectedStores(newStores);
-    try {
-      localStorage.setItem(
-        "lgsSelected",
-        encodeURIComponent(newStores.join(",")),
-      );
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores(newStores);
   };
 
   const selectAllStores = () => {
     setStoresWarning(null);
     setSelectedStores(LGS_OPTIONS);
-    try {
-      localStorage.setItem(
-        "lgsSelected",
-        encodeURIComponent(LGS_OPTIONS.join(",")),
-      );
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores(LGS_OPTIONS);
   };
 
   const selectNoStores = () => {
     setStoresWarning(null);
     setSelectedStores([]);
-    try {
-      localStorage.setItem("lgsSelected", encodeURIComponent(""));
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores([]);
   };
 
   // --- Initialization ---
@@ -458,12 +543,8 @@ export default function useSearch() {
       const q = decodeURIComponent(urlParams.get("s"));
       skipSuggestionsRef.current = true;
 
-      // Determine which stores to search (URL param takes precedence, already set in state initialization)
-      const stores =
-        urlParams.has("src") &&
-        LGS_OPTIONS.includes(decodeURIComponent(urlParams.get("src")))
-          ? [decodeURIComponent(urlParams.get("src"))]
-          : selectedStores;
+      const urlStores = getStoresFromUrl(urlParams);
+      const stores = urlStores ?? selectedStores;
 
       setTimeout(() => performSearch(q, stores), 100);
     }
@@ -477,6 +558,8 @@ export default function useSearch() {
     searchResults,
     searchProgress,
     searchError,
+    searchStoreErrors: visibleStoreErrors,
+    onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
     suggestions,
     showSuggestions,
