@@ -43,5 +43,4 @@ func ApplyBrowserLikeJSONFetchHeaders(h *http.Header, storeBase *url.URL) {
 	}
 	h.Set("Accept", browserLikeAcceptJSON)
 	h.Set("Accept-Language", browserLikeAcceptLanguage)
-	h.Set("Accept-Encoding", "gzip")
 }
