@@ -57,7 +57,7 @@ export PATH="/usr/local/go/bin:$PATH"
 
 ### Known test behaviour
 
-- The `gateway/arcanesanctum` test hits a live website that blocks direct requests without a proxy. It will fail with "Forbidden (proxy_mode=direct proxy=none)" unless `PROXY_URL` or `DEDICATED_PROXY_*` env vars are set. This is expected in environments without proxy credentials.
+- The `gateway/arcanesanctum` test hits a live website that blocks direct requests without a proxy. It will fail with "Forbidden (proxy_mode=direct proxy=none)" unless `DEDICATED_PROXY_*` env vars are set. This is expected in environments without proxy credentials.
 - Many gateway tests hit live upstream store websites, so transient network failures or rate-limiting can cause sporadic failures.
 
 ### Frontend API connection

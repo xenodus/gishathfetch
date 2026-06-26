@@ -21,9 +21,6 @@ const (
 	EnvLocal         = "local"
 	UseProxy         = true
 	PerSiteTimeout   = 20 * time.Second
-	// UseBinderposStorefrontAPIEnv toggles BinderPOS storefront API search mode.
-	// Default is enabled; set to "false" to force legacy scraping.
-	UseBinderposStorefrontAPIEnv = "USE_BINDERPOS_STOREFRONT_API"
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
 	// dynamic-proxy fallback attempts, which BinderPOS now reserves for the
 	// final fallback after dedicated and direct/no-proxy attempts.
@@ -31,9 +28,6 @@ const (
 	// UseDynamicProxyEnv toggles whether DYNAMIC_PROXY may be used for fallback
 	// attempts. When false, dynamic proxy is skipped even if configured.
 	UseDynamicProxyEnv = "USE_DYNAMIC_PROXY"
-	// UseBinderposSharedProxyFallbackEnv is reserved for future BinderPOS proxy
-	// routing options. It no longer changes scraper behavior (lookups are single-attempt).
-	UseBinderposSharedProxyFallbackEnv = "USE_BINDERPOS_SHARED_PROXY_FALLBACK"
 	// WebBotAuthEnabledEnv toggles RFC 9421 Web Bot Auth signing on outbound gateway requests.
 	WebBotAuthEnabledEnv = "WEB_BOT_AUTH_ENABLED"
 	// WebBotAuthPrivateKeyEnv holds a PEM (or base64-encoded PEM) Ed25519 PKCS8 private key.
@@ -52,20 +46,6 @@ const (
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
 // When false, each request picks a random dedicated proxy instead of acquiring a lease.
 const UseLeasedDedicatedProxy = false
-
-func UseBinderposStorefrontAPI() bool {
-	rawValue := strings.TrimSpace(os.Getenv(UseBinderposStorefrontAPIEnv))
-	if rawValue == "" {
-		return true
-	}
-
-	enabled, err := strconv.ParseBool(rawValue)
-	if err != nil {
-		return true
-	}
-
-	return enabled
-}
 
 func UseDynamicProxy() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
@@ -93,20 +73,6 @@ func WebBotAuthTTL() time.Duration {
 		return defaultTTL
 	}
 	return time.Duration(seconds) * time.Second
-}
-
-func UseBinderposSharedProxyFallback() bool {
-	rawValue := strings.TrimSpace(os.Getenv(UseBinderposSharedProxyFallbackEnv))
-	if rawValue == "" {
-		return false
-	}
-
-	enabled, err := strconv.ParseBool(rawValue)
-	if err != nil {
-		return false
-	}
-
-	return enabled
 }
 
 func GetAllowedOrigins() []string {

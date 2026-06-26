@@ -466,11 +466,6 @@ func resolveProxyLabel(mode, proxyURL string) string {
 			return config.DynamicProxyEnv
 		}
 		return "dynamic-configured"
-	case "shared":
-		if sharedProxyURL := os.Getenv("PROXY_URL"); sharedProxyURL != "" && sharedProxyURL == proxyURL {
-			return "PROXY_URL"
-		}
-		return "shared-configured"
 	case "dedicated":
 		if label := dedicatedProxyEnvLabel(proxyURL); label != "" {
 			return label
