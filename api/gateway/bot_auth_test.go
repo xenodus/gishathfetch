@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/webbotauth"
 
 	"github.com/stretchr/testify/require"
 )
@@ -46,18 +47,8 @@ func TestSignWebBotAuthRequestAddsHeaders(t *testing.T) {
 	require.Contains(t, req.Header.Get("Signature"), "sig=:")
 	require.NotEmpty(t, req.Header.Get("Signature"))
 
-	thumbprint := ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey))
+	thumbprint := webbotauth.Ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey))
 	require.Contains(t, req.Header.Get("Signature-Input"), thumbprint)
-}
-
-func TestEd25519JWKThumbprintMatchesRFC9421TestKey(t *testing.T) {
-	privateKey, err := parseEd25519PrivateKeyPEM(`-----BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIJ+DYvh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSnF
------END PRIVATE KEY-----`)
-	require.NoError(t, err)
-
-	thumbprint := ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey))
-	require.Equal(t, "poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U", thumbprint)
 }
 
 func TestPrepareOutboundRequestHTML(t *testing.T) {

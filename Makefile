@@ -22,15 +22,35 @@ docker-push-staging:
 frontend-dev:
 	cd frontend && npm install && npm run dev
 
-frontend-build:
+frontend-build: generate-signature-directory
 	cd frontend && npm install && npm run build
 
+generate-signature-directory:
+	@if [ -n "$$WEB_BOT_AUTH_PRIVATE_KEY" ]; then \
+		mkdir -p frontend/public/.well-known && \
+		cd api && go run -mod=vendor ./cmd/signature-directory -out ../frontend/public/.well-known/http-message-signatures-directory; \
+	else \
+		echo "Skipping signature directory generation: WEB_BOT_AUTH_PRIVATE_KEY not set"; \
+	fi
+
 frontend-update: frontend-build
-	aws s3 sync frontend/dist s3://gishathfetch.com
+	aws s3 sync frontend/dist s3://gishathfetch.com --exclude ".well-known/http-message-signatures-directory"
+	@if [ -f frontend/dist/.well-known/http-message-signatures-directory ]; then \
+		export AWS_PAGER="" && aws s3 cp frontend/dist/.well-known/http-message-signatures-directory \
+			s3://gishathfetch.com/.well-known/http-message-signatures-directory \
+			--content-type "application/http-message-signatures-directory+json" \
+			--cache-control "max-age=86400"; \
+	fi
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E3NPGUM21YCN36 --paths "/*"
 
 frontend-update-staging: frontend-build
-	aws s3 sync frontend/dist s3://staging.gishathfetch.com
+	aws s3 sync frontend/dist s3://staging.gishathfetch.com --exclude ".well-known/http-message-signatures-directory"
+	@if [ -f frontend/dist/.well-known/http-message-signatures-directory ]; then \
+		export AWS_PAGER="" && aws s3 cp frontend/dist/.well-known/http-message-signatures-directory \
+			s3://staging.gishathfetch.com/.well-known/http-message-signatures-directory \
+			--content-type "application/http-message-signatures-directory+json" \
+			--cache-control "max-age=86400"; \
+	fi
 	export AWS_PAGER="" && aws cloudfront create-invalidation --distribution-id E33AK6HADX83U0 --paths "/*"
 
 lambda-create:
