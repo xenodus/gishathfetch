@@ -22,14 +22,6 @@ const formatUsd = (value) =>
         currency: "USD",
       }).format(value);
 
-const formatSgd = (value) =>
-  value == null
-    ? "—"
-    : new Intl.NumberFormat("en-SG", {
-        style: "currency",
-        currency: "SGD",
-      }).format(value);
-
 const MarketPriceModal = ({
   show,
   onHide,
@@ -79,7 +71,7 @@ const MarketPriceModal = ({
                 </div>
               )}
               <div className="small text-muted mt-1">
-                Card Kingdom reference price (SGD) — not a Singapore shop price.
+                Card Kingdom reference price (USD) — not a Singapore shop price.
               </div>
             </div>
           </div>
@@ -105,14 +97,13 @@ const MarketPriceModal = ({
                 Card Kingdom · {data.priceListDate}
               </div>
               <div className="market-hero-price">
-                {formatSgd(data.references.cardkingdom.sgd)}
+                {formatUsd(data.references.cardkingdom.usd)}
               </div>
-              <div className="small text-muted">
-                {formatUsd(data.references.cardkingdom.usd)} USD
-                {data.references.cardkingdom.quantity != null
-                  ? ` · ${data.references.cardkingdom.quantity} in stock`
-                  : ""}
-              </div>
+              {data.references.cardkingdom.quantity != null && (
+                <div className="small text-muted">
+                  {data.references.cardkingdom.quantity} in stock
+                </div>
+              )}
             </div>
 
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
@@ -152,10 +143,7 @@ const MarketPriceModal = ({
               </fieldset>
             </div>
 
-            <MarketPriceChart
-              cardkingdom={filteredHistory}
-              usdToSgd={data.usdToSgd}
-            />
+            <MarketPriceChart cardkingdom={filteredHistory} />
 
             <div className="small text-muted mt-2 mb-3">
               Trend is built from Card Kingdom price list snapshots saved on

@@ -1,12 +1,9 @@
 import { getCachedJson, isCacheFresh, setCachedJson } from "./marketCache";
 
 const CK_PRICELIST = "https://api.cardkingdom.com/api/v2/pricelist";
-const FX_URL = "https://api.frankfurter.app/latest?from=USD&to=SGD";
 
 const CK_CACHE_KEY = "ck-pricelist";
 const CK_CACHE_TTL = 6 * 60 * 60 * 1000;
-const FX_CACHE_KEY = "usd-sgd-rate";
-const FX_CACHE_TTL = 12 * 60 * 60 * 1000;
 const JOURNAL_TTL = 365 * 24 * 60 * 60 * 1000;
 
 const normalizeText = (value) =>
@@ -140,28 +137,9 @@ const recordJournalSnapshot = async (key, price, date) => {
   return nextPoints;
 };
 
-export const getUsdToSgdRate = async () => {
-  const cached = await getCachedJson(FX_CACHE_KEY);
-  if (isCacheFresh(cached)) {
-    return cached.data.rate;
-  }
-  const response = await fetch(FX_URL);
-  if (!response.ok) {
-    return 1.35;
-  }
-  const payload = await response.json();
-  const rate = payload?.rates?.SGD;
-  const resolved = Number.isFinite(rate) ? rate : 1.35;
-  await setCachedJson(FX_CACHE_KEY, { rate: resolved }, FX_CACHE_TTL);
-  return resolved;
-};
-
 export const loadMarketSnapshot = async (card, onProgress) => {
   onProgress?.("Looking up Card Kingdom price…");
-  const [{ index, priceListDate }, usdToSgd] = await Promise.all([
-    getCkIndex(onProgress),
-    getUsdToSgdRate(),
-  ]);
+  const { index, priceListDate } = await getCkIndex(onProgress);
 
   const product = findCardKingdomProduct(index, card);
   if (!product) {
@@ -180,12 +158,10 @@ export const loadMarketSnapshot = async (card, onProgress) => {
     image: card.img,
     finish: product.is_foil ? "foil" : "normal",
     isFoil: product.is_foil,
-    usdToSgd,
     priceListDate: snapshotDate,
     references: {
       cardkingdom: {
         usd: priceUsd,
-        sgd: priceUsd * usdToSgd,
         url: `https://www.cardkingdom.com/${product.url}`,
         quantity: Number.parseInt(product.qty_retail, 10),
         source: "live",

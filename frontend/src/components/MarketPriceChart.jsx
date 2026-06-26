@@ -22,7 +22,7 @@ const buildPath = (points, xScale, yScale) => {
     .join(" ");
 };
 
-const MarketPriceChart = ({ cardkingdom = [], usdToSgd = 1.35 }) => {
+const MarketPriceChart = ({ cardkingdom = [] }) => {
   if (cardkingdom.length === 0) {
     return (
       <div className="market-chart-empty text-muted small text-center py-4">
@@ -93,7 +93,7 @@ const MarketPriceChart = ({ cardkingdom = [], usdToSgd = 1.35 }) => {
               textAnchor="end"
               className="market-chart-axis"
             >
-              {formatMoney(tick * usdToSgd, "SGD")}
+              {formatMoney(tick, "USD")}
             </text>
           </g>
         ))}
