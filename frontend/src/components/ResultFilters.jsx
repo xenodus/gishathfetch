@@ -14,7 +14,7 @@ const ResultFilters = ({
   onClearFilters,
 }) => {
   return (
-    <div className="mb-3 text-start result-filters bg-body-tertiary rounded py-3 px-3">
+    <div className="mb-3 text-start result-filters rounded py-3 px-3">
       <div className="row g-2 align-items-end">
         <div className="col-12 col-md-4">
           <Form.Label htmlFor="result-sort" className="small fw-semibold mb-1">
