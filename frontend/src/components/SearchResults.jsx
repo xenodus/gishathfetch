@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import useResultFilters from "../hooks/useResultFilters";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
@@ -40,9 +40,11 @@ const SearchResults = ({
   isSearching,
   hasSearched,
   searchError,
+  onRetrySearch,
   isCardInCart,
   addToCart,
   removeFromCart,
+  removeFromCartByCard,
   onSearchStore,
   baseUrl,
 }) => {
@@ -59,20 +61,46 @@ const SearchResults = ({
     clearFilters,
   } = useResultFilters(results, searchQuery);
 
+  const resultsAnchorRef = useRef(null);
+  const wasSearchingRef = useRef(false);
+
+  useEffect(() => {
+    if (wasSearchingRef.current && !isSearching && hasSearched) {
+      resultsAnchorRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+    wasSearchingRef.current = isSearching;
+  }, [isSearching, hasSearched]);
+
   const resultCountLabel = hasActiveFilters
     ? `Showing ${filteredResults.length} of ${results.length} result${results.length !== 1 ? "s" : ""}`
     : `${results.length} result${results.length !== 1 ? "s" : ""} found`;
 
   return (
     <>
+      <div ref={resultsAnchorRef} className="scroll-margin-top" />
       {hasSearched &&
         !isSearching &&
         (searchError ? (
           <div
-            className="mb-3 text-center bg-danger-subtle text-dark rounded py-2"
+            className="mb-3 text-center bg-danger-subtle text-dark rounded py-3 px-3"
             role="alert"
+            aria-live="assertive"
           >
             <strong>Error:</strong> {searchError}
+            {onRetrySearch && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm"
+                  onClick={onRetrySearch}
+                >
+                  Try again
+                </button>
+              </div>
+            )}
           </div>
         ) : results.length === 0 ? (
           <EmptySearchState />
@@ -118,6 +146,7 @@ const SearchResults = ({
                           isCardInCart={isCardInCart}
                           addToCart={addToCart}
                           removeFromCart={removeFromCart}
+                          removeFromCartByCard={removeFromCartByCard}
                           onSearchStore={onSearchStore}
                           baseUrl={baseUrl}
                         />

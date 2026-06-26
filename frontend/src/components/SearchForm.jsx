@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MAX_SEARCH_LENGTH } from "../constants";
+import { MAX_SEARCH_LENGTH, MIN_SEARCH_LENGTH } from "../constants";
 import StoreSelector from "./StoreSelector";
 
 const TIP_DISMISSED_STORAGE_KEY = "search-form-tip-dismissed";
@@ -20,6 +20,9 @@ const SearchForm = ({
   onSelectAll,
   onSelectNone,
   onCloseSuggestions,
+  searchError,
+  storesWarning,
+  onCancelSearch,
 }) => {
   const wrapperRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -95,6 +98,9 @@ const SearchForm = ({
     }
   };
 
+  const queryTooShort =
+    searchQuery.length > 0 && searchQuery.length < MIN_SEARCH_LENGTH;
+
   return (
     <div ref={wrapperRef}>
       <form id="searchForm" onSubmit={onSearchSubmit}>
@@ -121,6 +127,13 @@ const SearchForm = ({
             />
             <label htmlFor="search">Card Name</label>
           </div>
+
+          {(queryTooShort || searchError) && (
+            <div className="form-text text-danger" role="alert">
+              {searchError ||
+                `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`}
+            </div>
+          )}
 
           {showSuggestions && suggestions.length > 0 && (
             <div
@@ -194,15 +207,41 @@ const SearchForm = ({
           </div>
         )}
 
+        {storesWarning && (
+          <div className="alert alert-warning py-2 px-3 mb-3 small">
+            {storesWarning}
+          </div>
+        )}
+
         <div className="mb-3 d-grid">
-          <button
-            id="searchBtn"
-            type="submit"
-            className="btn btn-primary"
-            disabled={isSearching}
-          >
-            {isSearching ? searchProgress : "Search"}
-          </button>
+          {isSearching ? (
+            <div className="btn-group">
+              <button
+                id="searchBtn"
+                type="button"
+                className="btn btn-primary"
+                disabled
+              >
+                {searchProgress}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={onCancelSearch}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              id="searchBtn"
+              type="submit"
+              className="btn btn-primary"
+              disabled={queryTooShort}
+            >
+              Search
+            </button>
+          )}
         </div>
       </form>
     </div>

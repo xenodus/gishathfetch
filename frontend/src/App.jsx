@@ -26,6 +26,7 @@ export default function App() {
     setShowCart,
     addToCart,
     removeFromCart,
+    removeFromCartByCard,
     clearCart,
     isCardInCart,
   } = useCart();
@@ -38,6 +39,7 @@ export default function App() {
     searchResults,
     searchProgress,
     searchError,
+    storesWarning,
     suggestions,
     showSuggestions,
     setShowSuggestions,
@@ -50,6 +52,8 @@ export default function App() {
     selectAllStores,
     selectNoStores,
     performSearch,
+    cancelSearch,
+    retrySearch,
   } = useSearch();
 
   const [modalType, setModalType] = useState(null);
@@ -148,6 +152,9 @@ export default function App() {
         onSelectAll={selectAllStores}
         onSelectNone={selectNoStores}
         onCloseSuggestions={() => setShowSuggestions(false)}
+        searchError={searchError}
+        storesWarning={storesWarning}
+        onCancelSearch={cancelSearch}
       />
 
       <SearchResults
@@ -156,9 +163,11 @@ export default function App() {
         isSearching={isSearching}
         hasSearched={hasSearched}
         searchError={searchError}
+        onRetrySearch={retrySearch}
         isCardInCart={isCardInCart}
         addToCart={addToCart}
         removeFromCart={removeFromCart}
+        removeFromCartByCard={removeFromCartByCard}
         onSearchStore={handleCardSearch}
         baseUrl={BASE_URL}
       />

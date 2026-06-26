@@ -8,6 +8,9 @@ import {
 } from "../constants";
 
 const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
+const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
+const NO_STORES_WARNING =
+  "No stores selected — searching all stores. Select specific stores to search faster.";
 
 // Search configuration constants
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
@@ -29,6 +32,7 @@ export default function useSearch() {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchError, setSearchError] = useState(null);
+  const [storesWarning, setStoresWarning] = useState(null);
   const [selectedStores, setSelectedStores] = useState(() => {
     // First check URL parameters for store override
     const urlParams = new URLSearchParams(window.location.search);
@@ -66,6 +70,14 @@ export default function useSearch() {
   const searchAbortControllerRef = useRef(null);
   const autocompleteAbortControllerRef = useRef(null);
   const activeSearchRequestIdRef = useRef(0);
+  const searchResultsRef = useRef([]);
+  const resultsBeforeSearchRef = useRef([]);
+  const userCancelledRef = useRef(false);
+  const lastSearchRef = useRef({ query: "", stores: [] });
+
+  useEffect(() => {
+    searchResultsRef.current = searchResults;
+  }, [searchResults]);
 
   const updateUrlAndTitle = useCallback((query) => {
     if (window.location.hostname !== "localhost") {
@@ -75,9 +87,32 @@ export default function useSearch() {
     }
   }, []);
 
+  const resolveStoresToSearch = useCallback((stores) => {
+    if (stores.length > 0) {
+      setStoresWarning(null);
+      return stores;
+    }
+
+    setStoresWarning(NO_STORES_WARNING);
+    setSelectedStores(LGS_OPTIONS);
+    try {
+      localStorage.setItem(
+        "lgsSelected",
+        encodeURIComponent(LGS_OPTIONS.join(",")),
+      );
+    } catch (err) {
+      console.error("Failed to save selected stores:", err);
+    }
+    return LGS_OPTIONS;
+  }, []);
+
   const performSearch = useCallback(
     (query, stores) => {
-      if (!query || query.length < MIN_SEARCH_LENGTH) return;
+      if (!query || query.length < MIN_SEARCH_LENGTH) {
+        setSearchError(SEARCH_TOO_SHORT_ERROR);
+        setHasSearched(false);
+        return;
+      }
 
       if (query.length > MAX_SEARCH_LENGTH) {
         setHasSearched(true);
@@ -101,12 +136,15 @@ export default function useSearch() {
 
       // Prevent suggestions from appearing after programmatic search
       skipSuggestionsRef.current = true;
+      userCancelledRef.current = false;
+      resultsBeforeSearchRef.current = searchResultsRef.current;
+      lastSearchRef.current = { query, stores };
 
       setIsSearching(true);
       setSearchProgress("Searching LGS");
       setSearchResults([]);
       setHasSearched(true);
-      setSearchError(null); // Clear previous errors
+      setSearchError(null);
 
       if (window.gtag) {
         window.gtag("event", "search", { search_term: query });
@@ -162,7 +200,19 @@ export default function useSearch() {
           }
         })
         .catch((err) => {
-          if (err.name === "AbortError") return;
+          if (err.name === "AbortError") {
+            if (
+              userCancelledRef.current &&
+              requestId === activeSearchRequestIdRef.current
+            ) {
+              const previousResults = resultsBeforeSearchRef.current;
+              setSearchResults(previousResults);
+              setHasSearched(previousResults.length > 0);
+              setSearchError(null);
+              userCancelledRef.current = false;
+            }
+            return;
+          }
           if (requestId !== activeSearchRequestIdRef.current) return;
           console.error("Search error:", err);
           setSearchResults([]);
@@ -206,9 +256,36 @@ export default function useSearch() {
     [updateUrlAndTitle],
   );
 
+  const cancelSearch = useCallback(() => {
+    if (!searchAbortControllerRef.current) return;
+
+    userCancelledRef.current = true;
+    searchAbortControllerRef.current.abort();
+
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+
+    searchAbortControllerRef.current = null;
+    setIsSearching(false);
+    setSearchProgress("Search");
+    skipSuggestionsRef.current = false;
+  }, []);
+
+  const retrySearch = useCallback(() => {
+    const { query, stores } = lastSearchRef.current;
+    if (query) {
+      performSearch(query, stores);
+    }
+  }, [performSearch]);
+
   // --- Handlers ---
   const handleQueryChange = (e) => {
     setSearchQuery(e.target.value);
+    if (searchError === SEARCH_TOO_SHORT_ERROR) {
+      setSearchError(null);
+    }
   };
 
   useEffect(() => {
@@ -304,45 +381,17 @@ export default function useSearch() {
     setSearchQuery(suggestion);
     setShowSuggestions(false);
 
-    let storesToSearch = selectedStores;
-    if (selectedStores.length === 0) {
-      storesToSearch = LGS_OPTIONS;
-      setSelectedStores(LGS_OPTIONS);
-      try {
-        localStorage.setItem(
-          "lgsSelected",
-          encodeURIComponent(LGS_OPTIONS.join(",")),
-        );
-      } catch (err) {
-        console.error("Failed to save selected stores:", err);
-      }
-    }
-
-    performSearch(suggestion, storesToSearch);
+    performSearch(suggestion, resolveStoresToSearch(selectedStores));
   };
 
   const handleSearchSubmit = (e) => {
     if (e) e.preventDefault();
     setShowSuggestions(false);
-
-    let storesToSearch = selectedStores;
-    if (selectedStores.length === 0) {
-      storesToSearch = LGS_OPTIONS;
-      setSelectedStores(LGS_OPTIONS);
-      try {
-        localStorage.setItem(
-          "lgsSelected",
-          encodeURIComponent(LGS_OPTIONS.join(",")),
-        );
-      } catch (err) {
-        console.error("Failed to save selected stores:", err);
-      }
-    }
-
-    performSearch(searchQuery, storesToSearch);
+    performSearch(searchQuery, resolveStoresToSearch(selectedStores));
   };
 
   const toggleStore = (store) => {
+    setStoresWarning(null);
     const newStores = selectedStores.includes(store)
       ? selectedStores.filter((s) => s !== store)
       : [...selectedStores, store];
@@ -358,6 +407,7 @@ export default function useSearch() {
   };
 
   const selectAllStores = () => {
+    setStoresWarning(null);
     setSelectedStores(LGS_OPTIONS);
     try {
       localStorage.setItem(
@@ -370,6 +420,7 @@ export default function useSearch() {
   };
 
   const selectNoStores = () => {
+    setStoresWarning(null);
     setSelectedStores([]);
     try {
       localStorage.setItem("lgsSelected", encodeURIComponent(""));
@@ -411,6 +462,7 @@ export default function useSearch() {
     searchResults,
     searchProgress,
     searchError,
+    storesWarning,
     suggestions,
     showSuggestions,
     setShowSuggestions,
@@ -423,5 +475,7 @@ export default function useSearch() {
     selectAllStores,
     selectNoStores,
     performSearch,
+    cancelSearch,
+    retrySearch,
   };
 }
