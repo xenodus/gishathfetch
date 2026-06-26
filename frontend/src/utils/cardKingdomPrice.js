@@ -5,7 +5,7 @@ const SCRYFALL_AUTOCOMPLETE = "https://api.scryfall.com/cards/autocomplete";
 const SCRYFALL_NAMED = "https://api.scryfall.com/cards/named";
 
 const CK_CACHE_KEY = "ck-pricelist";
-const CK_CACHE_TTL = 6 * 60 * 60 * 1000;
+const CK_CACHE_TTL = 60 * 60 * 1000;
 
 const buildCheapestByName = (products) => {
   const cheapestByName = new Map();
