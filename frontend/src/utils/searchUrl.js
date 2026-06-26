@@ -1,6 +1,46 @@
 import { LGS_OPTIONS } from "../constants";
 
 /**
+ * @typedef {{
+ *   query: string,
+ *   stores: string[],
+ *   results: object[],
+ *   storeErrors: object[],
+ *   hasSearched: boolean,
+ *   searchError: string | null,
+ * }} SearchHistoryState
+ */
+
+/**
+ * @param {SearchHistoryState} snapshot
+ * @returns {SearchHistoryState}
+ */
+export function buildSearchHistoryState(snapshot) {
+  return {
+    query: snapshot.query,
+    stores: snapshot.stores,
+    results: snapshot.results,
+    storeErrors: snapshot.storeErrors,
+    hasSearched: snapshot.hasSearched,
+    searchError: snapshot.searchError,
+  };
+}
+
+/**
+ * @param {unknown} state
+ * @returns {state is SearchHistoryState}
+ */
+export function isSearchHistoryState(state) {
+  return (
+    !!state &&
+    typeof state === "object" &&
+    "query" in state &&
+    "stores" in state &&
+    "results" in state
+  );
+}
+
+/**
  * @param {string} lgsParam
  * @returns {string[]}
  */

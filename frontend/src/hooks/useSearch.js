@@ -5,11 +5,14 @@ import {
   LGS_OPTIONS,
   MAX_SEARCH_LENGTH,
   MIN_SEARCH_LENGTH,
+  PAGE_TITLE,
 } from "../constants";
 import {
+  buildSearchHistoryState,
   buildSearchUrl,
   getInitialSelectedStores,
   getStoresFromUrl,
+  isSearchHistoryState,
   persistSelectedStores,
 } from "../utils/searchUrl";
 
@@ -64,21 +67,30 @@ export default function useSearch() {
   const resultsBeforeSearchRef = useRef([]);
   const userCancelledRef = useRef(false);
   const lastSearchRef = useRef({ query: "", stores: [] });
+  const skipHistorySyncRef = useRef(false);
+  const restoringHistoryRef = useRef(false);
+  const performSearchRef = useRef(() => {});
 
   useEffect(() => {
     searchResultsRef.current = searchResults;
   }, [searchResults]);
 
-  const updateUrlAndTitle = useCallback((query, stores) => {
-    if (window.location.hostname !== "localhost") {
-      const newUrl = buildSearchUrl(BASE_URL, query, stores);
-      window.history.pushState(
-        { query, stores },
-        `${query} @ Gishath Fetch`,
-        newUrl,
-      );
-      document.title = `${query} @ Gishath Fetch`;
+  const syncSearchHistory = useCallback((snapshot) => {
+    if (window.location.hostname === "localhost") {
+      return;
     }
+
+    const newUrl = buildSearchUrl(BASE_URL, snapshot.query, snapshot.stores);
+    const title = snapshot.query
+      ? `${snapshot.query} @ Gishath Fetch`
+      : PAGE_TITLE;
+    const state = buildSearchHistoryState(snapshot);
+    const historyMethod = isSearchHistoryState(window.history.state)
+      ? "pushState"
+      : "replaceState";
+
+    window.history[historyMethod](state, title, newUrl);
+    document.title = title;
   }, []);
 
   const resolveStoresToSearch = useCallback((stores) => {
@@ -191,7 +203,17 @@ export default function useSearch() {
               : [];
             setSearchStoreErrors(storeErrors);
             setDismissedStoreErrorsKey(null);
-            updateUrlAndTitle(query, stores);
+            if (!skipHistorySyncRef.current) {
+              syncSearchHistory({
+                query,
+                stores,
+                results: result.data || [],
+                storeErrors,
+                hasSearched: true,
+                searchError: null,
+              });
+            }
+            skipHistorySyncRef.current = false;
             if (window.gtag) {
               window.gtag("event", "view_search_results", {
                 search_term: query,
@@ -223,25 +245,36 @@ export default function useSearch() {
           setSearchStoreErrors([]);
           setDismissedStoreErrorsKey(null);
 
+          let nextSearchError;
           // Set user-friendly error message
           if (
             err.message.includes("Failed to fetch") ||
             err.name === "TypeError"
           ) {
-            setSearchError(
-              "Unable to connect to the server. Please check your internet connection and try again.",
-            );
+            nextSearchError =
+              "Unable to connect to the server. Please check your internet connection and try again.";
           } else if (err.message.startsWith("Error (")) {
-            setSearchError(err.message);
+            nextSearchError = err.message;
           } else if (err.message.includes("Server error")) {
-            setSearchError(
-              "The server is experiencing issues. Please try again later.",
-            );
+            nextSearchError =
+              "The server is experiencing issues. Please try again later.";
           } else {
-            setSearchError(
-              "An error occurred while searching. Please try again.",
-            );
+            nextSearchError =
+              "An error occurred while searching. Please try again.";
           }
+          setSearchError(nextSearchError);
+
+          if (!skipHistorySyncRef.current) {
+            syncSearchHistory({
+              query,
+              stores,
+              results: [],
+              storeErrors: [],
+              hasSearched: true,
+              searchError: nextSearchError,
+            });
+          }
+          skipHistorySyncRef.current = false;
         })
         .finally(() => {
           clearInterval(progressInterval);
@@ -259,8 +292,75 @@ export default function useSearch() {
           skipSuggestionsRef.current = false;
         });
     },
-    [updateUrlAndTitle],
+    [syncSearchHistory],
   );
+
+  performSearchRef.current = performSearch;
+
+  const applyHistoryState = useCallback((state) => {
+    restoringHistoryRef.current = true;
+    skipSuggestionsRef.current = true;
+    setShowSuggestions(false);
+
+    if (!isSearchHistoryState(state)) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const query =
+        urlParams.has("s") && urlParams.get("s") !== ""
+          ? decodeURIComponent(urlParams.get("s"))
+          : "";
+      const urlStores = getStoresFromUrl(urlParams);
+      const stores = urlStores ?? getInitialSelectedStores(urlParams);
+
+      setSearchQuery(query);
+      setSelectedStores(stores);
+      persistSelectedStores(stores);
+      setSearchResults([]);
+      setSearchStoreErrors([]);
+      setSearchError(null);
+      setDismissedStoreErrorsKey(null);
+      setHasSearched(false);
+      setIsSearching(false);
+      setSearchProgress("Search");
+      document.title = PAGE_TITLE;
+
+      if (
+        query.length >= MIN_SEARCH_LENGTH &&
+        query.length <= MAX_SEARCH_LENGTH
+      ) {
+        skipHistorySyncRef.current = true;
+        restoringHistoryRef.current = false;
+        performSearchRef.current(query, stores);
+        return;
+      }
+
+      restoringHistoryRef.current = false;
+      return;
+    }
+
+    setSearchQuery(state.query || "");
+    setSelectedStores(state.stores || LGS_OPTIONS);
+    persistSelectedStores(state.stores || LGS_OPTIONS);
+    setSearchResults(state.results || []);
+    setSearchStoreErrors(state.storeErrors || []);
+    setHasSearched(!!state.hasSearched);
+    setSearchError(state.searchError || null);
+    setDismissedStoreErrorsKey(null);
+    setIsSearching(false);
+    setSearchProgress("Search");
+    document.title = state.query
+      ? `${state.query} @ Gishath Fetch`
+      : PAGE_TITLE;
+    restoringHistoryRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    const onPopState = (event) => {
+      applyHistoryState(event.state);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applyHistoryState]);
 
   const cancelSearch = useCallback(() => {
     if (!searchAbortControllerRef.current) return;
