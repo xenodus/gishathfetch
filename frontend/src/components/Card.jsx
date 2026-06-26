@@ -78,7 +78,7 @@ const Card = ({
               className="btn btn-outline-secondary btn-sm addCartBtn"
               onClick={() => onMarketLookup(card)}
             >
-              <BarChart2 size={12} className="cartIcon" /> Market
+              <BarChart2 size={12} className="cartIcon" /> CK Price
             </button>
           )}
           {isCart ? (

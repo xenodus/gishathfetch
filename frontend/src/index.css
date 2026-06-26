@@ -223,10 +223,6 @@ ins.adsbygoogle iframe {
   stroke: #6366f1;
 }
 
-.market-chart-line-tcg {
-  stroke: #14b8a6;
-}
-
 .market-chart-swatch {
   display: inline-block;
   width: 10px;
@@ -237,10 +233,6 @@ ins.adsbygoogle iframe {
 
 .market-chart-swatch-ck {
   background: #6366f1;
-}
-
-.market-chart-swatch-tcg {
-  background: #14b8a6;
 }
 
 .market-chart-empty {

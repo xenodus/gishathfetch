@@ -30,27 +30,6 @@ const formatSgd = (value) =>
         currency: "SGD",
       }).format(value);
 
-const ReferenceRow = ({ label, usd, sgd, url }) => (
-  <tr>
-    <td>
-      {url ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="link-offset-2"
-        >
-          {label}
-        </a>
-      ) : (
-        label
-      )}
-    </td>
-    <td>{formatSgd(sgd)}</td>
-    <td>{formatUsd(usd)}</td>
-  </tr>
-);
-
 const MarketPriceModal = ({
   show,
   onHide,
@@ -63,38 +42,22 @@ const MarketPriceModal = ({
   const [range, setRange] = useState("3m");
 
   const filteredHistory = useMemo(() => {
-    if (!data?.history) {
-      return { cardkingdom: [], tcgplayer: [] };
+    if (!data?.history?.cardkingdom) {
+      return [];
     }
-    return {
-      cardkingdom: filterHistoryByRange(data.history.cardkingdom, range),
-      tcgplayer: filterHistoryByRange(data.history.tcgplayer, range),
-    };
+    return filterHistoryByRange(data.history.cardkingdom, range);
   }, [data, range]);
 
-  const anchorSeries =
-    filteredHistory.cardkingdom.length > 0
-      ? filteredHistory.cardkingdom
-      : filteredHistory.tcgplayer;
-  const trend = computeTrendPercent(anchorSeries);
+  const trend = computeTrendPercent(filteredHistory);
   const trendLabel =
     trend == null
       ? null
       : `${trend >= 0 ? "▲" : "▼"} ${Math.abs(trend).toFixed(1)}%`;
 
-  const tcgHigh =
-    filteredHistory.tcgplayer.length > 0
-      ? Math.max(...filteredHistory.tcgplayer.map((point) => point.price))
-      : data?.references?.tcgplayer?.usd;
-  const tcgLow =
-    filteredHistory.tcgplayer.length > 0
-      ? Math.min(...filteredHistory.tcgplayer.map((point) => point.price))
-      : data?.references?.tcgplayer?.usd;
-
   return (
     <Modal show={show} onHide={onHide} size="lg" centered scrollable>
       <Modal.Header closeButton>
-        <Modal.Title>Global market prices</Modal.Title>
+        <Modal.Title>Card Kingdom market price</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {card && (
@@ -112,12 +75,11 @@ const MarketPriceModal = ({
               {data?.setName && (
                 <div className="small text-muted">
                   {data.setName}
-                  {data.collectorNumber ? ` #${data.collectorNumber}` : ""}
                   {data.isFoil ? " · Foil" : " · Non-foil"}
                 </div>
               )}
               <div className="small text-muted mt-1">
-                Global market data (SGD) — not Singapore shop prices.
+                Card Kingdom reference price (SGD) — not a Singapore shop price.
               </div>
             </div>
           </div>
@@ -140,8 +102,7 @@ const MarketPriceModal = ({
           <>
             <div className="market-hero rounded p-3 mb-3">
               <div className="small text-muted mb-1">
-                Card Kingdom
-                {data.references.cardkingdom.source === "live" ? " · live" : ""}
+                Card Kingdom · {data.priceListDate}
               </div>
               <div className="market-hero-price">
                 {formatSgd(data.references.cardkingdom.sgd)}
@@ -156,8 +117,8 @@ const MarketPriceModal = ({
 
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
               <div>
-                <div className="fw-semibold">Price history</div>
-                {trendLabel && (
+                <div className="fw-semibold">Price trend</div>
+                {trendLabel ? (
                   <div
                     className={`small ${trend >= 0 ? "text-success" : "text-danger"}`}
                   >
@@ -167,12 +128,17 @@ const MarketPriceModal = ({
                       <TrendingDown size={14} className="me-1" />
                     )}
                     {trendLabel} past{" "}
-                    {range === "all" ? "all data" : range.toUpperCase()}
+                    {range === "all" ? "recorded updates" : range.toUpperCase()}
+                  </div>
+                ) : (
+                  <div className="small text-muted">
+                    Trend appears after Card Kingdom price updates on future
+                    visits.
                   </div>
                 )}
               </div>
               <fieldset className="btn-group btn-group-sm border-0 p-0 m-0">
-                <legend className="visually-hidden">Chart range</legend>
+                <legend className="visually-hidden">Trend range</legend>
                 {RANGES.map((item) => (
                   <button
                     key={item.id}
@@ -187,73 +153,28 @@ const MarketPriceModal = ({
             </div>
 
             <MarketPriceChart
-              cardkingdom={filteredHistory.cardkingdom}
-              tcgplayer={filteredHistory.tcgplayer}
+              cardkingdom={filteredHistory}
               usdToSgd={data.usdToSgd}
             />
 
             <div className="small text-muted mt-2 mb-3">
-              Card Kingdom anchor
-              {tcgHigh != null && tcgLow != null
-                ? ` · TCGplayer High ${formatUsd(tcgHigh)} · Low ${formatUsd(tcgLow)}`
-                : ""}
+              Trend is built from Card Kingdom price list snapshots saved on
+              this device.
             </div>
 
-            <h6 className="mb-2">Market references</h6>
-            <div className="table-responsive">
-              <table className="table table-sm align-middle mb-3">
-                <thead>
-                  <tr>
-                    <th>Reference</th>
-                    <th>SGD</th>
-                    <th>USD</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <ReferenceRow
-                    label="Card Kingdom"
-                    usd={data.references.cardkingdom.usd}
-                    sgd={data.references.cardkingdom.sgd}
-                    url={data.references.cardkingdom.url}
-                  />
-                  <ReferenceRow
-                    label="TCGplayer"
-                    usd={data.references.tcgplayer.usd}
-                    sgd={data.references.tcgplayer.sgd}
-                    url={data.references.tcgplayer.url}
-                  />
-                </tbody>
-              </table>
-            </div>
-
-            <div className="d-flex flex-wrap gap-2">
-              {data.references.cardkingdom.url && (
-                <Button
-                  as="a"
-                  href={data.references.cardkingdom.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  variant="outline-primary"
-                  size="sm"
-                >
-                  <ExternalLink size={14} className="me-1" />
-                  Card Kingdom
-                </Button>
-              )}
-              {data.references.tcgplayer.url && (
-                <Button
-                  as="a"
-                  href={data.references.tcgplayer.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  variant="outline-primary"
-                  size="sm"
-                >
-                  <ExternalLink size={14} className="me-1" />
-                  TCGplayer
-                </Button>
-              )}
-            </div>
+            {data.references.cardkingdom.url && (
+              <Button
+                as="a"
+                href={data.references.cardkingdom.url}
+                target="_blank"
+                rel="noreferrer"
+                variant="outline-primary"
+                size="sm"
+              >
+                <ExternalLink size={14} className="me-1" />
+                View on Card Kingdom
+              </Button>
+            )}
           </>
         )}
       </Modal.Body>

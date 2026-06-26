@@ -22,22 +22,25 @@ const buildPath = (points, xScale, yScale) => {
     .join(" ");
 };
 
-const MarketPriceChart = ({
-  cardkingdom = [],
-  tcgplayer = [],
-  usdToSgd = 1.35,
-}) => {
-  const combined = [...cardkingdom, ...tcgplayer];
-  if (combined.length === 0) {
+const MarketPriceChart = ({ cardkingdom = [], usdToSgd = 1.35 }) => {
+  if (cardkingdom.length === 0) {
     return (
       <div className="market-chart-empty text-muted small text-center py-4">
-        No chart data available for this printing.
+        No Card Kingdom trend data yet.
       </div>
     );
   }
 
-  const dates = [...new Set(combined.map((point) => point.date))].sort();
-  const prices = combined.map((point) => point.price);
+  if (cardkingdom.length === 1) {
+    return (
+      <div className="market-chart-empty text-muted small text-center py-4">
+        Trend chart appears after Card Kingdom price updates on future visits.
+      </div>
+    );
+  }
+
+  const dates = cardkingdom.map((point) => point.date);
+  const prices = cardkingdom.map((point) => point.price);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const pricePadding =
@@ -73,7 +76,7 @@ const MarketPriceChart = ({
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         className="market-chart"
         role="img"
-        aria-label="TCGplayer and Card Kingdom price history chart"
+        aria-label="Card Kingdom price trend chart"
       >
         {yTicks.map((tick) => (
           <g key={tick}>
@@ -95,11 +98,6 @@ const MarketPriceChart = ({
           </g>
         ))}
 
-        <path
-          d={buildPath(tcgplayer, xScale, yScale)}
-          className="market-chart-line market-chart-line-tcg"
-          fill="none"
-        />
         <path
           d={buildPath(cardkingdom, xScale, yScale)}
           className="market-chart-line market-chart-line-ck"
@@ -123,10 +121,6 @@ const MarketPriceChart = ({
         <span>
           <span className="market-chart-swatch market-chart-swatch-ck" />
           Card Kingdom
-        </span>
-        <span>
-          <span className="market-chart-swatch market-chart-swatch-tcg" />
-          TCGplayer
         </span>
       </div>
     </div>
