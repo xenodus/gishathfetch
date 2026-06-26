@@ -2,6 +2,7 @@ package hideyoshi
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/joho/godotenv"
@@ -27,5 +28,19 @@ func Test_Search(t *testing.T) {
 			require.NotEmpty(t, card.Price)
 			require.Contains(t, card.Url, StoreBaseURL+"/products/")
 		}
+	}
+}
+
+func Test_Search_ExcludesPokemonInventory(t *testing.T) {
+	s := NewLGS()
+	result, err := s.Search(context.Background(), "Bulbasaur")
+	require.NoError(t, err)
+
+	for _, card := range result {
+		lower := strings.ToLower(card.Name)
+		require.NotContains(t, lower, "mega evolution: base set",
+			"Pokemon Bulbasaur inventory should not appear in MTG search results")
+		require.NotContains(t, lower, "near mint holofoil",
+			"Pokemon condition labels should not appear in MTG search results")
 	}
 }
