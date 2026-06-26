@@ -19,6 +19,7 @@ import (
 	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/gog"
 	"mtg-price-checker-sg/gateway/hideout"
+	"mtg-price-checker-sg/gateway/hideyoshi"
 	"mtg-price-checker-sg/gateway/manapro"
 	"mtg-price-checker-sg/gateway/moxandlotus"
 	"mtg-price-checker-sg/gateway/mtgasia"
@@ -78,6 +79,7 @@ var shopRegistry = []shopSpec{
 	{name: gameshaven.StoreName, newLGS: gameshaven.NewLGS, isBinderpos: true},
 	{name: gog.StoreName, newLGS: gog.NewLGS},
 	{name: hideout.StoreName, newLGS: hideout.NewLGS, isBinderpos: true},
+	{name: hideyoshi.StoreName, newLGS: hideyoshi.NewLGS},
 	{name: manapro.StoreName, newLGS: manapro.NewLGS, isBinderpos: true},
 	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
 	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS},

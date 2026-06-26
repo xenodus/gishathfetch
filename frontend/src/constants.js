@@ -16,6 +16,7 @@ export const LGS_OPTIONS = [
   "Games Haven",
   "Grey Ogre Games",
   "Hideout",
+  "Hideyoshi",
   "Mana Pro",
   "Mox & Lotus",
   "MTG Asia",
@@ -103,6 +104,14 @@ export const LGS_MAP = [
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.8199964760065!2d103.84085797576442!3d1.2817574584814586!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190d242b70db%3A0x965b932c3bc19eda!2sGrey%20Ogre%20Games!5e0!3m2!1sen!2ssg!4v1702821297360!5m2!1sen!2ssg",
     website: "https://www.greyogregames.com/",
+  },
+  {
+    id: "hideyoshi-map",
+    name: "Hideyoshi",
+    address: "504 Jurong West Street 51, #04-211, Hong Kah Court, Singapore 640504",
+    iframe:
+      "https://maps.google.com/maps?q=504+Jurong+West+Street+51,+Singapore+640504&output=embed",
+    website: "https://hideyoshitcg.com/",
   },
   {
     id: "hideout-map",
