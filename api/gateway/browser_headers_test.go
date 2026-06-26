@@ -47,8 +47,8 @@ func TestApplyBrowserLikeJSONFetchHeaders(t *testing.T) {
 	if got := h.Get("Accept"); got != browserLikeAcceptJSON {
 		t.Fatalf("Accept: got %q", got)
 	}
-	if got := h.Get("Accept-Encoding"); got != "gzip" {
-		t.Fatalf("Accept-Encoding: got %q", got)
+	if got := h.Get("Accept-Encoding"); got != "" {
+		t.Fatalf("Accept-Encoding should be left unset for Go client auto-decompression, got %q", got)
 	}
 }
 

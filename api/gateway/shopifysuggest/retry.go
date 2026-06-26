@@ -3,7 +3,6 @@ package shopifysuggest
 import (
 	"context"
 	"fmt"
-	"io"
 	"math/rand/v2"
 	"net/http"
 	"net/url"
@@ -73,7 +72,7 @@ func doSuggestGETWithRetry(ctx context.Context, client *http.Client, requestURL 
 			continue
 		}
 
-		body, err := io.ReadAll(resp.Body)
+		body, err := gateway.ReadResponseBody(resp)
 		resp.Body.Close()
 		if err != nil {
 			lastErr = err

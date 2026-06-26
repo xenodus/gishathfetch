@@ -1,6 +1,8 @@
 package shopifysuggest
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"net/http"
 	"net/http/httptest"
@@ -44,6 +46,20 @@ func TestFetchProductsSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(sampleSuggestBody))
+	}))
+	defer srv.Close()
+
+	products, err := fetchProducts(context.Background(), srv.Client(), srv.URL)
+	require.NoError(t, err)
+	require.Len(t, products, 1)
+	require.Equal(t, "Opt", products[0].Title)
+}
+
+func TestFetchProductsSuccessGzip(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write(gzipJSON(t, sampleSuggestBody))
 	}))
 	defer srv.Close()
 
@@ -155,4 +171,14 @@ func TestBuildSearchAttemptsProxyConfiguration(t *testing.T) {
 	require.Len(t, attempts, 2)
 	require.Equal(t, "direct", attempts[0].strategy)
 	require.Equal(t, "dedicated", attempts[1].strategy)
+}
+
+func gzipJSON(t *testing.T, body string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	_, err := zw.Write([]byte(body))
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+	return buf.Bytes()
 }
