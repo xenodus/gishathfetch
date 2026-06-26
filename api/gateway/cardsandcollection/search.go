@@ -172,6 +172,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{}); err != nil {
+		return cards, err
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return cards, err

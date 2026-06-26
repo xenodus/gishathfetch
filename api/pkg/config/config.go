@@ -34,6 +34,16 @@ const (
 	// UseBinderposSharedProxyFallbackEnv is reserved for future BinderPOS proxy
 	// routing options. It no longer changes scraper behavior (lookups are single-attempt).
 	UseBinderposSharedProxyFallbackEnv = "USE_BINDERPOS_SHARED_PROXY_FALLBACK"
+	// WebBotAuthEnabledEnv toggles RFC 9421 Web Bot Auth signing on outbound gateway requests.
+	WebBotAuthEnabledEnv = "WEB_BOT_AUTH_ENABLED"
+	// WebBotAuthPrivateKeyEnv holds a PEM (or base64-encoded PEM) Ed25519 PKCS8 private key.
+	WebBotAuthPrivateKeyEnv = "WEB_BOT_AUTH_PRIVATE_KEY"
+	// WebBotAuthSignatureAgentEnv is the Signature-Agent directory URL published by this bot.
+	WebBotAuthSignatureAgentEnv = "WEB_BOT_AUTH_SIGNATURE_AGENT"
+	// WebBotAuthUserAgentEnv optionally overrides the stable bot User-Agent when signing is enabled.
+	WebBotAuthUserAgentEnv = "WEB_BOT_AUTH_USER_AGENT"
+	// WebBotAuthTTLEnv optionally overrides signature validity in seconds (default 24h).
+	WebBotAuthTTLEnv = "WEB_BOT_AUTH_TTL_SECONDS"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
@@ -66,6 +76,20 @@ func UseDynamicProxy() bool {
 	}
 
 	return enabled
+}
+
+// WebBotAuthTTL returns how long outbound Web Bot Auth signatures remain valid.
+func WebBotAuthTTL() time.Duration {
+	const defaultTTL = 24 * time.Hour
+	rawValue := strings.TrimSpace(os.Getenv(WebBotAuthTTLEnv))
+	if rawValue == "" {
+		return defaultTTL
+	}
+	seconds, err := strconv.Atoi(rawValue)
+	if err != nil || seconds <= 0 {
+		return defaultTTL
+	}
+	return time.Duration(seconds) * time.Second
 }
 
 func UseBinderposSharedProxyFallback() bool {

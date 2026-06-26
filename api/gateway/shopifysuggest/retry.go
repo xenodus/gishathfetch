@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -55,7 +56,13 @@ func doSuggestGETWithRetry(ctx context.Context, client *http.Client, requestURL 
 			return nil, err
 		}
 		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", gateway.RandomBrowserUserAgent())
+		pageURL, _ := url.Parse(requestURL)
+		if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
+			Style:   gateway.OutboundStyleJSON,
+			PageURL: pageURL,
+		}); err != nil {
+			return nil, err
+		}
 
 		resp, err := client.Do(req)
 		if err != nil {
