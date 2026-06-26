@@ -26,7 +26,6 @@ const ResultFilters = ({
           >
             <option value="price-asc">Price (low to high)</option>
             <option value="price-desc">Price (high to low)</option>
-            <option value="store-asc">Store name</option>
           </Form.Select>
         </div>
         {availableQualities.length > 0 && (
