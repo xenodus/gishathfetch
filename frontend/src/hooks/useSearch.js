@@ -6,6 +6,12 @@ import {
   MAX_SEARCH_LENGTH,
   MIN_SEARCH_LENGTH,
 } from "../constants";
+import {
+  buildSearchUrl,
+  getInitialSelectedStores,
+  getStoresFromUrl,
+  persistSelectedStores,
+} from "../utils/searchUrl";
 
 const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
 const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
@@ -42,34 +48,9 @@ export default function useSearch() {
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
-  const [selectedStores, setSelectedStores] = useState(() => {
-    // First check URL parameters for store override
-    const urlParams = new URLSearchParams(window.location.search);
-    if (
-      urlParams.has("src") &&
-      LGS_OPTIONS.includes(decodeURIComponent(urlParams.get("src")))
-    ) {
-      const stores = [decodeURIComponent(urlParams.get("src"))];
-      // Save to localStorage for URL-based navigation
-      try {
-        localStorage.setItem(
-          "lgsSelected",
-          encodeURIComponent(stores.join(",")),
-        );
-      } catch (err) {
-        console.error("Failed to save selected stores:", err);
-      }
-      return stores;
-    }
-
-    // Otherwise check localStorage
-    const storedLgs = localStorage.getItem("lgsSelected");
-    if (storedLgs !== null) {
-      const decoded = decodeURIComponent(storedLgs);
-      return decoded === "" ? [] : decoded.split(",");
-    }
-    return LGS_OPTIONS;
-  });
+  const [selectedStores, setSelectedStores] = useState(() =>
+    getInitialSelectedStores(),
+  );
 
   // --- Helpers ---
   const skipSuggestionsRef = useRef(
@@ -88,10 +69,14 @@ export default function useSearch() {
     searchResultsRef.current = searchResults;
   }, [searchResults]);
 
-  const updateUrlAndTitle = useCallback((query) => {
+  const updateUrlAndTitle = useCallback((query, stores) => {
     if (window.location.hostname !== "localhost") {
-      const newUrl = `${BASE_URL}?s=${encodeURIComponent(query)}`;
-      window.history.pushState(query, `${query} @ Gishath Fetch`, newUrl);
+      const newUrl = buildSearchUrl(BASE_URL, query, stores);
+      window.history.pushState(
+        { query, stores },
+        `${query} @ Gishath Fetch`,
+        newUrl,
+      );
       document.title = `${query} @ Gishath Fetch`;
     }
   }, []);
@@ -104,14 +89,7 @@ export default function useSearch() {
 
     setStoresWarning(NO_STORES_WARNING);
     setSelectedStores(LGS_OPTIONS);
-    try {
-      localStorage.setItem(
-        "lgsSelected",
-        encodeURIComponent(LGS_OPTIONS.join(",")),
-      );
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores(LGS_OPTIONS);
     return LGS_OPTIONS;
   }, []);
 
@@ -213,7 +191,7 @@ export default function useSearch() {
               : [];
             setSearchStoreErrors(storeErrors);
             setDismissedStoreErrorsKey(null);
-            updateUrlAndTitle(query);
+            updateUrlAndTitle(query, stores);
             if (window.gtag) {
               window.gtag("event", "view_search_results", {
                 search_term: query,
@@ -436,37 +414,19 @@ export default function useSearch() {
       ? selectedStores.filter((s) => s !== store)
       : [...selectedStores, store];
     setSelectedStores(newStores);
-    try {
-      localStorage.setItem(
-        "lgsSelected",
-        encodeURIComponent(newStores.join(",")),
-      );
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores(newStores);
   };
 
   const selectAllStores = () => {
     setStoresWarning(null);
     setSelectedStores(LGS_OPTIONS);
-    try {
-      localStorage.setItem(
-        "lgsSelected",
-        encodeURIComponent(LGS_OPTIONS.join(",")),
-      );
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores(LGS_OPTIONS);
   };
 
   const selectNoStores = () => {
     setStoresWarning(null);
     setSelectedStores([]);
-    try {
-      localStorage.setItem("lgsSelected", encodeURIComponent(""));
-    } catch (err) {
-      console.error("Failed to save selected stores:", err);
-    }
+    persistSelectedStores([]);
   };
 
   // --- Initialization ---
@@ -483,12 +443,8 @@ export default function useSearch() {
       const q = decodeURIComponent(urlParams.get("s"));
       skipSuggestionsRef.current = true;
 
-      // Determine which stores to search (URL param takes precedence, already set in state initialization)
-      const stores =
-        urlParams.has("src") &&
-        LGS_OPTIONS.includes(decodeURIComponent(urlParams.get("src")))
-          ? [decodeURIComponent(urlParams.get("src"))]
-          : selectedStores;
+      const urlStores = getStoresFromUrl(urlParams);
+      const stores = urlStores ?? selectedStores;
 
       setTimeout(() => performSearch(q, stores), 100);
     }

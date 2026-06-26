@@ -1,0 +1,105 @@
+import { LGS_OPTIONS } from "../constants";
+
+/**
+ * @param {string} lgsParam
+ * @returns {string[]}
+ */
+export function parseStoresFromUrlParam(lgsParam) {
+  if (!lgsParam) {
+    return [];
+  }
+
+  const stores = lgsParam
+    .split(",")
+    .map((store) => store.trim())
+    .filter((store) => store.length > 0 && LGS_OPTIONS.includes(store));
+
+  return [...new Set(stores)];
+}
+
+/**
+ * @param {string} query
+ * @param {string[]} stores
+ * @returns {URLSearchParams}
+ */
+export function buildSearchUrlParams(query, stores) {
+  const params = new URLSearchParams();
+  params.set("s", query);
+
+  const validStores = stores.filter((store) => LGS_OPTIONS.includes(store));
+  const isAllStores =
+    validStores.length === LGS_OPTIONS.length &&
+    LGS_OPTIONS.every((store) => validStores.includes(store));
+
+  if (validStores.length > 0 && !isAllStores) {
+    params.set("lgs", validStores.join(","));
+  }
+
+  return params;
+}
+
+/**
+ * @param {string} baseUrl
+ * @param {string} query
+ * @param {string[]} stores
+ * @returns {string}
+ */
+export function buildSearchUrl(baseUrl, query, stores) {
+  const params = buildSearchUrlParams(query, stores);
+  return `${baseUrl}?${params.toString()}`;
+}
+
+/**
+ * @param {URLSearchParams} urlParams
+ * @returns {string[] | null}
+ */
+export function getStoresFromUrl(urlParams) {
+  if (
+    urlParams.has("src") &&
+    LGS_OPTIONS.includes(decodeURIComponent(urlParams.get("src")))
+  ) {
+    return [decodeURIComponent(urlParams.get("src"))];
+  }
+
+  if (urlParams.has("lgs")) {
+    const stores = parseStoresFromUrlParam(
+      decodeURIComponent(urlParams.get("lgs")),
+    );
+    return stores.length > 0 ? stores : null;
+  }
+
+  return null;
+}
+
+/**
+ * @param {string[]} stores
+ */
+export function persistSelectedStores(stores) {
+  try {
+    localStorage.setItem("lgsSelected", encodeURIComponent(stores.join(",")));
+  } catch (err) {
+    console.error("Failed to save selected stores:", err);
+  }
+}
+
+/**
+ * @param {URLSearchParams} [urlParams]
+ * @returns {string[]}
+ */
+export function getInitialSelectedStores(
+  urlParams = new URLSearchParams(window.location.search),
+) {
+  const urlStores = getStoresFromUrl(urlParams);
+  if (urlStores) {
+    persistSelectedStores(urlStores);
+    return urlStores;
+  }
+
+  const storedLgs = localStorage.getItem("lgsSelected");
+  if (storedLgs !== null) {
+    const decoded = decodeURIComponent(storedLgs);
+    return decoded === "" ? [] : decoded.split(",");
+  }
+
+  return LGS_OPTIONS;
+}
