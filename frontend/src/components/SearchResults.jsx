@@ -50,6 +50,7 @@ const SearchResults = ({
   removeFromCart,
   removeFromCartByCard,
   onSearchStore,
+  onMarketLookup,
   baseUrl,
 }) => {
   const {
@@ -167,6 +168,7 @@ const SearchResults = ({
                               removeFromCart={removeFromCart}
                               removeFromCartByCard={removeFromCartByCard}
                               onSearchStore={onSearchStore}
+                              onMarketLookup={onMarketLookup}
                               baseUrl={baseUrl}
                             />
                             {showAd && (

@@ -9,12 +9,14 @@ import SearchResults from "./components/SearchResults";
 
 const CartOffcanvas = lazy(() => import("./components/CartOffcanvas"));
 const Modals = lazy(() => import("./components/Modals"));
+const MarketPriceModal = lazy(() => import("./components/MarketPriceModal"));
 
 // --- Constants ---
 import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
 
 // --- Hooks ---
 import useCart from "./hooks/useCart";
+import useMarketPrices from "./hooks/useMarketPrices";
 import useSearch from "./hooks/useSearch";
 
 const THEME_STORAGE_KEY = "gishathfetch-theme";
@@ -57,6 +59,16 @@ export default function App() {
     cancelSearch,
     retrySearch,
   } = useSearch();
+
+  const {
+    marketCard,
+    marketData,
+    marketError,
+    marketStatus,
+    isMarketLoading,
+    openMarketModal,
+    closeMarketModal,
+  } = useMarketPrices();
 
   const [modalType, setModalType] = useState(null);
   const [theme, setTheme] = useState(() => {
@@ -173,6 +185,7 @@ export default function App() {
         removeFromCart={removeFromCart}
         removeFromCartByCard={removeFromCartByCard}
         onSearchStore={handleCardSearch}
+        onMarketLookup={openMarketModal}
         baseUrl={BASE_URL}
       />
 
@@ -204,6 +217,16 @@ export default function App() {
           onHidePrivacy={() => setModalType(null)}
           onShowPrivacy={() => setModalType("PRIVACY")}
           lgsMapData={LGS_MAP}
+        />
+
+        <MarketPriceModal
+          show={Boolean(marketCard)}
+          onHide={closeMarketModal}
+          card={marketCard}
+          data={marketData}
+          error={marketError}
+          status={marketStatus}
+          isLoading={isMarketLoading}
         />
       </Suspense>
     </div>

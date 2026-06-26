@@ -1,4 +1,5 @@
 import {
+  BarChart2,
   CheckSquare,
   FolderPlus,
   Search as SearchIcon,
@@ -15,6 +16,7 @@ const Card = ({
   removeFromCart,
   removeFromCartByCard,
   onSearchStore,
+  onMarketLookup,
   baseUrl,
 }) => {
   const qualityFoil = [];
@@ -69,7 +71,16 @@ const Card = ({
             {card.src}
           </a>
         </div>
-        <div>
+        <div className="d-flex flex-wrap justify-content-center gap-1">
+          {!isCart && onMarketLookup && (
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm addCartBtn"
+              onClick={() => onMarketLookup(card)}
+            >
+              <BarChart2 size={12} className="cartIcon" /> Market
+            </button>
+          )}
           {isCart ? (
             <div className="d-flex justify-content-center gap-1">
               <button

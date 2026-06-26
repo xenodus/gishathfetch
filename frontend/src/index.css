@@ -176,3 +176,74 @@ ins.adsbygoogle iframe {
 .scroll-margin-top {
   scroll-margin-top: 1rem;
 }
+
+.market-modal-image {
+  width: 88px;
+  max-width: 30vw;
+}
+
+.market-hero {
+  background: var(--bs-secondary-bg);
+}
+
+.market-hero-price {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.market-chart-wrap {
+  width: 100%;
+}
+
+.market-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.market-chart-grid {
+  stroke: var(--bs-border-color);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.market-chart-axis {
+  fill: var(--bs-secondary-color);
+  font-size: 11px;
+}
+
+.market-chart-line {
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.market-chart-line-ck {
+  stroke: #6366f1;
+}
+
+.market-chart-line-tcg {
+  stroke: #14b8a6;
+}
+
+.market-chart-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 0.35rem;
+}
+
+.market-chart-swatch-ck {
+  background: #6366f1;
+}
+
+.market-chart-swatch-tcg {
+  background: #14b8a6;
+}
+
+.market-chart-empty {
+  border: 1px dashed var(--bs-border-color);
+  border-radius: 0.5rem;
+}
