@@ -17,7 +17,7 @@ type storefrontStrategy struct {
 	run  func(ctx context.Context) ([]gateway.Card, error)
 }
 
-func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr string) ([]gateway.Card, error) {
+func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr string, scrapOnly bool) ([]gateway.Card, error) {
 	scrap := [3]storefrontStrategy{
 		{
 			name: "scrap-dedicated",
@@ -37,12 +37,6 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 				return i.scrapDynamic(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			},
 		},
-	}
-
-	// Stores without a Shopify/BinderPOS domain mapping (e.g. Arcane Sanctum)
-	// can only be scraped, so the decklist portal is skipped entirely.
-	if strings.TrimSpace(shopifyDomain) == "" {
-		return runStorefrontStrategies(ctx, scrap[:]...)
 	}
 
 	decklist := [3]storefrontStrategy{
@@ -66,7 +60,17 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 	}
 
-	return runStorefrontStrategies(ctx, orderDecklistAndScrap(decklist, scrap)...)
+	// ScrapOnly skips the shared decklist portal while keeping shopifyDomain
+	// available for documentation and live integration tests. An empty domain
+	// also forces scrape-only for backward compatibility.
+	return runStorefrontStrategies(ctx, selectStorefrontStrategies(scrapOnly, shopifyDomain, scrap, decklist)...)
+}
+
+func selectStorefrontStrategies(scrapOnly bool, shopifyDomain string, scrap, decklist [3]storefrontStrategy) []storefrontStrategy {
+	if scrapOnly || strings.TrimSpace(shopifyDomain) == "" {
+		return []storefrontStrategy{scrap[0], scrap[1], scrap[2]}
+	}
+	return orderDecklistAndScrap(decklist, scrap)
 }
 
 // orderDecklistAndScrap interleaves the decklist and scrap strategy families.

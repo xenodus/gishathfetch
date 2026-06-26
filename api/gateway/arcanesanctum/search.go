@@ -2,13 +2,19 @@ package arcanesanctum
 
 import (
 	"context"
+
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
 )
 
 const StoreName = binderpos.ArcaneSanctumStoreName
 const StoreBaseURL = "https://arcanesanctumtcg.com"
+const StoreShopifyDomain = "30uetm-1y.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
+
+// ScrapOnly skips the shared BinderPOS decklist portal while retaining the
+// Shopify domain mapping for documentation and live integration tests.
+const ScrapOnly = true
 
 type Store struct {
 	Name         string
@@ -31,8 +37,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		5,
 		s.Name,
 		s.BaseUrl,
-		"",
+		StoreShopifyDomain,
 		s.SearchUrl,
 		searchStr,
+		ScrapOnly,
 	)
 }

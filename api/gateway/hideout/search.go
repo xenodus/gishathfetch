@@ -35,5 +35,6 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		StoreShopifyDomain,
 		s.SearchUrl,
 		searchStr,
+		false,
 	)
 }

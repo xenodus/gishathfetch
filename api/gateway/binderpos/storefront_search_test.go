@@ -170,14 +170,58 @@ func binderposStoreSearchCases() []binderposStoreSearchCase {
 			query:         "Abrade",
 		},
 		{
+			storeName:     "Hideyoshi",
+			baseURL:       "https://hideyoshitcg.com",
+			shopifyDomain: "bposacct-9.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  2,
+			query:         "Abrade",
+		},
+		{
 			storeName:     "Arcane Sanctum",
 			baseURL:       "https://arcanesanctumtcg.com",
-			shopifyDomain: "",
+			shopifyDomain: "30uetm-1y.myshopify.com",
 			searchURL:     "/search?q=%s",
 			scrapVariant:  5,
 			query:         "signet",
 		},
 	}
+}
+
+func TestSelectStorefrontStrategies_ScrapOnly(t *testing.T) {
+	scrap := [3]storefrontStrategy{
+		{name: "scrap-dedicated"},
+		{name: "scrap-direct"},
+		{name: "scrap-dynamic"},
+	}
+	decklist := [3]storefrontStrategy{
+		{name: "decklist-dedicated"},
+		{name: "decklist-direct"},
+		{name: "decklist-dynamic"},
+	}
+
+	t.Run("scrapOnly with domain keeps scrape strategies only", func(t *testing.T) {
+		got := selectStorefrontStrategies(true, "shop.example.com", scrap, decklist)
+		assertStrategyOrder(t, []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}, strategyNames(got))
+	})
+
+	t.Run("empty domain keeps scrape strategies only", func(t *testing.T) {
+		got := selectStorefrontStrategies(false, "", scrap, decklist)
+		assertStrategyOrder(t, []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}, strategyNames(got))
+	})
+
+	t.Run("domain without scrapOnly uses decklist and scrap", func(t *testing.T) {
+		previousSelector := shouldStartWithDecklist
+		shouldStartWithDecklist = func() bool { return true }
+		t.Cleanup(func() { shouldStartWithDecklist = previousSelector })
+
+		got := selectStorefrontStrategies(false, "shop.example.com", scrap, decklist)
+		assertStrategyOrder(t, []string{
+			"decklist-dedicated", "decklist-direct",
+			"scrap-dedicated", "scrap-direct",
+			"decklist-dynamic", "scrap-dynamic",
+		}, strategyNames(got))
+	})
 }
 
 func normalizeCardName(name string) string {

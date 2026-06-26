@@ -1,15 +1,20 @@
-package cardaffinity
+package hideyoshi
 
 import (
 	"context"
+
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/binderpos"
 )
 
-const StoreName = "Card Affinity"
-const StoreBaseURL = "https://card-affinity.com"
-const StoreShopifyDomain = "563304-2.myshopify.com"
+const StoreName = "Hideyoshi"
+const StoreBaseURL = "https://hideyoshitcg.com"
+const StoreShopifyDomain = "bposacct-9.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
+
+// ScrapOnly skips the shared BinderPOS decklist portal while retaining the
+// Shopify domain mapping for documentation and live integration tests.
+const ScrapOnly = true
 
 type Store struct {
 	Name         string
@@ -35,6 +40,6 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		StoreShopifyDomain,
 		s.SearchUrl,
 		searchStr,
-		false,
+		ScrapOnly,
 	)
 }
