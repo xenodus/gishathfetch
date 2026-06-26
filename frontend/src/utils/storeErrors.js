@@ -16,14 +16,3 @@ export function formatStoreErrorsSummary(storeErrors) {
   const noun = count === 1 ? "store" : "stores";
   return `${count} ${noun} couldn't be searched: ${storeNames}`;
 }
-
-/**
- * @param {StoreError[]} storeErrors
- * @returns {string}
- */
-export function formatStoreErrorDetail({ store, error, statusCode }) {
-  if (statusCode && !error.includes(`(${statusCode})`)) {
-    return `${store}: ${error}`;
-  }
-  return `${store}: ${error}`;
-}
