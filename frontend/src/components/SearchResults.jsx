@@ -23,7 +23,8 @@ const EmptyFilteredState = ({ onClearFilters }) => (
   <div className="mb-3 text-center py-4 px-3">
     <div className="fw-semibold mb-2">No results match your filters</div>
     <p className="small text-muted mb-3">
-      Try a different condition, turning off foil only, or clear your filters.
+      Try a different condition, turning off foil only or cheapest per store, or
+      clear your filters.
     </p>
     <button
       type="button"
@@ -60,6 +61,8 @@ const SearchResults = ({
     availableQualities,
     foilOnly,
     setFoilOnly,
+    cheapestPerStore,
+    setCheapestPerStore,
     hasActiveFilters,
     clearFilters,
   } = useResultFilters(results, searchQuery);
@@ -136,6 +139,8 @@ const SearchResults = ({
                   availableQualities={availableQualities}
                   foilOnly={foilOnly}
                   onFoilOnlyChange={setFoilOnly}
+                  cheapestPerStore={cheapestPerStore}
+                  onCheapestPerStoreChange={setCheapestPerStore}
                   hasActiveFilters={hasActiveFilters}
                   onClearFilters={clearFilters}
                 />

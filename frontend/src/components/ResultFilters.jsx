@@ -8,6 +8,8 @@ const ResultFilters = ({
   availableQualities,
   foilOnly,
   onFoilOnlyChange,
+  cheapestPerStore,
+  onCheapestPerStoreChange,
   hasActiveFilters,
   onClearFilters,
 }) => {
@@ -58,6 +60,14 @@ const ResultFilters = ({
             label="Foil only"
             checked={foilOnly}
             onChange={(e) => onFoilOnlyChange(e.target.checked)}
+            className="mb-0"
+          />
+          <Form.Check
+            type="checkbox"
+            id="cheapest-per-store"
+            label="Cheapest per store"
+            checked={cheapestPerStore}
+            onChange={(e) => onCheapestPerStoreChange(e.target.checked)}
             className="mb-0"
           />
           {hasActiveFilters && (
