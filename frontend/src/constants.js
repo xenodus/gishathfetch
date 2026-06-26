@@ -167,14 +167,6 @@ export const MIN_SEARCH_LENGTH = 3;
 // rejecting bot paragraph spam.
 export const MAX_SEARCH_LENGTH = 150;
 
-export const API_BASE_URL =
-  window.location.hostname === "staging.gishathfetch.com" ||
-  window.location.hostname === "localhost"
-    ? "https://staging-api.gishathfetch.com/"
-    : "https://api.gishathfetch.com/";
+export const API_BASE_URL = "https://api.gishathfetch.com/";
 
-export const BASE_URL =
-  window.location.hostname === "staging.gishathfetch.com" ||
-  window.location.hostname === "localhost"
-    ? "https://staging.gishathfetch.com/"
-    : "https://gishathfetch.com/";
+export const BASE_URL = "https://gishathfetch.com/";

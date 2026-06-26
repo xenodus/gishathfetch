@@ -16,9 +16,8 @@ const (
 	// bot paragraph spam.
 	MaxSearchStringLength = 150
 	MaxPagesToSearch      = 3
-	EnvProd          = "prod"
-	EnvStaging       = "staging"
-	EnvLocal         = "local"
+	EnvProd  = "prod"
+	EnvLocal = "local"
 	UseProxy         = true
 	PerSiteTimeout   = 20 * time.Second
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
@@ -80,15 +79,8 @@ func WebBotAuthTTL() time.Duration {
 }
 
 func GetAllowedOrigins() []string {
-	if os.Getenv("ENV") == EnvProd {
-		return []string{
-			"https://gishathfetch.com",
-		}
-	}
-
 	return []string{
 		"https://gishathfetch.com",
-		"https://staging.gishathfetch.com",
 		"http://localhost:5173",
 		"http://localhost:63342", // JetBrains IDE built-in HTTP server (local dev only)
 	}

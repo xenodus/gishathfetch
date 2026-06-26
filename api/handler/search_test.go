@@ -89,7 +89,7 @@ func Test_Search_Success(t *testing.T) {
 				return tc.mockSearchResponse, tc.mockStoreErrors, tc.mockSearchErr
 			}
 
-			err := os.Setenv("ENV", config.EnvStaging)
+			err := os.Setenv("ENV", config.EnvProd)
 			require.NoError(t, err)
 
 			result, err := Search(context.Background(), tc.givenAPIGatewayProxyRequest)
@@ -114,7 +114,7 @@ func Test_Search_CORS(t *testing.T) {
 		return []controller.Card{}, []controller.StoreError{}, nil
 	}
 
-	err := os.Setenv("ENV", config.EnvStaging)
+	err := os.Setenv("ENV", config.EnvProd)
 	require.NoError(t, err)
 
 	t.Run("allowed origin returns CORS headers", func(t *testing.T) {
@@ -205,7 +205,7 @@ func Test_Search_Err(t *testing.T) {
 				return tc.mockSearchResponse, nil, tc.mockSearchErr
 			}
 
-			err := os.Setenv("ENV", config.EnvStaging)
+			err := os.Setenv("ENV", config.EnvProd)
 			require.NoError(t, err)
 			result, err := Search(context.Background(), tc.givenAPIGatewayProxyRequest)
 			require.NoError(t, err)

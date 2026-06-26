@@ -62,7 +62,7 @@ export PATH="/usr/local/go/bin:$PATH"
 
 ### Frontend API connection
 
-The frontend SPA points to `staging-api.gishathfetch.com` when running on localhost (see `frontend/src/constants.js`). CORS headers on the staging API only allow recognized origins; to test the full search flow through the browser, either use the computerUse agent to navigate (it works via fetch from the page) or add a Vite proxy configuration temporarily (revert before committing).
+The frontend SPA points to `api.gishathfetch.com` (see `frontend/src/constants.js`). CORS headers on the API allow `gishathfetch.com` and local dev origins (`localhost:5173`). To test the full search flow through the browser, either use the computerUse agent to navigate (it works via fetch from the page) or add a Vite proxy configuration temporarily (revert before committing).
 
 ### Backend local mode
 

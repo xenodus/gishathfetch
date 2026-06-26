@@ -50,7 +50,7 @@ func TestCKPrice_Success(t *testing.T) {
 		}, nil
 	}
 
-	require.NoError(t, os.Setenv("ENV", config.EnvStaging))
+	require.NoError(t, os.Setenv("ENV", config.EnvProd))
 
 	result, err := CKPrice(context.Background(), events.APIGatewayProxyRequest{
 		QueryStringParameters: map[string]string{"s": "Lightning Bolt"},
@@ -82,7 +82,7 @@ func TestCKPrice_NotFound(t *testing.T) {
 		return nil, nil
 	}
 
-	require.NoError(t, os.Setenv("ENV", config.EnvStaging))
+	require.NoError(t, os.Setenv("ENV", config.EnvProd))
 
 	result, err := CKPrice(context.Background(), events.APIGatewayProxyRequest{
 		QueryStringParameters: map[string]string{"s": "Not A Real Card"},
@@ -107,7 +107,7 @@ func TestHandle_RoutesCKPrice(t *testing.T) {
 		return nil, nil
 	}
 
-	require.NoError(t, os.Setenv("ENV", config.EnvStaging))
+	require.NoError(t, os.Setenv("ENV", config.EnvProd))
 
 	event, err := json.Marshal(events.APIGatewayProxyRequest{
 		Path:                  "/ck-price",
