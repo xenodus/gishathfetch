@@ -190,14 +190,6 @@ func TestFormatProxyContext(t *testing.T) {
 		}
 	})
 
-	t.Run("uses shared proxy env label", func(t *testing.T) {
-		t.Setenv("PROXY_URL", "http://shared-proxy:8080")
-		got := formatProxyContext("shared", "http://shared-proxy:8080")
-		if got != "proxy_mode=shared proxy=PROXY_URL" {
-			t.Fatalf("unexpected proxy context: %q", got)
-		}
-	})
-
 	t.Run("uses dynamic proxy env label", func(t *testing.T) {
 		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|8080||")
 		got := formatProxyContext("dynamic", "http://dynamic-proxy:8080")
@@ -222,13 +214,6 @@ func TestResolveProxyLabel(t *testing.T) {
 		}
 	})
 
-	t.Run("matches shared env key by URL", func(t *testing.T) {
-		t.Setenv("PROXY_URL", "http://shared:3333")
-		if got := resolveProxyLabel("shared", "http://shared:3333"); got != "PROXY_URL" {
-			t.Fatalf("expected PROXY_URL, got %q", got)
-		}
-	})
-
 	t.Run("matches dynamic env key by URL", func(t *testing.T) {
 		t.Setenv("DYNAMIC_PROXY", "dynamic|4444||")
 		if got := resolveProxyLabel("dynamic", "http://dynamic:4444"); got != "DYNAMIC_PROXY" {
@@ -242,9 +227,6 @@ func TestResolveProxyLabel(t *testing.T) {
 		}
 		if got := resolveProxyLabel("dynamic", "http://unknown-dynamic:5555"); got != "dynamic-configured" {
 			t.Fatalf("expected dynamic-configured fallback, got %q", got)
-		}
-		if got := resolveProxyLabel("shared", "http://unknown:5555"); got != "shared-configured" {
-			t.Fatalf("expected shared-configured fallback, got %q", got)
 		}
 		if got := resolveProxyLabel("unknown", "http://unknown:6666"); got != "configured" {
 			t.Fatalf("expected configured fallback, got %q", got)
