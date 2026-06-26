@@ -24,6 +24,7 @@ func TestIsMagicProduct(t *testing.T) {
 	require.False(t, IsMagicProduct("Flesh And Blood Single Cards", "Flesh and Blood", []string{"Common"}))
 	require.False(t, IsMagicProduct("Grand Archive Single Cards", "Grand Archive", nil))
 	require.False(t, IsMagicProduct("Lorcana Single", "Disney Lorcana", nil))
+	require.False(t, IsMagicProduct("Pokemon Single", "Pokemon", nil))
 }
 
 func TestSetFromTags(t *testing.T) {

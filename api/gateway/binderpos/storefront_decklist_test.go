@@ -118,6 +118,31 @@ func TestMapDecklistLinesToCards(t *testing.T) {
 		}
 	})
 
+	t.Run("skips out of stock variants", func(t *testing.T) {
+		outOfStock := []storefrontDecklistLine{
+			{
+				Products: []storefrontDecklistProduct{
+					{
+						Title:  "Abrade [Foundations]",
+						Handle: "abrade-foundations",
+						Variants: []storefrontDecklistStock{
+							{
+								ShopifyID: 222,
+								Title:     "Near Mint",
+								Price:     0.40,
+								Quantity:  0,
+							},
+						},
+					},
+				},
+			},
+		}
+		cards := mapDecklistLinesToCards(2, "Store", "https://store.example", outOfStock)
+		if len(cards) != 0 {
+			t.Fatalf("expected no cards for out-of-stock variant, got %+v", cards)
+		}
+	})
+
 	t.Run("skips product when title and name are empty", func(t *testing.T) {
 		skipName := []storefrontDecklistLine{
 			{

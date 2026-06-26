@@ -1,0 +1,32 @@
+package binderpos
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestShouldIncludeBinderposProduct(t *testing.T) {
+	require.True(t, shouldIncludeBinderposProduct("MTG Single", ""))
+	require.True(t, shouldIncludeBinderposProduct("MTG Single Cards", `["MTG","Rare"]`))
+	require.False(t, shouldIncludeBinderposProduct("Pokemon Single", ""))
+	require.False(t, shouldIncludeBinderposProduct("Grand Archive Single", ""))
+	require.False(t, shouldIncludeBinderposProduct("Lorcana Single", ""))
+
+	// Missing product type: do not filter (legacy storefronts).
+	require.True(t, shouldIncludeBinderposProduct("", ""))
+}
+
+func TestIsMagicProductType(t *testing.T) {
+	require.True(t, isMagicProductType("MTG Single Cards", []string{"Common"}))
+	require.True(t, isMagicProductType("Magic the Gathering Booster Box", nil))
+	require.True(t, isMagicProductType("", []string{"New Arrival", "MTG"}))
+	require.False(t, isMagicProductType("Pokemon Single", nil))
+	require.False(t, isMagicProductType("Grand Archive Single", nil))
+}
+
+func TestParseProductTags(t *testing.T) {
+	require.Equal(t, []string{"MTG", "Rare"}, parseProductTags(`["MTG","Rare"]`))
+	require.Nil(t, parseProductTags(""))
+	require.Nil(t, parseProductTags("not-json"))
+}

@@ -17,6 +17,7 @@ import (
 const StoreName = "Agora Hobby"
 const StoreBaseURL = "https://agorahobby.com"
 const StoreSearchPath = "/store/search"
+const storeCategoryMTG = "mtg"
 
 type Store struct {
 	Name       string
@@ -43,7 +44,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		Host:   baseURL.Host,
 		Path:   s.SearchPath,
 		RawQuery: url.Values{
-			"category":    {"mtg"},
+			"category":    {storeCategoryMTG},
 			"searchfield": {searchStr},
 		}.Encode(),
 	}
@@ -97,24 +98,26 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 				return
 			}
 			cleanPageURL.RawQuery = url.Values{
-				"category":    []string{"mtg"},
+				"category":    []string{storeCategoryMTG},
 				"searchfield": []string{searchStr},
 				"utm_source":  []string{config.UtmSource},
 			}.Encode()
 
-			if price > 0 {
-				cards = append(cards, gateway.Card{
-					Name:      strings.TrimSpace(name),
-					Url:       strings.TrimSpace(cleanPageURL.String()),
-					InStock:   isInstock,
-					IsFoil:    strings.Contains(name, "FOIL"), // case sensitive
-					Price:     price,
-					Source:    s.Name,
-					Img:       strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
-					Quality:   util.MapQuality(quality),
-					ExtraInfo: extraInfo,
-				})
+			if !isInstock || price <= 0 {
+				return
 			}
+
+			cards = append(cards, gateway.Card{
+				Name:      strings.TrimSpace(name),
+				Url:       strings.TrimSpace(cleanPageURL.String()),
+				InStock:   true,
+				IsFoil:    strings.Contains(name, "FOIL"), // case sensitive
+				Price:     price,
+				Source:    s.Name,
+				Img:       strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
+				Quality:   util.MapQuality(quality),
+				ExtraInfo: extraInfo,
+			})
 		})
 	})
 

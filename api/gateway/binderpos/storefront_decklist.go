@@ -99,7 +99,7 @@ func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines 
 
 			image := buildCardImageURL(product.Image, productTitle)
 			for _, variant := range product.Variants {
-				if variant.Price <= 0 {
+				if variant.Price <= 0 || variant.Quantity <= 0 {
 					continue
 				}
 				if variant.ShopifyID <= 0 || productPath == "" {
