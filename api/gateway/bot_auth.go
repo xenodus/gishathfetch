@@ -158,14 +158,23 @@ func loadWebBotAuth() {
 		userAgent = customUA
 	}
 
+	keyID := webbotauth.Ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey))
+	ttl := config.WebBotAuthTTL()
 	webBotAuth = webBotAuthState{
 		enabled:           true,
 		privateKey:        privateKey,
-		keyID:             webbotauth.Ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey)),
+		keyID:             keyID,
 		signatureAgentURL: signatureAgentURL,
 		userAgent:         userAgent,
-		ttl:               config.WebBotAuthTTL(),
+		ttl:               ttl,
 	}
+	log.Printf(
+		"Web Bot Auth enabled: signature_agent=%s key_id=%s user_agent=%q ttl=%s",
+		signatureAgentURL,
+		keyID,
+		userAgent,
+		ttl,
+	)
 }
 
 func newWebBotAuthNonce() (string, error) {
