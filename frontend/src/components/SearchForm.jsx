@@ -213,9 +213,9 @@ const SearchForm = ({
           </div>
         )}
 
-        <div className="mb-3 d-grid">
+        <div className="mb-3 d-grid gap-2">
           {isSearching ? (
-            <div className="btn-group">
+            <>
               <button
                 id="searchBtn"
                 type="button"
@@ -231,7 +231,7 @@ const SearchForm = ({
               >
                 Cancel
               </button>
-            </div>
+            </>
           ) : (
             <button
               id="searchBtn"
