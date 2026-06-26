@@ -169,14 +169,14 @@ func Test_Search_Err(t *testing.T) {
 				QueryStringParameters: map[string]string{"s": ""},
 			},
 			expStatusCode: http.StatusBadRequest,
-			expBody:       "", // lambdaApiResponse returns body as is for error but empty webRes
+			expBody:       `{"error":"enter at least 3 characters to search","statusCode":400}` + "\n",
 		},
 		"less than 3 characters search string": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
 				QueryStringParameters: map[string]string{"s": "ab"},
 			},
 			expStatusCode: http.StatusBadRequest,
-			expBody:       "",
+			expBody:       `{"error":"enter at least 3 characters to search","statusCode":400}` + "\n",
 		},
 		"search string too long": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
@@ -185,7 +185,7 @@ func Test_Search_Err(t *testing.T) {
 				},
 			},
 			expStatusCode: http.StatusBadRequest,
-			expBody:       `{"error":"card name is too long (maximum 150 characters)"}` + "\n",
+			expBody:       `{"error":"card name is too long (maximum 150 characters)","statusCode":400}` + "\n",
 		},
 		"controller error": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
@@ -193,7 +193,7 @@ func Test_Search_Err(t *testing.T) {
 			},
 			mockSearchErr: errors.New("controller error"),
 			expStatusCode: http.StatusInternalServerError,
-			expBody:       "err searching for cards",
+			expBody:       `{"error":"err searching for cards","statusCode":500}` + "\n",
 		},
 	}
 	for s, tc := range tcs {

@@ -346,6 +346,7 @@ func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
 	var proxyMu sync.Mutex
 	var lastProxyMode string
 	var lastProxyURL string
+	var responseStatusCode int
 
 	c.OnRequest(func(r *colly.Request) {
 		if r == nil || r.Ctx == nil {
@@ -358,6 +359,16 @@ func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
 		proxyMu.Unlock()
 	})
 
+	c.OnError(func(r *colly.Response, _ error) {
+		if r == nil || r.StatusCode < 100 {
+			return
+		}
+
+		proxyMu.Lock()
+		responseStatusCode = r.StatusCode
+		proxyMu.Unlock()
+	})
+
 	err := c.Visit(targetURL)
 	if err == nil {
 		return nil
@@ -366,8 +377,10 @@ func VisitWithProxyInfo(c *colly.Collector, targetURL string) error {
 	proxyMu.Lock()
 	mode := lastProxyMode
 	proxyURL := lastProxyURL
+	statusCode := responseStatusCode
 	proxyMu.Unlock()
 
+	err = EnrichErrorWithHTTPStatus(err, statusCode)
 	return fmt.Errorf("%w (%s)", err, formatProxyContext(mode, proxyURL))
 }
 

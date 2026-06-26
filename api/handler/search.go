@@ -22,8 +22,9 @@ type WebResponse struct {
 	Errors []controller.StoreError `json:"errors"`
 }
 
-type ValidationErrorResponse struct {
-	Error string `json:"error"`
+type ErrorResponse struct {
+	Error      string `json:"error"`
+	StatusCode int    `json:"statusCode"`
 }
 
 var searchFunc = controller.Search
@@ -59,7 +60,14 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 
 	if searchString == "" || len(searchString) < config.MinSearchStringLength {
 		apiRes.StatusCode = http.StatusBadRequest
-		return lambdaApiResponse(apiRes, webRes, origin)
+		return errorResponse(
+			apiRes,
+			origin,
+			fmt.Sprintf(
+				"enter at least %d characters to search",
+				config.MinSearchStringLength,
+			),
+		)
 	}
 
 	if len(searchString) > config.MaxSearchStringLength {
@@ -84,8 +92,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	})
 	if err != nil {
 		apiRes.StatusCode = http.StatusInternalServerError
-		apiRes.Body = "err searching for cards"
-		return lambdaApiResponse(apiRes, webRes, origin)
+		return errorResponse(apiRes, origin, "err searching for cards")
 	}
 
 	apiRes.StatusCode = http.StatusOK
@@ -104,14 +111,24 @@ func validationErrorResponse(
 	origin string,
 	message string,
 ) (events.APIGatewayProxyResponse, error) {
+	return errorResponse(apiResponse, origin, message)
+}
+
+func errorResponse(
+	apiResponse events.APIGatewayProxyResponse,
+	origin string,
+	message string,
+) (events.APIGatewayProxyResponse, error) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)
 
-	if err := encoder.Encode(ValidationErrorResponse{Error: message}); err != nil {
+	if err := encoder.Encode(ErrorResponse{
+		Error:      message,
+		StatusCode: apiResponse.StatusCode,
+	}); err != nil {
 		apiResponse.StatusCode = http.StatusInternalServerError
-		apiResponse.Body = "err marshalling validation error"
-		return lambdaApiResponse(apiResponse, WebResponse{}, origin)
+		return errorResponse(apiResponse, origin, "err marshalling error response")
 	}
 
 	apiResponse.Body = buf.String()
@@ -141,7 +158,17 @@ func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse W
 
 	if err := encoder.Encode(webResponse); err != nil {
 		apiResponse.StatusCode = http.StatusInternalServerError
-		apiResponse.Body = "err marshalling to json result"
+		var buf bytes.Buffer
+		encoder := json.NewEncoder(&buf)
+		encoder.SetEscapeHTML(false)
+		if encodeErr := encoder.Encode(ErrorResponse{
+			Error:      "err marshalling to json result",
+			StatusCode: http.StatusInternalServerError,
+		}); encodeErr != nil {
+			apiResponse.Body = "err marshalling to json result"
+			return apiResponse, nil
+		}
+		apiResponse.Body = buf.String()
 		return apiResponse, nil
 	}
 

@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
@@ -342,6 +343,37 @@ func TestSearchShops_IncludesStoreErrors(t *testing.T) {
 	}
 }
 
+func TestBuildStoreErrors_IncludesHTTPStatusCode(t *testing.T) {
+	storeErrors := buildStoreErrors(map[string]error{
+		"Arcane Sanctum": fmt.Errorf(
+			"attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
+		),
+		"Shopify Store": fmt.Errorf("shopifysuggest: unexpected status 429"),
+	})
+
+	if len(storeErrors) != 2 {
+		t.Fatalf("expected 2 store errors, got %d", len(storeErrors))
+	}
+
+	byStore := make(map[string]StoreError, len(storeErrors))
+	for _, storeError := range storeErrors {
+		byStore[storeError.Store] = storeError
+	}
+
+	arcane := byStore["Arcane Sanctum"]
+	if arcane.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503 for Arcane Sanctum, got %d", arcane.StatusCode)
+	}
+	if !strings.Contains(arcane.Error, "503 Service Unavailable") {
+		t.Fatalf("expected enriched error message, got %q", arcane.Error)
+	}
+
+	shopify := byStore["Shopify Store"]
+	if shopify.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("expected status 429 for Shopify Store, got %d", shopify.StatusCode)
+	}
+}
+
 func TestIsBinderposStore(t *testing.T) {
 	tests := map[string]bool{
 		cardscitadel.StoreName: true,
@@ -472,18 +504,18 @@ func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 
 func TestFormatDiscordErrorSummary(t *testing.T) {
 	got := formatDiscordErrorSummary("Uro, Titan of Nature's Wrath", []string{
-		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 3 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
-		"Error encountered searching [Arcane Sanctum] for [Uro, Titan of Nature's Wrath]: attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
+		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 3 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
+		"Error encountered searching [Arcane Sanctum] for [Uro, Titan of Nature's Wrath]: attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
 		"Recovered from panic in shop [ShopPanic]: panic value",
 	})
 
 	if !strings.Contains(got, "Encountered 3 error(s) while searching [Uro, Titan of Nature's Wrath]:") {
 		t.Fatalf("expected summary header, got: %s", got)
 	}
-	if !strings.Contains(got, "- [Arcane Sanctum] attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)") {
+	if !strings.Contains(got, "- [Arcane Sanctum] attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)") {
 		t.Fatalf("expected Arcane Sanctum concise line, got: %s", got)
 	}
-	if !strings.Contains(got, "- [Tefuda] attempt 3 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)") {
+	if !strings.Contains(got, "- [Tefuda] attempt 3 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)") {
 		t.Fatalf("expected Tefuda concise line, got: %s", got)
 	}
 	if !strings.Contains(got, "- Recovered from panic in shop [ShopPanic]: panic value") {

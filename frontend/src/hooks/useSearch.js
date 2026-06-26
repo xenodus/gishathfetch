@@ -12,6 +12,13 @@ const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters t
 const NO_STORES_WARNING =
   "No stores selected — searching all stores. Select specific stores to search faster.";
 
+function formatErrorWithStatusCode(message, statusCode) {
+  if (!statusCode) {
+    return message;
+  }
+  return `Error (${statusCode}): ${message}`;
+}
+
 // Search configuration constants
 const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const SEARCH_PROGRESS_INTERVAL_MS = 1000;
@@ -164,23 +171,31 @@ export default function useSearch() {
       fetch(searchUrl, { signal: searchAbortController.signal })
         .then(async (res) => {
           if (!res.ok) {
-            let validationMessage = null;
-            if (res.status === 400) {
-              try {
-                const errorBody = await res.json();
-                if (typeof errorBody?.error === "string" && errorBody.error) {
-                  validationMessage = errorBody.error;
-                }
-              } catch {
-                // Ignore malformed validation responses.
-              }
+            let errorBody = null;
+            try {
+              errorBody = await res.json();
+            } catch {
+              // Ignore malformed error responses.
             }
+
+            const validationMessage =
+              typeof errorBody?.error === "string" && errorBody.error
+                ? errorBody.error
+                : null;
+            const statusCode = errorBody?.statusCode || res.status;
 
             if (validationMessage) {
-              throw new Error(`Validation error: ${validationMessage}`);
+              throw new Error(
+                formatErrorWithStatusCode(validationMessage, statusCode),
+              );
             }
 
-            throw new Error(`Server error: ${res.status} ${res.statusText}`);
+            throw new Error(
+              formatErrorWithStatusCode(
+                res.statusText || "The server returned an error.",
+                statusCode,
+              ),
+            );
           }
           return res.json();
         })
@@ -225,8 +240,8 @@ export default function useSearch() {
             setSearchError(
               "Unable to connect to the server. Please check your internet connection and try again.",
             );
-          } else if (err.message.startsWith("Validation error: ")) {
-            setSearchError(err.message.slice("Validation error: ".length));
+          } else if (err.message.startsWith("Error (")) {
+            setSearchError(err.message);
           } else if (err.message.includes("Server error")) {
             setSearchError(
               "The server is experiencing issues. Please try again later.",
