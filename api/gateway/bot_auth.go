@@ -4,11 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,6 +15,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/webbotauth"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/lestrrat-go/htmsig"
@@ -140,21 +137,19 @@ func loadWebBotAuth() {
 		return
 	}
 
-	pemData := strings.TrimSpace(os.Getenv(config.WebBotAuthPrivateKeyEnv))
+	pemData, keyErr := webbotauth.LoadPrivateKeyPEM()
 	signatureAgentURL := strings.TrimSpace(os.Getenv(config.WebBotAuthSignatureAgentEnv))
-	if pemData == "" || signatureAgentURL == "" {
+	if keyErr != nil || signatureAgentURL == "" {
 		log.Printf(
-			"%s is true but %s and/or %s are unset; Web Bot Auth disabled",
+			"%s is true but signing credentials are not fully configured; Web Bot Auth disabled",
 			config.WebBotAuthEnabledEnv,
-			config.WebBotAuthPrivateKeyEnv,
-			config.WebBotAuthSignatureAgentEnv,
 		)
 		return
 	}
 
-	privateKey, err := parseEd25519PrivateKeyPEM(pemData)
+	privateKey, err := webbotauth.ParseEd25519PrivateKeyPEM(pemData)
 	if err != nil {
-		log.Printf("invalid %s: %v; Web Bot Auth disabled", config.WebBotAuthPrivateKeyEnv, err)
+		log.Printf("invalid Web Bot Auth signing key: %v; Web Bot Auth disabled", err)
 		return
 	}
 
@@ -166,48 +161,11 @@ func loadWebBotAuth() {
 	webBotAuth = webBotAuthState{
 		enabled:           true,
 		privateKey:        privateKey,
-		keyID:             ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey)),
+		keyID:             webbotauth.Ed25519JWKThumbprint(privateKey.Public().(ed25519.PublicKey)),
 		signatureAgentURL: signatureAgentURL,
 		userAgent:         userAgent,
 		ttl:               config.WebBotAuthTTL(),
 	}
-}
-
-func parseEd25519PrivateKeyPEM(raw string) (ed25519.PrivateKey, error) {
-	pemData := raw
-	if !strings.Contains(raw, "BEGIN") {
-		decoded, err := base64.StdEncoding.DecodeString(raw)
-		if err != nil {
-			return nil, fmt.Errorf("decode base64 private key: %w", err)
-		}
-		pemData = string(decoded)
-	}
-
-	block, _ := pem.Decode([]byte(pemData))
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-
-	keyIface, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("parse PKCS8 private key: %w", err)
-	}
-	privateKey, ok := keyIface.(ed25519.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("expected ed25519 private key, got %T", keyIface)
-	}
-	return privateKey, nil
-}
-
-func ed25519JWKThumbprint(pub ed25519.PublicKey) string {
-	jwk := map[string]string{
-		"crv": "Ed25519",
-		"kty": "OKP",
-		"x":   base64.RawURLEncoding.EncodeToString(pub),
-	}
-	payload, _ := json.Marshal(jwk)
-	sum := sha256.Sum256(payload)
-	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
 func newWebBotAuthNonce() (string, error) {
