@@ -3,8 +3,6 @@ package binderpos
 import (
 	"encoding/json"
 	"strings"
-
-	"mtg-price-checker-sg/gateway/shopifysuggest"
 )
 
 // shouldIncludeBinderposProduct reports whether a scraped BinderPOS product
@@ -17,7 +15,20 @@ func shouldIncludeBinderposProduct(productType, productTagsJSON string) bool {
 	if productType == "" {
 		return true
 	}
-	return shopifysuggest.IsMagicProduct(productType, "", parseProductTags(productTagsJSON))
+	return isMagicProductType(productType, parseProductTags(productTagsJSON))
+}
+
+func isMagicProductType(productType string, tags []string) bool {
+	pt := strings.ToLower(productType)
+	if strings.Contains(pt, "mtg") || strings.Contains(pt, "magic the gathering") {
+		return true
+	}
+	for _, tag := range tags {
+		if strings.EqualFold(strings.TrimSpace(tag), "MTG") {
+			return true
+		}
+	}
+	return false
 }
 
 func parseProductTags(productTagsJSON string) []string {

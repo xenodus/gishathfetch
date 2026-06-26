@@ -17,6 +17,14 @@ func TestShouldIncludeBinderposProduct(t *testing.T) {
 	require.True(t, shouldIncludeBinderposProduct("", ""))
 }
 
+func TestIsMagicProductType(t *testing.T) {
+	require.True(t, isMagicProductType("MTG Single Cards", []string{"Common"}))
+	require.True(t, isMagicProductType("Magic the Gathering Booster Box", nil))
+	require.True(t, isMagicProductType("", []string{"New Arrival", "MTG"}))
+	require.False(t, isMagicProductType("Pokemon Single", nil))
+	require.False(t, isMagicProductType("Grand Archive Single", nil))
+}
+
 func TestParseProductTags(t *testing.T) {
 	require.Equal(t, []string{"MTG", "Rare"}, parseProductTags(`["MTG","Rare"]`))
 	require.Nil(t, parseProductTags(""))
