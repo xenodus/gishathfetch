@@ -37,14 +37,10 @@ export default function useResultFilters(results, searchQuery) {
     }
 
     filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "price-desc":
-          return b.price - a.price;
-        case "store-asc":
-          return a.src.localeCompare(b.src) || a.price - b.price;
-        default:
-          return a.price - b.price;
+      if (sortBy === "price-desc") {
+        return b.price - a.price;
       }
+      return a.price - b.price;
     });
 
     return filtered;
