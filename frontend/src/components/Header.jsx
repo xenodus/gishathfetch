@@ -1,5 +1,5 @@
 import { Moon, Sun } from "react-feather";
-import { LGS_OPTIONS, SITE_TAGLINE } from "../constants";
+import { SITE_TAGLINE } from "../constants";
 
 const Header = ({ theme, onToggleTheme }) => {
   const isDarkMode = theme === "dark";
@@ -38,10 +38,6 @@ const Header = ({ theme, onToggleTheme }) => {
         <h1 className="fw-medium fs-4">
           - Gishath Fetch -<br />
           {SITE_TAGLINE}
-          <br />
-          <span className="fs-6 fw-normal">
-            Search {LGS_OPTIONS.length} LGS and online shops at once
-          </span>
         </h1>
       </div>
     </div>
