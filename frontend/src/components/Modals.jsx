@@ -138,8 +138,8 @@ const Modals = ({
             <div className="q-answer">
               <p>
                 Gishath Fetch queries the local game stores (LGS) you have
-                selected, hitting their sites concurrently in the background.
-                It filters the combined results for higher accuracy and returns
+                selected, hitting their sites concurrently in the background. It
+                filters the combined results for higher accuracy and returns
                 them sorted by price.
               </p>
             </div>
