@@ -85,5 +85,21 @@ lambda-update-staging:
 aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
 
+ck-dynamodb-create:
+	export AWS_PAGER="" && aws dynamodb create-table \
+		--table-name gishathfetch-ck-prices \
+		--attribute-definitions AttributeName=nameKey,AttributeType=S \
+		--key-schema AttributeName=nameKey,KeyType=HASH \
+		--billing-mode PAY_PER_REQUEST \
+		--region ap-southeast-1
+
+ck-dynamodb-create-staging:
+	export AWS_PAGER="" && aws dynamodb create-table \
+		--table-name gishathfetch-ck-prices-staging \
+		--attribute-definitions AttributeName=nameKey,AttributeType=S \
+		--key-schema AttributeName=nameKey,KeyType=HASH \
+		--billing-mode PAY_PER_REQUEST \
+		--region ap-southeast-1
+
 test:
 	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...

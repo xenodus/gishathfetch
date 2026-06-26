@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  fetchCardKingdomLatestPrice,
-  verifyCardName,
-} from "../utils/cardKingdomPrice";
+import { fetchCardKingdomLatestPrice } from "../utils/cardKingdomPrice";
 
 const useCardKingdomPrice = ({
   searchQuery,
@@ -28,16 +25,8 @@ const useCardKingdomPrice = ({
       setCardKingdomPrice(null);
 
       try {
-        const verifiedName = await verifyCardName(
-          searchQuery,
-          abortController.signal,
-        );
-        if (!verifiedName || cancelled) {
-          return;
-        }
-
         const price = await fetchCardKingdomLatestPrice(
-          verifiedName,
+          searchQuery,
           abortController.signal,
         );
         if (!cancelled) {

@@ -41,6 +41,10 @@ const (
 	WebBotAuthUserAgentEnv = "WEB_BOT_AUTH_USER_AGENT"
 	// WebBotAuthTTLEnv optionally overrides signature validity in seconds (default 24h).
 	WebBotAuthTTLEnv = "WEB_BOT_AUTH_TTL_SECONDS"
+	// CKDynamoDBTableEnv is the DynamoDB table storing cheapest Card Kingdom prices by card name.
+	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
+	// AWSRegion is the AWS region used for DynamoDB and other managed services.
+	AWSRegion = "ap-southeast-1"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.

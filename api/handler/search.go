@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"slices"
 	"strings"
 
 	"mtg-price-checker-sg/controller"
@@ -40,8 +39,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	origin := request.Headers["origin"]
 
 	if request.HTTPMethod == "OPTIONS" {
-		apiRes.StatusCode = http.StatusNoContent
-		return lambdaApiResponse(apiRes, webRes, origin)
+		return optionsResponse(origin)
 	}
 
 	searchString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["s"]))
@@ -59,7 +57,6 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	if searchString == "" || len(searchString) < config.MinSearchStringLength {
-		apiRes.StatusCode = http.StatusBadRequest
 		return errorResponse(
 			apiRes,
 			origin,
@@ -67,18 +64,19 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 				"enter at least %d characters to search",
 				config.MinSearchStringLength,
 			),
+			http.StatusBadRequest,
 		)
 	}
 
 	if len(searchString) > config.MaxSearchStringLength {
-		apiRes.StatusCode = http.StatusBadRequest
-		return validationErrorResponse(
+		return errorResponse(
 			apiRes,
 			origin,
 			fmt.Sprintf(
 				"card name is too long (maximum %d characters)",
 				config.MaxSearchStringLength,
 			),
+			http.StatusBadRequest,
 		)
 	}
 
@@ -91,8 +89,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		Lgs:          lgs,
 	})
 	if err != nil {
-		apiRes.StatusCode = http.StatusInternalServerError
-		return errorResponse(apiRes, origin, "err searching for cards")
+		return errorResponse(apiRes, origin, "err searching for cards", http.StatusInternalServerError)
 	}
 
 	apiRes.StatusCode = http.StatusOK
@@ -103,51 +100,11 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		webRes.Errors = storeErrors
 	}
 
-	return lambdaApiResponse(apiRes, webRes, origin)
+	return searchSuccessResponse(apiRes, webRes, origin)
 }
 
-func validationErrorResponse(
-	apiResponse events.APIGatewayProxyResponse,
-	origin string,
-	message string,
-) (events.APIGatewayProxyResponse, error) {
-	return errorResponse(apiResponse, origin, message)
-}
-
-func errorResponse(
-	apiResponse events.APIGatewayProxyResponse,
-	origin string,
-	message string,
-) (events.APIGatewayProxyResponse, error) {
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-
-	if err := encoder.Encode(ErrorResponse{
-		Error:      message,
-		StatusCode: apiResponse.StatusCode,
-	}); err != nil {
-		apiResponse.StatusCode = http.StatusInternalServerError
-		return errorResponse(apiResponse, origin, "err marshalling error response")
-	}
-
-	apiResponse.Body = buf.String()
-	return lambdaApiResponse(apiResponse, WebResponse{}, origin)
-}
-
-func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse, origin string) (events.APIGatewayProxyResponse, error) {
-	// Set CORS headers.
-	// Vary: Origin is required so CDNs/caches don't serve a response cached
-	// for one origin to a different origin when the Allow-Origin is dynamic.
-	if slices.Contains(config.GetAllowedOrigins(), origin) {
-		apiResponse.Headers = map[string]string{
-			"Access-Control-Allow-Origin":  origin,
-			"Access-Control-Allow-Methods": "GET, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type",
-			"Vary":                         "Origin",
-		}
-	}
-
+func searchSuccessResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse, origin string) (events.APIGatewayProxyResponse, error) {
+	applyCORSHeaders(&apiResponse, origin)
 	if apiResponse.StatusCode != http.StatusOK {
 		return apiResponse, nil
 	}
@@ -157,22 +114,9 @@ func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse W
 	encoder.SetEscapeHTML(false)
 
 	if err := encoder.Encode(webResponse); err != nil {
-		apiResponse.StatusCode = http.StatusInternalServerError
-		var buf bytes.Buffer
-		encoder := json.NewEncoder(&buf)
-		encoder.SetEscapeHTML(false)
-		if encodeErr := encoder.Encode(ErrorResponse{
-			Error:      "err marshalling to json result",
-			StatusCode: http.StatusInternalServerError,
-		}); encodeErr != nil {
-			apiResponse.Body = "err marshalling to json result"
-			return apiResponse, nil
-		}
-		apiResponse.Body = buf.String()
-		return apiResponse, nil
+		return errorResponse(apiResponse, origin, "err marshalling to json result", http.StatusInternalServerError)
 	}
 
 	apiResponse.Body = buf.String()
-
 	return apiResponse, nil
 }
