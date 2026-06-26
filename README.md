@@ -117,8 +117,8 @@ Resulting attempt order:
 | Decklist | `decklist-dedicated` → `decklist-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dynamic` → `scrap-dynamic` |
 | Scrape | `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic` |
 
-Stores without a Shopify domain mapping can only be scraped, so the decklist
-portal is skipped entirely: `scrap-dedicated` → `scrap-direct` → `scrap-dynamic`.
+Stores without a Shopify domain mapping, or with `ScrapOnly` set, skip the decklist
+portal and only scrape: `scrap-dedicated` → `scrap-direct` → `scrap-dynamic`.
 
 ### Fallback rules
 

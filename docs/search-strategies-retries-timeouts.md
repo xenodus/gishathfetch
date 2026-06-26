@@ -47,7 +47,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
 | `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **api-direct** → 3) **scrap-dedicated** → 4) **scrap-direct** → 5) **api-dynamic** → 6) **scrap-dynamic** | **10s** per step: `binderposAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same `binderposAttemptTimeout`. |
-| `shopifyDomain` **empty** | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps in `searchWithScrapDedicatedThenDirectThenDynamic`) | **10s** per step (same constant). No API attempts. |
+| `shopifyDomain` **empty** or **`ScrapOnly`** | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps) | **10s** per step (same constant). No API attempts. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|

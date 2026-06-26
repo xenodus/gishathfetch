@@ -79,7 +79,7 @@ var shopRegistry = []shopSpec{
 	{name: gameshaven.StoreName, newLGS: gameshaven.NewLGS, isBinderpos: true},
 	{name: gog.StoreName, newLGS: gog.NewLGS},
 	{name: hideout.StoreName, newLGS: hideout.NewLGS, isBinderpos: true},
-	{name: hideyoshi.StoreName, newLGS: hideyoshi.NewLGS},
+	{name: hideyoshi.StoreName, newLGS: hideyoshi.NewLGS, isBinderpos: true},
 	{name: manapro.StoreName, newLGS: manapro.NewLGS, isBinderpos: true},
 	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
 	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS},
