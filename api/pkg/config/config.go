@@ -42,6 +42,8 @@ const (
 	WebBotAuthTTLEnv = "WEB_BOT_AUTH_TTL_SECONDS"
 	// CKDynamoDBTableEnv is the DynamoDB table storing cheapest Card Kingdom prices by card name.
 	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
+	// CKRefreshAPIKeyEnv protects the scheduled CK pricelist refresh endpoint.
+	CKRefreshAPIKeyEnv = "CK_REFRESH_API_KEY"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
 )

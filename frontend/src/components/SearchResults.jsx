@@ -52,7 +52,6 @@ const SearchResults = ({
   removeFromCartByCard,
   onSearchStore,
   cardKingdomPrice,
-  isCardKingdomLoading,
   baseUrl,
 }) => {
   const {
@@ -113,10 +112,7 @@ const SearchResults = ({
           </div>
         ) : results.length === 0 && searchStoreErrors.length === 0 ? (
           <>
-            <CardKingdomPrice
-              price={cardKingdomPrice}
-              isLoading={isCardKingdomLoading}
-            />
+            <CardKingdomPrice price={cardKingdomPrice} />
             <EmptySearchState />
           </>
         ) : (
@@ -128,10 +124,7 @@ const SearchResults = ({
               />
             )}
 
-            <CardKingdomPrice
-              price={cardKingdomPrice}
-              isLoading={isCardKingdomLoading}
-            />
+            <CardKingdomPrice price={cardKingdomPrice} />
 
             {results.length === 0 ? (
               <EmptySearchState />

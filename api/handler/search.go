@@ -5,20 +5,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	"mtg-price-checker-sg/controller"
+	"mtg-price-checker-sg/controller/ckprice"
+	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/store/ckprices"
 
 	"github.com/aws/aws-lambda-go/events"
 )
 
 type WebResponse struct {
-	Data   []controller.Card       `json:"data"`
-	Errors []controller.StoreError `json:"errors"`
+	Data             []controller.Card       `json:"data"`
+	Errors           []controller.StoreError `json:"errors"`
+	CardKingdomPrice *cardkingdom.Listing    `json:"cardKingdomPrice,omitempty"`
 }
 
 type ErrorResponse struct {
@@ -27,6 +33,14 @@ type ErrorResponse struct {
 }
 
 var searchFunc = controller.Search
+
+var lookupCKPriceFunc = func(ctx context.Context, query string) (*cardkingdom.Listing, error) {
+	store, err := ckprices.NewDynamoDBStore(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ckprice.GetLatestPrice(ctx, store, query)
+}
 
 func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var apiRes events.APIGatewayProxyResponse
@@ -84,11 +98,37 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		lgs = strings.Split(lgsString, ",")
 	}
 
-	inStockCards, storeErrors, err := searchFunc(ctx, controller.SearchInput{
-		SearchString: searchString,
-		Lgs:          lgs,
-	})
-	if err != nil {
+	var (
+		inStockCards []controller.Card
+		storeErrors  []controller.StoreError
+		ckPrice      *cardkingdom.Listing
+		searchErr    error
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		inStockCards, storeErrors, searchErr = searchFunc(ctx, controller.SearchInput{
+			SearchString: searchString,
+			Lgs:          lgs,
+		})
+	}()
+
+	go func() {
+		defer wg.Done()
+		price, err := lookupCKPriceFunc(ctx, searchString)
+		if err != nil {
+			log.Printf("ck price lookup for [%s]: %v", searchString, err)
+			return
+		}
+		ckPrice = price
+	}()
+
+	wg.Wait()
+
+	if searchErr != nil {
 		return errorResponse(apiRes, origin, "err searching for cards", http.StatusInternalServerError)
 	}
 
@@ -99,6 +139,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	} else {
 		webRes.Errors = storeErrors
 	}
+	webRes.CardKingdomPrice = ckPrice
 
 	return searchSuccessResponse(apiRes, webRes, origin)
 }

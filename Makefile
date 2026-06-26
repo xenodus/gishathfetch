@@ -62,5 +62,11 @@ ck-dynamodb-create:
 		--billing-mode PAY_PER_REQUEST \
 		--region ap-southeast-1
 
+# Requires CK_REFRESH_API_KEY in the environment.
+ck-price-refresh:
+	@test -n "$$CK_REFRESH_API_KEY" || (echo "Set CK_REFRESH_API_KEY" && exit 1)
+	curl -fsS -X POST "https://api.gishathfetch.com/ck-price/refresh" \
+		-H "x-api-key: $$CK_REFRESH_API_KEY"
+
 test:
 	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"mtg-price-checker-sg/controller"
+	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -84,9 +85,16 @@ func Test_Search_Success(t *testing.T) {
 		t.Run(s, func(t *testing.T) {
 			// Setup Mock
 			originalSearchFunc := searchFunc
-			defer func() { searchFunc = originalSearchFunc }()
+			originalLookupCKPriceFunc := lookupCKPriceFunc
+			defer func() {
+				searchFunc = originalSearchFunc
+				lookupCKPriceFunc = originalLookupCKPriceFunc
+			}()
 			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
 				return tc.mockSearchResponse, tc.mockStoreErrors, tc.mockSearchErr
+			}
+			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
+				return nil, nil
 			}
 
 			err := os.Setenv("ENV", config.EnvProd)
@@ -109,9 +117,16 @@ func Test_Search_Success(t *testing.T) {
 func Test_Search_CORS(t *testing.T) {
 	// Setup Mock
 	originalSearchFunc := searchFunc
-	defer func() { searchFunc = originalSearchFunc }()
+	originalLookupCKPriceFunc := lookupCKPriceFunc
+	defer func() {
+		searchFunc = originalSearchFunc
+		lookupCKPriceFunc = originalLookupCKPriceFunc
+	}()
 	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
 		return []controller.Card{}, []controller.StoreError{}, nil
+	}
+	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
+		return nil, nil
 	}
 
 	err := os.Setenv("ENV", config.EnvProd)
@@ -200,9 +215,16 @@ func Test_Search_Err(t *testing.T) {
 		t.Run(s, func(t *testing.T) {
 			// Setup Mock
 			originalSearchFunc := searchFunc
-			defer func() { searchFunc = originalSearchFunc }()
+			originalLookupCKPriceFunc := lookupCKPriceFunc
+			defer func() {
+				searchFunc = originalSearchFunc
+				lookupCKPriceFunc = originalLookupCKPriceFunc
+			}()
 			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
 				return tc.mockSearchResponse, nil, tc.mockSearchErr
+			}
+			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
+				return nil, nil
 			}
 
 			err := os.Setenv("ENV", config.EnvProd)

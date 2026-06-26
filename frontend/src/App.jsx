@@ -12,7 +12,6 @@ const Modals = lazy(() => import("./components/Modals"));
 
 // --- Constants ---
 import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
-import useCardKingdomPrice from "./hooks/useCardKingdomPrice";
 // --- Hooks ---
 import useCart from "./hooks/useCart";
 import useSearch from "./hooks/useSearch";
@@ -42,6 +41,7 @@ export default function App() {
     searchStoreErrors,
     onDismissStoreErrors,
     storesWarning,
+    cardKingdomPrice,
     suggestions,
     showSuggestions,
     setShowSuggestions,
@@ -57,13 +57,6 @@ export default function App() {
     cancelSearch,
     retrySearch,
   } = useSearch();
-
-  const { cardKingdomPrice, isCardKingdomLoading } = useCardKingdomPrice({
-    searchQuery,
-    hasSearched,
-    isSearching,
-    searchError,
-  });
 
   const [modalType, setModalType] = useState(null);
   const [theme, setTheme] = useState(() => {
@@ -181,7 +174,6 @@ export default function App() {
         removeFromCartByCard={removeFromCartByCard}
         onSearchStore={handleCardSearch}
         cardKingdomPrice={cardKingdomPrice}
-        isCardKingdomLoading={isCardKingdomLoading}
         baseUrl={BASE_URL}
       />
 
