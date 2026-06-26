@@ -25,12 +25,15 @@ frontend-dev:
 frontend-build: generate-signature-directory
 	cd frontend && npm install && npm run build
 
+SIGNATURE_DIRECTORY_BIN=.cache/signature-directory
+
 generate-signature-directory:
-	@if [ -n "$$WEB_BOT_AUTH_PRIVATE_KEY" ]; then \
-		mkdir -p frontend/public/.well-known && \
-		cd api && go run -mod=vendor ./cmd/signature-directory -out ../frontend/public/.well-known/http-message-signatures-directory; \
+	@if [ -n "$$WEB_BOT_AUTH_PRIVATE_KEY" ] || { [ -n "$$WEB_BOT_AUTH_PRIVATE_KEY_FILE" ] && [ -s "$$WEB_BOT_AUTH_PRIVATE_KEY_FILE" ]; }; then \
+		mkdir -p frontend/public/.well-known .cache && \
+		cd api && go build -mod=vendor -o ../$(SIGNATURE_DIRECTORY_BIN) ./cmd/signature-directory && \
+		../$(SIGNATURE_DIRECTORY_BIN) -out ../frontend/public/.well-known/http-message-signatures-directory; \
 	else \
-		echo "Skipping signature directory generation: WEB_BOT_AUTH_PRIVATE_KEY not set"; \
+		echo "Skipping signature directory generation: Web Bot Auth private key not configured"; \
 	fi
 
 frontend-update: frontend-build

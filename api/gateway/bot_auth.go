@@ -137,21 +137,19 @@ func loadWebBotAuth() {
 		return
 	}
 
-	pemData := strings.TrimSpace(os.Getenv(config.WebBotAuthPrivateKeyEnv))
+	pemData, keyErr := webbotauth.LoadPrivateKeyPEM()
 	signatureAgentURL := strings.TrimSpace(os.Getenv(config.WebBotAuthSignatureAgentEnv))
-	if pemData == "" || signatureAgentURL == "" {
+	if keyErr != nil || signatureAgentURL == "" {
 		log.Printf(
-			"%s is true but %s and/or %s are unset; Web Bot Auth disabled",
+			"%s is true but signing credentials are not fully configured; Web Bot Auth disabled",
 			config.WebBotAuthEnabledEnv,
-			config.WebBotAuthPrivateKeyEnv,
-			config.WebBotAuthSignatureAgentEnv,
 		)
 		return
 	}
 
 	privateKey, err := webbotauth.ParseEd25519PrivateKeyPEM(pemData)
 	if err != nil {
-		log.Printf("invalid %s: %v; Web Bot Auth disabled", config.WebBotAuthPrivateKeyEnv, err)
+		log.Printf("invalid Web Bot Auth signing key: %v; Web Bot Auth disabled", err)
 		return
 	}
 

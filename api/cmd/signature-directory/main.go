@@ -6,9 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"mtg-price-checker-sg/pkg/config"
 	"mtg-price-checker-sg/pkg/webbotauth"
 )
 
@@ -16,14 +14,14 @@ func main() {
 	outPath := flag.String("out", "frontend/public/.well-known/http-message-signatures-directory", "output file path")
 	flag.Parse()
 
-	pemData := strings.TrimSpace(os.Getenv(config.WebBotAuthPrivateKeyEnv))
-	if pemData == "" {
-		log.Fatalf("%s is required", config.WebBotAuthPrivateKeyEnv)
+	pemData, err := webbotauth.LoadPrivateKeyPEM()
+	if err != nil {
+		log.Fatalf("load signing key: %v", err)
 	}
 
 	privateKey, err := webbotauth.ParseEd25519PrivateKeyPEM(pemData)
 	if err != nil {
-		log.Fatalf("parse %s: %v", config.WebBotAuthPrivateKeyEnv, err)
+		log.Fatalf("parse signing key: %v", err)
 	}
 
 	body, err := webbotauth.DirectoryJSON(privateKey)

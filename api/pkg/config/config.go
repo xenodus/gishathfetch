@@ -38,6 +38,9 @@ const (
 	WebBotAuthEnabledEnv = "WEB_BOT_AUTH_ENABLED"
 	// WebBotAuthPrivateKeyEnv holds a PEM (or base64-encoded PEM) Ed25519 PKCS8 private key.
 	WebBotAuthPrivateKeyEnv = "WEB_BOT_AUTH_PRIVATE_KEY"
+	// WebBotAuthPrivateKeyFileEnv holds a filesystem path to PEM key material.
+	// Prefer this in CI so the raw key is not kept in process environment variables.
+	WebBotAuthPrivateKeyFileEnv = "WEB_BOT_AUTH_PRIVATE_KEY_FILE"
 	// WebBotAuthSignatureAgentEnv is the Signature-Agent directory URL published by this bot.
 	WebBotAuthSignatureAgentEnv = "WEB_BOT_AUTH_SIGNATURE_AGENT"
 	// WebBotAuthUserAgentEnv optionally overrides the stable bot User-Agent when signing is enabled.

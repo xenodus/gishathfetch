@@ -2,3 +2,4 @@
 .env
 mtg-price-checker-sg
 .DS_Store
+.cache/

@@ -82,6 +82,7 @@ func TestMain(m *testing.M) {
 	for _, key := range []string{
 		config.WebBotAuthEnabledEnv,
 		config.WebBotAuthPrivateKeyEnv,
+		config.WebBotAuthPrivateKeyFileEnv,
 		config.WebBotAuthSignatureAgentEnv,
 		config.WebBotAuthUserAgentEnv,
 		config.WebBotAuthTTLEnv,
