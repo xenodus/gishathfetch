@@ -3,6 +3,7 @@ package ckprice
 import (
 	"context"
 	"testing"
+	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 
@@ -32,7 +33,11 @@ func TestGetLatestPrice_UsesVerifiedName(t *testing.T) {
 	}
 
 	store := &mockStore{
-		listing: &cardkingdom.Listing{CardName: "Lightning Bolt", PriceUsd: 1.49},
+		listing: &cardkingdom.Listing{
+			CardName:  "Lightning Bolt",
+			PriceUsd:  1.49,
+			UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+		},
 	}
 
 	listing, err := GetLatestPrice(context.Background(), store, "lightning bolt")
@@ -52,4 +57,37 @@ func TestGetLatestPrice_InvalidCard(t *testing.T) {
 	listing, err := GetLatestPrice(context.Background(), &mockStore{}, "asdfasdf")
 	require.NoError(t, err)
 	require.Nil(t, listing)
+}
+
+func TestGetLatestPrice_StaleListing(t *testing.T) {
+	originalVerify := verifyCardNameFunc
+	defer func() { verifyCardNameFunc = originalVerify }()
+
+	verifyCardNameFunc = func(_ context.Context, _ string) (string, error) {
+		return "Lightning Bolt", nil
+	}
+
+	store := &mockStore{
+		listing: &cardkingdom.Listing{
+			CardName:  "Lightning Bolt",
+			PriceUsd:  1.49,
+			UpdatedAt: time.Now().UTC().Add(-25 * time.Hour).Format(time.RFC3339),
+		},
+	}
+
+	listing, err := GetLatestPrice(context.Background(), store, "Lightning Bolt")
+	require.NoError(t, err)
+	require.Nil(t, listing)
+}
+
+func TestListingIsFresh(t *testing.T) {
+	now := time.Date(2026, 6, 26, 12, 0, 0, 0, time.UTC)
+
+	require.True(t, listingIsFresh(&cardkingdom.Listing{
+		UpdatedAt: "2026-06-26T00:00:00Z",
+	}, now))
+	require.False(t, listingIsFresh(&cardkingdom.Listing{
+		UpdatedAt: "2026-06-25T11:59:59Z",
+	}, now))
+	require.False(t, listingIsFresh(&cardkingdom.Listing{}, now))
 }

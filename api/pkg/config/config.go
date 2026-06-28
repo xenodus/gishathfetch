@@ -44,6 +44,8 @@ const (
 	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
 	// CKRefreshAPIKeyEnv protects the scheduled CK pricelist refresh endpoint.
 	CKRefreshAPIKeyEnv = "CK_REFRESH_API_KEY"
+	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
+	CKPriceMaxAge = 24 * time.Hour
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
 )
