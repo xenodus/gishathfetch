@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import useResultFilters from "../hooks/useResultFilters";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
+import CardKingdomPrice from "./CardKingdomPrice";
 import ResultFilters from "./ResultFilters";
 import SkeletonCard from "./SkeletonCard";
 import StoreErrorsBanner from "./StoreErrorsBanner";
@@ -50,6 +51,7 @@ const SearchResults = ({
   removeFromCart,
   removeFromCartByCard,
   onSearchStore,
+  cardKingdomPrice,
   baseUrl,
 }) => {
   const {
@@ -109,7 +111,10 @@ const SearchResults = ({
             )}
           </div>
         ) : results.length === 0 && searchStoreErrors.length === 0 ? (
-          <EmptySearchState />
+          <>
+            <CardKingdomPrice price={cardKingdomPrice} />
+            <EmptySearchState />
+          </>
         ) : (
           <>
             {searchStoreErrors.length > 0 && (
@@ -118,6 +123,8 @@ const SearchResults = ({
                 onDismiss={onDismissStoreErrors}
               />
             )}
+
+            <CardKingdomPrice price={cardKingdomPrice} />
 
             {results.length === 0 ? (
               <EmptySearchState />

@@ -16,9 +16,8 @@ const (
 	// bot paragraph spam.
 	MaxSearchStringLength = 150
 	MaxPagesToSearch      = 3
-	EnvProd          = "prod"
-	EnvStaging       = "staging"
-	EnvLocal         = "local"
+	EnvProd  = "prod"
+	EnvLocal = "local"
 	UseProxy         = true
 	PerSiteTimeout   = 20 * time.Second
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
@@ -41,6 +40,16 @@ const (
 	WebBotAuthUserAgentEnv = "WEB_BOT_AUTH_USER_AGENT"
 	// WebBotAuthTTLEnv optionally overrides signature validity in seconds (default 24h).
 	WebBotAuthTTLEnv = "WEB_BOT_AUTH_TTL_SECONDS"
+	// CKDynamoDBTableEnv is the DynamoDB table storing cheapest Card Kingdom prices by card name.
+	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
+	// CKRefreshAPIKeyEnv protects the scheduled CK pricelist refresh endpoint.
+	CKRefreshAPIKeyEnv = "CK_REFRESH_API_KEY"
+	// CKPriceLookupEnabledEnv toggles Card Kingdom price lookup on search responses.
+	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
+	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
+	CKPriceMaxAge = 24 * time.Hour
+	// AWSRegion is the AWS region used for DynamoDB and other managed services.
+	AWSRegion = "ap-southeast-1"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
@@ -75,16 +84,24 @@ func WebBotAuthTTL() time.Duration {
 	return time.Duration(seconds) * time.Second
 }
 
-func GetAllowedOrigins() []string {
-	if os.Getenv("ENV") == EnvProd {
-		return []string{
-			"https://gishathfetch.com",
-		}
+// CKPriceLookupEnabled reports whether search responses should include Card Kingdom prices.
+func CKPriceLookupEnabled() bool {
+	rawValue := strings.TrimSpace(os.Getenv(CKPriceLookupEnabledEnv))
+	if rawValue == "" {
+		return false
 	}
 
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return false
+	}
+
+	return enabled
+}
+
+func GetAllowedOrigins() []string {
 	return []string{
 		"https://gishathfetch.com",
-		"https://staging.gishathfetch.com",
 		"http://localhost:5173",
 		"http://localhost:63342", // JetBrains IDE built-in HTTP server (local dev only)
 	}

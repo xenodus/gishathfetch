@@ -5,21 +5,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"slices"
 	"strings"
+	"sync"
 
 	"mtg-price-checker-sg/controller"
+	"mtg-price-checker-sg/controller/ckprice"
+	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/store/ckprices"
 
 	"github.com/aws/aws-lambda-go/events"
 )
 
 type WebResponse struct {
-	Data   []controller.Card       `json:"data"`
-	Errors []controller.StoreError `json:"errors"`
+	Data             []controller.Card       `json:"data"`
+	Errors           []controller.StoreError `json:"errors"`
+	CardKingdomPrice *cardkingdom.Listing    `json:"cardKingdomPrice,omitempty"`
 }
 
 type ErrorResponse struct {
@@ -28,6 +33,14 @@ type ErrorResponse struct {
 }
 
 var searchFunc = controller.Search
+
+var lookupCKPriceFunc = func(ctx context.Context, query string) (*cardkingdom.Listing, error) {
+	store, err := ckprices.NewDynamoDBStore(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return ckprice.GetLatestPrice(ctx, store, query)
+}
 
 func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var apiRes events.APIGatewayProxyResponse
@@ -40,8 +53,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	origin := request.Headers["origin"]
 
 	if request.HTTPMethod == "OPTIONS" {
-		apiRes.StatusCode = http.StatusNoContent
-		return lambdaApiResponse(apiRes, webRes, origin)
+		return optionsResponse(origin)
 	}
 
 	searchString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["s"]))
@@ -53,13 +65,12 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		lgsString = ""
 	}
 
-	if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
+	if os.Getenv("ENV") != config.EnvProd {
 		searchString = "Opt"
 		lgsString, _ = url.QueryUnescape("Flagship%20Games%2CGames%20Haven%2CGrey%20Ogre%20Games%2CHideout%2CMana%20Pro%2CMox%20%26%20Lotus%2COneMtg%2CSanctuary%20Gaming")
 	}
 
 	if searchString == "" || len(searchString) < config.MinSearchStringLength {
-		apiRes.StatusCode = http.StatusBadRequest
 		return errorResponse(
 			apiRes,
 			origin,
@@ -67,18 +78,19 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 				"enter at least %d characters to search",
 				config.MinSearchStringLength,
 			),
+			http.StatusBadRequest,
 		)
 	}
 
 	if len(searchString) > config.MaxSearchStringLength {
-		apiRes.StatusCode = http.StatusBadRequest
-		return validationErrorResponse(
+		return errorResponse(
 			apiRes,
 			origin,
 			fmt.Sprintf(
 				"card name is too long (maximum %d characters)",
 				config.MaxSearchStringLength,
 			),
+			http.StatusBadRequest,
 		)
 	}
 
@@ -86,13 +98,41 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		lgs = strings.Split(lgsString, ",")
 	}
 
-	inStockCards, storeErrors, err := searchFunc(ctx, controller.SearchInput{
-		SearchString: searchString,
-		Lgs:          lgs,
-	})
-	if err != nil {
-		apiRes.StatusCode = http.StatusInternalServerError
-		return errorResponse(apiRes, origin, "err searching for cards")
+	var (
+		inStockCards []controller.Card
+		storeErrors  []controller.StoreError
+		ckPrice      *cardkingdom.Listing
+		searchErr    error
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		inStockCards, storeErrors, searchErr = searchFunc(ctx, controller.SearchInput{
+			SearchString: searchString,
+			Lgs:          lgs,
+		})
+	}()
+
+	if config.CKPriceLookupEnabled() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			price, err := lookupCKPriceFunc(ctx, searchString)
+			if err != nil {
+				log.Printf("ck price lookup for [%s]: %v", searchString, err)
+				return
+			}
+			ckPrice = price
+		}()
+	}
+
+	wg.Wait()
+
+	if searchErr != nil {
+		return errorResponse(apiRes, origin, "err searching for cards", http.StatusInternalServerError)
 	}
 
 	apiRes.StatusCode = http.StatusOK
@@ -102,52 +142,13 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	} else {
 		webRes.Errors = storeErrors
 	}
+	webRes.CardKingdomPrice = ckPrice
 
-	return lambdaApiResponse(apiRes, webRes, origin)
+	return searchSuccessResponse(apiRes, webRes, origin)
 }
 
-func validationErrorResponse(
-	apiResponse events.APIGatewayProxyResponse,
-	origin string,
-	message string,
-) (events.APIGatewayProxyResponse, error) {
-	return errorResponse(apiResponse, origin, message)
-}
-
-func errorResponse(
-	apiResponse events.APIGatewayProxyResponse,
-	origin string,
-	message string,
-) (events.APIGatewayProxyResponse, error) {
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-
-	if err := encoder.Encode(ErrorResponse{
-		Error:      message,
-		StatusCode: apiResponse.StatusCode,
-	}); err != nil {
-		apiResponse.StatusCode = http.StatusInternalServerError
-		return errorResponse(apiResponse, origin, "err marshalling error response")
-	}
-
-	apiResponse.Body = buf.String()
-	return lambdaApiResponse(apiResponse, WebResponse{}, origin)
-}
-
-func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse, origin string) (events.APIGatewayProxyResponse, error) {
-	// Set CORS headers.
-	// Vary: Origin is required so CDNs/caches don't serve a response cached
-	// for one origin to a different origin when the Allow-Origin is dynamic.
-	if slices.Contains(config.GetAllowedOrigins(), origin) {
-		apiResponse.Headers = map[string]string{
-			"Access-Control-Allow-Origin":  origin,
-			"Access-Control-Allow-Methods": "GET, OPTIONS",
-			"Access-Control-Allow-Headers": "Content-Type",
-			"Vary":                         "Origin",
-		}
-	}
-
+func searchSuccessResponse(apiResponse events.APIGatewayProxyResponse, webResponse WebResponse, origin string) (events.APIGatewayProxyResponse, error) {
+	applyCORSHeaders(&apiResponse, origin)
 	if apiResponse.StatusCode != http.StatusOK {
 		return apiResponse, nil
 	}
@@ -157,22 +158,9 @@ func lambdaApiResponse(apiResponse events.APIGatewayProxyResponse, webResponse W
 	encoder.SetEscapeHTML(false)
 
 	if err := encoder.Encode(webResponse); err != nil {
-		apiResponse.StatusCode = http.StatusInternalServerError
-		var buf bytes.Buffer
-		encoder := json.NewEncoder(&buf)
-		encoder.SetEscapeHTML(false)
-		if encodeErr := encoder.Encode(ErrorResponse{
-			Error:      "err marshalling to json result",
-			StatusCode: http.StatusInternalServerError,
-		}); encodeErr != nil {
-			apiResponse.Body = "err marshalling to json result"
-			return apiResponse, nil
-		}
-		apiResponse.Body = buf.String()
-		return apiResponse, nil
+		return errorResponse(apiResponse, origin, "err marshalling to json result", http.StatusInternalServerError)
 	}
 
 	apiResponse.Body = buf.String()
-
 	return apiResponse, nil
 }

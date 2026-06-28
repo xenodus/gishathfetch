@@ -18,15 +18,15 @@ func init() {
 	// load .env file
 	err := godotenv.Load()
 	if err != nil {
-		if os.Getenv("ENV") != config.EnvProd && os.Getenv("ENV") != config.EnvStaging {
+		if os.Getenv("ENV") != config.EnvProd {
 			log.Println("No .env file found or error loading .env")
 		}
 	}
 }
 
 func main() {
-	if os.Getenv("ENV") == config.EnvProd || os.Getenv("ENV") == config.EnvStaging {
-		lambda.Start(handler.Search)
+	if os.Getenv("ENV") == config.EnvProd {
+		lambda.Start(handler.Handle)
 	} else {
 		start := time.Now()
 		log.Println(handler.Search(context.Background(), events.APIGatewayProxyRequest{}))

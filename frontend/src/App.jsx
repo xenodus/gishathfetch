@@ -12,7 +12,6 @@ const Modals = lazy(() => import("./components/Modals"));
 
 // --- Constants ---
 import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
-
 // --- Hooks ---
 import useCart from "./hooks/useCart";
 import useSearch from "./hooks/useSearch";
@@ -42,6 +41,7 @@ export default function App() {
     searchStoreErrors,
     onDismissStoreErrors,
     storesWarning,
+    cardKingdomPrice,
     suggestions,
     showSuggestions,
     setShowSuggestions,
@@ -173,6 +173,7 @@ export default function App() {
         removeFromCart={removeFromCart}
         removeFromCartByCard={removeFromCartByCard}
         onSearchStore={handleCardSearch}
+        cardKingdomPrice={cardKingdomPrice}
         baseUrl={BASE_URL}
       />
 

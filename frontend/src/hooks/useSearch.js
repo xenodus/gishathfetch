@@ -49,6 +49,7 @@ export default function useSearch() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
+  const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
   const [selectedStores, setSelectedStores] = useState(() =>
@@ -142,6 +143,7 @@ export default function useSearch() {
       setIsSearching(true);
       setSearchProgress("Searching LGS");
       setSearchResults([]);
+      setCardKingdomPrice(null);
       setHasSearched(true);
       setSearchError(null);
       setSearchStoreErrors([]);
@@ -198,6 +200,7 @@ export default function useSearch() {
           if (result && Object.hasOwn(result, "data")) {
             // Treat null data as empty array
             setSearchResults(result.data || []);
+            setCardKingdomPrice(result.cardKingdomPrice ?? null);
             const storeErrors = Array.isArray(result.errors)
               ? result.errors
               : [];
@@ -561,6 +564,7 @@ export default function useSearch() {
     searchStoreErrors: visibleStoreErrors,
     onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
+    cardKingdomPrice,
     suggestions,
     showSuggestions,
     setShowSuggestions,

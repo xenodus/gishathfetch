@@ -114,7 +114,8 @@ export const LGS_MAP = [
   {
     id: "hideyoshi-map",
     name: "Hideyoshi",
-    address: "504 Jurong West Street 51, #04-211, Hong Kah Court, Singapore 640504",
+    address:
+      "504 Jurong West Street 51, #04-211, Hong Kah Court, Singapore 640504",
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63838.71666448266!2d103.7192003!3d1.3492252!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da0f00180a50f3%3A0xedf0967d08ff8944!2sHideyoshi!5e0!3m2!1sen!2ssg!4v1782000000000!5m2!1sen!2ssg",
     website: "https://hideyoshitcg.com/",
@@ -166,14 +167,6 @@ export const MIN_SEARCH_LENGTH = 3;
 // rejecting bot paragraph spam.
 export const MAX_SEARCH_LENGTH = 150;
 
-export const API_BASE_URL =
-  window.location.hostname === "staging.gishathfetch.com" ||
-  window.location.hostname === "localhost"
-    ? "https://staging-api.gishathfetch.com/"
-    : "https://api.gishathfetch.com/";
+export const API_BASE_URL = "https://api.gishathfetch.com/";
 
-export const BASE_URL =
-  window.location.hostname === "staging.gishathfetch.com" ||
-  window.location.hostname === "localhost"
-    ? "https://staging.gishathfetch.com/"
-    : "https://gishathfetch.com/";
+export const BASE_URL = "https://gishathfetch.com/";
