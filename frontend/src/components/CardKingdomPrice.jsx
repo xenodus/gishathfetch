@@ -15,7 +15,10 @@ const formatDataDate = (value) => {
   }
 
   const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = date.getUTCMonth() + 1;
+  const month = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(date);
   const year = date.getUTCFullYear();
 
   return `${day} ${month} ${year}`;
