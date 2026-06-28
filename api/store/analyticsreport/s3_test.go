@@ -29,7 +29,7 @@ func (m *mockS3Client) PutObject(_ context.Context, input *s3.PutObjectInput, _ 
 	return &s3.PutObjectOutput{}, nil
 }
 
-func TestS3Writer_WriteUploadsLatestAndDatedObjects(t *testing.T) {
+func TestS3Writer_WriteUploadsLatestObject(t *testing.T) {
 	mockClient := &mockS3Client{}
 	writer := &S3Writer{
 		client: mockClient,
@@ -52,17 +52,13 @@ func TestS3Writer_WriteUploadsLatestAndDatedObjects(t *testing.T) {
 		t.Fatalf("write report: %v", err)
 	}
 
-	if len(mockClient.objects) != 2 {
-		t.Fatalf("expected 2 objects, got %d", len(mockClient.objects))
+	if len(mockClient.objects) != 1 {
+		t.Fatalf("expected 1 object, got %d", len(mockClient.objects))
 	}
 
 	latestKey := "analytics/top-search-keywords/latest.json"
-	datedKey := "analytics/top-search-keywords/2026-06-28.json"
 	if _, ok := mockClient.objects[latestKey]; !ok {
 		t.Fatalf("missing latest object")
-	}
-	if _, ok := mockClient.objects[datedKey]; !ok {
-		t.Fatalf("missing dated object")
 	}
 
 	var decoded analyticskeywords.Report
@@ -71,15 +67,5 @@ func TestS3Writer_WriteUploadsLatestAndDatedObjects(t *testing.T) {
 	}
 	if decoded.PropertyID != "123456789" {
 		t.Fatalf("unexpected decoded report: %+v", decoded)
-	}
-}
-
-func TestParseGeneratedAtDate(t *testing.T) {
-	got, err := ParseGeneratedAtDate("2026-06-28T01:02:03Z")
-	if err != nil {
-		t.Fatalf("parse generated at: %v", err)
-	}
-	if got != "2026-06-28" {
-		t.Fatalf("expected 2026-06-28, got %s", got)
 	}
 }
