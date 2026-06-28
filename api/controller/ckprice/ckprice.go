@@ -2,6 +2,7 @@ package ckprice
 
 import (
 	"context"
+	"log"
 	"strings"
 	"time"
 
@@ -50,12 +51,22 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 
 // RefreshPrices downloads Card Kingdom retail prices from MTGJSON and upserts the DynamoDB index.
 func RefreshPrices(ctx context.Context, store ckprices.Store) (int, error) {
+	log.Printf("ck price refresh: fetching mtgjson prices")
+	fetchStarted := time.Now()
+
 	listings, err := fetchCheapestFunc(ctx)
 	if err != nil {
 		return 0, err
 	}
+
+	log.Printf("ck price refresh: fetched mtgjson prices listings=%d duration=%s", len(listings), time.Since(fetchStarted).Round(time.Millisecond))
+
+	log.Printf("ck price refresh: writing dynamodb listings=%d", len(listings))
+	writeStarted := time.Now()
 	if err := store.PutAll(ctx, listings); err != nil {
 		return 0, err
 	}
+	log.Printf("ck price refresh: wrote dynamodb listings=%d duration=%s", len(listings), time.Since(writeStarted).Round(time.Millisecond))
+
 	return len(listings), nil
 }

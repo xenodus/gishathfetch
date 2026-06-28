@@ -62,18 +62,20 @@ func CKPriceRefresh(ctx context.Context, request events.APIGatewayProxyRequest) 
 }
 
 func runCKPriceRefresh(ctx context.Context) error {
+	log.Printf("ck price refresh: started")
 	store, err := newCKRefreshStoreFunc(ctx)
 	if err != nil {
+		log.Printf("ck price refresh: failed opening dynamodb store: %v", err)
 		return err
 	}
 
 	count, err := refreshCKPricesFunc(ctx, store)
 	if err != nil {
-		log.Printf("ck price mtgjson: %v", err)
+		log.Printf("ck price refresh: failed: %v", err)
 		return err
 	}
 
-	log.Printf("refreshed %d card kingdom prices", count)
+	log.Printf("ck price refresh: finished refreshed=%d", count)
 	return nil
 }
 
@@ -98,7 +100,11 @@ func enqueueCKPriceRefresh(ctx context.Context) error {
 		InvocationType: lambdatypes.InvocationTypeEvent,
 		Payload:        payload,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	log.Printf("ck price refresh: queued async job function=%s", functionName)
+	return nil
 }
 
 func isValidRefreshAPIKey(provided string) bool {
