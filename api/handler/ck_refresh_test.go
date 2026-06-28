@@ -25,19 +25,12 @@ func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.
 	return nil
 }
 
-func TestCKPriceRefresh_Success(t *testing.T) {
-	originalStoreFunc := newCKRefreshStoreFunc
-	originalRefreshFunc := refreshCKPricesFunc
-	defer func() {
-		newCKRefreshStoreFunc = originalStoreFunc
-		refreshCKPricesFunc = originalRefreshFunc
-	}()
+func TestCKPriceRefresh_Accepted(t *testing.T) {
+	originalEnqueueFunc := enqueueCKPriceRefreshFunc
+	defer func() { enqueueCKPriceRefreshFunc = originalEnqueueFunc }()
 
-	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
-		return &mockCKRefreshStore{}, nil
-	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 42, nil
+	enqueueCKPriceRefreshFunc = func(_ context.Context) error {
+		return nil
 	}
 
 	require.NoError(t, os.Setenv(config.CKRefreshAPIKeyEnv, "test-secret"))
@@ -48,11 +41,11 @@ func TestCKPriceRefresh_Success(t *testing.T) {
 		Headers:    map[string]string{"x-api-key": "test-secret"},
 	})
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, result.StatusCode)
+	require.Equal(t, http.StatusAccepted, result.StatusCode)
 
-	var response CKRefreshResponse
+	var response CKRefreshAcceptedResponse
 	require.NoError(t, json.Unmarshal([]byte(result.Body), &response))
-	require.Equal(t, 42, response.Refreshed)
+	require.Equal(t, "accepted", response.Status)
 }
 
 func TestCKPriceRefresh_Unauthorized(t *testing.T) {
@@ -67,7 +60,7 @@ func TestCKPriceRefresh_Unauthorized(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, result.StatusCode)
 }
 
-func TestHandle_RoutesCKPriceRefresh(t *testing.T) {
+func TestHandle_RoutesCKPriceRefreshRun(t *testing.T) {
 	originalStoreFunc := newCKRefreshStoreFunc
 	originalRefreshFunc := refreshCKPricesFunc
 	defer func() {
@@ -80,6 +73,21 @@ func TestHandle_RoutesCKPriceRefresh(t *testing.T) {
 	}
 	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
 		return 1, nil
+	}
+
+	event, err := json.Marshal(map[string]string{"action": ckPriceRefreshRunAction})
+	require.NoError(t, err)
+
+	_, err = Handle(context.Background(), event)
+	require.NoError(t, err)
+}
+
+func TestHandle_RoutesCKPriceRefresh(t *testing.T) {
+	originalEnqueueFunc := enqueueCKPriceRefreshFunc
+	defer func() { enqueueCKPriceRefreshFunc = originalEnqueueFunc }()
+
+	enqueueCKPriceRefreshFunc = func(_ context.Context) error {
+		return nil
 	}
 
 	require.NoError(t, os.Setenv(config.CKRefreshAPIKeyEnv, "test-secret"))
@@ -97,5 +105,5 @@ func TestHandle_RoutesCKPriceRefresh(t *testing.T) {
 
 	apiResponse, ok := response.(events.APIGatewayProxyResponse)
 	require.True(t, ok)
-	require.Equal(t, http.StatusOK, apiResponse.StatusCode)
+	require.Equal(t, http.StatusAccepted, apiResponse.StatusCode)
 }

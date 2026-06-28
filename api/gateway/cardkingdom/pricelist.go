@@ -5,29 +5,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"mtg-price-checker-sg/gateway"
 )
 
-const pricelistURL = "https://api.cardkingdom.com/api/v2/pricelist"
+const (
+	pricelistURL     = "https://api.cardkingdom.com/api/v2/pricelist"
+	pricelistTimeout = 3 * time.Minute
+)
 
-var httpGet = func(ctx context.Context, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+var fetchPricelistResponse = func(ctx context.Context) (*http.Response, error) {
+	storeBase, err := url.Parse(listingBaseURL)
 	if err != nil {
 		return nil, err
 	}
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
-		Style: gateway.OutboundStyleJSON,
-	}); err != nil {
-		return nil, err
-	}
-	return http.DefaultClient.Do(req)
+
+	return gateway.DoOutboundGET(ctx, pricelistURL, gateway.OutboundRequestOptions{
+		Style:     gateway.OutboundStyleJSON,
+		StoreBase: storeBase,
+	}, pricelistTimeout)
 }
 
 // FetchCheapestByName downloads the Card Kingdom pricelist and indexes cheapest listings.
 func FetchCheapestByName(ctx context.Context) (map[string]Listing, error) {
-	resp, err := httpGet(ctx, pricelistURL)
+	resp, err := fetchPricelistResponse(ctx)
 	if err != nil {
 		return nil, err
 	}
