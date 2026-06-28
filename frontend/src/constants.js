@@ -179,3 +179,5 @@ export const TOP_SEARCH_KEYWORDS_URL =
   "/analytics/top-search-keywords/latest.json";
 
 export const TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT = 20;
+export const TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT = 10;
+export const DESKTOP_MIN_WIDTH_MEDIA_QUERY = "(min-width: 768px)";
