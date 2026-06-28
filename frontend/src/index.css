@@ -173,6 +173,16 @@ ins.adsbygoogle iframe {
   display: block;
 }
 
+.bottom-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-right: 0.25rem;
+}
+
 .scroll-margin-top {
   scroll-margin-top: 1rem;
 }

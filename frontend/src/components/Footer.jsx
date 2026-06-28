@@ -59,9 +59,11 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
             onClick={onShowCart}
           >
-            <div className="px-2 py-1">
-              <FolderPlus size={14} className="me-1 mb-1" /> Saved{" "}
-              {cartCount > 0 && `(${cartCount})`}
+            <div className="px-2 py-1 d-inline-flex align-items-center">
+              <span className="bottom-nav-icon">
+                <FolderPlus size={14} aria-hidden="true" />
+              </span>
+              <span>Saved {cartCount > 0 && `(${cartCount})`}</span>
             </div>
           </button>
           <button
@@ -70,8 +72,11 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
             onClick={onShowMap}
           >
-            <div className="px-2 py-1">
-              <MapIcon size={14} className="me-1" /> Map
+            <div className="px-2 py-1 d-inline-flex align-items-center">
+              <span className="bottom-nav-icon">
+                <MapIcon size={14} aria-hidden="true" />
+              </span>
+              <span>Map</span>
             </div>
           </button>
           <button
@@ -80,8 +85,11 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
             onClick={onShowFaq}
           >
-            <div className="px-2 py-1">
-              <HelpCircle size={14} className="me-1 mb-1" /> FAQs
+            <div className="px-2 py-1 d-inline-flex align-items-center">
+              <span className="bottom-nav-icon">
+                <HelpCircle size={14} aria-hidden="true" />
+              </span>
+              <span>FAQs</span>
             </div>
           </button>
           <a
@@ -89,8 +97,11 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             aria-label="Scroll to top of page"
             className="py-1 link-light link-offset-2 link-underline-opacity-0"
           >
-            <div className="px-2 py-1">
-              <ArrowUp size={14} className="me-1" /> Top
+            <div className="px-2 py-1 d-inline-flex align-items-center">
+              <span className="bottom-nav-icon">
+                <ArrowUp size={14} aria-hidden="true" />
+              </span>
+              <span>Top</span>
             </div>
           </a>
         </div>
