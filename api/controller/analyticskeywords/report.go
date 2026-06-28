@@ -13,7 +13,7 @@ import (
 const (
 	TopKeywordLimit = 20
 	// ga4CandidateLimit fetches more GA4 rows than needed so invalid searches can be filtered out.
-	ga4CandidateLimit = 100
+	ga4CandidateLimit = 20
 	periodLast24Hours = "last24Hours"
 	periodLast7Days   = "last7Days"
 	periodLast30Days  = "last30Days"
