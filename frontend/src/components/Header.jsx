@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { Moon, Sun } from "react-feather";
-import { SITE_LOGO_SRC, SITE_TAGLINE } from "../constants";
+import { pickSeasonalLogoSrc, SITE_TAGLINE } from "../constants";
 
 const Header = ({ theme, onToggleTheme }) => {
   const isDarkMode = theme === "dark";
+  const logoSrc = useMemo(() => pickSeasonalLogoSrc(), []);
 
   return (
     <div className="mb-3 text-center">
@@ -25,12 +27,7 @@ const Header = ({ theme, onToggleTheme }) => {
         </div>
         <div>
           <a href="/">
-            <img
-              id="logo"
-              src={SITE_LOGO_SRC}
-              className="mb-2"
-              alt="Gishath Fetch"
-            />
+            <img id="logo" src={logoSrc} className="mb-2" alt="Gishath Fetch" />
           </a>
         </div>
       </div>

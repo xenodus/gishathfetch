@@ -27,8 +27,17 @@ export const LGS_OPTIONS = [
 export const SITE_TAGLINE =
   "Magic: The Gathering price checker for Singapore's LGS and online shops";
 
-// Seasonal/promotional header logo. Default: img/gishath-fetch-web.png
-export const SITE_LOGO_SRC = "img/gishath-fetch-thor.png";
+// Seasonal/promotional header logos. Default: img/gishath-fetch-web.png
+export const SEASONAL_LOGO_SRCS = [
+  "img/gishath-fetch-thor.png",
+  "img/gishath-fetch-ironman.png",
+];
+
+export function pickSeasonalLogoSrc() {
+  return SEASONAL_LOGO_SRCS[
+    Math.floor(Math.random() * SEASONAL_LOGO_SRCS.length)
+  ];
+}
 
 // Keep in sync with meta/og descriptions in frontend/index.html.
 export const SITE_DESCRIPTION = `Compare MTG singles prices across ${LGS_OPTIONS.length} Singapore local game stores and online shops in one search. In-stock results sorted by price.`;
