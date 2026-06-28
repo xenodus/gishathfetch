@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
+  BASE_URL,
   DESKTOP_MIN_WIDTH_MEDIA_QUERY,
   TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT,
   TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT,
 } from "../constants";
 import useMediaQuery from "../hooks/useMediaQuery";
+import { buildSearchQueryUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-a",
@@ -78,12 +80,7 @@ function getDisplayLimit(isDesktop) {
     : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
 }
 
-export default function TopSearchKeywords({
-  keywordsByPeriod,
-  isLoading,
-  onKeywordClick,
-  disabled = false,
-}) {
+export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
   const [period, setPeriod] = useState("last24Hours");
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop);
@@ -119,24 +116,18 @@ export default function TopSearchKeywords({
 
   return (
     <div className={SECTION_CLASS_NAME}>
-      <PopularSearchHeader
-        period={period}
-        onPeriodChange={setPeriod}
-        disabled={disabled}
-      />
+      <PopularSearchHeader period={period} onPeriodChange={setPeriod} />
       {keywords.length > 0 ? (
         <div className="d-flex flex-wrap justify-content-center gap-2">
           {keywords.map((keyword) => (
-            <button
+            <a
               key={keyword}
-              type="button"
-              className="btn btn-sm popular-search-pill"
-              disabled={disabled}
+              href={buildSearchQueryUrl(BASE_URL, keyword)}
+              className="btn btn-sm popular-search-pill text-decoration-none"
               aria-label={`Search for ${keyword}`}
-              onClick={() => onKeywordClick(keyword)}
             >
               {keyword}
-            </button>
+            </a>
           ))}
         </div>
       ) : (

@@ -90,6 +90,17 @@ export function buildSearchUrl(baseUrl, query, stores) {
 }
 
 /**
+ * @param {string} baseUrl
+ * @param {string} query
+ * @returns {string}
+ */
+export function buildSearchQueryUrl(baseUrl, query) {
+  const params = new URLSearchParams();
+  params.set("s", query);
+  return `${baseUrl}?${params.toString()}`;
+}
+
+/**
  * @param {URLSearchParams} urlParams
  * @returns {string[] | null}
  */
