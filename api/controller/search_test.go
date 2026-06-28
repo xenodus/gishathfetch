@@ -502,6 +502,30 @@ func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 	}
 }
 
+func TestFormatShopSearchSummary(t *testing.T) {
+	got := formatShopSearchSummary("Orthion, Hero of Lavabrink", 8*time.Second+240*time.Millisecond, []shopSearchDuration{
+		{name: "Agora Hobby", duration: 8*time.Second + 240*time.Millisecond},
+		{name: "Fyendal Hobby", duration: 222*time.Millisecond},
+		{name: "Cards & Collections", duration: 341*time.Millisecond},
+	})
+
+	if !strings.Contains(got, "Checked 3 shops for [Orthion, Hero of Lavabrink] in 8.24s:") {
+		t.Fatalf("expected summary header, got: %s", got)
+	}
+	if !strings.Contains(got, "[Agora Hobby] 8.24s") {
+		t.Fatalf("expected Agora Hobby duration, got: %s", got)
+	}
+	if !strings.Contains(got, "[Cards & Collections] 341ms") {
+		t.Fatalf("expected Cards & Collections duration, got: %s", got)
+	}
+	if !strings.Contains(got, "[Fyendal Hobby] 222ms") {
+		t.Fatalf("expected Fyendal Hobby duration, got: %s", got)
+	}
+	if strings.Index(got, "[Agora Hobby]") > strings.Index(got, "[Cards & Collections]") {
+		t.Fatalf("expected shops to be sorted alphabetically, got: %s", got)
+	}
+}
+
 func TestFormatDiscordErrorSummary(t *testing.T) {
 	got := formatDiscordErrorSummary("Uro, Titan of Nature's Wrath", []string{
 		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 3 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
