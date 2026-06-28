@@ -12,8 +12,13 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 	var internalEvent struct {
 		Action string `json:"action"`
 	}
-	if err := json.Unmarshal(event, &internalEvent); err == nil && internalEvent.Action == ckPriceRefreshRunAction {
-		return nil, runCKPriceRefresh(ctx)
+	if err := json.Unmarshal(event, &internalEvent); err == nil && internalEvent.Action != "" {
+		switch internalEvent.Action {
+		case ckPriceRefreshRunAction:
+			return nil, runCKPriceRefresh(ctx)
+		case analyticsKeywordsExportRunAction:
+			return nil, runAnalyticsKeywordsExport(ctx)
+		}
 	}
 
 	var apiRequest events.APIGatewayProxyRequest

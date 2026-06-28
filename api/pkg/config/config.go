@@ -50,6 +50,14 @@ const (
 	MTGJSONAllPricesTodayURLEnv = "MTGJSON_ALL_PRICES_TODAY_URL"
 	// MTGJSONAllPrintingsURLEnv overrides the MTGJSON AllPrintings download URL.
 	MTGJSONAllPrintingsURLEnv = "MTGJSON_ALL_PRINTINGS_URL"
+	// GA4PropertyIDEnv is the numeric GA4 property ID used by the Data API.
+	GA4PropertyIDEnv = "GA4_PROPERTY_ID"
+	// GA4CredentialsJSONEnv holds a Google service account JSON key with Analytics read access.
+	GA4CredentialsJSONEnv = "GA4_CREDENTIALS_JSON"
+	// AnalyticsS3BucketEnv is the destination bucket for exported analytics reports.
+	AnalyticsS3BucketEnv = "ANALYTICS_S3_BUCKET"
+	// AnalyticsS3KeyPrefixEnv is the object key prefix for exported analytics reports.
+	AnalyticsS3KeyPrefixEnv = "ANALYTICS_S3_KEY_PREFIX"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
 )

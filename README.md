@@ -37,8 +37,10 @@ flowchart TB
         AGW[API Gateway api.gishathfetch.com]
         SearchLambda[Lambda mtg-price-scrapper]
         RefreshLambda[Lambda mtg-price-ck-refresh]
+        AnalyticsLambda[Lambda mtg-analytics-keywords-export]
         EB[EventBridge daily schedule]
         DDB[(DynamoDB CK prices)]
+        AnalyticsS3[(S3 analytics reports)]
         ECR[ECR mtg-price-scrapper image]
     end
 
@@ -47,10 +49,12 @@ flowchart TB
         Proxies[Proxy tiers direct / dedicated / dynamic]
         MTGJSON[MTGJSON AllPricesToday + AllPrintings]
         Scryfall[Scryfall API]
+        GA4[Google Analytics GA4]
     end
 
     Browser -->|HTTPS| CF
     CF --> S3
+    Browser -->|gtag search events| GA4
     Browser -->|GET /?s=...&lgs=...| AGW
     AGW --> SearchLambda
     SearchLambda --> Proxies
@@ -60,8 +64,12 @@ flowchart TB
     EB -->|action: ck-price-refresh-run| RefreshLambda
     RefreshLambda -->|download bz2 archives| MTGJSON
     RefreshLambda -->|batch write cheapest CK retail| DDB
+    EB -->|action: analytics-keywords-export-run| AnalyticsLambda
+    AnalyticsLambda -->|GA4 Data API| GA4
+    AnalyticsLambda -->|write JSON reports| AnalyticsS3
     ECR -.->|deploy| SearchLambda
     ECR -.->|deploy| RefreshLambda
+    ECR -.->|deploy| AnalyticsLambda
 ```
 
 ### Services
@@ -72,9 +80,67 @@ flowchart TB
 | Search API | API Gateway → `api.gishathfetch.com` | Routes `GET /?s=...&lgs=...` to the search Lambda |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily MTGJSON download and DynamoDB index rebuild |
-| Scheduler | EventBridge (`ck-price-refresh-daily`) | Invokes refresh Lambda with `{"action":"ck-price-refresh-run"}` |
+| Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
+| Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
 | CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
-| Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for both Lambdas (different handlers via event shape) |
+| Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for all Lambdas (different handlers via event shape) |
+
+### Analytics keywords export flow
+
+The frontend sends GA4 `search` events with a `search_term` parameter whenever a
+user starts a valid card-name search (`frontend/src/hooks/useSearch.js`). The
+analytics Lambda queries the GA4 Data API for the `search` event and `searchTerm`
+dimension, ranks the top 20 keywords for the last 24 hours, 7 days, and 30 days,
+and writes JSON to S3.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant GA as Google Analytics
+    participant EB as EventBridge
+    participant L as mtg-analytics-keywords-export
+    participant S3 as S3 analytics bucket
+
+    U->>FE: search for card name
+    FE->>GA: gtag event search (search_term)
+    EB->>L: daily analytics-keywords-export-run
+    L->>GA: GA4 Data API RunReport
+    L->>S3: latest.json + YYYY-MM-DD.json
+```
+
+S3 output (default prefix `analytics/top-search-keywords/`):
+
+- `latest.json` — most recent export
+- `YYYY-MM-DD.json` — dated snapshot for the export run
+
+Example report shape:
+
+```json
+{
+  "generatedAt": "2026-06-28T12:00:00Z",
+  "propertyId": "123456789",
+  "eventName": "search",
+  "periods": {
+    "last24Hours": { "start": "...", "end": "...", "keywords": [{"term": "Opt", "count": 4}] },
+    "last7Days": { "startDate": "7daysAgo", "endDate": "today", "keywords": [] },
+    "last30Days": { "startDate": "30daysAgo", "endDate": "today", "keywords": [] }
+  }
+}
+```
+
+AWS setup (one-time, outside this repo):
+
+1. Create Lambda `mtg-analytics-keywords-export` using the same ECR image and IAM role as the other Lambdas (`lambda-mtg`), with `ENV=prod`.
+2. Set environment variables:
+   - `GA4_PROPERTY_ID` — numeric GA4 property ID (not the `G-…` measurement ID; find it under Admin → Property settings)
+   - `GA4_CREDENTIALS_JSON` — Google service account JSON with **Viewer** access to the GA4 property
+   - `ANALYTICS_S3_BUCKET` — destination bucket for reports
+   - `ANALYTICS_S3_KEY_PREFIX` — optional; defaults to `analytics/top-search-keywords`
+3. Grant the Lambda role `s3:PutObject` on `arn:aws:s3:::<bucket>/<prefix>/*`.
+4. Create EventBridge rule `analytics-keywords-export-daily` targeting the Lambda with payload `{"action":"analytics-keywords-export-run"}`.
+
+The frontend measurement ID is `G-6NRLSYZ9P9` (`frontend/index.html`); the Data API uses the separate numeric property ID.
 
 ### CK price refresh flow
 

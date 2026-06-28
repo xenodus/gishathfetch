@@ -54,6 +54,10 @@ lambda-update:
       --function-name mtg-price-ck-refresh \
       --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
       --output text > /dev/null
+	export AWS_PAGER="" && aws lambda update-function-code \
+      --function-name mtg-analytics-keywords-export \
+      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
+      --output text > /dev/null
 
 aws-login:
 	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
