@@ -61,8 +61,10 @@ export default function App() {
   } = useSearch();
 
   const showTopSearchKeywords = !hasSearched;
-  const { keywords: topSearchKeywords, isLoading: isLoadingTopSearchKeywords } =
-    useTopSearchKeywords(showTopSearchKeywords);
+  const {
+    keywordsByPeriod: topSearchKeywordsByPeriod,
+    isLoading: isLoadingTopSearchKeywords,
+  } = useTopSearchKeywords(showTopSearchKeywords);
 
   const [modalType, setModalType] = useState(null);
   const [theme, setTheme] = useState(() => {
@@ -167,7 +169,7 @@ export default function App() {
 
       {showTopSearchKeywords && (
         <TopSearchKeywords
-          keywords={topSearchKeywords}
+          keywordsByPeriod={topSearchKeywordsByPeriod}
           isLoading={isLoadingTopSearchKeywords}
           onKeywordClick={handleSuggestionClick}
           disabled={isSearching}

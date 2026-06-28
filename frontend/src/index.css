@@ -194,3 +194,44 @@ ins.adsbygoogle iframe {
     var(--bs-body-bg)
   );
 }
+
+.popular-search-header {
+  text-align: center;
+}
+
+.popular-search-legend {
+  float: none;
+  width: auto;
+  padding: 0;
+  color: #000;
+}
+
+[data-bs-theme="dark"] .popular-search-legend {
+  color: var(--bs-body-color);
+}
+
+.popular-search-period-toggle {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.popular-search-period-btn {
+  border-radius: var(--bs-border-radius-pill);
+  border: 1px solid var(--bs-primary);
+  background-color: transparent;
+  color: var(--bs-primary);
+}
+
+.popular-search-period-btn.is-active {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: var(--bs-white);
+}
+
+.popular-search-period-btn:hover:not(:disabled):not(.is-active),
+.popular-search-period-btn:focus-visible:not(:disabled):not(.is-active) {
+  background-color: rgba(var(--bs-primary-rgb), 0.15);
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}
