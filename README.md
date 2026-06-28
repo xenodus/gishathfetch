@@ -129,19 +129,6 @@ Example report shape:
 }
 ```
 
-AWS setup (one-time, outside this repo):
-
-1. Create Lambda `mtg-analytics-keywords-export` using the same ECR image and IAM role as the other Lambdas (`lambda-mtg`), with `ENV=prod`.
-2. Set environment variables:
-   - `GA4_PROPERTY_ID` — numeric GA4 property ID (not the `G-…` measurement ID; find it under Admin → Property settings)
-   - `GA4_CREDENTIALS_JSON` — Google service account JSON with **Viewer** access to the GA4 property
-   - `ANALYTICS_S3_BUCKET` — destination bucket for reports
-   - `ANALYTICS_S3_KEY_PREFIX` — optional; defaults to `analytics/top-search-keywords`
-3. Grant the Lambda role `s3:PutObject` on `arn:aws:s3:::<bucket>/<prefix>/*`.
-4. Create EventBridge rule `analytics-keywords-export-daily` targeting the Lambda with payload `{"action":"analytics-keywords-export-run"}`.
-
-The frontend measurement ID is `G-6NRLSYZ9P9` (`frontend/index.html`); the Data API uses the separate numeric property ID.
-
 ### CK price refresh flow
 
 CK prices come from [MTGJSON](https://mtgjson.com/) (official Card Kingdom partner
