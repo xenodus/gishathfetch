@@ -124,10 +124,11 @@ const SearchResults = ({
               />
             )}
 
-            <CardKingdomPrice price={cardKingdomPrice} />
-
             {results.length === 0 ? (
-              <EmptySearchState />
+              <>
+                <CardKingdomPrice price={cardKingdomPrice} />
+                <EmptySearchState />
+              </>
             ) : (
               <>
                 <div
@@ -137,6 +138,8 @@ const SearchResults = ({
                 >
                   {resultCountLabel}
                 </div>
+
+                <CardKingdomPrice price={cardKingdomPrice} />
 
                 <ResultFilters
                   sortBy={sortBy}

@@ -4,10 +4,32 @@ const formatUsd = (value) =>
     currency: "USD",
   }).format(value);
 
+const formatDataDate = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    timeZone: "UTC",
+  }).format(date);
+  const year = date.getUTCFullYear();
+
+  return `${day} ${month} ${year}`;
+};
+
 const CardKingdomPrice = ({ price }) => {
   if (!price) {
     return null;
   }
+
+  const dataDate = formatDataDate(price.updatedAt);
 
   return (
     <div
@@ -18,6 +40,7 @@ const CardKingdomPrice = ({ price }) => {
         Card Kingdom from {formatUsd(price.priceUsd)}
         {price.edition ? ` · ${price.edition}` : ""}
         {price.isFoil ? " · Foil" : ""}
+        {dataDate ? ` · as of ${dataDate}` : ""}
         {" · "}
         <a
           href={price.url}
