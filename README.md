@@ -15,7 +15,97 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 ## 🏗️ Architecture
 
 - Frontend: React 19 + Vite + Bootstrap (`frontend/`)
-- Backend: Go Lambda handler + concurrent scrapers (`api/`)
+- Backend: Go Lambda handlers + concurrent scrapers (`api/`)
+
+### System overview
+
+Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search
+requests go through API Gateway to a container-based Lambda that scrapes LGS
+sites in parallel. Card Kingdom (CK) retail prices are maintained in DynamoDB by
+a separate refresh Lambda on a daily EventBridge schedule; the search Lambda
+reads that index when `CK_PRICE_LOOKUP_ENABLED` is set.
+
+```mermaid
+flowchart TB
+    subgraph client["Client"]
+        Browser[Browser]
+    end
+
+    subgraph aws["AWS ap-southeast-1"]
+        CF[CloudFront]
+        S3[(S3 gishathfetch.com)]
+        AGW[API Gateway api.gishathfetch.com]
+        SearchLambda[Lambda mtg-price-scrapper]
+        RefreshLambda[Lambda mtg-price-ck-refresh]
+        EB[EventBridge daily schedule]
+        DDB[(DynamoDB CK prices)]
+        ECR[ECR mtg-price-scrapper image]
+    end
+
+    subgraph external["External services"]
+        LGS[LGS store websites]
+        Proxies[Proxy tiers direct / dedicated / dynamic]
+        MTGJSON[MTGJSON AllPricesToday + AllPrintings]
+        Scryfall[Scryfall API]
+    end
+
+    Browser -->|HTTPS| CF
+    CF --> S3
+    Browser -->|GET /?s=...&lgs=...| AGW
+    AGW --> SearchLambda
+    SearchLambda --> Proxies
+    Proxies --> LGS
+    SearchLambda -->|optional CK lookup| DDB
+    SearchLambda -->|verify card name| Scryfall
+    EB -->|action: ck-price-refresh-run| RefreshLambda
+    RefreshLambda -->|download bz2 archives| MTGJSON
+    RefreshLambda -->|batch write cheapest CK retail| DDB
+    ECR -.->|deploy| SearchLambda
+    ECR -.->|deploy| RefreshLambda
+```
+
+### Services
+
+| Service | Name / endpoint | Role |
+|---------|-----------------|------|
+| Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
+| Search API | API Gateway → `api.gishathfetch.com` | Routes `GET /?s=...&lgs=...` to the search Lambda |
+| Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional CK price lookup from DynamoDB |
+| CK refresh Lambda | `mtg-price-ck-refresh` | Daily MTGJSON download and DynamoDB index rebuild |
+| Scheduler | EventBridge (`ck-price-refresh-daily`) | Invokes refresh Lambda with `{"action":"ck-price-refresh-run"}` |
+| CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
+| Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for both Lambdas (different handlers via event shape) |
+
+### CK price refresh flow
+
+CK prices come from [MTGJSON](https://mtgjson.com/) (official Card Kingdom partner
+data), not the Card Kingdom API. The refresh Lambda streams
+`AllPricesToday.json.bz2` and `AllPrintings.json.bz2`, picks the cheapest CK
+retail listing per card name, and batch-writes the index. Search verifies the
+query against Scryfall before looking up DynamoDB and omits stale entries older
+than 24 hours.
+
+```mermaid
+sequenceDiagram
+    participant EB as EventBridge
+    participant R as mtg-price-ck-refresh
+    participant M as MTGJSON
+    participant D as DynamoDB
+    participant S as mtg-price-scrapper
+    participant SF as Scryfall
+    participant U as User
+
+    EB->>R: daily ck-price-refresh-run
+    R->>M: download AllPricesToday + AllPrintings
+    R->>D: PutAll cheapest CK retail by name
+    U->>S: GET /?s=Lightning+Bolt
+    par LGS scrape + CK lookup
+        S->>S: scrape selected stores
+        S->>SF: verify card name
+        S->>D: GetByNameKey
+    end
+    S-->>U: data + cardKingdomPrice
+```
 
 ## 🔎 Search flow
 
