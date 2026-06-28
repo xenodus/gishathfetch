@@ -33,3 +33,26 @@ func TestUseDynamicProxy(t *testing.T) {
 		}
 	})
 }
+
+func TestCKPriceLookupEnabled(t *testing.T) {
+	t.Run("defaults to disabled when unset", func(t *testing.T) {
+		t.Setenv(CKPriceLookupEnabledEnv, "")
+		if CKPriceLookupEnabled() {
+			t.Fatalf("expected ck price lookup to be disabled by default")
+		}
+	})
+
+	t.Run("respects explicit true", func(t *testing.T) {
+		t.Setenv(CKPriceLookupEnabledEnv, "true")
+		if !CKPriceLookupEnabled() {
+			t.Fatalf("expected ck price lookup to be enabled")
+		}
+	})
+
+	t.Run("respects explicit false", func(t *testing.T) {
+		t.Setenv(CKPriceLookupEnabledEnv, "false")
+		if CKPriceLookupEnabled() {
+			t.Fatalf("expected ck price lookup to be disabled")
+		}
+	})
+}

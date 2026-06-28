@@ -44,6 +44,8 @@ const (
 	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
 	// CKRefreshAPIKeyEnv protects the scheduled CK pricelist refresh endpoint.
 	CKRefreshAPIKeyEnv = "CK_REFRESH_API_KEY"
+	// CKPriceLookupEnabledEnv toggles Card Kingdom price lookup on search responses.
+	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
 	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
 	CKPriceMaxAge = 24 * time.Hour
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
@@ -80,6 +82,21 @@ func WebBotAuthTTL() time.Duration {
 		return defaultTTL
 	}
 	return time.Duration(seconds) * time.Second
+}
+
+// CKPriceLookupEnabled reports whether search responses should include Card Kingdom prices.
+func CKPriceLookupEnabled() bool {
+	rawValue := strings.TrimSpace(os.Getenv(CKPriceLookupEnabledEnv))
+	if rawValue == "" {
+		return false
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return false
+	}
+
+	return enabled
 }
 
 func GetAllowedOrigins() []string {

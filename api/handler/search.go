@@ -106,7 +106,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	)
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
@@ -116,15 +116,18 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		})
 	}()
 
-	go func() {
-		defer wg.Done()
-		price, err := lookupCKPriceFunc(ctx, searchString)
-		if err != nil {
-			log.Printf("ck price lookup for [%s]: %v", searchString, err)
-			return
-		}
-		ckPrice = price
-	}()
+	if config.CKPriceLookupEnabled() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			price, err := lookupCKPriceFunc(ctx, searchString)
+			if err != nil {
+				log.Printf("ck price lookup for [%s]: %v", searchString, err)
+				return
+			}
+			ckPrice = price
+		}()
+	}
 
 	wg.Wait()
 
