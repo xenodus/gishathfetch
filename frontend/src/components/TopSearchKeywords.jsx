@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-a",
   "top-search-keyword-skeleton-b",
@@ -6,17 +8,61 @@ const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-e",
 ];
 
+const PERIOD_OPTIONS = [
+  { id: "last24Hours", label: "24 hours" },
+  { id: "last30Days", label: "30 days" },
+];
+
+function hasAnyKeywords(keywordsByPeriod) {
+  return PERIOD_OPTIONS.some(
+    (option) => (keywordsByPeriod?.[option.id]?.length ?? 0) > 0,
+  );
+}
+
+function PeriodToggle({ period, onPeriodChange, disabled }) {
+  return (
+    <fieldset className="btn-group btn-group-sm border-0 p-0 m-0">
+      <legend className="visually-hidden">Popular search time range</legend>
+      {PERIOD_OPTIONS.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          className={`btn ${
+            period === option.id ? "btn-secondary" : "btn-outline-secondary"
+          }`}
+          disabled={disabled}
+          aria-pressed={period === option.id}
+          onClick={() => onPeriodChange(option.id)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
 export default function TopSearchKeywords({
-  keywords,
+  keywordsByPeriod,
   isLoading,
   onKeywordClick,
   disabled = false,
 }) {
+  const [period, setPeriod] = useState("last24Hours");
+
+  if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
+    return null;
+  }
+
+  const keywords = keywordsByPeriod?.[period] ?? [];
+  const selectedPeriodLabel =
+    PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? "";
+
   if (isLoading) {
     return (
       <div className="mb-3 text-center">
-        <div className="small text-muted mb-2">
-          Popular searches (last 24 hours)
+        <div className="small text-muted mb-2">Popular searches</div>
+        <div className="d-flex justify-content-center mb-2">
+          <PeriodToggle period={period} onPeriodChange={setPeriod} disabled />
         </div>
         <div className="d-flex flex-wrap justify-content-center gap-2">
           {LOADING_SKELETON_KEYS.map((key) => (
@@ -31,29 +77,36 @@ export default function TopSearchKeywords({
     );
   }
 
-  if (keywords.length === 0) {
-    return null;
-  }
-
   return (
     <div className="mb-3 text-center">
-      <div className="small text-muted mb-2">
-        Popular searches (last 24 hours)
+      <div className="small text-muted mb-2">Popular searches</div>
+      <div className="d-flex justify-content-center mb-2">
+        <PeriodToggle
+          period={period}
+          onPeriodChange={setPeriod}
+          disabled={disabled}
+        />
       </div>
-      <div className="d-flex flex-wrap justify-content-center gap-2">
-        {keywords.map((keyword) => (
-          <button
-            key={keyword}
-            type="button"
-            className="btn btn-outline-secondary btn-sm rounded-pill"
-            disabled={disabled}
-            aria-label={`Search for ${keyword}`}
-            onClick={() => onKeywordClick(keyword)}
-          >
-            {keyword}
-          </button>
-        ))}
-      </div>
+      {keywords.length > 0 ? (
+        <div className="d-flex flex-wrap justify-content-center gap-2">
+          {keywords.map((keyword) => (
+            <button
+              key={keyword}
+              type="button"
+              className="btn btn-outline-secondary btn-sm rounded-pill"
+              disabled={disabled}
+              aria-label={`Search for ${keyword}`}
+              onClick={() => onKeywordClick(keyword)}
+            >
+              {keyword}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="small text-muted">
+          No popular searches in the last {selectedPeriodLabel}.
+        </div>
+      )}
     </div>
   );
 }

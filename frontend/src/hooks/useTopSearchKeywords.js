@@ -4,8 +4,7 @@ import {
   TOP_SEARCH_KEYWORDS_URL,
 } from "../constants";
 
-function parseTopSearchKeywords(payload) {
-  const keywords = payload?.periods?.last24Hours?.keywords;
+function parseKeywordList(keywords) {
   if (!Array.isArray(keywords)) {
     return [];
   }
@@ -16,8 +15,22 @@ function parseTopSearchKeywords(payload) {
     .slice(0, TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT);
 }
 
+function parseTopSearchKeywords(payload) {
+  return {
+    last24Hours: parseKeywordList(payload?.periods?.last24Hours?.keywords),
+    last30Days: parseKeywordList(payload?.periods?.last30Days?.keywords),
+  };
+}
+
+const EMPTY_KEYWORDS_BY_PERIOD = {
+  last24Hours: [],
+  last30Days: [],
+};
+
 export default function useTopSearchKeywords(enabled) {
-  const [keywords, setKeywords] = useState([]);
+  const [keywordsByPeriod, setKeywordsByPeriod] = useState(
+    EMPTY_KEYWORDS_BY_PERIOD,
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -42,12 +55,12 @@ export default function useTopSearchKeywords(enabled) {
 
         const payload = await response.json();
         if (!cancelled) {
-          setKeywords(parseTopSearchKeywords(payload));
+          setKeywordsByPeriod(parseTopSearchKeywords(payload));
         }
       } catch (error) {
         if (!cancelled && error.name !== "AbortError") {
           console.error("Failed to load top search keywords:", error);
-          setKeywords([]);
+          setKeywordsByPeriod(EMPTY_KEYWORDS_BY_PERIOD);
         }
       } finally {
         if (!cancelled) {
@@ -64,5 +77,5 @@ export default function useTopSearchKeywords(enabled) {
     };
   }, [enabled]);
 
-  return { keywords, isLoading };
+  return { keywordsByPeriod, isLoading };
 }
