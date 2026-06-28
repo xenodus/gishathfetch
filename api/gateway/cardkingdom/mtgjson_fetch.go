@@ -1,0 +1,321 @@
+package cardkingdom
+
+import (
+	"bytes"
+	"compress/bzip2"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"mtg-price-checker-sg/pkg/config"
+)
+
+const (
+	defaultAllPricesTodayURL = "https://mtgjson.com/api/v5/AllPricesToday.json.bz2"
+	defaultAllPrintingsURL   = "https://mtgjson.com/api/v5/AllPrintings.json.bz2"
+	mtgjsonDownloadTimeout   = 3 * time.Minute
+)
+
+type ckUUIDPrice struct {
+	normal float64
+	foil   float64
+}
+
+type mtgjsonCard struct {
+	UUID         string `json:"uuid"`
+	Name         string `json:"name"`
+	PurchaseUrls struct {
+		CardKingdom     string `json:"cardKingdom"`
+		CardKingdomFoil string `json:"cardKingdomFoil"`
+	} `json:"purchaseUrls"`
+}
+
+func fetchCheapestFromMTGJSON(ctx context.Context) (map[string]Listing, error) {
+	ctx, cancel := context.WithTimeout(ctx, mtgjsonDownloadTimeout)
+	defer cancel()
+
+	pricesRaw, err := downloadMTGJSONBzip2(ctx, allPricesTodayURL(), mtgjsonDownloadTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("all prices today: %w", err)
+	}
+
+	pricesByUUID, updatedAt, err := parseCKPricesByUUID(pricesRaw)
+	if err != nil {
+		return nil, fmt.Errorf("parse all prices today: %w", err)
+	}
+	if len(pricesByUUID) == 0 {
+		return nil, fmt.Errorf("parse all prices today: no card kingdom prices found")
+	}
+
+	return streamAllPrintingsSets(ctx, allPrintingsURL(), pricesByUUID, updatedAt)
+}
+
+func allPricesTodayURL() string {
+	if url := strings.TrimSpace(os.Getenv(config.MTGJSONAllPricesTodayURLEnv)); url != "" {
+		return url
+	}
+	return defaultAllPricesTodayURL
+}
+
+func allPrintingsURL() string {
+	if url := strings.TrimSpace(os.Getenv(config.MTGJSONAllPrintingsURLEnv)); url != "" {
+		return url
+	}
+	return defaultAllPrintingsURL
+}
+
+func downloadMTGJSONBzip2(ctx context.Context, downloadURL string, timeout time.Duration) ([]byte, error) {
+	client := &http.Client{Timeout: timeout}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/octet-stream")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	compressed, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	decompressed, err := io.ReadAll(bzip2.NewReader(bytes.NewReader(compressed)))
+	if err != nil {
+		return nil, fmt.Errorf("bzip2 decompress: %w", err)
+	}
+	return decompressed, nil
+}
+
+func parseCKPricesByUUID(raw []byte) (map[string]ckUUIDPrice, time.Time, error) {
+	var payload struct {
+		Meta struct {
+			Date string `json:"date"`
+		} `json:"meta"`
+		Data map[string]struct {
+			Paper *struct {
+				CardKingdom *struct {
+					Retail map[string]map[string]float64 `json:"retail"`
+				} `json:"cardkingdom"`
+			} `json:"paper"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil, time.Time{}, err
+	}
+
+	updatedAt, err := time.Parse("2006-01-02", payload.Meta.Date)
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("meta date: %w", err)
+	}
+
+	pricesByUUID := make(map[string]ckUUIDPrice)
+	for uuid, entry := range payload.Data {
+		if entry.Paper == nil || entry.Paper.CardKingdom == nil {
+			continue
+		}
+		price := ckUUIDPrice{
+			normal: latestRetailPrice(entry.Paper.CardKingdom.Retail["normal"]),
+			foil:   latestRetailPrice(entry.Paper.CardKingdom.Retail["foil"]),
+		}
+		if price.normal <= 0 && price.foil <= 0 {
+			continue
+		}
+		pricesByUUID[uuid] = price
+	}
+
+	return pricesByUUID, updatedAt.UTC(), nil
+}
+
+func latestRetailPrice(byDate map[string]float64) float64 {
+	var latest float64
+	for _, price := range byDate {
+		if price > latest {
+			latest = price
+		}
+	}
+	return latest
+}
+
+func streamAllPrintingsSets(
+	ctx context.Context,
+	downloadURL string,
+	pricesByUUID map[string]ckUUIDPrice,
+	updatedAt time.Time,
+) (map[string]Listing, error) {
+	client := &http.Client{Timeout: mtgjsonDownloadTimeout}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/octet-stream")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	decoder := json.NewDecoder(bzip2.NewReader(resp.Body))
+	return decodeAllPrintingsSets(decoder, pricesByUUID, updatedAt)
+}
+
+func decodeAllPrintingsSets(
+	decoder *json.Decoder,
+	pricesByUUID map[string]ckUUIDPrice,
+	updatedAt time.Time,
+) (map[string]Listing, error) {
+	token, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '{' {
+		return nil, fmt.Errorf("expected top-level object")
+	}
+
+	cheapest := make(map[string]Listing)
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected object key")
+		}
+
+		switch key {
+		case "meta":
+			if err := skipJSONValue(decoder); err != nil {
+				return nil, err
+			}
+		case "data":
+			if err := decodeSetCatalog(decoder, pricesByUUID, updatedAt, cheapest); err != nil {
+				return nil, err
+			}
+		default:
+			if err := skipJSONValue(decoder); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if _, err := decoder.Token(); err != nil {
+		return nil, err
+	}
+	return cheapest, nil
+}
+
+func decodeSetCatalog(
+	decoder *json.Decoder,
+	pricesByUUID map[string]ckUUIDPrice,
+	updatedAt time.Time,
+	cheapest map[string]Listing,
+) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	if delim, ok := token.(json.Delim); !ok || delim != '{' {
+		return fmt.Errorf("expected data object")
+	}
+
+	for decoder.More() {
+		if _, err := decoder.Token(); err != nil {
+			return err
+		}
+
+		var set struct {
+			Name  string        `json:"name"`
+			Cards []mtgjsonCard `json:"cards"`
+		}
+		if err := decoder.Decode(&set); err != nil {
+			return err
+		}
+
+		for _, card := range set.Cards {
+			applyMTGJSONCardPrices(cheapest, card, set.Name, pricesByUUID, updatedAt)
+		}
+	}
+
+	_, err = decoder.Token()
+	return err
+}
+
+func applyMTGJSONCardPrices(
+	cheapest map[string]Listing,
+	card mtgjsonCard,
+	setName string,
+	pricesByUUID map[string]ckUUIDPrice,
+	updatedAt time.Time,
+) {
+	price, ok := pricesByUUID[card.UUID]
+	if !ok {
+		return
+	}
+
+	updatedAtValue := updatedAt.Format(time.RFC3339)
+	if price.normal > 0 && card.PurchaseUrls.CardKingdom != "" {
+		considerCheapestListing(cheapest, Listing{
+			CardName:  card.Name,
+			Edition:   setName,
+			PriceUsd:  price.normal,
+			URL:       card.PurchaseUrls.CardKingdom,
+			Quantity:  0,
+			IsFoil:    false,
+			UpdatedAt: updatedAtValue,
+		})
+	}
+
+	if price.foil <= 0 {
+		return
+	}
+
+	foilURL := card.PurchaseUrls.CardKingdomFoil
+	if foilURL == "" {
+		foilURL = card.PurchaseUrls.CardKingdom
+	}
+	if foilURL == "" {
+		return
+	}
+
+	considerCheapestListing(cheapest, Listing{
+		CardName:  card.Name,
+		Edition:   setName,
+		PriceUsd:  price.foil,
+		URL:       foilURL,
+		Quantity:  0,
+		IsFoil:    true,
+		UpdatedAt: updatedAtValue,
+	})
+}
+
+func considerCheapestListing(cheapest map[string]Listing, listing Listing) {
+	nameKey := strings.ToLower(strings.TrimSpace(listing.CardName))
+	if nameKey == "" || listing.PriceUsd <= 0 {
+		return
+	}
+	existing, ok := cheapest[nameKey]
+	if !ok || listing.PriceUsd < existing.PriceUsd {
+		cheapest[nameKey] = listing
+	}
+}
+
+func skipJSONValue(decoder *json.Decoder) error {
+	var discard json.RawMessage
+	return decoder.Decode(&discard)
+}
