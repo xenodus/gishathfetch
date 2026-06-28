@@ -1,15 +1,22 @@
+AWS_ACCOUNT_ID := 206363131200
+AWS_REGION := ap-southeast-1
+ECR_REPO := mtg-price-scrapper
+ECR_IMAGE := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):latest
+LAMBDA_ROLE := arn:aws:iam::$(AWS_ACCOUNT_ID):role/lambda-mtg
+LAMBDA_FUNCTIONS := mtg-price-scrapper mtg-price-ck-refresh mtg-analytics-keywords-export
+
 deploy: deploy-common docker-tag docker-push lambda-update frontend-update
 
 deploy-common: docker-build aws-login
 
 docker-build:
-	docker buildx build --platform linux/amd64 --provenance=false --load -t mtg-price-scrapper .
+	docker buildx build --platform linux/amd64 --provenance=false --load -t $(ECR_REPO) .
 
 docker-tag:
-	docker tag mtg-price-scrapper 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest
+	docker tag $(ECR_REPO) $(ECR_IMAGE)
 
 docker-push:
-	export AWS_PAGER="" && docker push 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest
+	export AWS_PAGER="" && docker push $(ECR_IMAGE)
 
 frontend-dev:
 	cd frontend && npm install && npm run dev
@@ -42,21 +49,21 @@ lambda-create:
 	export AWS_PAGER="" && aws lambda create-function \
       --function-name mtg-price-scrapper \
       --package-type Image \
-      --code ImageUri=206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
-      --role arn:aws:iam::206363131200:role/lambda-mtg
+      --code ImageUri=$(ECR_IMAGE) \
+      --role $(LAMBDA_ROLE)
 
 lambda-update:
-	export AWS_PAGER="" && aws lambda update-function-code \
-      --function-name mtg-price-scrapper \
-      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
-      --output text > /dev/null
-	export AWS_PAGER="" && aws lambda update-function-code \
-      --function-name mtg-price-ck-refresh \
-      --image-uri 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com/mtg-price-scrapper:latest \
-      --output text > /dev/null
+	@for fn in $(LAMBDA_FUNCTIONS); do \
+		echo "Updating Lambda $$fn"; \
+		export AWS_PAGER="" && aws lambda update-function-code \
+			--function-name $$fn \
+			--image-uri $(ECR_IMAGE) \
+			--region $(AWS_REGION) \
+			--output text > /dev/null; \
+	done
 
 aws-login:
-	aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin 206363131200.dkr.ecr.ap-southeast-1.amazonaws.com
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 
 test:
 	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...
