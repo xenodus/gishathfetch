@@ -40,7 +40,6 @@ flowchart TB
         AnalyticsLambda[Lambda mtg-analytics-keywords-export]
         EB[EventBridge daily schedule]
         DDB[(DynamoDB CK prices)]
-        AnalyticsS3[(S3 analytics reports)]
         ECR[ECR mtg-price-scrapper image]
     end
 
@@ -66,7 +65,7 @@ flowchart TB
     RefreshLambda -->|batch write cheapest CK retail| DDB
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
     AnalyticsLambda -->|GA4 Data API| GA4
-    AnalyticsLambda -->|write JSON reports| AnalyticsS3
+    AnalyticsLambda -->|write latest.json| S3
     ECR -.->|deploy| SearchLambda
     ECR -.->|deploy| RefreshLambda
     ECR -.->|deploy| AnalyticsLambda
@@ -100,18 +99,28 @@ sequenceDiagram
     participant GA as Google Analytics
     participant EB as EventBridge
     participant L as mtg-analytics-keywords-export
-    participant S3 as S3 analytics bucket
+    participant S3 as S3 gishathfetch.com
 
     U->>FE: search for card name
     FE->>GA: gtag event search (search_term)
     EB->>L: daily analytics-keywords-export-run
     L->>GA: GA4 Data API RunReport
-    L->>S3: latest.json
+    L->>S3: analytics/top-search-keywords/latest.json
+    FE->>S3: fetch latest.json via CloudFront
 ```
 
-S3 output (default prefix `analytics/top-search-keywords/`):
+S3 output (default bucket `gishathfetch.com`, prefix `analytics/top-search-keywords/`):
 
-- `latest.json` — most recent export
+- `latest.json` — most recent export, served at `https://gishathfetch.com/analytics/top-search-keywords/latest.json`
+
+The export Lambda writes to the same bucket as the frontend SPA so the report is
+available same-origin through CloudFront. The object is uploaded with
+`Cache-Control: public, max-age=3600` so edge caches can serve it between daily
+exports without a separate invalidation.
+
+If the Lambda still has `ANALYTICS_S3_BUCKET` set to a legacy analytics bucket,
+remove it or set it to `gishathfetch.com`, and ensure the Lambda role can
+`PutObject` on `arn:aws:s3:::gishathfetch.com/analytics/top-search-keywords/*`.
 
 Example report shape:
 
