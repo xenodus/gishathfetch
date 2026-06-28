@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	pricelistURL     = "https://api.cardkingdom.com/api/v2/pricelist"
-	pricelistTimeout = 3 * time.Minute
+	pricelistURL          = "https://api.cardkingdom.com/api/v2/pricelist"
+	pricelistTimeout      = 3 * time.Minute
+	outboundErrorPrefix   = "ck price outbound"
 )
 
 var fetchPricelistResponse = func(ctx context.Context) (*http.Response, error) {
@@ -33,12 +34,12 @@ var fetchPricelistResponse = func(ctx context.Context) (*http.Response, error) {
 func FetchCheapestByName(ctx context.Context) (map[string]Listing, error) {
 	resp, err := fetchPricelistResponse(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", outboundErrorPrefix, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("cardkingdom: pricelist status %d", resp.StatusCode)
+		return nil, fmt.Errorf("%s: pricelist status %d", outboundErrorPrefix, resp.StatusCode)
 	}
 
 	body, err := gateway.ReadResponseBody(resp)
