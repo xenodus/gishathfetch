@@ -235,3 +235,17 @@ ins.adsbygoogle iframe {
   border-color: var(--bs-primary);
   color: var(--bs-primary);
 }
+
+.popular-search-pill {
+  border-radius: var(--bs-border-radius-pill);
+  border: 1px solid var(--bs-border-color);
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-secondary-color);
+}
+
+.popular-search-pill:hover:not(:disabled),
+.popular-search-pill:focus-visible:not(:disabled) {
+  background-color: rgba(var(--bs-primary-rgb), 0.15);
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}

@@ -111,7 +111,7 @@ export default function TopSearchKeywords({
             <button
               key={keyword}
               type="button"
-              className="btn btn-outline-secondary btn-sm rounded-pill"
+              className="btn btn-sm popular-search-pill"
               disabled={disabled}
               aria-label={`Search for ${keyword}`}
               onClick={() => onKeywordClick(keyword)}
