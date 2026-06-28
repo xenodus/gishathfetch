@@ -60,11 +60,10 @@ export default function App() {
     retrySearch,
   } = useSearch();
 
-  const showTopSearchKeywords = !hasSearched;
   const {
     keywordsByPeriod: topSearchKeywordsByPeriod,
     isLoading: isLoadingTopSearchKeywords,
-  } = useTopSearchKeywords(showTopSearchKeywords);
+  } = useTopSearchKeywords(true);
 
   const [modalType, setModalType] = useState(null);
   const [theme, setTheme] = useState(() => {
@@ -167,15 +166,6 @@ export default function App() {
         onCancelSearch={cancelSearch}
       />
 
-      {showTopSearchKeywords && (
-        <TopSearchKeywords
-          keywordsByPeriod={topSearchKeywordsByPeriod}
-          isLoading={isLoadingTopSearchKeywords}
-          onKeywordClick={handleSuggestionClick}
-          disabled={isSearching}
-        />
-      )}
-
       <SearchResults
         results={searchResults}
         searchQuery={searchQuery}
@@ -192,6 +182,13 @@ export default function App() {
         onSearchStore={handleCardSearch}
         cardKingdomPrice={cardKingdomPrice}
         baseUrl={BASE_URL}
+      />
+
+      <TopSearchKeywords
+        keywordsByPeriod={topSearchKeywordsByPeriod}
+        isLoading={isLoadingTopSearchKeywords}
+        onKeywordClick={handleSuggestionClick}
+        disabled={isSearching}
       />
 
       <Footer
