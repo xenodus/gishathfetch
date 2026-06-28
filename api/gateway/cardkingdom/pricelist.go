@@ -4,39 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
-
-	"mtg-price-checker-sg/gateway"
 )
 
 const (
-	pricelistURL          = "https://api.cardkingdom.com/api/v2/pricelist"
-	pricelistTimeout      = 3 * time.Minute
-	outboundErrorPrefix   = "ck price outbound"
+	pricelistURL        = "https://api.cardkingdom.com/api/v2/pricelist"
+	pricelistTimeout    = 3 * time.Minute
+	outboundErrorPrefix = "ck price outbound"
 )
 
-var fetchPricelistResponse = func(ctx context.Context) (*http.Response, error) {
-	return gateway.DoOutboundGET(ctx, pricelistURL, gateway.OutboundRequestOptions{
-		Accept:         "application/json",
-		SkipDirect:     true,
-		SkipWebBotAuth: true,
-	}, pricelistTimeout)
+var fetchPricelistBody = func(ctx context.Context) ([]byte, error) {
+	body, err := fetchPricelistBodyTLS(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", outboundErrorPrefix, err)
+	}
+	return body, nil
 }
 
 // FetchCheapestByName downloads the Card Kingdom pricelist and indexes cheapest listings.
 func FetchCheapestByName(ctx context.Context) (map[string]Listing, error) {
-	resp, err := fetchPricelistResponse(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", outboundErrorPrefix, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s: pricelist status %d", outboundErrorPrefix, resp.StatusCode)
-	}
-
-	body, err := gateway.ReadResponseBody(resp)
+	body, err := fetchPricelistBody(ctx)
 	if err != nil {
 		return nil, err
 	}
