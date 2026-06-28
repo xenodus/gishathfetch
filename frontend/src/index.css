@@ -195,6 +195,16 @@ ins.adsbygoogle iframe {
   );
 }
 
+.popular-search-header {
+  text-align: center;
+}
+
+.popular-search-legend {
+  float: none;
+  width: auto;
+  padding: 0;
+}
+
 .popular-search-period-toggle {
   display: inline-flex;
   gap: 0.375rem;

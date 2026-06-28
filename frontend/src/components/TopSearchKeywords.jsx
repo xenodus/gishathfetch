@@ -21,8 +21,7 @@ function hasAnyKeywords(keywordsByPeriod) {
 
 function PeriodToggle({ period, onPeriodChange, disabled }) {
   return (
-    <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
-      <legend className="visually-hidden">Popular search time range</legend>
+    <div className="popular-search-period-toggle">
       {PERIOD_OPTIONS.map((option) => (
         <button
           key={option.id}
@@ -37,6 +36,23 @@ function PeriodToggle({ period, onPeriodChange, disabled }) {
           {option.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function PopularSearchHeader({ period, onPeriodChange, disabled }) {
+  return (
+    <fieldset className="popular-search-header border-0 p-0 m-0 mb-2">
+      <div className="d-inline-flex align-items-center justify-content-center gap-2 flex-wrap">
+        <legend className="popular-search-legend small text-muted mb-0">
+          Popular searches:
+        </legend>
+        <PeriodToggle
+          period={period}
+          onPeriodChange={onPeriodChange}
+          disabled={disabled}
+        />
+      </div>
     </fieldset>
   );
 }
@@ -60,10 +76,11 @@ export default function TopSearchKeywords({
   if (isLoading) {
     return (
       <div className="mb-3 text-center">
-        <div className="small text-muted mb-2">Popular searches</div>
-        <div className="d-flex justify-content-center mb-2">
-          <PeriodToggle period={period} onPeriodChange={setPeriod} disabled />
-        </div>
+        <PopularSearchHeader
+          period={period}
+          onPeriodChange={setPeriod}
+          disabled
+        />
         <div className="d-flex flex-wrap justify-content-center gap-2">
           {LOADING_SKELETON_KEYS.map((key) => (
             <span
@@ -79,14 +96,11 @@ export default function TopSearchKeywords({
 
   return (
     <div className="mb-3 text-center">
-      <div className="small text-muted mb-2">Popular searches</div>
-      <div className="d-flex justify-content-center mb-2">
-        <PeriodToggle
-          period={period}
-          onPeriodChange={setPeriod}
-          disabled={disabled}
-        />
-      </div>
+      <PopularSearchHeader
+        period={period}
+        onPeriodChange={setPeriod}
+        disabled={disabled}
+      />
       {keywords.length > 0 ? (
         <div className="d-flex flex-wrap justify-content-center gap-2">
           {keywords.map((keyword) => (
