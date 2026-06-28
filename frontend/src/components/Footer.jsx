@@ -60,7 +60,9 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             onClick={onShowCart}
           >
             <div className="px-2 py-1 d-inline-flex align-items-center">
-              <FolderPlus size={14} className="me-1" aria-hidden="true" />
+              <span className="bottom-nav-icon">
+                <FolderPlus size={14} aria-hidden="true" />
+              </span>
               <span>Saved {cartCount > 0 && `(${cartCount})`}</span>
             </div>
           </button>
@@ -71,7 +73,9 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             onClick={onShowMap}
           >
             <div className="px-2 py-1 d-inline-flex align-items-center">
-              <MapIcon size={14} className="me-1" aria-hidden="true" />
+              <span className="bottom-nav-icon">
+                <MapIcon size={14} aria-hidden="true" />
+              </span>
               <span>Map</span>
             </div>
           </button>
@@ -82,7 +86,9 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             onClick={onShowFaq}
           >
             <div className="px-2 py-1 d-inline-flex align-items-center">
-              <HelpCircle size={14} className="me-1" aria-hidden="true" />
+              <span className="bottom-nav-icon">
+                <HelpCircle size={14} aria-hidden="true" />
+              </span>
               <span>FAQs</span>
             </div>
           </button>
@@ -92,7 +98,9 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
             className="py-1 link-light link-offset-2 link-underline-opacity-0"
           >
             <div className="px-2 py-1 d-inline-flex align-items-center">
-              <ArrowUp size={14} className="me-1" aria-hidden="true" />
+              <span className="bottom-nav-icon">
+                <ArrowUp size={14} aria-hidden="true" />
+              </span>
               <span>Top</span>
             </div>
           </a>
