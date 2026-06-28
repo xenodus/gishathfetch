@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SearchForm from "./components/SearchForm";
 import SearchResults from "./components/SearchResults";
+import TopSearchKeywords from "./components/TopSearchKeywords";
 
 const CartOffcanvas = lazy(() => import("./components/CartOffcanvas"));
 const Modals = lazy(() => import("./components/Modals"));
@@ -15,6 +16,7 @@ import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
 // --- Hooks ---
 import useCart from "./hooks/useCart";
 import useSearch from "./hooks/useSearch";
+import useTopSearchKeywords from "./hooks/useTopSearchKeywords";
 
 const THEME_STORAGE_KEY = "gishathfetch-theme";
 
@@ -57,6 +59,10 @@ export default function App() {
     cancelSearch,
     retrySearch,
   } = useSearch();
+
+  const showTopSearchKeywords = !hasSearched;
+  const { keywords: topSearchKeywords, isLoading: isLoadingTopSearchKeywords } =
+    useTopSearchKeywords(showTopSearchKeywords);
 
   const [modalType, setModalType] = useState(null);
   const [theme, setTheme] = useState(() => {
@@ -158,6 +164,15 @@ export default function App() {
         storesWarning={storesWarning}
         onCancelSearch={cancelSearch}
       />
+
+      {showTopSearchKeywords && (
+        <TopSearchKeywords
+          keywords={topSearchKeywords}
+          isLoading={isLoadingTopSearchKeywords}
+          onKeywordClick={handleSuggestionClick}
+          disabled={isSearching}
+        />
+      )}
 
       <SearchResults
         results={searchResults}
