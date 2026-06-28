@@ -5,24 +5,20 @@ import (
 	"strings"
 	"testing"
 
+	"mtg-price-checker-sg/gateway/gatewaytest"
+
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
-	require.NoError(t, err)
-	require.True(t, len(result) > 0)
-
-	for _, card := range result {
-		require.True(t, card.InStock, "gateway should only return in-stock listings")
-		require.NotEmpty(t, card.Name)
-		require.NotEmpty(t, card.Source)
-		require.NotEmpty(t, card.Url)
-		require.NotEmpty(t, card.Img)
-		require.NotEmpty(t, card.Price)
-		require.Contains(t, card.Url, StoreBaseURL+"/store/search?category="+storeCategoryMTG+"&searchfield=")
-	}
+	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
+		URLContains:    StoreBaseURL + "/store/search?category=" + storeCategoryMTG + "&searchfield=",
+		RequireInStock: true,
+	}, func(t *testing.T, ctx context.Context) {
+		gatewaytest.RequireAgoraSearchStructure(t, ctx, StoreBaseURL, StoreSearchPath, storeCategoryMTG, "Abrade")
+	})
 }
 
 func Test_Search_FiltersMTGCategory(t *testing.T) {
