@@ -15,8 +15,8 @@ func (m *mockCKRefreshStore) GetByNameKey(_ context.Context, _ string) (*cardkin
 	return nil, nil
 }
 
-func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) error {
-	return nil
+func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {
+	return "", nil
 }
 
 func TestHandle_RoutesCKPriceRefreshRun(t *testing.T) {

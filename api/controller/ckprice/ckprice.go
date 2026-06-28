@@ -63,10 +63,11 @@ func RefreshPrices(ctx context.Context, store ckprices.Store) (int, error) {
 
 	log.Printf("ck price refresh: writing dynamodb listings=%d", len(listings))
 	writeStarted := time.Now()
-	if err := store.PutAll(ctx, listings); err != nil {
+	syncedAt, err := store.PutAll(ctx, listings)
+	if err != nil {
 		return 0, err
 	}
-	log.Printf("ck price refresh: wrote dynamodb listings=%d duration=%s", len(listings), time.Since(writeStarted).Round(time.Millisecond))
+	log.Printf("ck price refresh: wrote dynamodb listings=%d syncedAt=%s duration=%s", len(listings), syncedAt, time.Since(writeStarted).Round(time.Millisecond))
 
 	return len(listings), nil
 }
