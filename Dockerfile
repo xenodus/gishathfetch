@@ -1,4 +1,4 @@
-FROM golang:1.26.3-alpine AS build
+FROM golang:1.26.4-alpine AS build
 WORKDIR /mtg-price-checker
 # Copy dependencies list
 COPY api ./api

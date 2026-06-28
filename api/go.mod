@@ -1,6 +1,6 @@
 module mtg-price-checker-sg
 
-go 1.26.3
+go 1.26.4
 
 require (
 	github.com/PuerkitoBio/goquery v1.11.0
@@ -9,7 +9,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.25
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.48
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.59.0
-	github.com/aws/aws-sdk-go-v2/service/lambda v1.93.0
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lestrrat-go/htmsig v1.0.0
@@ -21,7 +20,6 @@ require (
 	github.com/antchfx/htmlquery v1.3.5 // indirect
 	github.com/antchfx/xmlquery v1.5.0 // indirect
 	github.com/antchfx/xpath v1.3.6 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.13 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.29 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.29 // indirect
@@ -52,8 +50,8 @@ require (
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
-	golang.org/x/net v0.53.0 // indirect
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
