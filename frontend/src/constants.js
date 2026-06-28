@@ -178,4 +178,4 @@ export const BASE_URL = "https://gishathfetch.com/";
 export const TOP_SEARCH_KEYWORDS_URL =
   "/analytics/top-search-keywords/latest.json";
 
-export const TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT = 10;
+export const TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT = 20;
