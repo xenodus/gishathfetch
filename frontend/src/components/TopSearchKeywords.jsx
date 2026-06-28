@@ -13,6 +13,10 @@ const PERIOD_OPTIONS = [
   { id: "last30Days", label: "30 days" },
 ];
 
+// Stable selector for AdSense "Excluded areas" and google-anno-skip for ad intents.
+const SECTION_CLASS_NAME =
+  "popular-searches-section google-anno-skip mb-3 text-center";
+
 function hasAnyKeywords(keywordsByPeriod) {
   return PERIOD_OPTIONS.some(
     (option) => (keywordsByPeriod?.[option.id]?.length ?? 0) > 0,
@@ -75,7 +79,7 @@ export default function TopSearchKeywords({
 
   if (isLoading) {
     return (
-      <div className="mb-3 text-center">
+      <div className={SECTION_CLASS_NAME}>
         <PopularSearchHeader
           period={period}
           onPeriodChange={setPeriod}
@@ -95,7 +99,7 @@ export default function TopSearchKeywords({
   }
 
   return (
-    <div className="mb-3 text-center">
+    <div className={SECTION_CLASS_NAME}>
       <PopularSearchHeader
         period={period}
         onPeriodChange={setPeriod}
