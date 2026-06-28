@@ -21,14 +21,14 @@ function hasAnyKeywords(keywordsByPeriod) {
 
 function PeriodToggle({ period, onPeriodChange, disabled }) {
   return (
-    <fieldset className="btn-group btn-group-sm border-0 p-0 m-0">
+    <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
       <legend className="visually-hidden">Popular search time range</legend>
       {PERIOD_OPTIONS.map((option) => (
         <button
           key={option.id}
           type="button"
-          className={`btn ${
-            period === option.id ? "btn-secondary" : "btn-outline-secondary"
+          className={`btn btn-sm popular-search-period-btn${
+            period === option.id ? " is-active" : ""
           }`}
           disabled={disabled}
           aria-pressed={period === option.id}

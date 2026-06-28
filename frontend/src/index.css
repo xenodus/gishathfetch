@@ -194,3 +194,24 @@ ins.adsbygoogle iframe {
     var(--bs-body-bg)
   );
 }
+
+.popular-search-period-toggle {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.popular-search-period-btn {
+  border-radius: var(--bs-border-radius-pill);
+  border: 1px solid var(--bs-secondary);
+  background-color: transparent;
+  color: var(--bs-secondary);
+}
+
+.popular-search-period-btn.is-active,
+.popular-search-period-btn:hover:not(:disabled),
+.popular-search-period-btn:focus-visible:not(:disabled) {
+  background-color: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: var(--bs-white);
+}
