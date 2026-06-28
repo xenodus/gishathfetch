@@ -44,7 +44,13 @@ func TestHandle_RoutesAnalyticsKeywordsExportRun(t *testing.T) {
 	newGA4ReporterFunc = func(_ context.Context) (ga4.Reporter, error) {
 		return &mockAnalyticsReporter{}, nil
 	}
-	buildAnalyticsKeywordsReportFunc = analyticskeywords.BuildReport
+	buildAnalyticsKeywordsReportFunc = func(_ context.Context, _ ga4.Reporter, propertyID string, _ int) (*analyticskeywords.Report, error) {
+		return &analyticskeywords.Report{
+			GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+			PropertyID:  propertyID,
+			EventName:   ga4.SearchEventName,
+		}, nil
+	}
 	newAnalyticsReportWriterFunc = func(_ context.Context) (analyticsreport.Writer, error) {
 		return writer, nil
 	}

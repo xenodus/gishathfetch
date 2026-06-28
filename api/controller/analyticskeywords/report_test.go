@@ -2,6 +2,7 @@ package analyticskeywords
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,11 +37,25 @@ func trimTerms(terms []ga4.SearchTermCount, limit int) []ga4.SearchTermCount {
 	return terms[:limit]
 }
 
+func mockVerifyCardName(_ context.Context, query string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(query)) {
+	case "opt", "lightning bolt", "sol ring":
+		return strings.TrimSpace(query), nil
+	default:
+		return "", nil
+	}
+}
+
 func TestBuildReport(t *testing.T) {
 	fixedNow := time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC)
 	originalNowFunc := nowFunc
+	originalVerifyFunc := verifyCardNameFunc
 	nowFunc = func() time.Time { return fixedNow }
-	defer func() { nowFunc = originalNowFunc }()
+	verifyCardNameFunc = mockVerifyCardName
+	defer func() {
+		nowFunc = originalNowFunc
+		verifyCardNameFunc = originalVerifyFunc
+	}()
 
 	reporter := &mockReporter{
 		last24Hours: []ga4.SearchTermCount{{Term: "Opt", Count: 4}},
@@ -79,5 +94,60 @@ func TestBuildReport(t *testing.T) {
 	}
 	if len(last30Days.Keywords) != 1 || last30Days.Keywords[0].Term != "Sol Ring" {
 		t.Fatalf("unexpected 30d keywords: %+v", last30Days.Keywords)
+	}
+}
+
+func TestValidateKeywords_FiltersInvalidAndMergesCanonicalNames(t *testing.T) {
+	originalVerifyFunc := verifyCardNameFunc
+	verifyCardNameFunc = func(_ context.Context, query string) (string, error) {
+		switch strings.ToLower(strings.TrimSpace(query)) {
+		case "opt":
+			return "Opt", nil
+		case "lightning bolt":
+			return "Lightning Bolt", nil
+		default:
+			return "", nil
+		}
+	}
+	defer func() { verifyCardNameFunc = originalVerifyFunc }()
+
+	keywords, err := validateKeywords(context.Background(), []ga4.SearchTermCount{
+		{Term: "asdfasdf", Count: 99},
+		{Term: "opt", Count: 4},
+		{Term: "Opt", Count: 2},
+		{Term: "Lightning Bolt", Count: 10},
+	}, 20)
+	if err != nil {
+		t.Fatalf("validate keywords: %v", err)
+	}
+
+	if len(keywords) != 2 {
+		t.Fatalf("expected 2 keywords, got %d", len(keywords))
+	}
+	if keywords[0].Term != "Lightning Bolt" || keywords[0].Count != 10 {
+		t.Fatalf("unexpected first keyword: %+v", keywords[0])
+	}
+	if keywords[1].Term != "Opt" || keywords[1].Count != 6 {
+		t.Fatalf("unexpected second keyword: %+v", keywords[1])
+	}
+}
+
+func TestValidateKeywords_RespectsLimit(t *testing.T) {
+	originalVerifyFunc := verifyCardNameFunc
+	verifyCardNameFunc = func(_ context.Context, query string) (string, error) {
+		return query, nil
+	}
+	defer func() { verifyCardNameFunc = originalVerifyFunc }()
+
+	keywords, err := validateKeywords(context.Background(), []ga4.SearchTermCount{
+		{Term: "A", Count: 3},
+		{Term: "B", Count: 2},
+		{Term: "C", Count: 1},
+	}, 2)
+	if err != nil {
+		t.Fatalf("validate keywords: %v", err)
+	}
+	if len(keywords) != 2 {
+		t.Fatalf("expected 2 keywords, got %d", len(keywords))
 	}
 }
