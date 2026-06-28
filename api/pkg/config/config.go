@@ -54,10 +54,17 @@ const (
 	GA4PropertyIDEnv = "GA4_PROPERTY_ID"
 	// GA4CredentialsJSONEnv holds a Google service account JSON key with Analytics read access.
 	GA4CredentialsJSONEnv = "GA4_CREDENTIALS_JSON"
-	// AnalyticsS3BucketEnv is the destination bucket for exported analytics reports.
+	// AnalyticsS3BucketEnv overrides the destination bucket for exported analytics reports.
 	AnalyticsS3BucketEnv = "ANALYTICS_S3_BUCKET"
+	// AnalyticsS3DefaultBucket is the frontend S3 bucket served by CloudFront.
+	AnalyticsS3DefaultBucket = "gishathfetch.com"
 	// AnalyticsS3KeyPrefixEnv is the object key prefix for exported analytics reports.
 	AnalyticsS3KeyPrefixEnv = "ANALYTICS_S3_KEY_PREFIX"
+	// AnalyticsS3DefaultKeyPrefix is the default object key prefix under the frontend bucket.
+	AnalyticsS3DefaultKeyPrefix = "analytics/top-search-keywords"
+	// AnalyticsLatestJSONCacheControl is applied to latest.json so CloudFront can cache it
+	// between daily exports without a separate invalidation.
+	AnalyticsLatestJSONCacheControl = "public, max-age=3600"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
 )

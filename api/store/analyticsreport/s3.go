@@ -40,12 +40,12 @@ var loadAWSConfig = func(ctx context.Context) (aws.Config, error) {
 func NewS3Writer(ctx context.Context) (*S3Writer, error) {
 	bucket := strings.TrimSpace(os.Getenv(config.AnalyticsS3BucketEnv))
 	if bucket == "" {
-		return nil, fmt.Errorf("analyticsreport: %s is not set", config.AnalyticsS3BucketEnv)
+		bucket = config.AnalyticsS3DefaultBucket
 	}
 
 	prefix := strings.Trim(strings.TrimSpace(os.Getenv(config.AnalyticsS3KeyPrefixEnv)), "/")
 	if prefix == "" {
-		prefix = "analytics/top-search-keywords"
+		prefix = config.AnalyticsS3DefaultKeyPrefix
 	}
 
 	cfg, err := loadAWSConfig(ctx)
@@ -72,10 +72,11 @@ func (w *S3Writer) Write(ctx context.Context, report *analyticskeywords.Report) 
 
 	key := w.objectKey("latest.json")
 	_, err = w.client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(w.bucket),
-		Key:         aws.String(key),
-		Body:        bytes.NewReader(payload),
-		ContentType: aws.String("application/json"),
+		Bucket:       aws.String(w.bucket),
+		Key:          aws.String(key),
+		Body:         bytes.NewReader(payload),
+		ContentType:  aws.String("application/json"),
+		CacheControl: aws.String(config.AnalyticsLatestJSONCacheControl),
 	})
 	if err != nil {
 		return fmt.Errorf("analyticsreport: put s3://%s/%s: %w", w.bucket, key, err)
