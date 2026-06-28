@@ -19,7 +19,11 @@ import (
 const (
 	defaultAllPricesTodayURL = "https://mtgjson.com/api/v5/AllPricesToday.json.bz2"
 	defaultAllPrintingsURL   = "https://mtgjson.com/api/v5/AllPrintings.json.bz2"
-	mtgjsonDownloadTimeout   = 3 * time.Minute
+	// mtgjsonFetchTimeout bounds the full MTGJSON download + parse path. AllPrintings
+	// alone can take several minutes on Lambda; keep Lambda timeout at 600s.
+	mtgjsonFetchTimeout            = 8 * time.Minute
+	mtgjsonAllPricesTodayHTTPTimeout = 2 * time.Minute
+	mtgjsonAllPrintingsHTTPTimeout  = 7 * time.Minute
 )
 
 type ckUUIDPrice struct {
@@ -37,12 +41,12 @@ type mtgjsonCard struct {
 }
 
 func fetchCheapestFromMTGJSON(ctx context.Context) (map[string]Listing, error) {
-	ctx, cancel := context.WithTimeout(ctx, mtgjsonDownloadTimeout)
+	ctx, cancel := context.WithTimeout(ctx, mtgjsonFetchTimeout)
 	defer cancel()
 
 	log.Printf("ck price refresh: downloading AllPricesToday from %s", allPricesTodayURL())
 	pricesStarted := time.Now()
-	pricesRaw, err := downloadMTGJSONBzip2(ctx, allPricesTodayURL(), mtgjsonDownloadTimeout)
+	pricesRaw, err := downloadMTGJSONBzip2(ctx, allPricesTodayURL(), mtgjsonAllPricesTodayHTTPTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("all prices today: %w", err)
 	}
@@ -167,7 +171,7 @@ func streamAllPrintingsSets(
 	pricesByUUID map[string]ckUUIDPrice,
 	updatedAt time.Time,
 ) (map[string]Listing, error) {
-	client := &http.Client{Timeout: mtgjsonDownloadTimeout}
+	client := &http.Client{Timeout: mtgjsonAllPrintingsHTTPTimeout}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
 		return nil, err
