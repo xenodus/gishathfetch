@@ -203,8 +203,11 @@ ins.adsbygoogle iframe {
   float: none;
   width: auto;
   padding: 0;
-  color: var(--bs-secondary-color);
-  opacity: 0.7;
+  color: #000;
+}
+
+[data-bs-theme="dark"] .popular-search-legend {
+  color: var(--bs-body-color);
 }
 
 .popular-search-period-toggle {
