@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"mtg-price-checker-sg/gateway"
@@ -18,14 +17,9 @@ const (
 )
 
 var fetchPricelistResponse = func(ctx context.Context) (*http.Response, error) {
-	storeBase, err := url.Parse(listingBaseURL)
-	if err != nil {
-		return nil, err
-	}
-
 	return gateway.DoOutboundGET(ctx, pricelistURL, gateway.OutboundRequestOptions{
-		Style:          gateway.OutboundStyleJSON,
-		StoreBase:      storeBase,
+		Accept:         "application/json",
+		SkipDirect:     true,
 		SkipWebBotAuth: true,
 	}, pricelistTimeout)
 }

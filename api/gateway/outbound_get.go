@@ -3,16 +3,14 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"mtg-price-checker-sg/gateway/util"
 )
-
-var outboundDedicatedProxySeq atomic.Uint32
 
 type outboundAttempt struct {
 	strategy string
@@ -28,7 +26,7 @@ func DoOutboundGET(
 	timeout time.Duration,
 ) (*http.Response, error) {
 	var failures []string
-	for _, attempt := range buildOutboundGETAttempts(timeout) {
+	for _, attempt := range buildOutboundGETAttempts(timeout, opts.SkipDirect) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 		if err != nil {
 			return nil, err
@@ -43,8 +41,7 @@ func DoOutboundGET(
 			continue
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			failures = append(failures, fmt.Sprintf("%s: status %d", attempt.strategy, resp.StatusCode))
-			resp.Body.Close()
+			failures = append(failures, outboundStatusFailure(attempt.strategy, resp))
 			continue
 		}
 		return resp, nil
@@ -55,14 +52,27 @@ func DoOutboundGET(
 	return nil, fmt.Errorf("outbound get failed: %s", strings.Join(failures, "; "))
 }
 
-func buildOutboundGETAttempts(timeout time.Duration) []outboundAttempt {
-	attempts := []outboundAttempt{{
-		strategy: "direct",
-		client:   &http.Client{Timeout: timeout},
-	}}
+func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool) []outboundAttempt {
+	var attempts []outboundAttempt
+	if !skipDirect {
+		attempts = append(attempts, outboundAttempt{
+			strategy: "direct",
+			client:   &http.Client{Timeout: timeout},
+		})
+	}
 
-	if client, ok := dedicatedProxyHTTPClient(timeout); ok {
-		attempts = append(attempts, outboundAttempt{strategy: "dedicated", client: client})
+	for idx, proxyURL := range util.GetDedicatedProxyURLs() {
+		if proxyURL == "" {
+			continue
+		}
+		client, err := newProxyHTTPClient(proxyURL, timeout)
+		if err != nil {
+			continue
+		}
+		attempts = append(attempts, outboundAttempt{
+			strategy: fmt.Sprintf("dedicated-%d", idx+1),
+			client:   client,
+		})
 	}
 
 	if client, ok := dynamicProxyHTTPClient(timeout); ok {
@@ -70,19 +80,6 @@ func buildOutboundGETAttempts(timeout time.Duration) []outboundAttempt {
 	}
 
 	return attempts
-}
-
-func dedicatedProxyHTTPClient(timeout time.Duration) (*http.Client, bool) {
-	proxyURLs := util.GetDedicatedProxyURLs()
-	if len(proxyURLs) == 0 {
-		return nil, false
-	}
-
-	client, err := newProxyHTTPClient(nextOutboundDedicatedProxyURL(proxyURLs), timeout)
-	if err != nil {
-		return nil, false
-	}
-	return client, true
 }
 
 func dynamicProxyHTTPClient(timeout time.Duration) (*http.Client, bool) {
@@ -98,9 +95,26 @@ func dynamicProxyHTTPClient(timeout time.Duration) (*http.Client, bool) {
 	return client, true
 }
 
-func nextOutboundDedicatedProxyURL(proxyURLs []string) string {
-	v := outboundDedicatedProxySeq.Add(1) - 1
-	return proxyURLs[int(v%uint32(len(proxyURLs)))]
+func outboundStatusFailure(strategy string, resp *http.Response) string {
+	msg := fmt.Sprintf("%s: status %d", strategy, resp.StatusCode)
+	if resp == nil {
+		return msg
+	}
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
+	resp.Body.Close()
+
+	if cfRay := resp.Header.Get("cf-ray"); cfRay != "" {
+		msg += " cf-ray=" + cfRay
+	}
+	trimmed := strings.TrimSpace(string(body))
+	if trimmed == "" {
+		return msg
+	}
+	if len(trimmed) > 120 {
+		trimmed = trimmed[:120] + "..."
+	}
+	return msg + " (" + trimmed + ")"
 }
 
 func newProxyHTTPClient(proxyURL string, timeout time.Duration) (*http.Client, error) {

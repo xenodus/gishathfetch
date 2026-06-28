@@ -38,6 +38,27 @@ func TestDoOutboundGET_DirectSuccess(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 }
 
+func TestBuildOutboundGETAttempts_TriesEachDedicatedProxy(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(2*time.Second, false)
+	require.GreaterOrEqual(t, len(attempts), 3)
+	require.Equal(t, "direct", attempts[0].strategy)
+	require.Equal(t, "dedicated-1", attempts[1].strategy)
+	require.Equal(t, "dedicated-2", attempts[2].strategy)
+}
+
+func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(2*time.Second, true)
+	require.Len(t, attempts, 1)
+	require.Equal(t, "dedicated-1", attempts[0].strategy)
+}
+
 func TestDoOutboundGET_DirectForbiddenWithoutProxy(t *testing.T) {
 	clearProxyEnv(t)
 
@@ -49,9 +70,9 @@ func TestDoOutboundGET_DirectForbiddenWithoutProxy(t *testing.T) {
 	_, err := DoOutboundGET(
 		context.Background(),
 		server.URL,
-		OutboundRequestOptions{Style: OutboundStyleJSON},
+		OutboundRequestOptions{Accept: "application/json", SkipWebBotAuth: true},
 		2*time.Second,
 	)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "403")
+	require.Contains(t, err.Error(), "direct: status 403")
 }

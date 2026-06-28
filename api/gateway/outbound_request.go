@@ -20,6 +20,10 @@ type OutboundRequestOptions struct {
 	Style     OutboundRequestStyle
 	PageURL   *url.URL
 	StoreBase *url.URL
+	// Accept sets an optional Accept header after style-specific headers apply.
+	Accept string
+	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
+	SkipDirect bool
 	// SkipWebBotAuth uses a browser User-Agent and omits Web Bot Auth signing.
 	SkipWebBotAuth bool
 }
@@ -44,6 +48,10 @@ func PrepareOutboundRequest(ctx context.Context, req *http.Request, opts Outboun
 			storeBase = opts.PageURL
 		}
 		ApplyBrowserLikeJSONFetchHeaders(&req.Header, storeBase)
+	}
+
+	if opts.Accept != "" {
+		req.Header.Set("Accept", opts.Accept)
 	}
 
 	if opts.SkipWebBotAuth {
