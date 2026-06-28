@@ -1,4 +1,12 @@
 import { useState } from "react";
+import {
+  BASE_URL,
+  DESKTOP_MIN_WIDTH_MEDIA_QUERY,
+  TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT,
+  TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT,
+} from "../constants";
+import useMediaQuery from "../hooks/useMediaQuery";
+import { buildSearchQueryUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-a",
@@ -6,6 +14,11 @@ const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-c",
   "top-search-keyword-skeleton-d",
   "top-search-keyword-skeleton-e",
+  "top-search-keyword-skeleton-f",
+  "top-search-keyword-skeleton-g",
+  "top-search-keyword-skeleton-h",
+  "top-search-keyword-skeleton-i",
+  "top-search-keyword-skeleton-j",
 ];
 
 const PERIOD_OPTIONS = [
@@ -61,19 +74,22 @@ function PopularSearchHeader({ period, onPeriodChange, disabled }) {
   );
 }
 
-export default function TopSearchKeywords({
-  keywordsByPeriod,
-  isLoading,
-  onKeywordClick,
-  disabled = false,
-}) {
+function getDisplayLimit(isDesktop) {
+  return isDesktop
+    ? TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT
+    : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
+}
+
+export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
   const [period, setPeriod] = useState("last24Hours");
+  const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
+  const displayLimit = getDisplayLimit(isDesktop);
 
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
     return null;
   }
 
-  const keywords = keywordsByPeriod?.[period] ?? [];
+  const keywords = (keywordsByPeriod?.[period] ?? []).slice(0, displayLimit);
   const selectedPeriodLabel =
     PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? "";
 
@@ -86,7 +102,7 @@ export default function TopSearchKeywords({
           disabled
         />
         <div className="d-flex flex-wrap justify-content-center gap-2">
-          {LOADING_SKELETON_KEYS.map((key) => (
+          {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
             <span
               key={key}
               className="placeholder col-3 rounded-pill"
@@ -100,24 +116,18 @@ export default function TopSearchKeywords({
 
   return (
     <div className={SECTION_CLASS_NAME}>
-      <PopularSearchHeader
-        period={period}
-        onPeriodChange={setPeriod}
-        disabled={disabled}
-      />
+      <PopularSearchHeader period={period} onPeriodChange={setPeriod} />
       {keywords.length > 0 ? (
         <div className="d-flex flex-wrap justify-content-center gap-2">
           {keywords.map((keyword) => (
-            <button
+            <a
               key={keyword}
-              type="button"
-              className="btn btn-sm popular-search-pill"
-              disabled={disabled}
+              href={buildSearchQueryUrl(BASE_URL, keyword)}
+              className="btn btn-sm popular-search-pill text-decoration-none"
               aria-label={`Search for ${keyword}`}
-              onClick={() => onKeywordClick(keyword)}
             >
               {keyword}
-            </button>
+            </a>
           ))}
         </div>
       ) : (

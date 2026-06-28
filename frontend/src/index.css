@@ -243,8 +243,8 @@ ins.adsbygoogle iframe {
   color: var(--bs-secondary-color);
 }
 
-.popular-search-pill:hover:not(:disabled),
-.popular-search-pill:focus-visible:not(:disabled) {
+.popular-search-pill:hover,
+.popular-search-pill:focus-visible {
   background-color: rgba(var(--bs-primary-rgb), 0.15);
   border-color: var(--bs-primary);
   color: var(--bs-primary);

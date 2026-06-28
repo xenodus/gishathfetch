@@ -187,8 +187,6 @@ export default function App() {
       <TopSearchKeywords
         keywordsByPeriod={topSearchKeywordsByPeriod}
         isLoading={isLoadingTopSearchKeywords}
-        onKeywordClick={handleSuggestionClick}
-        disabled={isSearching}
       />
 
       <Footer
