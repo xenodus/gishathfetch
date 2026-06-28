@@ -136,7 +136,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	aggregator := newFetchResultAggregator(len(shops))
 	binderposGate := make(chan struct{}, binderposMaxConcurrent)
 
-	log.Printf("Start checking shops for [%s]...", searchString)
+	start := time.Now()
 
 	for shopName, lgs := range shops {
 		shopName := shopName
@@ -154,8 +154,13 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	if len(siteErrors) > 0 {
 		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
 	}
-	log.Println("End checking shops...")
+	log.Println(formatShopSearchSummary(searchString, time.Since(start), aggregator.shopDurationSnapshot()))
 	return cards, siteErrors
+}
+
+type shopSearchDuration struct {
+	name     string
+	duration time.Duration
 }
 
 type fetchResultAggregator struct {
@@ -163,6 +168,7 @@ type fetchResultAggregator struct {
 	cards                []gateway.Card
 	siteErrors           map[string]error
 	discordErrorMessages []string
+	shopDurations        []shopSearchDuration
 }
 
 func newFetchResultAggregator(shopCount int) *fetchResultAggregator {
@@ -194,6 +200,18 @@ func (f *fetchResultAggregator) addDiscordErrorMessage(message string) {
 	f.mu.Unlock()
 }
 
+func (f *fetchResultAggregator) addShopDuration(shopName string, duration time.Duration) {
+	f.mu.Lock()
+	f.shopDurations = append(f.shopDurations, shopSearchDuration{name: shopName, duration: duration})
+	f.mu.Unlock()
+}
+
+func (f *fetchResultAggregator) shopDurationSnapshot() []shopSearchDuration {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]shopSearchDuration(nil), f.shopDurations...)
+}
+
 func (f *fetchResultAggregator) snapshot() ([]gateway.Card, map[string]error, []string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -219,7 +237,7 @@ func searchShop(
 	defer recoverShopPanic(shopName, aggregator)
 	start := time.Now()
 	defer func() {
-		log.Printf("Done searching [%s]. Took: [%s]", shopName, time.Since(start))
+		aggregator.addShopDuration(shopName, time.Since(start))
 	}()
 
 	shopCtx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
@@ -258,6 +276,26 @@ func recordShopSearchError(searchString, shopName string, err error, aggregator 
 		aggregator.addDiscordErrorMessage(errMsg)
 	}
 	aggregator.addSiteError(shopName, err)
+}
+
+func formatShopSearchSummary(searchString string, totalDuration time.Duration, shopDurations []shopSearchDuration) string {
+	sortedDurations := append([]shopSearchDuration(nil), shopDurations...)
+	sort.Slice(sortedDurations, func(i, j int) bool {
+		return sortedDurations[i].name < sortedDurations[j].name
+	})
+
+	shopSummaries := make([]string, 0, len(sortedDurations))
+	for _, shopDuration := range sortedDurations {
+		shopSummaries = append(shopSummaries, fmt.Sprintf("[%s] %s", shopDuration.name, shopDuration.duration))
+	}
+
+	return fmt.Sprintf(
+		"Checked %d shops for [%s] in %s: %s",
+		len(sortedDurations),
+		searchString,
+		totalDuration,
+		strings.Join(shopSummaries, ", "),
+	)
 }
 
 func formatDiscordErrorSummary(searchString string, errorMessages []string) string {
