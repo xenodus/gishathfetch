@@ -30,4 +30,12 @@ export default defineConfig({
     },
   ],
   base: "",
+  server: {
+    proxy: {
+      "/analytics": {
+        target: "https://gishathfetch.com",
+        changeOrigin: true,
+      },
+    },
+  },
 });

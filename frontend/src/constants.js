@@ -173,3 +173,9 @@ export const MAX_SEARCH_LENGTH = 150;
 export const API_BASE_URL = "https://api.gishathfetch.com/";
 
 export const BASE_URL = "https://gishathfetch.com/";
+
+// Same-origin on production (served from gishathfetch.com via CloudFront).
+export const TOP_SEARCH_KEYWORDS_URL =
+  "/analytics/top-search-keywords/latest.json";
+
+export const TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT = 10;
