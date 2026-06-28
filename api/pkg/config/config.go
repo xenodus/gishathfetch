@@ -42,8 +42,6 @@ const (
 	WebBotAuthTTLEnv = "WEB_BOT_AUTH_TTL_SECONDS"
 	// CKDynamoDBTableEnv is the DynamoDB table storing cheapest Card Kingdom prices by card name.
 	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
-	// CKRefreshAPIKeyEnv protects the scheduled CK pricelist refresh endpoint.
-	CKRefreshAPIKeyEnv = "CK_REFRESH_API_KEY"
 	// CKPriceLookupEnabledEnv toggles Card Kingdom price lookup on search responses.
 	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
 	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
