@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -39,10 +40,13 @@ func fetchCheapestFromMTGJSON(ctx context.Context) (map[string]Listing, error) {
 	ctx, cancel := context.WithTimeout(ctx, mtgjsonDownloadTimeout)
 	defer cancel()
 
+	log.Printf("ck price refresh: downloading AllPricesToday from %s", allPricesTodayURL())
+	pricesStarted := time.Now()
 	pricesRaw, err := downloadMTGJSONBzip2(ctx, allPricesTodayURL(), mtgjsonDownloadTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("all prices today: %w", err)
 	}
+	log.Printf("ck price refresh: downloaded AllPricesToday bytes=%d duration=%s", len(pricesRaw), time.Since(pricesStarted).Round(time.Millisecond))
 
 	pricesByUUID, updatedAt, err := parseCKPricesByUUID(pricesRaw)
 	if err != nil {
@@ -51,8 +55,17 @@ func fetchCheapestFromMTGJSON(ctx context.Context) (map[string]Listing, error) {
 	if len(pricesByUUID) == 0 {
 		return nil, fmt.Errorf("parse all prices today: no card kingdom prices found")
 	}
+	log.Printf("ck price refresh: parsed AllPricesToday uuid_prices=%d price_date=%s", len(pricesByUUID), updatedAt.Format("2006-01-02"))
 
-	return streamAllPrintingsSets(ctx, allPrintingsURL(), pricesByUUID, updatedAt)
+	log.Printf("ck price refresh: streaming AllPrintings from %s", allPrintingsURL())
+	printingsStarted := time.Now()
+	listings, err := streamAllPrintingsSets(ctx, allPrintingsURL(), pricesByUUID, updatedAt)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("ck price refresh: streamed AllPrintings listings=%d duration=%s", len(listings), time.Since(printingsStarted).Round(time.Millisecond))
+
+	return listings, nil
 }
 
 func allPricesTodayURL() string {
