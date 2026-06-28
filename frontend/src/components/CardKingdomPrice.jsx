@@ -37,7 +37,8 @@ const CardKingdomPrice = ({ price }) => {
       aria-live="polite"
     >
       <span className="small">
-        Card Kingdom from {formatUsd(price.priceUsd)}
+        <strong>Card Kingdom</strong> from{" "}
+        <strong>{formatUsd(price.priceUsd)}</strong>
         {price.edition ? ` · ${price.edition}` : ""}
         {price.isFoil ? " · Foil" : ""}
         {dataDate ? ` · as of ${dataDate}` : ""}
