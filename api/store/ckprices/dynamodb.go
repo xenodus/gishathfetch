@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/pkg/config"
@@ -27,6 +28,7 @@ type dynamoRecord struct {
 	Quantity  int     `dynamodbav:"quantity"`
 	IsFoil    bool    `dynamodbav:"isFoil"`
 	UpdatedAt string  `dynamodbav:"updatedAt"`
+	SyncedAt  string  `dynamodbav:"syncedAt"`
 }
 
 type DynamoDBStore struct {
@@ -78,22 +80,15 @@ func (s *DynamoDBStore) GetByNameKey(ctx context.Context, nameKey string) (*card
 		Quantity:  record.Quantity,
 		IsFoil:    record.IsFoil,
 		UpdatedAt: record.UpdatedAt,
+		SyncedAt:  record.SyncedAt,
 	}, nil
 }
 
 func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) error {
+	syncedAt := time.Now().UTC().Format(time.RFC3339)
 	writeRequests := make([]types.WriteRequest, 0, len(listings))
 	for nameKey, listing := range listings {
-		record := dynamoRecord{
-			NameKey:   nameKey,
-			CardName:  listing.CardName,
-			Edition:   listing.Edition,
-			PriceUsd:  listing.PriceUsd,
-			URL:       listing.URL,
-			Quantity:  listing.Quantity,
-			IsFoil:    listing.IsFoil,
-			UpdatedAt: listing.UpdatedAt,
-		}
+		record := dynamoRecordFromListing(nameKey, listing, syncedAt)
 		item, err := attributevalue.MarshalMap(record)
 		if err != nil {
 			return err
@@ -115,6 +110,20 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 	}
 
 	return nil
+}
+
+func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, syncedAt string) dynamoRecord {
+	return dynamoRecord{
+		NameKey:   nameKey,
+		CardName:  listing.CardName,
+		Edition:   listing.Edition,
+		PriceUsd:  listing.PriceUsd,
+		URL:       listing.URL,
+		Quantity:  listing.Quantity,
+		IsFoil:    listing.IsFoil,
+		UpdatedAt: listing.UpdatedAt,
+		SyncedAt:  syncedAt,
+	}
 }
 
 func (s *DynamoDBStore) writeBatch(ctx context.Context, batch []types.WriteRequest) error {
