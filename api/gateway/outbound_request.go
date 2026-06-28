@@ -20,6 +20,8 @@ type OutboundRequestOptions struct {
 	Style     OutboundRequestStyle
 	PageURL   *url.URL
 	StoreBase *url.URL
+	// SkipWebBotAuth uses a browser User-Agent and omits Web Bot Auth signing.
+	SkipWebBotAuth bool
 }
 
 // PrepareOutboundRequest applies per-domain pacing, browser-like headers, a
@@ -42,6 +44,11 @@ func PrepareOutboundRequest(ctx context.Context, req *http.Request, opts Outboun
 			storeBase = opts.PageURL
 		}
 		ApplyBrowserLikeJSONFetchHeaders(&req.Header, storeBase)
+	}
+
+	if opts.SkipWebBotAuth {
+		req.Header.Set("User-Agent", RandomBrowserUserAgent())
+		return nil
 	}
 
 	req.Header.Set("User-Agent", OutboundUserAgent())

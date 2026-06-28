@@ -23,8 +23,9 @@ var fetchPricelistResponse = func(ctx context.Context) (*http.Response, error) {
 	}
 
 	return gateway.DoOutboundGET(ctx, pricelistURL, gateway.OutboundRequestOptions{
-		Style:     gateway.OutboundStyleJSON,
-		StoreBase: storeBase,
+		Style:          gateway.OutboundStyleJSON,
+		StoreBase:      storeBase,
+		SkipWebBotAuth: true,
 	}, pricelistTimeout)
 }
 
