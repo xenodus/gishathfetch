@@ -1,7 +1,6 @@
 package cardkingdom
 
 import (
-	"strconv"
 	"strings"
 	"time"
 )
@@ -19,18 +18,18 @@ func BuildCheapestByName(products []Product, updatedAt time.Time) map[string]Lis
 			continue
 		}
 
-		priceUsd, err := strconv.ParseFloat(strings.TrimSpace(product.PriceRetail), 64)
+		priceUsd, err := product.PriceRetail.Float64()
 		if err != nil || priceUsd <= 0 {
 			continue
 		}
 
-		quantity, _ := strconv.Atoi(strings.TrimSpace(product.QtyRetail))
+		quantity64, _ := product.QtyRetail.Int64()
 		listing := Listing{
 			CardName:  product.Name,
 			Edition:   product.Edition,
 			PriceUsd:  priceUsd,
 			URL:       listingBaseURL + strings.TrimPrefix(product.URL, "/"),
-			Quantity:  quantity,
+			Quantity:  int(quantity64),
 			IsFoil:    strings.EqualFold(strings.TrimSpace(product.IsFoil), "true"),
 			UpdatedAt: updatedAtValue,
 		}
