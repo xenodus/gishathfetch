@@ -17,7 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-const batchWriteLimit = 25
+const (
+	batchWriteLimit   = 25
+	syncMetadataKey   = "__sync__"
+	syncMetadataLabel = "CK price sync metadata"
+)
 
 type dynamoRecord struct {
 	NameKey   string  `dynamodbav:"nameKey"`
@@ -29,6 +33,13 @@ type dynamoRecord struct {
 	IsFoil    bool    `dynamodbav:"isFoil"`
 	UpdatedAt string  `dynamodbav:"updatedAt"`
 	SyncedAt  string  `dynamodbav:"syncedAt"`
+}
+
+type syncMetadataRecord struct {
+	NameKey       string `dynamodbav:"nameKey"`
+	CardName      string `dynamodbav:"cardName"`
+	SyncedAt      string `dynamodbav:"syncedAt"`
+	ListingCount  int    `dynamodbav:"listingCount"`
 }
 
 type DynamoDBStore struct {
@@ -84,19 +95,32 @@ func (s *DynamoDBStore) GetByNameKey(ctx context.Context, nameKey string) (*card
 	}, nil
 }
 
-func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) error {
+func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (string, error) {
 	syncedAt := time.Now().UTC().Format(time.RFC3339)
-	writeRequests := make([]types.WriteRequest, 0, len(listings))
+	writeRequests := make([]types.WriteRequest, 0, len(listings)+1)
 	for nameKey, listing := range listings {
 		record := dynamoRecordFromListing(nameKey, listing, syncedAt)
 		item, err := attributevalue.MarshalMap(record)
 		if err != nil {
-			return err
+			return "", err
 		}
 		writeRequests = append(writeRequests, types.WriteRequest{
 			PutRequest: &types.PutRequest{Item: item},
 		})
 	}
+
+	metadataItem, err := attributevalue.MarshalMap(syncMetadataRecord{
+		NameKey:      syncMetadataKey,
+		CardName:     syncMetadataLabel,
+		SyncedAt:     syncedAt,
+		ListingCount: len(listings),
+	})
+	if err != nil {
+		return "", err
+	}
+	writeRequests = append(writeRequests, types.WriteRequest{
+		PutRequest: &types.PutRequest{Item: metadataItem},
+	})
 
 	for start := 0; start < len(writeRequests); start += batchWriteLimit {
 		end := start + batchWriteLimit
@@ -105,11 +129,11 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 		}
 		batch := writeRequests[start:end]
 		if err := s.writeBatch(ctx, batch); err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	return nil
+	return syncedAt, nil
 }
 
 func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, syncedAt string) dynamoRecord {

@@ -20,8 +20,8 @@ func (m *mockStore) GetByNameKey(_ context.Context, nameKey string) (*cardkingdo
 	return m.listing, nil
 }
 
-func (m *mockStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) error {
-	return nil
+func (m *mockStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {
+	return "", nil
 }
 
 func TestGetLatestPrice_UsesVerifiedName(t *testing.T) {
