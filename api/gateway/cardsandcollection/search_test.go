@@ -4,23 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"mtg-price-checker-sg/gateway/gatewaytest"
 )
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "counterspell")
-	require.NoError(t, err)
-	require.True(t, len(result) > 0)
-
-	for _, card := range result {
-		if card.InStock {
-			require.NotEmpty(t, card.Name)
-			require.NotEmpty(t, card.Source)
-			require.NotEmpty(t, card.Url)
-			require.NotEmpty(t, card.Img)
-			require.NotEmpty(t, card.Price)
-			require.Contains(t, card.Url, StoreBaseURL+"/product/")
-		}
-	}
+	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
+		URLContains: StoreBaseURL + "/product/",
+	}, func(t *testing.T, ctx context.Context) {
+		gatewaytest.RequireCardsAndCollectionAPIStructure(t, ctx, StoreBaseURL, "counterspell")
+	})
 }

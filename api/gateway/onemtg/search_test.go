@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"mtg-price-checker-sg/gateway/binderpos"
+	"mtg-price-checker-sg/gateway/gatewaytest"
+
 	"github.com/joho/godotenv"
-	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -15,17 +17,15 @@ func init() {
 func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
-	require.NoError(t, err)
-	require.True(t, len(result) > 0)
-
-	for _, card := range result {
-		if card.InStock {
-			require.NotEmpty(t, card.Name)
-			require.NotEmpty(t, card.Source)
-			require.NotEmpty(t, card.Url)
-			require.NotEmpty(t, card.Img)
-			require.NotEmpty(t, card.Price)
-			require.Contains(t, card.Url, StoreBaseURL+"/products/")
-		}
-	}
+	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
+		URLContains: StoreBaseURL + "/products/",
+	}, func(t *testing.T, ctx context.Context) {
+		binderpos.RequireStorefrontStructure(t, ctx, binderpos.StructureProbeConfig{
+			ScrapVariant:  2,
+			BaseURL:       StoreBaseURL,
+			SearchURL:     StoreSearchURL,
+			ShopifyDomain: StoreShopifyDomain,
+			Query:         "Abrade",
+		})
+	})
 }

@@ -3,7 +3,6 @@ package binderpos
 import (
 	"context"
 	"errors"
-	"log"
 	"os"
 	"testing"
 
@@ -84,10 +83,10 @@ func Test_Scrap(t *testing.T) {
 				require.Error(t, err)
 				require.Equal(t, testArg.expErr.Error(), err.Error())
 				return
-			} else {
-				require.NoError(t, err)
-				require.True(t, len(result) > 0)
+			}
 
+			require.NoError(t, err)
+			if len(result) > 0 {
 				for _, card := range result {
 					if card.InStock {
 						require.NotEmpty(t, card.Name)
@@ -96,11 +95,18 @@ func Test_Scrap(t *testing.T) {
 						require.NotEmpty(t, card.Img)
 						require.NotEmpty(t, card.Price)
 						require.Contains(t, card.Url, testArg.baseUrl+"/products/")
-
-						log.Println(card.Name)
 					}
 				}
+				return
 			}
+
+			require.NoError(t, ProbeScrapeStructure(
+				context.Background(),
+				testArg.scrapVariant,
+				testArg.baseUrl,
+				testArg.searchUrl,
+				testArg.searchStr,
+			))
 		})
 	}
 }

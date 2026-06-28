@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"mtg-price-checker-sg/gateway/binderpos"
+	"mtg-price-checker-sg/gateway/gatewaytest"
+
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
@@ -16,18 +19,19 @@ func init() {
 func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
-	require.NoError(t, err)
-	require.True(t, len(result) > 0)
-
-	for _, card := range result {
-		require.True(t, card.InStock, "gateway should only return in-stock variants")
-		require.NotEmpty(t, card.Name)
-		require.NotEmpty(t, card.Source)
-		require.NotEmpty(t, card.Url)
-		require.NotEmpty(t, card.Img)
-		require.NotEmpty(t, card.Price)
-		require.Contains(t, card.Url, StoreBaseURL+"/products/")
-	}
+	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
+		URLContains:    StoreBaseURL + "/products/",
+		RequireInStock: true,
+	}, func(t *testing.T, ctx context.Context) {
+		binderpos.RequireStorefrontStructure(t, ctx, binderpos.StructureProbeConfig{
+			ScrapVariant:  2,
+			BaseURL:       StoreBaseURL,
+			SearchURL:     StoreSearchURL,
+			ShopifyDomain: StoreShopifyDomain,
+			ScrapOnly:     ScrapOnly,
+			Query:         "Abrade",
+		})
+	})
 }
 
 func Test_Search_ExcludesPokemonInventory(t *testing.T) {
