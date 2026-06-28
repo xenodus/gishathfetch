@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -26,7 +27,7 @@ func DoOutboundGET(
 	opts OutboundRequestOptions,
 	timeout time.Duration,
 ) (*http.Response, error) {
-	var lastErr error
+	var failures []string
 	for _, attempt := range buildOutboundGETAttempts(timeout) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 		if err != nil {
@@ -38,20 +39,20 @@ func DoOutboundGET(
 
 		resp, err := attempt.client.Do(req)
 		if err != nil {
-			lastErr = fmt.Errorf("%s: %w", attempt.strategy, err)
+			failures = append(failures, fmt.Sprintf("%s: %v", attempt.strategy, err))
 			continue
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			lastErr = fmt.Errorf("%s: status %d", attempt.strategy, resp.StatusCode)
+			failures = append(failures, fmt.Sprintf("%s: status %d", attempt.strategy, resp.StatusCode))
 			resp.Body.Close()
 			continue
 		}
 		return resp, nil
 	}
-	if lastErr == nil {
+	if len(failures) == 0 {
 		return nil, fmt.Errorf("outbound get failed")
 	}
-	return nil, lastErr
+	return nil, fmt.Errorf("outbound get failed: %s", strings.Join(failures, "; "))
 }
 
 func buildOutboundGETAttempts(timeout time.Duration) []outboundAttempt {

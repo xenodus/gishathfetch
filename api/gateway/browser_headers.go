@@ -40,6 +40,9 @@ func ApplyBrowserLikeJSONFetchHeaders(h *http.Header, storeBase *url.URL) {
 	}
 	if ref := navigationReferer(storeBase); ref != "" {
 		h.Set("Referer", ref)
+		if storeBase.Scheme != "" && storeBase.Host != "" {
+			h.Set("Origin", storeBase.Scheme+"://"+storeBase.Host)
+		}
 	}
 	h.Set("Accept", browserLikeAcceptJSON)
 	h.Set("Accept-Language", browserLikeAcceptLanguage)

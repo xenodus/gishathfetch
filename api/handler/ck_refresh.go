@@ -69,6 +69,7 @@ func runCKPriceRefresh(ctx context.Context) error {
 
 	count, err := refreshCKPricesFunc(ctx, store)
 	if err != nil {
+		log.Printf("ck price outbound: %v", err)
 		return err
 	}
 
