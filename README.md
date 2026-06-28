@@ -106,13 +106,12 @@ sequenceDiagram
     FE->>GA: gtag event search (search_term)
     EB->>L: daily analytics-keywords-export-run
     L->>GA: GA4 Data API RunReport
-    L->>S3: latest.json + YYYY-MM-DD.json
+    L->>S3: latest.json
 ```
 
 S3 output (default prefix `analytics/top-search-keywords/`):
 
 - `latest.json` — most recent export
-- `YYYY-MM-DD.json` — dated snapshot for the export run
 
 Example report shape:
 

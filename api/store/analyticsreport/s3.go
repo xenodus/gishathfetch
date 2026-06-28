@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"mtg-price-checker-sg/controller/analyticskeywords"
 	"mtg-price-checker-sg/pkg/config"
@@ -71,26 +70,15 @@ func (w *S3Writer) Write(ctx context.Context, report *analyticskeywords.Report) 
 		return err
 	}
 
-	generatedDate, err := ParseGeneratedAtDate(report.GeneratedAt)
+	key := w.objectKey("latest.json")
+	_, err = w.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(w.bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(payload),
+		ContentType: aws.String("application/json"),
+	})
 	if err != nil {
-		return err
-	}
-
-	keys := []string{
-		w.objectKey("latest.json"),
-		w.objectKey(generatedDate + ".json"),
-	}
-
-	for _, key := range keys {
-		_, err = w.client.PutObject(ctx, &s3.PutObjectInput{
-			Bucket:      aws.String(w.bucket),
-			Key:         aws.String(key),
-			Body:        bytes.NewReader(payload),
-			ContentType: aws.String("application/json"),
-		})
-		if err != nil {
-			return fmt.Errorf("analyticsreport: put s3://%s/%s: %w", w.bucket, key, err)
-		}
+		return fmt.Errorf("analyticsreport: put s3://%s/%s: %w", w.bucket, key, err)
 	}
 
 	return nil
@@ -98,13 +86,4 @@ func (w *S3Writer) Write(ctx context.Context, report *analyticskeywords.Report) 
 
 func (w *S3Writer) objectKey(name string) string {
 	return w.prefix + "/" + name
-}
-
-// ParseGeneratedAtDate extracts the YYYY-MM-DD portion from an RFC3339 timestamp.
-func ParseGeneratedAtDate(generatedAt string) (string, error) {
-	parsed, err := time.Parse(time.RFC3339, generatedAt)
-	if err != nil {
-		return "", err
-	}
-	return parsed.UTC().Format("2006-01-02"), nil
 }
