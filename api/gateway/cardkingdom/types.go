@@ -21,4 +21,5 @@ type Listing struct {
 	Quantity  int     `json:"quantity"`
 	IsFoil    bool    `json:"isFoil"`
 	UpdatedAt string  `json:"updatedAt,omitempty"`
+	SyncedAt  string  `json:"syncedAt,omitempty"`
 }
