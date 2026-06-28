@@ -1,5 +1,5 @@
 import { Moon, Sun } from "react-feather";
-import { SITE_TAGLINE } from "../constants";
+import { SITE_LOGO_SRC, SITE_TAGLINE } from "../constants";
 
 const Header = ({ theme, onToggleTheme }) => {
   const isDarkMode = theme === "dark";
@@ -27,7 +27,7 @@ const Header = ({ theme, onToggleTheme }) => {
           <a href="/">
             <img
               id="logo"
-              src="img/gishath-fetch-web.png"
+              src={SITE_LOGO_SRC}
               className="mb-2"
               alt="Gishath Fetch"
             />
