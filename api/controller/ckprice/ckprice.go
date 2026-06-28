@@ -48,7 +48,7 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 	return !now.After(updatedAt.Add(config.CKPriceMaxAge))
 }
 
-// RefreshPrices downloads the Card Kingdom pricelist and upserts the DynamoDB index.
+// RefreshPrices downloads Card Kingdom retail prices from MTGJSON and upserts the DynamoDB index.
 func RefreshPrices(ctx context.Context, store ckprices.Store) (int, error) {
 	listings, err := fetchCheapestFunc(ctx)
 	if err != nil {

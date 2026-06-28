@@ -48,6 +48,10 @@ const (
 	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
 	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
 	CKPriceMaxAge = 24 * time.Hour
+	// MTGJSONAllPricesTodayURLEnv overrides the MTGJSON AllPricesToday download URL.
+	MTGJSONAllPricesTodayURLEnv = "MTGJSON_ALL_PRICES_TODAY_URL"
+	// MTGJSONAllPrintingsURLEnv overrides the MTGJSON AllPrintings download URL.
+	MTGJSONAllPrintingsURLEnv = "MTGJSON_ALL_PRINTINGS_URL"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
 )
