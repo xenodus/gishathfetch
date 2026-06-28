@@ -44,7 +44,7 @@ function PopularSearchHeader({ period, onPeriodChange, disabled }) {
   return (
     <fieldset className="popular-search-header border-0 p-0 m-0 mb-2">
       <div className="d-inline-flex align-items-center justify-content-center gap-2 flex-wrap">
-        <legend className="popular-search-legend small text-muted mb-0">
+        <legend className="popular-search-legend small mb-0">
           Popular searches:
         </legend>
         <PeriodToggle

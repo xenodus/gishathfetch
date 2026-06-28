@@ -203,6 +203,8 @@ ins.adsbygoogle iframe {
   float: none;
   width: auto;
   padding: 0;
+  color: var(--bs-secondary-color);
+  opacity: 0.7;
 }
 
 .popular-search-period-toggle {
@@ -213,15 +215,20 @@ ins.adsbygoogle iframe {
 
 .popular-search-period-btn {
   border-radius: var(--bs-border-radius-pill);
-  border: 1px solid var(--bs-secondary);
+  border: 1px solid var(--bs-primary);
   background-color: transparent;
-  color: var(--bs-secondary);
+  color: var(--bs-primary);
 }
 
-.popular-search-period-btn.is-active,
-.popular-search-period-btn:hover:not(:disabled),
-.popular-search-period-btn:focus-visible:not(:disabled) {
-  background-color: var(--bs-secondary);
-  border-color: var(--bs-secondary);
+.popular-search-period-btn.is-active {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
   color: var(--bs-white);
+}
+
+.popular-search-period-btn:hover:not(:disabled):not(.is-active),
+.popular-search-period-btn:focus-visible:not(:disabled):not(.is-active) {
+  background-color: rgba(var(--bs-primary-rgb), 0.15);
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
 }
