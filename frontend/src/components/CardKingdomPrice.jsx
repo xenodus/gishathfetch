@@ -14,12 +14,11 @@ const formatDataDate = (value) => {
     return null;
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = date.getUTCMonth() + 1;
+  const year = date.getUTCFullYear();
+
+  return `${day} ${month} ${year}`;
 };
 
 const CardKingdomPrice = ({ price }) => {
