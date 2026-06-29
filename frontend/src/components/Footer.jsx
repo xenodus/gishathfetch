@@ -2,6 +2,10 @@ import { ArrowUp, FolderPlus, HelpCircle, Map as MapIcon } from "react-feather";
 import useBottomChromeLayout from "../hooks/useBottomChromeLayout";
 import AdComponent from "./AdComponent";
 
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
   useBottomChromeLayout();
 
@@ -53,10 +57,11 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
               <span>FAQs</span>
             </div>
           </button>
-          <a
-            href="#top"
+          <button
+            type="button"
             aria-label="Scroll to top of page"
-            className="py-1 link-light link-offset-2 link-underline-opacity-0"
+            className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
+            onClick={scrollToTop}
           >
             <div className="px-2 py-1 d-inline-flex align-items-center">
               <span className="bottom-nav-icon">
@@ -64,7 +69,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
               </span>
               <span>Top</span>
             </div>
-          </a>
+          </button>
         </div>
       </div>
     </>
