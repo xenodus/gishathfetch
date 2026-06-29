@@ -189,6 +189,8 @@ const SearchForm = ({
           onToggle={onStoreToggle}
           onSelectAll={onSelectAll}
           onSelectNone={onSelectNone}
+          collapsible
+          collapseOnSearch={isSearching}
         />
 
         {showTip && (
