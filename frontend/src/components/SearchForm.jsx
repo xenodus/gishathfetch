@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Loader, X } from "react-feather";
 import { MAX_SEARCH_LENGTH, MIN_SEARCH_LENGTH } from "../constants";
 import StoreSelector from "./StoreSelector";
 
@@ -7,9 +8,12 @@ const TIP_DISMISSED_STORAGE_KEY = "search-form-tip-dismissed";
 const SearchForm = ({
   searchQuery,
   onQueryChange,
+  onClearQuery,
   onSearchSubmit,
   suggestions,
   showSuggestions,
+  showEmptySuggestions,
+  isLoadingSuggestions,
   onSuggestionClick,
   onFocus,
   isSearching,
@@ -26,6 +30,7 @@ const SearchForm = ({
   popularSearchesSlot,
 }) => {
   const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showTip, setShowTip] = useState(() => {
     if (typeof window === "undefined") {
@@ -52,11 +57,54 @@ const SearchForm = ({
     };
   }, [onCloseSuggestions]);
 
+  useEffect(() => {
+    if (selectedIndex < 0) {
+      return;
+    }
+
+    document
+      .getElementById(`suggestion-${selectedIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (event) => {
+      if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+
+      event.preventDefault();
+      inputRef.current?.focus();
+    };
+
+    document.addEventListener("keydown", handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown);
+    };
+  }, []);
+
+  const handleInputChange = (event) => {
+    setSelectedIndex(-1);
+    onQueryChange(event);
+  };
+
   const handleKeyDown = (e) => {
     if (!showSuggestions || suggestions.length === 0) {
-      // Reset index when suggestions are not shown
-      if (selectedIndex !== -1) {
-        setSelectedIndex(-1);
+      if (e.key === "Escape") {
+        onCloseSuggestions?.();
       }
       return;
     }
@@ -101,82 +149,135 @@ const SearchForm = ({
 
   const queryTooShort =
     searchQuery.length > 0 && searchQuery.length < MIN_SEARCH_LENGTH;
+  const showSuggestionDropdown =
+    (showSuggestions && suggestions.length > 0) ||
+    isLoadingSuggestions ||
+    showEmptySuggestions;
+  const showClearButton = searchQuery.length > 0 && !isSearching;
 
   return (
     <div ref={wrapperRef}>
       <form id="searchForm" onSubmit={onSearchSubmit}>
         <div className="mb-3 position-relative">
-          <div className="form-floating">
+          <div className="form-floating search-input-wrapper">
             <input
-              type="search"
-              className="form-control"
+              ref={inputRef}
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              className="form-control search-input"
               id="search"
               role="combobox"
               placeholder="lightning bolt"
               value={searchQuery}
-              onChange={onQueryChange}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               autoComplete="off"
               onFocus={onFocus}
               maxLength={MAX_SEARCH_LENGTH}
               aria-autocomplete="list"
               aria-controls="suggestions"
-              aria-expanded={showSuggestions && suggestions.length > 0}
+              aria-expanded={showSuggestionDropdown}
               aria-activedescendant={
                 selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined
               }
+              aria-describedby={
+                queryTooShort || searchError ? "search-error" : undefined
+              }
             />
             <label htmlFor="search">Card Name</label>
+            <div className="search-input-actions">
+              {isLoadingSuggestions && (
+                <Loader
+                  size={16}
+                  className="search-input-spinner"
+                  aria-hidden="true"
+                />
+              )}
+              {showClearButton && (
+                <button
+                  type="button"
+                  className="search-input-clear"
+                  onClick={() => {
+                    onClearQuery();
+                    inputRef.current?.focus();
+                  }}
+                  aria-label="Clear search"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
+            </div>
           </div>
 
           {(queryTooShort || searchError) && (
-            <div className="form-text text-danger" role="alert">
+            <div
+              className="form-text text-danger"
+              id="search-error"
+              role="alert"
+            >
               {searchError ||
                 `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`}
             </div>
           )}
 
-          {showSuggestions && suggestions.length > 0 && (
+          {showSuggestionDropdown && (
             <div
               id="suggestions"
               className="suggestions d-block"
               role="listbox"
               aria-label="Card name suggestions"
             >
-              {suggestions.map((s, suggestionIndex) => {
-                // Escape query for regex and split suggestion into parts
-                const escapedQuery = searchQuery.replace(
-                  /[.*+?^${}()|[\]\\]/g,
-                  "\\$&",
-                );
-                const parts = s.split(new RegExp(`(${escapedQuery})`, "gi"));
+              {isLoadingSuggestions && (
+                <output className="suggestion-status">
+                  <Loader size={14} className="search-input-spinner me-2" />
+                  Loading suggestions…
+                </output>
+              )}
 
-                return (
-                  // biome-ignore lint/a11y/useFocusableInteractive: Focus is managed by input
-                  // biome-ignore lint/a11y/useKeyWithClickEvents: Keyboard navigation is handled by input
-                  <div
-                    key={s}
-                    id={`suggestion-${suggestionIndex}`}
-                    className={`suggestion-item${selectedIndex === suggestionIndex ? " selected" : ""}`}
-                    onClick={() => {
-                      onSuggestionClick(s);
-                      setSelectedIndex(-1);
-                    }}
-                    role="option"
-                    aria-selected={selectedIndex === suggestionIndex}
-                  >
-                    {parts.map((part, index) =>
-                      part.toLowerCase() === searchQuery.toLowerCase() ? (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: Order of regex parts is stable
-                        <b key={`${suggestionIndex}-${index}`}>{part}</b>
-                      ) : (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: Order of regex parts is stable
-                        <span key={`${suggestionIndex}-${index}`}>{part}</span>
-                      ),
-                    )}
-                  </div>
-                );
-              })}
+              {!isLoadingSuggestions && showEmptySuggestions && (
+                <output className="suggestion-status">
+                  No matching cards found.
+                </output>
+              )}
+
+              {!isLoadingSuggestions &&
+                showSuggestions &&
+                suggestions.map((s, suggestionIndex) => {
+                  const escapedQuery = searchQuery.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    "\\$&",
+                  );
+                  const parts = s.split(new RegExp(`(${escapedQuery})`, "gi"));
+
+                  return (
+                    // biome-ignore lint/a11y/useFocusableInteractive: Focus is managed by input
+                    // biome-ignore lint/a11y/useKeyWithClickEvents: Keyboard navigation is handled by input
+                    <div
+                      key={s}
+                      id={`suggestion-${suggestionIndex}`}
+                      className={`suggestion-item${selectedIndex === suggestionIndex ? " selected" : ""}`}
+                      onClick={() => {
+                        onSuggestionClick(s);
+                        setSelectedIndex(-1);
+                      }}
+                      role="option"
+                      aria-selected={selectedIndex === suggestionIndex}
+                    >
+                      {parts.map((part, index) =>
+                        part.toLowerCase() === searchQuery.toLowerCase() ? (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: Order of regex parts is stable
+                          <b key={`${suggestionIndex}-${index}`}>{part}</b>
+                        ) : (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: Order of regex parts is stable
+                          <span key={`${suggestionIndex}-${index}`}>
+                            {part}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

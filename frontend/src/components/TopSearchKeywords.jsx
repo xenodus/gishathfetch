@@ -108,6 +108,7 @@ export default function TopSearchKeywords({
   isLoading,
   collapsible = false,
   collapseOnSearch = false,
+  onKeywordClick,
 }) {
   const [period, setPeriod] = useState("last24Hours");
   const [isExpanded, setIsExpanded] = useState(!collapsible);
@@ -168,16 +169,28 @@ export default function TopSearchKeywords({
             </div>
           ) : keywords.length > 0 ? (
             <div className="popular-searches-pills">
-              {keywords.map((keyword) => (
-                <a
-                  key={keyword}
-                  href={buildSearchQueryUrl(BASE_URL, keyword)}
-                  className="btn btn-sm popular-search-pill text-decoration-none"
-                  aria-label={`Search for ${keyword}`}
-                >
-                  {keyword}
-                </a>
-              ))}
+              {keywords.map((keyword) =>
+                onKeywordClick ? (
+                  <button
+                    key={keyword}
+                    type="button"
+                    className="btn btn-sm popular-search-pill"
+                    aria-label={`Search for ${keyword}`}
+                    onClick={() => onKeywordClick(keyword)}
+                  >
+                    {keyword}
+                  </button>
+                ) : (
+                  <a
+                    key={keyword}
+                    href={buildSearchQueryUrl(BASE_URL, keyword)}
+                    className="btn btn-sm popular-search-pill text-decoration-none"
+                    aria-label={`Search for ${keyword}`}
+                  >
+                    {keyword}
+                  </a>
+                ),
+              )}
             </div>
           ) : (
             <p className="popular-searches-empty small text-muted mb-0">

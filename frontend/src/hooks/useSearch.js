@@ -48,6 +48,8 @@ export default function useSearch() {
   const [searchProgress, setSearchProgress] = useState("Search");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [autocompleteSettled, setAutocompleteSettled] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
   const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
@@ -411,10 +413,26 @@ export default function useSearch() {
   // --- Handlers ---
   const handleQueryChange = (e) => {
     setSearchQuery(e.target.value);
+    setAutocompleteSettled(false);
     if (searchError === SEARCH_TOO_SHORT_ERROR) {
       setSearchError(null);
     }
   };
+
+  const handleClearQuery = useCallback(() => {
+    setSearchQuery("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setAutocompleteSettled(false);
+    setIsLoadingSuggestions(false);
+    if (searchError === SEARCH_TOO_SHORT_ERROR) {
+      setSearchError(null);
+    }
+    if (autocompleteAbortControllerRef.current) {
+      autocompleteAbortControllerRef.current.abort();
+      autocompleteAbortControllerRef.current = null;
+    }
+  }, [searchError]);
 
   useEffect(() => {
     if (skipSuggestionsRef.current) {
@@ -434,6 +452,8 @@ export default function useSearch() {
         }
         const autocompleteAbortController = new AbortController();
         autocompleteAbortControllerRef.current = autocompleteAbortController;
+        setIsLoadingSuggestions(true);
+        setAutocompleteSettled(false);
 
         fetch(
           `https://api.scryfall.com/cards/autocomplete?q=${encodeURIComponent(searchQuery.toLowerCase())}`,
@@ -473,6 +493,8 @@ export default function useSearch() {
               autocompleteAbortController
             ) {
               autocompleteAbortControllerRef.current = null;
+              setIsLoadingSuggestions(false);
+              setAutocompleteSettled(true);
             }
           });
       }, AUTOCOMPLETE_DEBOUNCE_MS);
@@ -483,6 +505,8 @@ export default function useSearch() {
       autocompleteAbortControllerRef.current.abort();
       autocompleteAbortControllerRef.current = null;
     }
+    setIsLoadingSuggestions(false);
+    setAutocompleteSettled(false);
     setSuggestions([]);
     setShowSuggestions(false);
   }, [searchQuery]);
@@ -508,9 +532,21 @@ export default function useSearch() {
     skipSuggestionsRef.current = true;
     setSearchQuery(suggestion);
     setShowSuggestions(false);
+    setAutocompleteSettled(false);
 
     performSearch(suggestion, resolveStoresToSearch(selectedStores));
   };
+
+  const handlePopularSearchClick = useCallback(
+    (keyword) => {
+      skipSuggestionsRef.current = true;
+      setSearchQuery(keyword);
+      setShowSuggestions(false);
+      setAutocompleteSettled(false);
+      performSearch(keyword, resolveStoresToSearch(selectedStores));
+    },
+    [performSearch, resolveStoresToSearch, selectedStores],
+  );
 
   const handleSearchSubmit = (e) => {
     if (e) e.preventDefault();
@@ -575,10 +611,18 @@ export default function useSearch() {
     suggestions,
     showSuggestions,
     setShowSuggestions,
+    isLoadingSuggestions,
+    showEmptySuggestions:
+      autocompleteSettled &&
+      searchQuery.length > MIN_SEARCH_LENGTH - 1 &&
+      searchQuery.length <= MAX_SEARCH_LENGTH &&
+      suggestions.length === 0,
     selectedStores,
     setSelectedStores,
     handleQueryChange,
+    handleClearQuery,
     handleSuggestionClick,
+    handlePopularSearchClick,
     handleSearchSubmit,
     toggleStore,
     selectAllStores,
