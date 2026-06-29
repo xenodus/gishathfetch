@@ -34,10 +34,22 @@ type ckUUIDPrice struct {
 type mtgjsonCard struct {
 	UUID         string `json:"uuid"`
 	Name         string `json:"name"`
+	Number       string `json:"number"`
 	PurchaseUrls struct {
 		CardKingdom     string `json:"cardKingdom"`
 		CardKingdomFoil string `json:"cardKingdomFoil"`
 	} `json:"purchaseUrls"`
+}
+
+type printingKey struct {
+	number string
+	name   string
+}
+
+type printingAggregate struct {
+	cardKingdom     string
+	cardKingdomFoil string
+	price           ckUUIDPrice
 }
 
 func fetchCheapestFromMTGJSON(ctx context.Context) (map[string]Listing, error) {
@@ -264,8 +276,12 @@ func decodeSetCatalog(
 			return err
 		}
 
+		aggregates := make(map[printingKey]printingAggregate)
 		for _, card := range set.Cards {
-			applyMTGJSONCardPrices(cheapest, card, set.Name, pricesByUUID, updatedAt)
+			mergePrintingAggregate(aggregates, card, pricesByUUID)
+		}
+		for key, aggregate := range aggregates {
+			applyPrintingAggregate(cheapest, key.name, set.Name, aggregate, updatedAt)
 		}
 	}
 
@@ -273,47 +289,76 @@ func decodeSetCatalog(
 	return err
 }
 
-func applyMTGJSONCardPrices(
-	cheapest map[string]Listing,
+func mergePrintingAggregate(
+	aggregates map[printingKey]printingAggregate,
 	card mtgjsonCard,
-	setName string,
 	pricesByUUID map[string]ckUUIDPrice,
-	updatedAt time.Time,
 ) {
-	price, ok := pricesByUUID[card.UUID]
-	if !ok {
+	name := strings.TrimSpace(card.Name)
+	if name == "" {
 		return
 	}
 
+	key := printingKey{
+		number: strings.TrimSpace(card.Number),
+		name:   name,
+	}
+	aggregate := aggregates[key]
+
+	if card.PurchaseUrls.CardKingdom != "" {
+		aggregate.cardKingdom = card.PurchaseUrls.CardKingdom
+	}
+	if card.PurchaseUrls.CardKingdomFoil != "" {
+		aggregate.cardKingdomFoil = card.PurchaseUrls.CardKingdomFoil
+	}
+	if price, ok := pricesByUUID[card.UUID]; ok {
+		if price.normal > aggregate.price.normal {
+			aggregate.price.normal = price.normal
+		}
+		if price.foil > aggregate.price.foil {
+			aggregate.price.foil = price.foil
+		}
+	}
+
+	aggregates[key] = aggregate
+}
+
+func applyPrintingAggregate(
+	cheapest map[string]Listing,
+	cardName string,
+	setName string,
+	aggregate printingAggregate,
+	updatedAt time.Time,
+) {
 	updatedAtValue := updatedAt.Format(time.RFC3339)
-	if price.normal > 0 && card.PurchaseUrls.CardKingdom != "" {
+	if aggregate.price.normal > 0 && aggregate.cardKingdom != "" {
 		considerCheapestListing(cheapest, Listing{
-			CardName:  card.Name,
+			CardName:  cardName,
 			Edition:   setName,
-			PriceUsd:  price.normal,
-			URL:       card.PurchaseUrls.CardKingdom,
+			PriceUsd:  aggregate.price.normal,
+			URL:       aggregate.cardKingdom,
 			Quantity:  0,
 			IsFoil:    false,
 			UpdatedAt: updatedAtValue,
 		})
 	}
 
-	if price.foil <= 0 {
+	if aggregate.price.foil <= 0 {
 		return
 	}
 
-	foilURL := card.PurchaseUrls.CardKingdomFoil
+	foilURL := aggregate.cardKingdomFoil
 	if foilURL == "" {
-		foilURL = card.PurchaseUrls.CardKingdom
+		foilURL = aggregate.cardKingdom
 	}
 	if foilURL == "" {
 		return
 	}
 
 	considerCheapestListing(cheapest, Listing{
-		CardName:  card.Name,
+		CardName:  cardName,
 		Edition:   setName,
-		PriceUsd:  price.foil,
+		PriceUsd:  aggregate.price.foil,
 		URL:       foilURL,
 		Quantity:  0,
 		IsFoil:    true,
