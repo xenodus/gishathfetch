@@ -141,6 +141,7 @@ body {
 }
 
 .store-selector-bulk-btn {
+  font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-primary);
   background-color: transparent;
@@ -172,6 +173,7 @@ body {
 }
 
 .store-selector-pill {
+  font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-border-color);
   background-color: var(--bs-body-bg);
@@ -431,6 +433,7 @@ ins.adsbygoogle iframe {
 }
 
 .popular-search-period-btn {
+  font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-primary);
   background-color: transparent;
@@ -458,6 +461,7 @@ ins.adsbygoogle iframe {
 }
 
 .popular-search-pill {
+  font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-border-color);
   background-color: var(--bs-body-bg);
@@ -474,7 +478,7 @@ ins.adsbygoogle iframe {
 .popular-search-pill-skeleton {
   display: inline-block;
   width: 5.5rem;
-  height: 1.9375rem;
+  height: 1.75rem;
 }
 
 .popular-searches-empty {
