@@ -79,8 +79,8 @@ func TestS3Writer_WriteUploadsLatestObject(t *testing.T) {
 		t.Fatalf("write report: %v", err)
 	}
 
-	if len(mockClient.objects) != 1 {
-		t.Fatalf("expected 1 object, got %d", len(mockClient.objects))
+	if len(mockClient.objects) != 2 {
+		t.Fatalf("expected 2 objects, got %d", len(mockClient.objects))
 	}
 
 	latestKey := config.AnalyticsS3DefaultKeyPrefix + "/latest.json"
@@ -101,5 +101,20 @@ func TestS3Writer_WriteUploadsLatestObject(t *testing.T) {
 	}
 	if decoded.PropertyID != "123456789" {
 		t.Fatalf("unexpected decoded report: %+v", decoded)
+	}
+
+	robotsObject, ok := mockClient.objects[analyticskeywords.RobotsTxtObjectKey]
+	if !ok {
+		t.Fatalf("missing robots.txt object")
+	}
+	if robotsObject.contentType != "text/plain; charset=utf-8" {
+		t.Fatalf("expected text/plain content type, got %q", robotsObject.contentType)
+	}
+	if robotsObject.cacheControl != config.RobotsTxtCacheControl {
+		t.Fatalf("expected cache control %q, got %q", config.RobotsTxtCacheControl, robotsObject.cacheControl)
+	}
+	expectedRobotsTxt := analyticskeywords.BuildRobotsTxt(report, config.SiteBaseURL)
+	if string(robotsObject.body) != expectedRobotsTxt {
+		t.Fatalf("unexpected robots.txt:\n%s", robotsObject.body)
 	}
 }

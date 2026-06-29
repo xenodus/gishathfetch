@@ -82,6 +82,18 @@ func (w *S3Writer) Write(ctx context.Context, report *analyticskeywords.Report) 
 		return fmt.Errorf("analyticsreport: put s3://%s/%s: %w", w.bucket, key, err)
 	}
 
+	robotsTxt := analyticskeywords.BuildRobotsTxt(report, config.SiteBaseURL)
+	_, err = w.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:       aws.String(w.bucket),
+		Key:          aws.String(analyticskeywords.RobotsTxtObjectKey),
+		Body:         bytes.NewReader([]byte(robotsTxt)),
+		ContentType:  aws.String("text/plain; charset=utf-8"),
+		CacheControl: aws.String(config.RobotsTxtCacheControl),
+	})
+	if err != nil {
+		return fmt.Errorf("analyticsreport: put s3://%s/%s: %w", w.bucket, analyticskeywords.RobotsTxtObjectKey, err)
+	}
+
 	return nil
 }
 
