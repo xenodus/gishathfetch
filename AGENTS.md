@@ -34,6 +34,11 @@ For any PR that includes UI changes:
 
 - Include screenshots in the PR description at both **desktop** and **mobile** resolutions.
 - **Take full-page screenshots** that include the visible UI changes. Avoid tight crops of a single component; reviewers should see the change in the context of the full page.
+- **Refresh screenshots whenever further visible UI changes are made** on the same PR. Do not leave stale screenshots in the PR description after follow-up styling or layout edits.
+- **Avoid cached screenshots** when updating a PR:
+  - Save each new capture under a **new filename** (for example, append a date or version suffix like `homepage-search-20260629-v2-desktop.png`).
+  - Update the PR description to reference the new image paths so GitHub uploads fresh assets instead of reusing old URLs.
+  - Do not overwrite an existing screenshot filename if the PR already references it.
 - **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts used in the PR description.
 - Embed screenshots using **GitHub-hosted image URLs that render in PR descriptions** (for example `github.com/.../releases/download/...` or `github.com/user-attachments/assets/...`). Do not use `cursor.com/artifacts/...` URLs or uncommitted local file paths.
 
@@ -65,6 +70,8 @@ export PATH="/usr/local/go/bin:$PATH"
 Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
 - Desktop and mobile full-page screenshots with the visible UI changes
+- Re-capture and update PR screenshots after any follow-up visible UI change on the same PR
+- Use a new filename for each refresh so PR images are not served from cache
 - Do not commit screenshots to the repo; attach them only in the PR description
 - Use GitHub-hosted image URLs that render on GitHub (not Cursor artifact URLs)
 
