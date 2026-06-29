@@ -65,6 +65,10 @@ const (
 	// AnalyticsLatestJSONCacheControl is applied to latest.json so CloudFront can cache it
 	// between daily exports without a separate invalidation.
 	AnalyticsLatestJSONCacheControl = "public, max-age=3600"
+	// RobotsTxtCacheControl is applied to robots.txt so CloudFront can cache it between daily exports.
+	RobotsTxtCacheControl = "public, max-age=3600"
+	// SiteBaseURL is the public frontend origin used when generating robots.txt search URLs.
+	SiteBaseURL = "https://gishathfetch.com/"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
 )
