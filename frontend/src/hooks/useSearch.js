@@ -537,17 +537,6 @@ export default function useSearch() {
     performSearch(suggestion, resolveStoresToSearch(selectedStores));
   };
 
-  const handlePopularSearchClick = useCallback(
-    (keyword) => {
-      skipSuggestionsRef.current = true;
-      setSearchQuery(keyword);
-      setShowSuggestions(false);
-      setAutocompleteSettled(false);
-      performSearch(keyword, resolveStoresToSearch(selectedStores));
-    },
-    [performSearch, resolveStoresToSearch, selectedStores],
-  );
-
   const handleSearchSubmit = (e) => {
     if (e) e.preventDefault();
     setShowSuggestions(false);
@@ -622,7 +611,6 @@ export default function useSearch() {
     handleQueryChange,
     handleClearQuery,
     handleSuggestionClick,
-    handlePopularSearchClick,
     handleSearchSubmit,
     toggleStore,
     selectAllStores,

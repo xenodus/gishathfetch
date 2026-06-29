@@ -54,7 +54,6 @@ export default function App() {
     handleQueryChange,
     handleClearQuery,
     handleSuggestionClick,
-    handlePopularSearchClick,
     handleSearchSubmit,
     toggleStore,
     selectAllStores,
@@ -177,7 +176,6 @@ export default function App() {
             isLoading={isLoadingTopSearchKeywords}
             collapsible
             collapseOnSearch={isSearching}
-            onKeywordClick={handlePopularSearchClick}
           />
         }
       />
