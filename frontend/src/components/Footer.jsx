@@ -1,7 +1,8 @@
 import { ArrowUp, FolderPlus, HelpCircle, Map as MapIcon } from "react-feather";
+import { Link } from "react-router-dom";
 import AdComponent from "./AdComponent";
 
-const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
+const Footer = ({ cartCount, onShowCart, onShowFaq }) => {
   return (
     <>
       <div className="mt-4 pb-5">
@@ -24,11 +25,10 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
               <span>Saved {cartCount > 0 && `(${cartCount})`}</span>
             </div>
           </button>
-          <button
-            type="button"
+          <Link
+            to="/map"
             aria-label="View store locations map"
             className="btn btn-link py-1 link-light link-offset-2 link-underline-opacity-0 text-decoration-none border-0"
-            onClick={onShowMap}
           >
             <div className="px-2 py-1 d-inline-flex align-items-center">
               <span className="bottom-nav-icon">
@@ -36,7 +36,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
               </span>
               <span>Map</span>
             </div>
-          </button>
+          </Link>
           <button
             type="button"
             aria-label="View frequently asked questions"

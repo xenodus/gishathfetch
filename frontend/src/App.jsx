@@ -12,7 +12,7 @@ const CartOffcanvas = lazy(() => import("./components/CartOffcanvas"));
 const Modals = lazy(() => import("./components/Modals"));
 
 // --- Constants ---
-import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
+import { BASE_URL, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
 // --- Hooks ---
 import useCart from "./hooks/useCart";
 import useSearch from "./hooks/useSearch";
@@ -195,7 +195,6 @@ export default function App() {
       <Footer
         cartCount={cart.length}
         onShowCart={() => setShowCart(true)}
-        onShowMap={() => setModalType("MAP")}
         onShowFaq={() => setModalType("FAQ")}
       />
 
@@ -212,14 +211,11 @@ export default function App() {
         />
 
         <Modals
-          showMap={modalType === "MAP"}
-          onHideMap={() => setModalType(null)}
           showFaq={modalType === "FAQ"}
           onHideFaq={() => setModalType(null)}
           showPrivacy={modalType === "PRIVACY"}
           onHidePrivacy={() => setModalType(null)}
           onShowPrivacy={() => setModalType("PRIVACY")}
-          lgsMapData={LGS_MAP}
         />
       </Suspense>
     </div>

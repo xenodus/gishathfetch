@@ -73,3 +73,20 @@ export function applyHomeSeo() {
   setMetaContent("name", "twitter:description", SITE_DESCRIPTION);
   setCanonicalUrl(BASE_URL);
 }
+
+const MAP_PAGE_TITLE = "Singapore MTG Store Map | Gishath Fetch";
+const MAP_PAGE_DESCRIPTION =
+  "Find Singapore Magic: The Gathering local game stores on an interactive map. Addresses, websites, and directions for every pinned shop.";
+
+export function applyMapSeo() {
+  const mapUrl = `${BASE_URL}map`;
+
+  document.title = MAP_PAGE_TITLE;
+  setMetaContent("name", "description", MAP_PAGE_DESCRIPTION);
+  setMetaContent("property", "og:title", MAP_PAGE_TITLE);
+  setMetaContent("property", "og:description", MAP_PAGE_DESCRIPTION);
+  setMetaContent("property", "og:url", mapUrl);
+  setMetaContent("name", "twitter:title", MAP_PAGE_TITLE);
+  setMetaContent("name", "twitter:description", MAP_PAGE_DESCRIPTION);
+  setCanonicalUrl(mapUrl);
+}

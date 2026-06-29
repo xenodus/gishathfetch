@@ -202,6 +202,30 @@ body {
   color: var(--bs-white);
 }
 
+.store-location-map {
+  width: 100%;
+  min-height: 360px;
+  height: 50vh;
+  max-height: 520px;
+  z-index: 0;
+}
+
+.store-map-list {
+  padding-left: 1rem;
+  columns: 2;
+  column-gap: 2rem;
+}
+
+@media (max-width: 575.98px) {
+  .store-map-list {
+    columns: 1;
+  }
+}
+
+.store-map-popup a {
+  color: var(--bs-primary);
+}
+
 .map-item iframe {
   float: left;
   min-height: 450px;
