@@ -3,23 +3,41 @@ import { useEffect } from "react";
 const ANCHOR_AD_SELECTOR = "ins.adsbygoogle.adsbygoogle-noablate";
 const CSS_VAR = "--anchor-ad-offset";
 
+function parsePixelValue(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function measureAnchorAdOffset() {
-  const anchorAd = document.querySelector(ANCHOR_AD_SELECTOR);
-  if (!anchorAd || !anchorAd.isConnected) {
-    return 0;
+  const anchorAds = document.querySelectorAll(ANCHOR_AD_SELECTOR);
+  let maxOffset = 0;
+
+  for (const anchorAd of anchorAds) {
+    if (!anchorAd.isConnected) continue;
+
+    const status = anchorAd.getAttribute("data-anchor-status");
+    if (status === "dismissed") continue;
+
+    const rect = anchorAd.getBoundingClientRect();
+    const computed = window.getComputedStyle(anchorAd);
+    const height = Math.max(
+      rect.height,
+      anchorAd.offsetHeight,
+      parsePixelValue(computed.height),
+    );
+    if (height <= 0) continue;
+
+    const isBottomAnchored =
+      computed.position === "fixed" &&
+      parsePixelValue(computed.bottom) <= 4 &&
+      rect.bottom >= window.innerHeight - 4;
+
+    if (!isBottomAnchored) continue;
+
+    maxOffset = Math.max(maxOffset, Math.ceil(height));
   }
 
-  const status = anchorAd.getAttribute("data-anchor-status");
-  if (status === "dismissed") {
-    return 0;
-  }
-
-  const rect = anchorAd.getBoundingClientRect();
-  if (rect.height <= 0 || rect.bottom < window.innerHeight - 2) {
-    return 0;
-  }
-
-  return Math.ceil(rect.height);
+  return maxOffset;
 }
 
 function syncAnchorAdOffset() {
