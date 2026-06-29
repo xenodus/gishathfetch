@@ -70,8 +70,10 @@ Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
 ### Known test behaviour
 
-- The `gateway/arcanesanctum` test hits a live website that blocks direct requests without a proxy. It will fail with "Forbidden (proxy_mode=direct proxy=none)" unless `DEDICATED_PROXY_*` env vars are set. This is expected in environments without proxy credentials.
-- Many gateway tests hit live upstream store websites, so transient network failures or rate-limiting can cause sporadic failures.
+- **Live gateway store tests** (`gateway/*/search_test.go`) hit real upstream store websites. They use `gatewaytest.RequireSearchOrProbe`: when search returns cards, field shape is validated; when inventory is empty, tests fall back to HTML/API **structure probes** instead of requiring in-stock results. Transient network failures or rate-limiting can still cause sporadic failures.
+- **BinderPOS live integration tests** (`gateway/binderpos/*_test.go`) are skipped by default. Set `RUN_BINDERPOS_LIVE_TESTS=1` to run live storefront/scrape checks against real stores (see also `docs/search-strategies-retries-timeouts.md`).
+- **`gateway/arcanesanctum`** is currently skipped because Arcane Sanctum is disabled in the controller; it is not expected to fail on `make test`.
+- Some live tests and structure probes may return **403 Forbidden** without `DEDICATED_PROXY_*` credentials when an upstream site blocks direct requests. That is expected in environments without proxy config.
 
 ### Frontend API connection
 
