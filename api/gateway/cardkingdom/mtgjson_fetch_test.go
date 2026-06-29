@@ -35,6 +35,25 @@ const sampleAllPricesToday = `{
         }
       }
     },
+    "uuid-tony-80-price": {
+      "paper": {
+        "cardkingdom": {
+          "retail": {
+            "normal": {"2026-06-28": 7.49},
+            "foil": {"2026-06-28": 8.99}
+          }
+        }
+      }
+    },
+    "uuid-tony-363-price": {
+      "paper": {
+        "cardkingdom": {
+          "retail": {
+            "foil": {"2026-06-28": 44.99}
+          }
+        }
+      }
+    },
     "uuid-no-ck": {
       "paper": {
         "tcgplayer": {
@@ -56,6 +75,7 @@ const sampleAllPrintings = `{
         {
           "uuid": "uuid-bolt-4ed",
           "name": "Lightning Bolt",
+          "number": "162",
           "purchaseUrls": {
             "cardKingdom": "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt"
           }
@@ -68,10 +88,52 @@ const sampleAllPrintings = `{
         {
           "uuid": "uuid-bolt-mm-foil",
           "name": "Lightning Bolt",
+          "number": "141",
           "purchaseUrls": {
             "cardKingdom": "https://www.cardkingdom.com/mtg/modern-masters-2015/lightning-bolt",
             "cardKingdomFoil": "https://www.cardkingdom.com/mtg/modern-masters-2015/lightning-bolt-foil"
           }
+        }
+      ]
+    }
+  }
+}`
+
+const sampleAllPrintingsSplitUUID = `{
+  "meta": {"date": "2026-06-28"},
+  "data": {
+    "MSH": {
+      "name": "Marvel Super Heroes",
+      "cards": [
+        {
+          "uuid": "uuid-tony-80-url",
+          "name": "Tony Stark // The Invincible Iron Man",
+          "number": "80",
+          "purchaseUrls": {
+            "cardKingdom": "https://www.cardkingdom.com/mtg/marvel-super-heroes/tony-stark",
+            "cardKingdomFoil": "https://www.cardkingdom.com/mtg/marvel-super-heroes/tony-stark-foil"
+          }
+        },
+        {
+          "uuid": "uuid-tony-80-price",
+          "name": "Tony Stark // The Invincible Iron Man",
+          "number": "80",
+          "purchaseUrls": {}
+        },
+        {
+          "uuid": "uuid-tony-363-url",
+          "name": "Tony Stark // The Invincible Iron Man",
+          "number": "363",
+          "purchaseUrls": {
+            "cardKingdom": "https://www.cardkingdom.com/mtg/marvel-super-heroes-variants/tony-stark-0363-borderless",
+            "cardKingdomFoil": "https://www.cardkingdom.com/mtg/marvel-super-heroes-variants/tony-stark-0363-borderless-foil"
+          }
+        },
+        {
+          "uuid": "uuid-tony-363-price",
+          "name": "Tony Stark // The Invincible Iron Man",
+          "number": "363",
+          "purchaseUrls": {}
         }
       ]
     }
@@ -110,6 +172,29 @@ func TestDecodeAllPrintingsSets(t *testing.T) {
 	require.False(t, listing.IsFoil)
 	require.Equal(t, "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt", listing.URL)
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
+}
+
+func TestDecodeAllPrintingsSets_MergesSplitUUIDPrintings(t *testing.T) {
+	prices := map[string]ckUUIDPrice{
+		"uuid-tony-80-price":  {normal: 7.49, foil: 8.99},
+		"uuid-tony-363-price": {foil: 44.99},
+	}
+	updatedAt := time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC)
+
+	cheapest, err := decodeAllPrintingsSets(
+		json.NewDecoder(strings.NewReader(sampleAllPrintingsSplitUUID)),
+		prices,
+		updatedAt,
+	)
+	require.NoError(t, err)
+	require.Len(t, cheapest, 1)
+
+	listing := cheapest["tony stark // the invincible iron man"]
+	require.Equal(t, "Tony Stark // The Invincible Iron Man", listing.CardName)
+	require.Equal(t, "Marvel Super Heroes", listing.Edition)
+	require.InDelta(t, 7.49, listing.PriceUsd, 0.001)
+	require.False(t, listing.IsFoil)
+	require.Equal(t, "https://www.cardkingdom.com/mtg/marvel-super-heroes/tony-stark", listing.URL)
 }
 
 func TestFetchCheapestFromMTGJSON_FromTestServers(t *testing.T) {
