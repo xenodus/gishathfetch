@@ -1,14 +1,87 @@
 import { Button, Modal } from "react-bootstrap";
+import LazyMapIframe from "./LazyMapIframe";
 
 const Modals = ({
+  showMap,
+  onHideMap,
   showFaq,
   onHideFaq,
   showPrivacy,
   onHidePrivacy,
   onShowPrivacy,
+  lgsMapData,
 }) => {
   return (
     <>
+      {/* Map Modal */}
+      <Modal show={showMap} onHide={onHideMap} size="xl">
+        <Modal.Header closeButton>
+          <Modal.Title id="map-list">Where are the shops?</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="mb-4">
+            <ul style={{ paddingLeft: "1rem" }}>
+              {lgsMapData.map((shop, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: Static map data
+                <li key={i}>
+                  <a href={`#${shop.id}`} className="link-offset-2">
+                    {shop.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {lgsMapData.map((shop, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: Static map data
+            <div id={shop.id} key={i} className="mb-4 map-item">
+              <h5>{shop.name}</h5>
+              <div className="mb-2">{shop.address}</div>
+              <div className="mb-2">
+                <a href={shop.website} target="_blank" rel="noreferrer">
+                  {shop.website}
+                </a>
+              </div>
+              <LazyMapIframe
+                src={shop.iframe}
+                title={shop.name}
+                isActive={showMap}
+              />
+              <div>
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    document.getElementById("map-list").scrollIntoView()
+                  }
+                >
+                  Back to top
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="ms-2"
+                  onClick={onHideMap}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          ))}
+        </Modal.Body>
+        <Modal.Footer className="justify-content-start">
+          &copy; 2023 gishathfetch.com by{" "}
+          <a href="https://github.com/xenodus" target="_blank" rel="noreferrer">
+            xenodus
+          </a>{" "}
+          |{" "}
+          <Button
+            variant="link"
+            className="p-0 text-decoration-none"
+            onClick={onShowPrivacy}
+          >
+            privacy policy
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       {/* FAQ Modal */}
       <Modal show={showFaq} onHide={onHideFaq} size="xl">
         <Modal.Header
