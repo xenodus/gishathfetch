@@ -327,7 +327,7 @@ const SearchForm = ({
               <button
                 id="searchBtn"
                 type="button"
-                className="btn btn-primary"
+                className="btn search-submit-btn"
                 disabled
               >
                 {searchProgress}
@@ -344,7 +344,7 @@ const SearchForm = ({
             <button
               id="searchBtn"
               type="submit"
-              className="btn btn-primary"
+              className="btn search-submit-btn"
               disabled={queryTooShort}
             >
               Search

@@ -26,6 +26,28 @@ body {
   width: 120px;
 }
 
+.search-submit-btn {
+  --bs-btn-bg: var(--gf-search-btn-bg);
+  --bs-btn-border-color: var(--gf-search-btn-border);
+  --bs-btn-color: var(--gf-search-btn-color);
+  --bs-btn-hover-bg: var(--gf-search-btn-hover-bg);
+  --bs-btn-hover-border-color: var(--gf-search-btn-hover-border);
+  --bs-btn-hover-color: var(--gf-search-btn-color);
+  --bs-btn-active-bg: var(--gf-search-btn-active-bg);
+  --bs-btn-active-border-color: var(--gf-search-btn-hover-border);
+  --bs-btn-active-color: var(--gf-search-btn-color);
+  --bs-btn-disabled-bg: var(--gf-search-btn-disabled-bg);
+  --bs-btn-disabled-border-color: var(--gf-search-btn-disabled-bg);
+  --bs-btn-disabled-color: var(--gf-search-btn-disabled-color);
+  --bs-btn-focus-shadow-rgb: 242, 195, 185;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.search-submit-btn:focus-visible {
+  box-shadow: 0 0 0 0.25rem var(--gf-search-btn-focus-ring);
+}
+
 .theme-toggle-btn {
   width: 32px;
   height: 32px;

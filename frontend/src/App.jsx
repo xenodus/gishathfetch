@@ -93,7 +93,7 @@ export default function App() {
     if (themeColorMeta) {
       themeColorMeta.setAttribute(
         "content",
-        theme === "dark" ? "#0e1412" : "#0a6b5c",
+        theme === "dark" ? "#2a302e" : "#97b3ae",
       );
     }
 
