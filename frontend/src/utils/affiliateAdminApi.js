@@ -1,9 +1,7 @@
-const ADMIN_API_KEY_STORAGE_KEY = "gishathfetch-affiliate-admin-api-key";
-
-function getHeaders(apiKey) {
+function authHeaders(getAuthorizationHeader) {
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: getAuthorizationHeader(),
   };
 }
 
@@ -19,33 +17,12 @@ async function parseError(response) {
   return `Request failed (${response.status})`;
 }
 
-export function loadStoredAdminApiKey() {
-  try {
-    return sessionStorage.getItem(ADMIN_API_KEY_STORAGE_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-export function storeAdminApiKey(apiKey) {
-  try {
-    sessionStorage.setItem(ADMIN_API_KEY_STORAGE_KEY, apiKey);
-  } catch {
-    // Ignore storage failures; caller can keep the key in memory only.
-  }
-}
-
-export function clearStoredAdminApiKey() {
-  try {
-    sessionStorage.removeItem(ADMIN_API_KEY_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-export async function fetchAdminAffiliateLinks(apiBaseUrl, apiKey) {
+export async function fetchAdminAffiliateLinks(
+  apiBaseUrl,
+  getAuthorizationHeader,
+) {
   const response = await fetch(`${apiBaseUrl}admin/affiliate-links`, {
-    headers: getHeaders(apiKey),
+    headers: authHeaders(getAuthorizationHeader),
   });
   if (!response.ok) {
     throw new Error(await parseError(response));
@@ -54,10 +31,14 @@ export async function fetchAdminAffiliateLinks(apiBaseUrl, apiKey) {
   return Array.isArray(payload?.data) ? payload.data : [];
 }
 
-export async function createAffiliateLink(apiBaseUrl, apiKey, body) {
+export async function createAffiliateLink(
+  apiBaseUrl,
+  getAuthorizationHeader,
+  body,
+) {
   const response = await fetch(`${apiBaseUrl}admin/affiliate-links`, {
     method: "POST",
-    headers: getHeaders(apiKey),
+    headers: authHeaders(getAuthorizationHeader),
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -66,10 +47,15 @@ export async function createAffiliateLink(apiBaseUrl, apiKey, body) {
   return response.json();
 }
 
-export async function updateAffiliateLink(apiBaseUrl, apiKey, id, body) {
+export async function updateAffiliateLink(
+  apiBaseUrl,
+  getAuthorizationHeader,
+  id,
+  body,
+) {
   const response = await fetch(`${apiBaseUrl}admin/affiliate-links/${id}`, {
     method: "PUT",
-    headers: getHeaders(apiKey),
+    headers: authHeaders(getAuthorizationHeader),
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -78,10 +64,14 @@ export async function updateAffiliateLink(apiBaseUrl, apiKey, id, body) {
   return response.json();
 }
 
-export async function deleteAffiliateLink(apiBaseUrl, apiKey, id) {
+export async function deleteAffiliateLink(
+  apiBaseUrl,
+  getAuthorizationHeader,
+  id,
+) {
   const response = await fetch(`${apiBaseUrl}admin/affiliate-links/${id}`, {
     method: "DELETE",
-    headers: getHeaders(apiKey),
+    headers: authHeaders(getAuthorizationHeader),
   });
   if (!response.ok) {
     throw new Error(await parseError(response));

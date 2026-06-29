@@ -20,7 +20,7 @@ type stubAffiliateService struct {
 	all    []affiliatelinks.Link
 }
 
-func (s *stubAffiliateService) ListActive(ctx context.Context) ([]affiliatelinks.Link, error) {
+func (s *stubAffiliateService) ListActive(ctx context.Context, platform string) ([]affiliatelinks.Link, error) {
 	return s.active, nil
 }
 

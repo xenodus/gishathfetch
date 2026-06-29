@@ -11,7 +11,8 @@ function parseAffiliateLinks(payload) {
     (item) =>
       typeof item?.link === "string" &&
       typeof item?.imageUrl === "string" &&
-      typeof item?.price === "string",
+      typeof item?.price === "string" &&
+      (item.platform === undefined || typeof item?.platform === "string"),
   );
 }
 

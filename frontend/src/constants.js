@@ -181,6 +181,19 @@ export function getApiBaseUrl() {
 
 export const AFFILIATE_LINKS_URL = `${getApiBaseUrl()}affiliate-links`;
 
+export const AFFILIATE_PLATFORMS = {
+  amazon: {
+    label: "Amazon",
+    linkLabel: "View on Amazon",
+    linkPlaceholder: "https://www.amazon.sg/...",
+  },
+  shopee: {
+    label: "Shopee",
+    linkLabel: "View on Shopee",
+    linkPlaceholder: "https://shopee.sg/...",
+  },
+};
+
 export const BASE_URL = "https://gishathfetch.com/";
 
 // Same-origin on production (served from gishathfetch.com via CloudFront).

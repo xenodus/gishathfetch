@@ -33,6 +33,7 @@ func NewService(linkStore store.Store, imageUploader *store.ImageUploader) *Serv
 
 // CreateInput is the payload for creating a new affiliate link.
 type CreateInput struct {
+	Platform         string `json:"platform"`
 	Title            string `json:"title"`
 	ImageURL         string `json:"imageUrl"`
 	ImageData        string `json:"imageData"`
@@ -45,6 +46,7 @@ type CreateInput struct {
 
 // UpdateInput is the payload for updating an existing affiliate link.
 type UpdateInput struct {
+	Platform         string `json:"platform"`
 	Title            string `json:"title"`
 	ImageURL         string `json:"imageUrl"`
 	ImageData        string `json:"imageData"`
@@ -59,18 +61,23 @@ func (s *Service) ListAll(ctx context.Context) ([]store.Link, error) {
 	return s.store.ListAll(ctx)
 }
 
-func (s *Service) ListActive(ctx context.Context) ([]store.Link, error) {
+func (s *Service) ListActive(ctx context.Context, platform string) ([]store.Link, error) {
 	links, err := s.store.ListAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	platform = strings.ToLower(strings.TrimSpace(platform))
 	now := s.now().UTC()
 	active := make([]store.Link, 0, len(links))
 	for _, link := range links {
-		if link.IsActive(now) {
-			active = append(active, link)
+		if !link.IsActive(now) {
+			continue
 		}
+		if platform != "" && strings.ToLower(link.Platform) != platform {
+			continue
+		}
+		active = append(active, link)
 	}
 	return active, nil
 }
@@ -81,7 +88,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (store.Link, er
 		return store.Link{}, err
 	}
 
-	link, err := s.buildLink("", input.Title, imageURL, input.Price, input.Link, input.ExpiryDate, input.Status, "", "")
+	link, err := s.buildLink("", input.Platform, input.Title, imageURL, input.Price, input.Link, input.ExpiryDate, input.Status, "", "")
 	if err != nil {
 		return store.Link{}, err
 	}
@@ -111,7 +118,12 @@ func (s *Service) Update(ctx context.Context, id string, input UpdateInput) (sto
 		imageURL = existing.ImageURL
 	}
 
-	link, err := s.buildLink(id, input.Title, imageURL, input.Price, input.Link, input.ExpiryDate, input.Status, existing.CreatedAt, existing.UpdatedAt)
+	platform := strings.TrimSpace(input.Platform)
+	if platform == "" {
+		platform = existing.Platform
+	}
+
+	link, err := s.buildLink(id, platform, input.Title, imageURL, input.Price, input.Link, input.ExpiryDate, input.Status, existing.CreatedAt, existing.UpdatedAt)
 	if err != nil {
 		return store.Link{}, err
 	}
@@ -133,13 +145,14 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.store.Delete(ctx, id)
 }
 
-func (s *Service) buildLink(id, title, imageURL, price, linkURL, expiryDate, status, createdAt, updatedAt string) (store.Link, error) {
+func (s *Service) buildLink(id, platform, title, imageURL, price, linkURL, expiryDate, status, createdAt, updatedAt string) (store.Link, error) {
 	title = strings.TrimSpace(title)
 	imageURL = strings.TrimSpace(imageURL)
 	price = strings.TrimSpace(price)
 	linkURL = strings.TrimSpace(linkURL)
 	expiryDate = strings.TrimSpace(expiryDate)
 	status = normalizeStatus(status)
+	platform = normalizePlatform(platform)
 
 	if imageURL == "" {
 		return store.Link{}, fmt.Errorf("image is required")
@@ -165,6 +178,7 @@ func (s *Service) buildLink(id, title, imageURL, price, linkURL, expiryDate, sta
 
 	return store.Link{
 		ID:         id,
+		Platform:   platform,
 		Title:      title,
 		ImageURL:   imageURL,
 		Price:      price,
@@ -195,6 +209,17 @@ func (s *Service) resolveImageURL(ctx context.Context, imageURL, imageData, cont
 		return "", fmt.Errorf("image is required")
 	}
 	return imageURL, nil
+}
+
+func normalizePlatform(platform string) string {
+	platform = strings.ToLower(strings.TrimSpace(platform))
+	if platform == "" {
+		return store.PlatformAmazon
+	}
+	if store.IsSupportedPlatform(platform) {
+		return platform
+	}
+	return store.PlatformAmazon
 }
 
 func normalizeStatus(status string) string {

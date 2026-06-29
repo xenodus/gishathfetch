@@ -41,11 +41,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path,
       },
-      "/admin/affiliate-links": {
-        target: "https://api.gishathfetch.com",
-        changeOrigin: true,
-        rewrite: (path) => path,
-      },
     },
   },
 });

@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getApiBaseUrl } from "../constants";
+import { AFFILIATE_PLATFORMS, API_BASE_URL } from "../constants";
+import useAdminSession from "../hooks/useAdminSession";
 import {
-  clearStoredAdminApiKey,
   createAffiliateLink,
   deleteAffiliateLink,
   fetchAdminAffiliateLinks,
   fileToImagePayload,
-  loadStoredAdminApiKey,
-  storeAdminApiKey,
   updateAffiliateLink,
 } from "../utils/affiliateAdminApi";
 
 const EMPTY_FORM = {
+  platform: "amazon",
   title: "",
   price: "",
   link: "",
@@ -27,6 +26,10 @@ function formatDate(value) {
     return "No expiry";
   }
   return value;
+}
+
+function platformLabel(platform) {
+  return AFFILIATE_PLATFORMS[platform]?.label || platform || "—";
 }
 
 function LinkFormModal({
@@ -44,6 +47,7 @@ function LinkFormModal({
       return;
     }
     setForm({
+      platform: initialValues?.platform || "amazon",
       title: initialValues?.title || "",
       price: initialValues?.price || "",
       link: initialValues?.link || "",
@@ -57,6 +61,10 @@ function LinkFormModal({
   if (!show) {
     return null;
   }
+
+  const linkPlaceholder =
+    AFFILIATE_PLATFORMS[form.platform]?.linkPlaceholder ||
+    "https://example.com/...";
 
   const handleChange = (event) => {
     const { name, value, files } = event.target;
@@ -86,6 +94,27 @@ function LinkFormModal({
             {error ? <div className="alert alert-danger">{error}</div> : null}
             <div className="row g-3">
               <div className="col-md-6">
+                <label className="form-label" htmlFor="affiliate-platform">
+                  Platform
+                </label>
+                <select
+                  id="affiliate-platform"
+                  name="platform"
+                  className="form-select"
+                  value={form.platform}
+                  onChange={handleChange}
+                  required
+                >
+                  {Object.entries(AFFILIATE_PLATFORMS).map(
+                    ([value, config]) => (
+                      <option key={value} value={value}>
+                        {config.label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+              <div className="col-md-6">
                 <label className="form-label" htmlFor="affiliate-title">
                   Title
                 </label>
@@ -114,7 +143,7 @@ function LinkFormModal({
               </div>
               <div className="col-12">
                 <label className="form-label" htmlFor="affiliate-link">
-                  Amazon link
+                  Affiliate link
                 </label>
                 <input
                   id="affiliate-link"
@@ -123,7 +152,7 @@ function LinkFormModal({
                   className="form-control"
                   value={form.link}
                   onChange={handleChange}
-                  placeholder="https://www.amazon.sg/..."
+                  placeholder={linkPlaceholder}
                   required
                 />
               </div>
@@ -217,8 +246,13 @@ function LinkFormModal({
 }
 
 export default function AdminAffiliateDashboard() {
-  const [apiKey, setApiKey] = useState(loadStoredAdminApiKey);
-  const [apiKeyInput, setApiKeyInput] = useState("");
+  const {
+    loginInputRef,
+    isAuthenticated,
+    signIn,
+    signOut,
+    getAuthorizationHeader,
+  } = useAdminSession();
   const [links, setLinks] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -227,16 +261,17 @@ export default function AdminAffiliateDashboard() {
   const [editingLink, setEditingLink] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  const isAuthenticated = useMemo(() => apiKey.trim().length > 0, [apiKey]);
-
   const loadLinks = useCallback(async () => {
-    if (!apiKey.trim()) {
+    if (!isAuthenticated) {
       return;
     }
     setIsLoading(true);
     setError("");
     try {
-      const data = await fetchAdminAffiliateLinks(getApiBaseUrl(), apiKey);
+      const data = await fetchAdminAffiliateLinks(
+        API_BASE_URL,
+        getAuthorizationHeader,
+      );
       setLinks(data);
     } catch (err) {
       setError(err.message || "Failed to load affiliate links.");
@@ -245,13 +280,12 @@ export default function AdminAffiliateDashboard() {
           .toLowerCase()
           .includes("unauthorized")
       ) {
-        clearStoredAdminApiKey();
-        setApiKey("");
+        signOut();
       }
     } finally {
       setIsLoading(false);
     }
-  }, [apiKey]);
+  }, [getAuthorizationHeader, isAuthenticated, signOut]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -261,25 +295,21 @@ export default function AdminAffiliateDashboard() {
 
   const handleLogin = (event) => {
     event.preventDefault();
-    const trimmed = apiKeyInput.trim();
-    if (!trimmed) {
+    if (!signIn()) {
       setError("API key is required.");
       return;
     }
-    storeAdminApiKey(trimmed);
-    setApiKey(trimmed);
-    setApiKeyInput("");
     setError("");
   };
 
   const handleLogout = () => {
-    clearStoredAdminApiKey();
-    setApiKey("");
+    signOut();
     setLinks([]);
   };
 
   const buildPayload = async (form) => {
     const payload = {
+      platform: form.platform,
       title: form.title.trim(),
       price: form.price.trim(),
       link: form.link.trim(),
@@ -303,7 +333,11 @@ export default function AdminAffiliateDashboard() {
     setFormError("");
     try {
       const payload = await buildPayload(form);
-      await createAffiliateLink(getApiBaseUrl(), apiKey, payload);
+      await createAffiliateLink(
+        API_BASE_URL,
+        getAuthorizationHeader,
+        payload,
+      );
       setShowForm(false);
       await loadLinks();
     } catch (err) {
@@ -322,8 +356,8 @@ export default function AdminAffiliateDashboard() {
         payload.imageUrl = editingLink.imageUrl;
       }
       await updateAffiliateLink(
-        getApiBaseUrl(),
-        apiKey,
+        API_BASE_URL,
+        getAuthorizationHeader,
         editingLink.id,
         payload,
       );
@@ -343,7 +377,11 @@ export default function AdminAffiliateDashboard() {
     }
     setError("");
     try {
-      await deleteAffiliateLink(getApiBaseUrl(), apiKey, link.id);
+      await deleteAffiliateLink(
+        API_BASE_URL,
+        getAuthorizationHeader,
+        link.id,
+      );
       await loadLinks();
     } catch (err) {
       setError(err.message || "Failed to delete affiliate link.");
@@ -355,7 +393,8 @@ export default function AdminAffiliateDashboard() {
       <div className="container py-5" style={{ maxWidth: "480px" }}>
         <h1 className="h3 mb-3">Affiliate Links Admin</h1>
         <p className="text-secondary">
-          Enter the admin API key configured in the Lambda environment.
+          Enter the admin API key configured in the Lambda environment. The key
+          is kept in memory for this tab only and is cleared when you sign out.
         </p>
         {error ? <div className="alert alert-danger">{error}</div> : null}
         <form onSubmit={handleLogin} className="card card-body shadow-sm">
@@ -363,11 +402,10 @@ export default function AdminAffiliateDashboard() {
             API key
           </label>
           <input
+            ref={loginInputRef}
             id="admin-api-key"
             type="password"
             className="form-control mb-3"
-            value={apiKeyInput}
-            onChange={(event) => setApiKeyInput(event.target.value)}
             autoComplete="current-password"
           />
           <button type="submit" className="btn btn-primary">
@@ -387,7 +425,7 @@ export default function AdminAffiliateDashboard() {
         <div>
           <h1 className="h3 mb-1">Affiliate Links Admin</h1>
           <p className="text-secondary mb-0">
-            Manage Amazon affiliate products shown on the homepage.
+            Manage Amazon and Shopee affiliate products shown on the homepage.
           </p>
         </div>
         <div className="d-flex gap-2">
@@ -422,6 +460,7 @@ export default function AdminAffiliateDashboard() {
           <thead>
             <tr>
               <th>Image</th>
+              <th>Platform</th>
               <th>Title</th>
               <th>Price</th>
               <th>Status</th>
@@ -433,13 +472,13 @@ export default function AdminAffiliateDashboard() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="text-center py-4">
+                <td colSpan={8} className="text-center py-4">
                   Loading...
                 </td>
               </tr>
             ) : links.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-4 text-secondary">
+                <td colSpan={8} className="text-center py-4 text-secondary">
                   No affiliate links yet.
                 </td>
               </tr>
@@ -453,6 +492,7 @@ export default function AdminAffiliateDashboard() {
                       className="affiliate-admin-thumb"
                     />
                   </td>
+                  <td>{platformLabel(link.platform)}</td>
                   <td>{link.title || "—"}</td>
                   <td>{link.price}</td>
                   <td>

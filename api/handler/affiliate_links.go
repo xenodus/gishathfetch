@@ -53,7 +53,7 @@ func AffiliateLinks(ctx context.Context, request events.APIGatewayProxyRequest) 
 		return errorResponse(apiRes, origin, "affiliate links are not configured", http.StatusServiceUnavailable)
 	}
 
-	links, err := service.ListActive(ctx)
+	links, err := service.ListActive(ctx, strings.TrimSpace(request.QueryStringParameters["platform"]))
 	if err != nil {
 		return errorResponse(apiRes, origin, "failed to load affiliate links", http.StatusInternalServerError)
 	}

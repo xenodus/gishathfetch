@@ -1,15 +1,22 @@
 package affiliatelinks
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	StatusActive   = "active"
 	StatusInactive = "inactive"
+
+	PlatformAmazon = "amazon"
+	PlatformShopee = "shopee"
 )
 
-// Link is a curated Amazon affiliate product entry.
+// Link is a curated affiliate product entry.
 type Link struct {
 	ID         string `json:"id" dynamodbav:"id"`
+	Platform   string `json:"platform" dynamodbav:"platform"`
 	Title      string `json:"title,omitempty" dynamodbav:"title,omitempty"`
 	ImageURL   string `json:"imageUrl" dynamodbav:"imageUrl"`
 	Price      string `json:"price" dynamodbav:"price"`
@@ -18,6 +25,16 @@ type Link struct {
 	Status     string `json:"status" dynamodbav:"status"`
 	CreatedAt  string `json:"createdAt" dynamodbav:"createdAt"`
 	UpdatedAt  string `json:"updatedAt" dynamodbav:"updatedAt"`
+}
+
+// IsSupportedPlatform reports whether platform is a known affiliate provider.
+func IsSupportedPlatform(platform string) bool {
+	switch strings.ToLower(strings.TrimSpace(platform)) {
+	case PlatformAmazon, PlatformShopee:
+		return true
+	default:
+		return false
+	}
 }
 
 // IsActive reports whether the link should be shown on the public site.
