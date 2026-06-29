@@ -164,6 +164,14 @@ export default function App() {
         searchError={searchError}
         storesWarning={storesWarning}
         onCancelSearch={cancelSearch}
+        popularSearchesSlot={
+          <TopSearchKeywords
+            keywordsByPeriod={topSearchKeywordsByPeriod}
+            isLoading={isLoadingTopSearchKeywords}
+            collapsible
+            collapseOnSearch={isSearching}
+          />
+        }
       />
 
       <SearchResults
@@ -182,11 +190,6 @@ export default function App() {
         onSearchStore={handleCardSearch}
         cardKingdomPrice={cardKingdomPrice}
         baseUrl={BASE_URL}
-      />
-
-      <TopSearchKeywords
-        keywordsByPeriod={topSearchKeywordsByPeriod}
-        isLoading={isLoadingTopSearchKeywords}
       />
 
       <Footer

@@ -15,6 +15,7 @@ import {
   isSearchHistoryState,
   persistSelectedStores,
 } from "../utils/searchUrl";
+import { applyHomeSeo, applySearchSeo } from "../utils/seo";
 
 const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
 const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
@@ -91,7 +92,11 @@ export default function useSearch() {
       : "replaceState";
 
     window.history[historyMethod](state, title, newUrl);
-    document.title = title;
+    if (snapshot.query) {
+      applySearchSeo(snapshot.query);
+    } else {
+      applyHomeSeo();
+    }
   }, []);
 
   const resolveStoresToSearch = useCallback((stores) => {
@@ -324,7 +329,7 @@ export default function useSearch() {
       setHasSearched(false);
       setIsSearching(false);
       setSearchProgress("Search");
-      document.title = PAGE_TITLE;
+      applyHomeSeo();
 
       if (
         query.length >= MIN_SEARCH_LENGTH &&
@@ -350,9 +355,11 @@ export default function useSearch() {
     setDismissedStoreErrorsKey(null);
     setIsSearching(false);
     setSearchProgress("Search");
-    document.title = state.query
-      ? `${state.query} @ Gishath Fetch`
-      : PAGE_TITLE;
+    if (state.query) {
+      applySearchSeo(state.query);
+    } else {
+      applyHomeSeo();
+    }
     restoringHistoryRef.current = false;
   }, []);
 

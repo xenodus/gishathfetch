@@ -23,13 +23,23 @@
   <meta name="keywords"
     content="MTG, Magic The Gathering, Singapore, LGS, online shop, card prices, price checker, local game store, TCG, trading card game, singles" />
 
-  <meta property="og:title" content="Gishath Fetch">
+  <meta property="og:title" content="Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops">
   <meta property="og:site_name" content="Gishath Fetch">
   <meta property="og:url" content="https://gishathfetch.com/">
   <meta property="og:description"
     content="Compare MTG singles prices across 18 Singapore local game stores and online shops in one search. In-stock results sorted by price.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://gishathfetch.com/img/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops">
+  <meta name="twitter:description"
+    content="Compare MTG singles prices across 18 Singapore local game stores and online shops in one search. In-stock results sorted by price.">
+  <meta name="twitter:image" content="https://gishathfetch.com/img/og-image.png">
+
+  <link rel="canonical" href="https://gishathfetch.com/">
 
   <!-- Preconnect to external domains for better performance -->
   <link rel="preconnect" href="https://api.scryfall.com">
@@ -64,6 +74,14 @@
     "author": {
       "@type": "Person",
       "name": "Alvin Yeoh"
+    },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://gishathfetch.com/?s={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
     }
   }
   </script>

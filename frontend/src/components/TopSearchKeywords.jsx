@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BASE_URL,
   DESKTOP_MIN_WIDTH_MEDIA_QUERY,
@@ -28,7 +28,7 @@ const PERIOD_OPTIONS = [
 
 // Stable selector for AdSense "Excluded areas" and google-anno-skip for ad intents.
 const SECTION_CLASS_NAME =
-  "popular-searches-section google-anno-skip mb-3 text-center";
+  "popular-searches-section google-anno-skip mb-3";
 
 function hasAnyKeywords(keywordsByPeriod) {
   return PERIOD_OPTIONS.some(
@@ -60,7 +60,7 @@ function PeriodToggle({ period, onPeriodChange, disabled }) {
 function PopularSearchHeader({ period, onPeriodChange, disabled }) {
   return (
     <fieldset className="popular-search-header border-0 p-0 m-0 mb-2">
-      <div className="d-inline-flex align-items-center justify-content-center gap-2 flex-wrap">
+      <div className="d-flex align-items-center justify-content-start gap-2 flex-wrap">
         <legend className="popular-search-legend small mb-0">
           Popular searches:
         </legend>
@@ -80,10 +80,23 @@ function getDisplayLimit(isDesktop) {
     : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
 }
 
-export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
+export default function TopSearchKeywords({
+  keywordsByPeriod,
+  isLoading,
+  collapsible = false,
+  collapseOnSearch = false,
+}) {
   const [period, setPeriod] = useState("last24Hours");
+  const [isExpanded, setIsExpanded] = useState(!collapsible);
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop);
+  const panelId = "popular-searches-panel";
+
+  useEffect(() => {
+    if (collapseOnSearch) {
+      setIsExpanded(false);
+    }
+  }, [collapseOnSearch]);
 
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
     return null;
@@ -93,15 +106,44 @@ export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
   const selectedPeriodLabel =
     PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? "";
 
+  if (collapsible && !isExpanded) {
+    return (
+      <div className={`${SECTION_CLASS_NAME} popular-searches-collapsed`}>
+        <button
+          type="button"
+          className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
+          aria-expanded="false"
+          aria-controls={panelId}
+          onClick={() => setIsExpanded(true)}
+        >
+          Show popular searches
+        </button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className={SECTION_CLASS_NAME}>
+      <div className={SECTION_CLASS_NAME} id={panelId}>
+        {collapsible && (
+          <div className="mb-2">
+            <button
+              type="button"
+              className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
+              aria-expanded="true"
+              aria-controls={panelId}
+              onClick={() => setIsExpanded(false)}
+            >
+              Hide popular searches
+            </button>
+          </div>
+        )}
         <PopularSearchHeader
           period={period}
           onPeriodChange={setPeriod}
           disabled
         />
-        <div className="d-flex flex-wrap justify-content-center gap-2">
+        <div className="d-flex flex-wrap justify-content-start gap-2">
           {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
             <span
               key={key}
@@ -115,10 +157,23 @@ export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
   }
 
   return (
-    <div className={SECTION_CLASS_NAME}>
+    <div className={SECTION_CLASS_NAME} id={panelId}>
+      {collapsible && (
+        <div className="mb-2">
+          <button
+            type="button"
+            className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
+            aria-expanded="true"
+            aria-controls={panelId}
+            onClick={() => setIsExpanded(false)}
+          >
+            Hide popular searches
+          </button>
+        </div>
+      )}
       <PopularSearchHeader period={period} onPeriodChange={setPeriod} />
       {keywords.length > 0 ? (
-        <div className="d-flex flex-wrap justify-content-center gap-2">
+        <div className="d-flex flex-wrap justify-content-start gap-2">
           {keywords.map((keyword) => (
             <a
               key={keyword}
