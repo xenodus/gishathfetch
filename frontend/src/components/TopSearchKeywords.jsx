@@ -80,10 +80,16 @@ function getDisplayLimit(isDesktop) {
     : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
 }
 
-export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
+export default function TopSearchKeywords({
+  keywordsByPeriod,
+  isLoading,
+  collapsible = false,
+}) {
   const [period, setPeriod] = useState("last24Hours");
+  const [isExpanded, setIsExpanded] = useState(!collapsible);
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop);
+  const panelId = "popular-searches-panel";
 
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
     return null;
@@ -93,9 +99,38 @@ export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
   const selectedPeriodLabel =
     PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? "";
 
+  if (collapsible && !isExpanded) {
+    return (
+      <div className={`${SECTION_CLASS_NAME} popular-searches-collapsed`}>
+        <button
+          type="button"
+          className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
+          aria-expanded="false"
+          aria-controls={panelId}
+          onClick={() => setIsExpanded(true)}
+        >
+          Show popular searches
+        </button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className={SECTION_CLASS_NAME}>
+      <div className={SECTION_CLASS_NAME} id={panelId}>
+        {collapsible && (
+          <div className="mb-2">
+            <button
+              type="button"
+              className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
+              aria-expanded="true"
+              aria-controls={panelId}
+              onClick={() => setIsExpanded(false)}
+            >
+              Hide popular searches
+            </button>
+          </div>
+        )}
         <PopularSearchHeader
           period={period}
           onPeriodChange={setPeriod}
@@ -115,7 +150,20 @@ export default function TopSearchKeywords({ keywordsByPeriod, isLoading }) {
   }
 
   return (
-    <div className={SECTION_CLASS_NAME}>
+    <div className={SECTION_CLASS_NAME} id={panelId}>
+      {collapsible && (
+        <div className="mb-2">
+          <button
+            type="button"
+            className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
+            aria-expanded="true"
+            aria-controls={panelId}
+            onClick={() => setIsExpanded(false)}
+          >
+            Hide popular searches
+          </button>
+        </div>
+      )}
       <PopularSearchHeader period={period} onPeriodChange={setPeriod} />
       {keywords.length > 0 ? (
         <div className="d-flex flex-wrap justify-content-center gap-2">

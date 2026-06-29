@@ -169,6 +169,7 @@ export default function App() {
             <TopSearchKeywords
               keywordsByPeriod={topSearchKeywordsByPeriod}
               isLoading={isLoadingTopSearchKeywords}
+              collapsible
             />
           ) : null
         }

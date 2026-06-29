@@ -249,3 +249,7 @@ ins.adsbygoogle iframe {
   border-color: var(--bs-primary);
   color: var(--bs-primary);
 }
+
+.popular-searches-collapsed {
+  margin-bottom: 0.75rem;
+}
