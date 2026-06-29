@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader, X } from "react-feather";
 import { MAX_SEARCH_LENGTH, MIN_SEARCH_LENGTH } from "../constants";
-import { hasStoredStoreSelection } from "../utils/searchUrl";
 import StoreSelector from "./StoreSelector";
 
 const TIP_DISMISSED_STORAGE_KEY = "search-form-tip-dismissed";
@@ -293,7 +292,7 @@ const SearchForm = ({
           onSelectNone={onSelectNone}
           collapsible
           collapseOnSearch={isSearching}
-          defaultExpanded={!hasStoredStoreSelection()}
+          defaultExpanded={false}
         />
 
         {showTip && (
