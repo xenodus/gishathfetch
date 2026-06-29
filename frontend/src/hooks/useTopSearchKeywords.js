@@ -19,12 +19,16 @@ function parseTopSearchKeywords(payload) {
   return {
     last24Hours: parseKeywordList(payload?.periods?.last24Hours?.keywords),
     last30Days: parseKeywordList(payload?.periods?.last30Days?.keywords),
+    last6Months: parseKeywordList(payload?.periods?.last6Months?.keywords),
+    last1Year: parseKeywordList(payload?.periods?.last1Year?.keywords),
   };
 }
 
 const EMPTY_KEYWORDS_BY_PERIOD = {
   last24Hours: [],
   last30Days: [],
+  last6Months: [],
+  last1Year: [],
 };
 
 export default function useTopSearchKeywords(enabled) {
