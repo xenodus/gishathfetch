@@ -88,6 +88,15 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-bs-theme", theme);
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute(
+        "content",
+        theme === "dark" ? "#0e1412" : "#0a6b5c",
+      );
+    }
+
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch {

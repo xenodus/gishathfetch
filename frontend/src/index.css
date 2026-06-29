@@ -37,7 +37,7 @@ body {
 
 .btn.btn-outline-primary.theme-toggle-btn:hover,
 .btn.btn-outline-primary.theme-toggle-btn:focus-visible {
-  background-color: rgba(13, 110, 253, 0.25);
+  background-color: rgba(var(--bs-primary-rgb), 0.25);
 }
 
 .store-selector-section {
@@ -373,8 +373,9 @@ input#search:focus-visible {
 
 ::-webkit-scrollbar-thumb {
   border-radius: 5px;
-  background-color: rgba(0, 0, 0, 0.5);
-  -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+  background-color: color-mix(in srgb, var(--bs-body-color) 45%, transparent);
+  -webkit-box-shadow: 0 0 1px
+    color-mix(in srgb, var(--bs-body-bg) 50%, transparent);
 }
 
 /* Prevent AdSense from causing horizontal scrolling in narrow containers (e.g. offcanvas) */

@@ -1,0 +1,153 @@
+/*
+ * Gishath Fetch — Jade & Amber theme
+ *
+ * Deep jade green as the brand primary (MTG green-mana feel) with warm amber
+ * accents for warnings and highlights. Light mode uses a soft mint-tinted
+ * parchment; dark mode uses a deep forest-night palette with luminous jade.
+ */
+
+[data-bs-theme="light"] {
+  color-scheme: light;
+
+  --bs-primary: #0a6b5c;
+  --bs-primary-rgb: 10, 107, 92;
+  --bs-secondary: #5a6b65;
+  --bs-secondary-rgb: 90, 107, 101;
+  --bs-success: #16803d;
+  --bs-success-rgb: 22, 128, 61;
+  --bs-info: #0e7490;
+  --bs-info-rgb: 14, 116, 144;
+  --bs-warning: #c27803;
+  --bs-warning-rgb: 194, 120, 3;
+  --bs-danger: #b91c1c;
+  --bs-danger-rgb: 185, 28, 28;
+  --bs-light: #f4f8f6;
+  --bs-light-rgb: 244, 248, 246;
+  --bs-dark: #1a2520;
+  --bs-dark-rgb: 26, 37, 32;
+
+  --bs-body-bg: #f4f8f6;
+  --bs-body-color: #1a2520;
+  --bs-body-color-rgb: 26, 37, 32;
+
+  --bs-emphasis-color: #0d1613;
+  --bs-emphasis-color-rgb: 13, 22, 19;
+
+  --bs-secondary-color: rgba(26, 37, 32, 0.72);
+  --bs-secondary-bg: #dfe9e5;
+  --bs-secondary-bg-rgb: 223, 233, 229;
+
+  --bs-tertiary-color: rgba(26, 37, 32, 0.5);
+  --bs-tertiary-bg: #e6f0ec;
+  --bs-tertiary-bg-rgb: 230, 240, 236;
+
+  --bs-border-color: #b8ccc4;
+  --bs-border-color-translucent: rgba(26, 37, 32, 0.12);
+
+  --bs-link-color: #0a6b5c;
+  --bs-link-color-rgb: 10, 107, 92;
+  --bs-link-hover-color: #085a4d;
+  --bs-link-hover-color-rgb: 8, 90, 77;
+
+  --bs-focus-ring-color: rgba(10, 107, 92, 0.28);
+
+  --bs-primary-bg-subtle: #d4ece7;
+  --bs-primary-border-subtle: #a8d9ce;
+  --bs-primary-text-emphasis: #064a40;
+
+  --bs-secondary-bg-subtle: #e4eae7;
+  --bs-secondary-border-subtle: #c9d5d0;
+  --bs-secondary-text-emphasis: #3d4844;
+
+  --bs-success-bg-subtle: #d8f0e0;
+  --bs-success-border-subtle: #a8d9b8;
+  --bs-success-text-emphasis: #0f5132;
+
+  --bs-info-bg-subtle: #d0eef5;
+  --bs-info-border-subtle: #9dd9ea;
+  --bs-info-text-emphasis: #055160;
+
+  --bs-warning-bg-subtle: #fdf0d4;
+  --bs-warning-border-subtle: #f5d48a;
+  --bs-warning-text-emphasis: #664d03;
+
+  --bs-danger-bg-subtle: #f8dede;
+  --bs-danger-border-subtle: #f0b4b4;
+  --bs-danger-text-emphasis: #842029;
+
+  --bs-light-bg-subtle: #f4f8f6;
+  --bs-dark-bg-subtle: #b8ccc4;
+}
+
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+
+  --bs-primary: #3dd9c0;
+  --bs-primary-rgb: 61, 217, 192;
+  --bs-secondary: #8fa39c;
+  --bs-secondary-rgb: 143, 163, 156;
+  --bs-success: #4ade80;
+  --bs-success-rgb: 74, 222, 128;
+  --bs-info: #22d3ee;
+  --bs-info-rgb: 34, 211, 238;
+  --bs-warning: #fbbf24;
+  --bs-warning-rgb: 251, 191, 36;
+  --bs-danger: #f87171;
+  --bs-danger-rgb: 248, 113, 113;
+  --bs-light: #dde8e4;
+  --bs-light-rgb: 221, 232, 228;
+  --bs-dark: #0e1412;
+  --bs-dark-rgb: 14, 20, 18;
+
+  --bs-body-bg: #0e1412;
+  --bs-body-color: #dde8e4;
+  --bs-body-color-rgb: 221, 232, 228;
+
+  --bs-emphasis-color: #f4f8f6;
+  --bs-emphasis-color-rgb: 244, 248, 246;
+
+  --bs-secondary-color: rgba(221, 232, 228, 0.72);
+  --bs-secondary-bg: #232d29;
+  --bs-secondary-bg-rgb: 35, 45, 41;
+
+  --bs-tertiary-color: rgba(221, 232, 228, 0.5);
+  --bs-tertiary-bg: #1a2320;
+  --bs-tertiary-bg-rgb: 26, 35, 32;
+
+  --bs-border-color: #2f3d38;
+  --bs-border-color-translucent: rgba(221, 232, 228, 0.12);
+
+  --bs-link-color: #5eead4;
+  --bs-link-color-rgb: 94, 234, 212;
+  --bs-link-hover-color: #99f6e4;
+  --bs-link-hover-color-rgb: 153, 246, 228;
+
+  --bs-focus-ring-color: rgba(61, 217, 192, 0.28);
+
+  --bs-primary-bg-subtle: #0a3d35;
+  --bs-primary-border-subtle: #0f5c4f;
+  --bs-primary-text-emphasis: #7de8d5;
+
+  --bs-secondary-bg-subtle: #1e2824;
+  --bs-secondary-border-subtle: #2f3d38;
+  --bs-secondary-text-emphasis: #b8ccc4;
+
+  --bs-success-bg-subtle: #0f3320;
+  --bs-success-border-subtle: #1a5c38;
+  --bs-success-text-emphasis: #86efac;
+
+  --bs-info-bg-subtle: #0c3a44;
+  --bs-info-border-subtle: #155e70;
+  --bs-info-text-emphasis: #67e8f9;
+
+  --bs-warning-bg-subtle: #3d2e08;
+  --bs-warning-border-subtle: #6b4f0e;
+  --bs-warning-text-emphasis: #fde68a;
+
+  --bs-danger-bg-subtle: #3d1515;
+  --bs-danger-border-subtle: #6b2222;
+  --bs-danger-text-emphasis: #fca5a5;
+
+  --bs-light-bg-subtle: #1a2320;
+  --bs-dark-bg-subtle: #2f3d38;
+}

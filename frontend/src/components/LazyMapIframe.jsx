@@ -32,7 +32,7 @@ const LazyMapIframe = ({ src, title, isActive }) => {
     <div ref={containerRef} className="mb-3" style={{ minHeight: "450px" }}>
       {shouldLoad ? (
         <iframe
-          className="w-100 border border-dark"
+          className="w-100 border"
           style={{ minHeight: "450px" }}
           src={src}
           allowFullScreen=""
@@ -42,7 +42,7 @@ const LazyMapIframe = ({ src, title, isActive }) => {
         />
       ) : (
         <div
-          className="w-100 border border-dark d-flex align-items-center justify-content-center text-muted"
+          className="w-100 border d-flex align-items-center justify-content-center text-muted"
           style={{ minHeight: "450px" }}
         >
           Loading map…

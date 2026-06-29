@@ -86,7 +86,7 @@ const Modals = ({
       <Modal show={showFaq} onHide={onHideFaq} size="xl">
         <Modal.Header
           closeButton
-          className="border-bottom border-dark border-opacity-25"
+          className="border-bottom border-secondary border-opacity-25"
         >
           <Modal.Title id="faq-list">FAQs</Modal.Title>
         </Modal.Header>
@@ -290,7 +290,7 @@ const Modals = ({
       <Modal show={showPrivacy} onHide={onHidePrivacy} size="xl">
         <Modal.Header
           closeButton
-          className="border-bottom border-dark border-opacity-25"
+          className="border-bottom border-secondary border-opacity-25"
         >
           <Modal.Title>Privacy Policy</Modal.Title>
         </Modal.Header>
