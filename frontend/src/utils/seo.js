@@ -21,6 +21,20 @@ function setMetaContent(attrName, attrValue, content) {
   getOrCreateMeta(attrName, attrValue).setAttribute("content", content);
 }
 
+function getOrCreateLink(rel) {
+  let element = document.head.querySelector(`link[rel="${rel}"]`);
+  if (!element) {
+    element = document.createElement("link");
+    element.setAttribute("rel", rel);
+    document.head.appendChild(element);
+  }
+  return element;
+}
+
+function setCanonicalUrl(url) {
+  getOrCreateLink("canonical").setAttribute("href", url);
+}
+
 export function buildSearchPageTitle(query) {
   return `${query} @ Gishath Fetch`;
 }

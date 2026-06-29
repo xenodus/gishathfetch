@@ -33,8 +33,6 @@ export const SITE_LOGO_SRC = "img/gishath-fetch-thor.png";
 // Keep in sync with meta/og descriptions in frontend/index.html.
 export const SITE_DESCRIPTION = `Compare MTG singles prices across ${LGS_OPTIONS.length} Singapore local game stores and online shops in one search. In-stock results sorted by price.`;
 
-export const SITE_OG_IMAGE_URL = "https://gishathfetch.com/img/og-image.png";
-
 export const LGS_MAP = [
   {
     id: "5-mana-map",
