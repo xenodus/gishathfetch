@@ -34,7 +34,8 @@ For any PR that includes UI changes:
 
 - Include screenshots in the PR description at both **desktop** and **mobile** resolutions.
 - **Take full-page screenshots** that include the visible UI changes. Avoid tight crops of a single component; reviewers should see the change in the context of the full page.
-- **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts. Attach them to the PR description using image URLs that render on GitHub (for example by referencing local screenshot files with absolute paths when creating/updating the PR, so they can be uploaded and rewritten to stable hosted URLs).
+- **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts used in the PR description.
+- Embed screenshots using **GitHub-hosted image URLs that render in PR descriptions** (for example `github.com/.../releases/download/...` or `github.com/user-attachments/assets/...`). Do not use `cursor.com/artifacts/...` URLs or uncommitted local file paths.
 
 ## Cursor Cloud specific instructions
 
@@ -65,7 +66,7 @@ Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
 - Desktop and mobile full-page screenshots with the visible UI changes
 - Do not commit screenshots to the repo; attach them only in the PR description
-- Use PR-update tooling with absolute local file paths so images upload and render on GitHub
+- Use GitHub-hosted image URLs that render on GitHub (not Cursor artifact URLs)
 
 ### Known test behaviour
 
