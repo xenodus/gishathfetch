@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BASE_URL,
   DESKTOP_MIN_WIDTH_MEDIA_QUERY,
@@ -84,12 +84,19 @@ export default function TopSearchKeywords({
   keywordsByPeriod,
   isLoading,
   collapsible = false,
+  collapseOnSearch = false,
 }) {
   const [period, setPeriod] = useState("last24Hours");
   const [isExpanded, setIsExpanded] = useState(!collapsible);
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop);
   const panelId = "popular-searches-panel";
+
+  useEffect(() => {
+    if (collapseOnSearch) {
+      setIsExpanded(false);
+    }
+  }, [collapseOnSearch]);
 
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
     return null;

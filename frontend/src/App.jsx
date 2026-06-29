@@ -165,13 +165,12 @@ export default function App() {
         storesWarning={storesWarning}
         onCancelSearch={cancelSearch}
         popularSearchesSlot={
-          !hasSearched ? (
-            <TopSearchKeywords
-              keywordsByPeriod={topSearchKeywordsByPeriod}
-              isLoading={isLoadingTopSearchKeywords}
-              collapsible
-            />
-          ) : null
+          <TopSearchKeywords
+            keywordsByPeriod={topSearchKeywordsByPeriod}
+            isLoading={isLoadingTopSearchKeywords}
+            collapsible
+            collapseOnSearch={isSearching}
+          />
         }
       />
 
@@ -192,13 +191,6 @@ export default function App() {
         cardKingdomPrice={cardKingdomPrice}
         baseUrl={BASE_URL}
       />
-
-      {hasSearched && (
-        <TopSearchKeywords
-          keywordsByPeriod={topSearchKeywordsByPeriod}
-          isLoading={isLoadingTopSearchKeywords}
-        />
-      )}
 
       <Footer
         cartCount={cart.length}
