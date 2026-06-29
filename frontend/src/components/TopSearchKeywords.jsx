@@ -25,6 +25,8 @@ const LOADING_SKELETON_KEYS = [
 const PERIOD_OPTIONS = [
   { id: "last24Hours", label: "24 hours" },
   { id: "last30Days", label: "30 days" },
+  { id: "last6Months", label: "6 months" },
+  { id: "last1Year", label: "1 year" },
 ];
 
 // Stable selector for AdSense "Excluded areas" and google-anno-skip for ad intents.

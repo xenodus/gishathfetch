@@ -13,6 +13,8 @@ type mockReporter struct {
 	last24Hours []ga4.SearchTermCount
 	last7Days   []ga4.SearchTermCount
 	last30Days  []ga4.SearchTermCount
+	last6Months []ga4.SearchTermCount
+	last1Year   []ga4.SearchTermCount
 }
 
 func (m *mockReporter) TopSearchTerms(_ context.Context, startDate, endDate string, limit int) ([]ga4.SearchTermCount, error) {
@@ -21,6 +23,10 @@ func (m *mockReporter) TopSearchTerms(_ context.Context, startDate, endDate stri
 		return trimTerms(m.last7Days, limit), nil
 	case startDate == "30daysAgo" && endDate == "today":
 		return trimTerms(m.last30Days, limit), nil
+	case startDate == "6monthsAgo" && endDate == "today":
+		return trimTerms(m.last6Months, limit), nil
+	case startDate == "365daysAgo" && endDate == "today":
+		return trimTerms(m.last1Year, limit), nil
 	default:
 		return nil, nil
 	}
@@ -61,6 +67,8 @@ func TestBuildReport(t *testing.T) {
 		last24Hours: []ga4.SearchTermCount{{Term: "Opt", Count: 4}},
 		last7Days:   []ga4.SearchTermCount{{Term: "Lightning Bolt", Count: 10}},
 		last30Days:  []ga4.SearchTermCount{{Term: "Sol Ring", Count: 20}},
+		last6Months: []ga4.SearchTermCount{{Term: "Opt", Count: 40}},
+		last1Year:   []ga4.SearchTermCount{{Term: "Lightning Bolt", Count: 100}},
 	}
 
 	report, err := BuildReport(context.Background(), reporter, "123456789", 20)
@@ -94,6 +102,22 @@ func TestBuildReport(t *testing.T) {
 	}
 	if len(last30Days.Keywords) != 1 || last30Days.Keywords[0].Term != "Sol Ring" {
 		t.Fatalf("unexpected 30d keywords: %+v", last30Days.Keywords)
+	}
+
+	last6Months := report.Periods[periodLast6Months]
+	if last6Months.StartDate != "6monthsAgo" || last6Months.EndDate != "today" {
+		t.Fatalf("unexpected 6mo window: %+v", last6Months)
+	}
+	if len(last6Months.Keywords) != 1 || last6Months.Keywords[0].Term != "Opt" {
+		t.Fatalf("unexpected 6mo keywords: %+v", last6Months.Keywords)
+	}
+
+	last1Year := report.Periods[periodLast1Year]
+	if last1Year.StartDate != "365daysAgo" || last1Year.EndDate != "today" {
+		t.Fatalf("unexpected 1yr window: %+v", last1Year)
+	}
+	if len(last1Year.Keywords) != 1 || last1Year.Keywords[0].Term != "Lightning Bolt" {
+		t.Fatalf("unexpected 1yr keywords: %+v", last1Year.Keywords)
 	}
 }
 

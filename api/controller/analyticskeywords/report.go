@@ -16,6 +16,8 @@ const (
 	periodLast24Hours = "last24Hours"
 	periodLast7Days   = "last7Days"
 	periodLast30Days  = "last30Days"
+	periodLast6Months = "last6Months"
+	periodLast1Year   = "last1Year"
 )
 
 // KeywordCount is one ranked search keyword.
@@ -47,7 +49,7 @@ var (
 	verifyCardNameFunc = scryfall.VerifyCardName
 )
 
-// BuildReport fetches top search keywords for the last 24 hours, 7 days, and 30 days.
+// BuildReport fetches top search keywords for the last 24 hours, 7 days, 30 days, 6 months, and 1 year.
 func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, limit int) (*Report, error) {
 	if reporter == nil {
 		return nil, fmt.Errorf("analyticskeywords: reporter is required")
@@ -61,7 +63,7 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 		GeneratedAt: now.Format(time.RFC3339),
 		PropertyID:  propertyID,
 		EventName:   ga4.SearchEventName,
-		Periods:     make(map[string]PeriodReport, 3),
+		Periods:     make(map[string]PeriodReport, 5),
 	}
 
 	last24Hours, err := reporter.TopSearchTermsLast24Hours(ctx, now, ga4CandidateLimit)
@@ -106,6 +108,36 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 		StartDate:    "30daysAgo",
 		EndDate:      "today",
 		Keywords:     validated30Days,
+		KeywordLimit: limit,
+	}
+
+	last6Months, err := reporter.TopSearchTerms(ctx, "6monthsAgo", "today", ga4CandidateLimit)
+	if err != nil {
+		return nil, fmt.Errorf("analyticskeywords: last 6 months: %w", err)
+	}
+	validated6Months, err := validateKeywords(ctx, last6Months, limit)
+	if err != nil {
+		return nil, fmt.Errorf("analyticskeywords: last 6 months: %w", err)
+	}
+	report.Periods[periodLast6Months] = PeriodReport{
+		StartDate:    "6monthsAgo",
+		EndDate:      "today",
+		Keywords:     validated6Months,
+		KeywordLimit: limit,
+	}
+
+	last1Year, err := reporter.TopSearchTerms(ctx, "365daysAgo", "today", ga4CandidateLimit)
+	if err != nil {
+		return nil, fmt.Errorf("analyticskeywords: last 1 year: %w", err)
+	}
+	validated1Year, err := validateKeywords(ctx, last1Year, limit)
+	if err != nil {
+		return nil, fmt.Errorf("analyticskeywords: last 1 year: %w", err)
+	}
+	report.Periods[periodLast1Year] = PeriodReport{
+		StartDate:    "365daysAgo",
+		EndDate:      "today",
+		Keywords:     validated1Year,
 		KeywordLimit: limit,
 	}
 
