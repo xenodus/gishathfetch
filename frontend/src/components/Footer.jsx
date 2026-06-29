@@ -1,15 +1,18 @@
 import { ArrowUp, FolderPlus, HelpCircle, Map as MapIcon } from "react-feather";
+import useAnchorAdOffset from "../hooks/useAnchorAdOffset";
 import AdComponent from "./AdComponent";
 
 const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
+  useAnchorAdOffset();
+
   return (
     <>
-      <div className="mt-4 pb-5">
+      <div className="mt-4 site-footer-spacer">
         <AdComponent />
       </div>
 
       {/* Fixed Bottom Navigation */}
-      <div className="fixed-bottom bg-primary text-light text-center">
+      <div className="site-bottom-nav bg-primary text-light text-center">
         <div className="d-flex flex-row align-items-center justify-content-center">
           <button
             type="button"

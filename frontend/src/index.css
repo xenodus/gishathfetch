@@ -306,11 +306,6 @@ input#search:focus-visible {
   -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
-/* Parity fix: Google Ads z-index */
-ins.adsbygoogle {
-  z-index: 1000;
-}
-
 /* Prevent AdSense from causing horizontal scrolling in narrow containers (e.g. offcanvas) */
 .ad-large {
   max-width: 100%;
@@ -330,6 +325,19 @@ ins.adsbygoogle {
 
 ins.adsbygoogle iframe {
   display: block;
+}
+
+.site-bottom-nav {
+  position: fixed;
+  right: 0;
+  left: 0;
+  bottom: var(--anchor-ad-offset, 0px);
+  z-index: 1030;
+  transition: bottom 0.2s ease;
+}
+
+.site-footer-spacer {
+  padding-bottom: calc(3rem + var(--anchor-ad-offset, 0px));
 }
 
 .bottom-nav-icon {
