@@ -126,17 +126,11 @@ body {
 
 .store-selector-controls {
   display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  margin-bottom: 0.625rem;
-}
-
-.store-selector-bulk-actions {
-  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-bottom: 0.625rem;
 }
 
 .store-selector-bulk-toggle {
@@ -168,41 +162,6 @@ body {
 
 .store-selector-count {
   white-space: nowrap;
-}
-
-.store-selector-filter-input-wrap {
-  position: relative;
-}
-
-.store-selector-filter-icon {
-  position: absolute;
-  top: 50%;
-  left: 0.625rem;
-  transform: translateY(-50%);
-  color: var(--bs-secondary-color);
-  pointer-events: none;
-}
-
-.store-selector-filter-input {
-  padding-left: 2rem;
-  padding-right: 2rem;
-}
-
-.store-selector-filter-clear {
-  position: absolute;
-  top: 50%;
-  right: 0.125rem;
-  transform: translateY(-50%);
-  border: 0;
-  background: transparent;
-  color: var(--bs-secondary-color);
-  line-height: 1;
-  padding: 0.125rem 0.375rem;
-}
-
-.store-selector-filter-clear:hover,
-.store-selector-filter-clear:focus-visible {
-  color: var(--bs-primary);
 }
 
 .store-selector-pills {
@@ -241,10 +200,6 @@ body {
   background-color: color-mix(in srgb, var(--bs-primary) 88%, var(--bs-white));
   border-color: color-mix(in srgb, var(--bs-primary) 88%, var(--bs-white));
   color: var(--bs-white);
-}
-
-.store-selector-empty {
-  padding-top: 0.125rem;
 }
 
 .map-item iframe {
