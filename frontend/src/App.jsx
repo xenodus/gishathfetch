@@ -176,6 +176,10 @@ export default function App() {
             isLoading={isLoadingTopSearchKeywords}
             collapsible
             collapseOnSearch={isSearching}
+            defaultExpanded={
+              searchQuery.trim() === "" &&
+              topSearchKeywordsByPeriod.last24Hours.length > 0
+            }
           />
         }
       />

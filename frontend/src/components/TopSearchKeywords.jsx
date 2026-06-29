@@ -110,12 +110,21 @@ export default function TopSearchKeywords({
   isLoading,
   collapsible = false,
   collapseOnSearch = false,
+  defaultExpanded = false,
 }) {
   const [period, setPeriod] = useState("last24Hours");
-  const [isExpanded, setIsExpanded] = useState(!collapsible);
+  const [isExpanded, setIsExpanded] = useState(
+    () => !collapsible || defaultExpanded,
+  );
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop);
   const panelId = useId();
+
+  useEffect(() => {
+    if (defaultExpanded) {
+      setIsExpanded(true);
+    }
+  }, [defaultExpanded]);
 
   useEffect(() => {
     if (collapseOnSearch) {
