@@ -34,11 +34,7 @@ For any PR that includes UI changes:
 
 - Include screenshots in the PR description at both **desktop** and **mobile** resolutions.
 - **Take full-page screenshots** that include the visible UI changes. Avoid tight crops of a single component; reviewers should see the change in the context of the full page.
-- **Commit** screenshot files to the repo (e.g. under `docs/screenshots/`) and embed them using **`raw.githubusercontent.com` URLs from the PR branch**. Local paths (`/workspace/...`) and Cursor artifact URLs (`cursor.com/artifacts/...`) do not render on GitHub.
-
-  ```markdown
-  ![Short description](https://raw.githubusercontent.com/<org>/<repo>/<branch>/docs/screenshots/<file>.png)
-  ```
+- **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts. Attach them to the PR description using image URLs that render on GitHub (for example by referencing local screenshot files with absolute paths when creating/updating the PR, so they can be uploaded and rewritten to stable hosted URLs).
 
 ## Cursor Cloud specific instructions
 
@@ -67,9 +63,9 @@ export PATH="/usr/local/go/bin:$PATH"
 
 Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
-- Desktop and mobile full-page screenshots, committed under `docs/screenshots/`
-- Include the visible UI changes in each screenshot
-- Embed with `raw.githubusercontent.com/<org>/<repo>/<branch>/...` URLs so images render in the PR description
+- Desktop and mobile full-page screenshots with the visible UI changes
+- Do not commit screenshots to the repo; attach them only in the PR description
+- Use PR-update tooling with absolute local file paths so images upload and render on GitHub
 
 ### Known test behaviour
 
