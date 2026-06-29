@@ -61,6 +61,34 @@ function syncBottomChromeLayout() {
 export default function useBottomChromeLayout() {
   useEffect(() => {
     let rafId = 0;
+    const resizeObservers = new Set();
+
+    const unobserveAnchorAd = (anchorAd) => {
+      const observer = resizeObservers.get(anchorAd);
+      if (!observer) return;
+      observer.disconnect();
+      resizeObservers.delete(anchorAd);
+    };
+
+    const observeAnchorAd = (anchorAd) => {
+      if (resizeObservers.has(anchorAd)) return;
+
+      const resizeObserver = new ResizeObserver(scheduleSync);
+      resizeObserver.observe(anchorAd);
+      resizeObservers.set(anchorAd, resizeObserver);
+    };
+
+    const syncAnchorObservers = () => {
+      const anchorAds = document.querySelectorAll(ANCHOR_AD_SELECTOR);
+      for (const anchorAd of anchorAds) {
+        observeAnchorAd(anchorAd);
+      }
+      for (const anchorAd of resizeObservers.keys()) {
+        if (!anchorAd.isConnected) {
+          unobserveAnchorAd(anchorAd);
+        }
+      }
+    };
 
     const scheduleSync = () => {
       if (rafId) {
@@ -68,6 +96,7 @@ export default function useBottomChromeLayout() {
       }
       rafId = requestAnimationFrame(() => {
         rafId = 0;
+        syncAnchorObservers();
         syncBottomChromeLayout();
       });
     };
@@ -79,7 +108,7 @@ export default function useBottomChromeLayout() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["style", "class", "data-anchor-status"],
+      attributeFilter: ["class", "data-anchor-status"],
     });
 
     window.addEventListener("resize", scheduleSync);
@@ -97,6 +126,9 @@ export default function useBottomChromeLayout() {
       window.removeEventListener("resize", scheduleSync);
       window.clearInterval(pollId);
       window.clearTimeout(stopPollId);
+      for (const anchorAd of [...resizeObservers.keys()]) {
+        unobserveAnchorAd(anchorAd);
+      }
       document.documentElement.style.removeProperty(FOOTER_NAV_HEIGHT_VAR);
       document.documentElement.style.removeProperty(ANCHOR_AD_HEIGHT_VAR);
     };
