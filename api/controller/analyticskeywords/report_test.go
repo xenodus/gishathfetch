@@ -125,6 +125,64 @@ func TestBuildReport(t *testing.T) {
 	}
 }
 
+func TestGA4CalendarDate(t *testing.T) {
+	got := ga4CalendarDate(time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC))
+	if got != "2026-06-28" {
+		t.Fatalf("unexpected calendar date: %q", got)
+	}
+}
+
+func TestBuildReport_LongRangePeriodsUseGA4CalendarDates(t *testing.T) {
+	fixedNow := time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC)
+	originalNowFunc := nowFunc
+	originalVerifyFunc := verifyCardNameFunc
+	nowFunc = func() time.Time { return fixedNow }
+	verifyCardNameFunc = mockVerifyCardName
+	defer func() {
+		nowFunc = originalNowFunc
+		verifyCardNameFunc = originalVerifyFunc
+	}()
+
+	reporter := &mockReporter{
+		start6Months: ga4CalendarDate(fixedNow.AddDate(0, -6, 0)),
+		start1Year:   ga4CalendarDate(fixedNow.AddDate(-1, 0, 0)),
+		last6Months:  []ga4.SearchTermCount{{Term: "Opt", Count: 1}},
+		last1Year:    []ga4.SearchTermCount{{Term: "Sol Ring", Count: 1}},
+	}
+
+	report, err := BuildReport(context.Background(), reporter, "123456789", 20)
+	if err != nil {
+		t.Fatalf("build report: %v", err)
+	}
+
+	last6Months := report.Periods[periodLast6Months]
+	if !isGA4CalendarDate(last6Months.StartDate) {
+		t.Fatalf("6-month startDate must be YYYY-MM-DD, got %q", last6Months.StartDate)
+	}
+	if last6Months.StartDate != ga4CalendarDate(fixedNow.AddDate(0, -6, 0)) {
+		t.Fatalf("unexpected 6-month start date: %q", last6Months.StartDate)
+	}
+	if last6Months.EndDate != "today" {
+		t.Fatalf("unexpected 6-month end date: %q", last6Months.EndDate)
+	}
+
+	last1Year := report.Periods[periodLast1Year]
+	if !isGA4CalendarDate(last1Year.StartDate) {
+		t.Fatalf("1-year startDate must be YYYY-MM-DD, got %q", last1Year.StartDate)
+	}
+	if last1Year.StartDate != ga4CalendarDate(fixedNow.AddDate(-1, 0, 0)) {
+		t.Fatalf("unexpected 1-year start date: %q", last1Year.StartDate)
+	}
+	if last1Year.EndDate != "today" {
+		t.Fatalf("unexpected 1-year end date: %q", last1Year.EndDate)
+	}
+}
+
+func isGA4CalendarDate(value string) bool {
+	_, err := time.Parse("2006-01-02", value)
+	return err == nil
+}
+
 func TestValidateKeywords_FiltersInvalidAndMergesCanonicalNames(t *testing.T) {
 	originalVerifyFunc := verifyCardNameFunc
 	verifyCardNameFunc = func(_ context.Context, query string) (string, error) {
