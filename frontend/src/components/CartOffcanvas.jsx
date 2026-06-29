@@ -108,7 +108,7 @@ const CartOffcanvas = ({
               ))}
 
             <div className="mt-4">
-              <AdComponent variant="responsive" />
+              <AdComponent />
             </div>
 
             {cart.length >= 2 && (

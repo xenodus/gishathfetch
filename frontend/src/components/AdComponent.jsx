@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-const AdComponent = ({ variant = "leaderboard" }) => {
+const AdComponent = () => {
   const adInitialized = useRef(false);
   const insRef = useRef(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -24,8 +24,6 @@ const AdComponent = ({ variant = "leaderboard" }) => {
       console.error("AdSense error:", e);
     }
   }, []);
-
-  const isResponsive = variant === "responsive";
 
   useEffect(() => {
     const insEl = insRef.current;
@@ -84,15 +82,11 @@ const AdComponent = ({ variant = "leaderboard" }) => {
         <ins
           ref={insRef}
           className="adsbygoogle"
-          style={
-            isResponsive
-              ? { display: "block", width: "100%", maxWidth: "100%" }
-              : { display: "inline-block", width: "728px", height: "90px" }
-          }
+          style={{ display: "block", width: "100%", maxWidth: "100%" }}
           data-ad-client="ca-pub-2393161407259792"
           data-ad-slot="6707964257"
-          data-ad-format={isResponsive ? "auto" : undefined}
-          data-full-width-responsive={isResponsive ? "true" : undefined}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
         ></ins>
       </div>
       <div className="text-secondary" style={{ fontSize: "11px" }}>
