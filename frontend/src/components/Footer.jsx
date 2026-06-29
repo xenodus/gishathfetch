@@ -1,53 +1,11 @@
-import React, { useEffect } from "react";
 import { ArrowUp, FolderPlus, HelpCircle, Map as MapIcon } from "react-feather";
+import AdComponent from "./AdComponent";
 
 const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
-  const adInitialized = React.useRef(false);
-
-  useEffect(() => {
-    if (adInitialized.current) return;
-    adInitialized.current = true;
-
-    try {
-      // biome-ignore lint/suspicious/noAssignInExpressions: Legacy Google Ads code
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-
-      // Parity fix: use setTimeout to set z-index for footer ads, exactly as in legacy index.js
-      setTimeout(() => {
-        const ads = document.querySelectorAll("ins.adsbygoogle");
-        ads.forEach((ad) => {
-          ad.style.zIndex = "1000";
-        });
-      }, 1000);
-    } catch (e) {
-      console.error("Footer AdSense error:", e);
-    }
-  }, []);
   return (
     <>
-      {/* Footer / Ads */}
-      <div className="ad-large mt-4 pb-5 text-center d-print-none d-block d-sm-block">
-        <div className="text-center mb-2" style={{ fontSize: "11px" }}>
-          <a
-            href="https://www.patreon.com/GishathFetch"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Follow / Support Gishath Fetch on Patreon
-          </a>
-        </div>
-        <div style={{ minHeight: "90px" }}>
-          {/* AdSense slot placeholder */}
-          <ins
-            className="adsbygoogle"
-            style={{ display: "inline-block", width: "728px", height: "90px" }}
-            data-ad-client="ca-pub-2393161407259792"
-            data-ad-slot="6707964257"
-          ></ins>
-        </div>
-        <div className="text-secondary" style={{ fontSize: "11px" }}>
-          Advertisement
-        </div>
+      <div className="mt-4 pb-5">
+        <AdComponent />
       </div>
 
       {/* Fixed Bottom Navigation */}
