@@ -1,9 +1,9 @@
 import { ArrowUp, FolderPlus, HelpCircle, Map as MapIcon } from "react-feather";
-import useAnchorAdOffset from "../hooks/useAnchorAdOffset";
+import useBottomChromeLayout from "../hooks/useBottomChromeLayout";
 import AdComponent from "./AdComponent";
 
 const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
-  useAnchorAdOffset();
+  useBottomChromeLayout();
 
   return (
     <>

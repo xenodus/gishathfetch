@@ -1,16 +1,27 @@
 import { useEffect } from "react";
 
+const FOOTER_NAV_SELECTOR = ".site-bottom-nav";
 const ANCHOR_AD_SELECTOR = "ins.adsbygoogle.adsbygoogle-noablate";
-const CSS_VAR = "--anchor-ad-offset";
+const FOOTER_NAV_HEIGHT_VAR = "--footer-nav-height";
+const ANCHOR_AD_HEIGHT_VAR = "--anchor-ad-height";
 
 function parsePixelValue(value) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function measureAnchorAdOffset() {
+function measureFooterNavHeight() {
+  const footerNav = document.querySelector(FOOTER_NAV_SELECTOR);
+  if (!footerNav) {
+    return 0;
+  }
+
+  return Math.ceil(footerNav.getBoundingClientRect().height);
+}
+
+function measureAnchorAdHeight() {
   const anchorAds = document.querySelectorAll(ANCHOR_AD_SELECTOR);
-  let maxOffset = 0;
+  let maxHeight = 0;
 
   for (const anchorAd of anchorAds) {
     if (!anchorAd.isConnected) continue;
@@ -27,26 +38,27 @@ function measureAnchorAdOffset() {
     );
     if (height <= 0) continue;
 
-    const isBottomAnchored =
-      computed.position === "fixed" &&
-      parsePixelValue(computed.bottom) <= 4 &&
-      rect.bottom >= window.innerHeight - 4;
-
-    if (!isBottomAnchored) continue;
-
-    maxOffset = Math.max(maxOffset, Math.ceil(height));
+    maxHeight = Math.max(maxHeight, Math.ceil(height));
   }
 
-  return maxOffset;
+  return maxHeight;
 }
 
-function syncAnchorAdOffset() {
-  const offset = measureAnchorAdOffset();
-  document.documentElement.style.setProperty(CSS_VAR, `${offset}px`);
-  return offset;
+function syncBottomChromeLayout() {
+  const footerNavHeight = measureFooterNavHeight();
+  const anchorAdHeight = measureAnchorAdHeight();
+
+  document.documentElement.style.setProperty(
+    FOOTER_NAV_HEIGHT_VAR,
+    `${footerNavHeight}px`,
+  );
+  document.documentElement.style.setProperty(
+    ANCHOR_AD_HEIGHT_VAR,
+    `${anchorAdHeight}px`,
+  );
 }
 
-export default function useAnchorAdOffset() {
+export default function useBottomChromeLayout() {
   useEffect(() => {
     let rafId = 0;
 
@@ -56,7 +68,7 @@ export default function useAnchorAdOffset() {
       }
       rafId = requestAnimationFrame(() => {
         rafId = 0;
-        syncAnchorAdOffset();
+        syncBottomChromeLayout();
       });
     };
 
@@ -85,7 +97,8 @@ export default function useAnchorAdOffset() {
       window.removeEventListener("resize", scheduleSync);
       window.clearInterval(pollId);
       window.clearTimeout(stopPollId);
-      document.documentElement.style.removeProperty(CSS_VAR);
+      document.documentElement.style.removeProperty(FOOTER_NAV_HEIGHT_VAR);
+      document.documentElement.style.removeProperty(ANCHOR_AD_HEIGHT_VAR);
     };
   }, []);
 }
