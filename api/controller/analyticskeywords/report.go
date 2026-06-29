@@ -59,6 +59,8 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 	}
 
 	now := nowFunc().UTC()
+	start6Months := ga4CalendarDate(now.AddDate(0, -6, 0))
+	start1Year := ga4CalendarDate(now.AddDate(-1, 0, 0))
 	report := &Report{
 		GeneratedAt: now.Format(time.RFC3339),
 		PropertyID:  propertyID,
@@ -111,7 +113,7 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 		KeywordLimit: limit,
 	}
 
-	last6Months, err := reporter.TopSearchTerms(ctx, "6monthsAgo", "today", ga4CandidateLimit)
+	last6Months, err := reporter.TopSearchTerms(ctx, start6Months, "today", ga4CandidateLimit)
 	if err != nil {
 		return nil, fmt.Errorf("analyticskeywords: last 6 months: %w", err)
 	}
@@ -120,13 +122,13 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 		return nil, fmt.Errorf("analyticskeywords: last 6 months: %w", err)
 	}
 	report.Periods[periodLast6Months] = PeriodReport{
-		StartDate:    "6monthsAgo",
+		StartDate:    start6Months,
 		EndDate:      "today",
 		Keywords:     validated6Months,
 		KeywordLimit: limit,
 	}
 
-	last1Year, err := reporter.TopSearchTerms(ctx, "365daysAgo", "today", ga4CandidateLimit)
+	last1Year, err := reporter.TopSearchTerms(ctx, start1Year, "today", ga4CandidateLimit)
 	if err != nil {
 		return nil, fmt.Errorf("analyticskeywords: last 1 year: %w", err)
 	}
@@ -135,13 +137,17 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 		return nil, fmt.Errorf("analyticskeywords: last 1 year: %w", err)
 	}
 	report.Periods[periodLast1Year] = PeriodReport{
-		StartDate:    "365daysAgo",
+		StartDate:    start1Year,
 		EndDate:      "today",
 		Keywords:     validated1Year,
 		KeywordLimit: limit,
 	}
 
 	return report, nil
+}
+
+func ga4CalendarDate(t time.Time) string {
+	return t.UTC().Format("2006-01-02")
 }
 
 func validateKeywords(ctx context.Context, terms []ga4.SearchTermCount, limit int) ([]KeywordCount, error) {
