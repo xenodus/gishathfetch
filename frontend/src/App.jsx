@@ -47,9 +47,12 @@ export default function App() {
     suggestions,
     showSuggestions,
     setShowSuggestions,
+    isLoadingSuggestions,
+    showEmptySuggestions,
     selectedStores,
     setSelectedStores,
     handleQueryChange,
+    handleClearQuery,
     handleSuggestionClick,
     handleSearchSubmit,
     toggleStore,
@@ -146,9 +149,12 @@ export default function App() {
       <SearchForm
         searchQuery={searchQuery}
         onQueryChange={handleQueryChange}
+        onClearQuery={handleClearQuery}
         onSearchSubmit={handleSearchSubmit}
         suggestions={suggestions}
         showSuggestions={showSuggestions}
+        showEmptySuggestions={showEmptySuggestions}
+        isLoadingSuggestions={isLoadingSuggestions}
         onSuggestionClick={handleSuggestionClick}
         onFocus={() =>
           searchQuery.length > MIN_SEARCH_LENGTH - 1 && setShowSuggestions(true)
