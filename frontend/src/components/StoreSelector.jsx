@@ -30,8 +30,9 @@ const StoreSelector = memo(
     onSelectNone,
     collapsible = true,
     collapseOnSearch = false,
+    defaultExpanded = true,
   }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
     const panelId = useId();
 
     useEffect(() => {

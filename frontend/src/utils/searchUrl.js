@@ -123,6 +123,17 @@ export function getStoresFromUrl(urlParams) {
 }
 
 /**
+ * @returns {boolean}
+ */
+export function hasStoredStoreSelection() {
+  try {
+    return localStorage.getItem("lgsSelected") !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * @param {string[]} stores
  */
 export function persistSelectedStores(stores) {
