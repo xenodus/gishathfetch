@@ -104,7 +104,7 @@ function applyAnchorAdOffsets(footerNavHeight) {
 export default function useBottomChromeLayout() {
   useEffect(() => {
     let rafId = 0;
-    const resizeObservers = new Set();
+    const resizeObservers = new Map();
 
     const unobserveAnchorAd = (anchorAd) => {
       const observer = resizeObservers.get(anchorAd);
