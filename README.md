@@ -147,7 +147,7 @@ data), not the Card Kingdom API. The refresh Lambda streams
 `AllPricesToday.json.bz2` and `AllPrintings.json.bz2`, picks the cheapest CK
 retail listing per card name, and batch-writes the index. Search verifies the
 query against Scryfall before looking up DynamoDB and omits stale entries older
-than 24 hours.
+than 48 hours.
 
 ```mermaid
 sequenceDiagram

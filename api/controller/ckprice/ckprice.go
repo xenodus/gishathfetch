@@ -43,9 +43,7 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 		return false
 	}
 
-	// Prefer DynamoDB sync time over MTGJSON's calendar price date. MTGJSON
-	// meta.date is midnight UTC, so a 24h window against it hides prices for
-	// most of the day after the first daily refresh.
+	// Prefer DynamoDB sync time over MTGJSON's calendar price date.
 	freshnessSource := listing.SyncedAt
 	if freshnessSource == "" {
 		freshnessSource = listing.UpdatedAt
