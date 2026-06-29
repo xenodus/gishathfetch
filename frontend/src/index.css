@@ -328,8 +328,8 @@ ins.adsbygoogle iframe {
 }
 
 ins.adsbygoogle.adsbygoogle-noablate {
-  /* biome-ignore lint/complexity/noImportantStyles: Keep anchor ads above the fixed footer nav */
-  bottom: var(--footer-nav-height, 0px) !important;
+  margin-bottom: var(--footer-nav-height, 0px);
+  z-index: 1040;
 }
 
 .site-bottom-nav {
