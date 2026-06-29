@@ -400,7 +400,8 @@ ins.adsbygoogle iframe {
 
 ins.adsbygoogle.adsbygoogle-noablate {
   margin-bottom: var(--footer-nav-height, 0px);
-  z-index: 1040;
+  /* biome-ignore lint/complexity/noImportantStyles: Cap Google anchor ad z-index below site footer */
+  z-index: 1020 !important;
 }
 
 .site-bottom-nav {

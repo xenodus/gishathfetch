@@ -37,6 +37,7 @@ function measureAnchorAdHeight() {
       parsePixelValue(computed.height),
     );
     if (height <= 0) continue;
+    if (!isBottomAnchorAd(anchorAd)) continue;
 
     maxHeight = Math.max(maxHeight, Math.ceil(height));
   }
@@ -56,6 +57,48 @@ function syncBottomChromeLayout() {
     ANCHOR_AD_HEIGHT_VAR,
     `${anchorAdHeight}px`,
   );
+  applyAnchorAdOffsets(footerNavHeight);
+}
+
+function isBottomAnchorAd(anchorAd) {
+  const computed = window.getComputedStyle(anchorAd);
+  if (computed.position !== "fixed") {
+    return false;
+  }
+
+  const bottom = parsePixelValue(computed.bottom);
+  if (bottom > 0 && bottom <= 16) {
+    return true;
+  }
+
+  const rect = anchorAd.getBoundingClientRect();
+  return rect.height > 0 && rect.bottom >= window.innerHeight - 16;
+}
+
+function applyAnchorAdOffsets(footerNavHeight) {
+  const anchorAds = document.querySelectorAll(ANCHOR_AD_SELECTOR);
+
+  for (const anchorAd of anchorAds) {
+    if (!anchorAd.isConnected) continue;
+
+    const status = anchorAd.getAttribute("data-anchor-status");
+    if (status === "dismissed") {
+      anchorAd.style.removeProperty("margin-bottom");
+      anchorAd.style.removeProperty("z-index");
+      continue;
+    }
+
+    if (!isBottomAnchorAd(anchorAd)) {
+      continue;
+    }
+
+    anchorAd.style.setProperty(
+      "margin-bottom",
+      `${footerNavHeight}px`,
+      "important",
+    );
+    anchorAd.style.setProperty("z-index", "1020", "important");
+  }
 }
 
 export default function useBottomChromeLayout() {
