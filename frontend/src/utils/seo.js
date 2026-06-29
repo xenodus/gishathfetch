@@ -6,9 +6,7 @@ import {
 } from "../constants";
 
 function getOrCreateMeta(attrName, attrValue) {
-  let element = document.head.querySelector(
-    `meta[${attrName}="${attrValue}"]`,
-  );
+  let element = document.head.querySelector(`meta[${attrName}="${attrValue}"]`);
   if (!element) {
     element = document.createElement("meta");
     element.setAttribute(attrName, attrValue);
@@ -62,6 +60,7 @@ export function applySearchSeo(query) {
   setMetaContent("property", "og:url", url);
   setMetaContent("name", "twitter:title", title);
   setMetaContent("name", "twitter:description", description);
+  setCanonicalUrl(url);
 }
 
 export function applyHomeSeo() {
@@ -72,4 +71,5 @@ export function applyHomeSeo() {
   setMetaContent("property", "og:url", BASE_URL);
   setMetaContent("name", "twitter:title", PAGE_TITLE);
   setMetaContent("name", "twitter:description", SITE_DESCRIPTION);
+  setCanonicalUrl(BASE_URL);
 }
