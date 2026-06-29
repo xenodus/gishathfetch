@@ -45,7 +45,7 @@ const (
 	// CKPriceLookupEnabledEnv toggles Card Kingdom price lookup on search responses.
 	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
 	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
-	CKPriceMaxAge = 24 * time.Hour
+	CKPriceMaxAge = 48 * time.Hour
 	// MTGJSONAllPricesTodayURLEnv overrides the MTGJSON AllPricesToday download URL.
 	MTGJSONAllPricesTodayURLEnv = "MTGJSON_ALL_PRICES_TODAY_URL"
 	// MTGJSONAllPrintingsURLEnv overrides the MTGJSON AllPrintings download URL.
@@ -109,7 +109,7 @@ func WebBotAuthTTL() time.Duration {
 func CKPriceLookupEnabled() bool {
 	rawValue := strings.TrimSpace(os.Getenv(CKPriceLookupEnabledEnv))
 	if rawValue == "" {
-		return false
+		return strings.TrimSpace(os.Getenv(CKDynamoDBTableEnv)) != ""
 	}
 
 	enabled, err := strconv.ParseBool(rawValue)

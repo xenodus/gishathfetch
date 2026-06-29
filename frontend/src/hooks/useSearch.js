@@ -221,6 +221,7 @@ export default function useSearch() {
                 storeErrors,
                 hasSearched: true,
                 searchError: null,
+                cardKingdomPrice: result.cardKingdomPrice ?? null,
               });
             }
             skipHistorySyncRef.current = false;
@@ -282,6 +283,7 @@ export default function useSearch() {
               storeErrors: [],
               hasSearched: true,
               searchError: nextSearchError,
+              cardKingdomPrice: null,
             });
           }
           skipHistorySyncRef.current = false;
@@ -327,6 +329,7 @@ export default function useSearch() {
       setSearchResults([]);
       setSearchStoreErrors([]);
       setSearchError(null);
+      setCardKingdomPrice(null);
       setDismissedStoreErrorsKey(null);
       setHasSearched(false);
       setIsSearching(false);
@@ -354,6 +357,7 @@ export default function useSearch() {
     setSearchStoreErrors(state.storeErrors || []);
     setHasSearched(!!state.hasSearched);
     setSearchError(state.searchError || null);
+    setCardKingdomPrice(state.cardKingdomPrice ?? null);
     setDismissedStoreErrorsKey(null);
     setIsSearching(false);
     setSearchProgress("Search");

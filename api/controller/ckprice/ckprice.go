@@ -39,14 +39,24 @@ func GetLatestPrice(ctx context.Context, store ckprices.Store, query string) (*c
 }
 
 func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
-	if listing == nil || listing.UpdatedAt == "" {
+	if listing == nil {
 		return false
 	}
-	updatedAt, err := time.Parse(time.RFC3339, listing.UpdatedAt)
+
+	// Prefer DynamoDB sync time over MTGJSON's calendar price date.
+	freshnessSource := listing.SyncedAt
+	if freshnessSource == "" {
+		freshnessSource = listing.UpdatedAt
+	}
+	if freshnessSource == "" {
+		return false
+	}
+
+	freshnessTime, err := time.Parse(time.RFC3339, freshnessSource)
 	if err != nil {
 		return false
 	}
-	return !now.After(updatedAt.Add(config.CKPriceMaxAge))
+	return !now.After(freshnessTime.Add(config.CKPriceMaxAge))
 }
 
 // RefreshPrices downloads Card Kingdom retail prices from MTGJSON and upserts the DynamoDB index.
