@@ -106,12 +106,14 @@ sequenceDiagram
     EB->>L: daily analytics-keywords-export-run
     L->>GA: GA4 Data API RunReport
     L->>S3: analytics/top-search-keywords/latest.json
+    L->>S3: robots.txt
     FE->>S3: fetch latest.json via CloudFront
 ```
 
 S3 output (default bucket `gishathfetch.com`, prefix `analytics/top-search-keywords/`):
 
 - `latest.json` — most recent export, served at `https://gishathfetch.com/analytics/top-search-keywords/latest.json`
+- `robots.txt` — bucket root; baseline crawl policy plus daily `Allow` lines for top search keywords
 
 The export Lambda writes to the same bucket as the frontend SPA so the report is
 available same-origin through CloudFront. The object is uploaded with
@@ -120,7 +122,13 @@ exports without a separate invalidation.
 
 If the Lambda still has `ANALYTICS_S3_BUCKET` set to a legacy analytics bucket,
 remove it or set it to `gishathfetch.com`, and ensure the Lambda role can
-`PutObject` on `arn:aws:s3:::gishathfetch.com/analytics/top-search-keywords/*`.
+`PutObject` on:
+
+- `arn:aws:s3:::gishathfetch.com/analytics/top-search-keywords/*`
+- `arn:aws:s3:::gishathfetch.com/robots.txt`
+
+Frontend deploys exclude `robots.txt` from `aws s3 sync` so the daily Lambda export
+remains the source of truth for the live file.
 
 Example report shape:
 
