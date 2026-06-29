@@ -3,22 +3,8 @@ import { ChevronDown, MapPin } from "react-feather";
 
 const SECTION_CLASS_NAME = "store-selector-section google-anno-skip mb-3";
 
-function getSelectionSummary(selectedStores, totalCount) {
-  const selectedCount = selectedStores.length;
-
-  if (selectedCount === 0) {
-    return "No stores selected";
-  }
-
-  if (selectedCount === totalCount) {
-    return `All ${totalCount} stores`;
-  }
-
-  if (selectedCount <= 3) {
-    return selectedStores.join(", ");
-  }
-
-  return `${selectedCount} of ${totalCount} stores`;
+function getSelectionSummary(selectedCount, totalCount) {
+  return `${selectedCount} of ${totalCount} stores selected`;
 }
 
 const StoreSelector = memo(
@@ -48,8 +34,8 @@ const StoreSelector = memo(
     const showContent = !collapsible || isExpanded;
 
     const summaryText = useMemo(
-      () => getSelectionSummary(selectedStores, totalCount),
-      [selectedStores, totalCount],
+      () => getSelectionSummary(selectedCount, totalCount),
+      [selectedCount, totalCount],
     );
 
     const handleToggleSection = () => {
@@ -78,11 +64,6 @@ const StoreSelector = memo(
             <span className="store-selector-title">
               {isExpanded ? "Stores" : summaryText}
             </span>
-            {!isExpanded && !allSelected && !noneSelected && (
-              <span className="store-selector-badge" aria-hidden="true">
-                {selectedCount}
-              </span>
-            )}
             <ChevronDown
               size={16}
               aria-hidden="true"
