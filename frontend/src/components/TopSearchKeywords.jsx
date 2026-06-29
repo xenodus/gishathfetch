@@ -28,7 +28,7 @@ const PERIOD_OPTIONS = [
 
 // Stable selector for AdSense "Excluded areas" and google-anno-skip for ad intents.
 const SECTION_CLASS_NAME =
-  "popular-searches-section google-anno-skip mb-3 text-center";
+  "popular-searches-section google-anno-skip mb-3";
 
 function hasAnyKeywords(keywordsByPeriod) {
   return PERIOD_OPTIONS.some(
@@ -60,7 +60,7 @@ function PeriodToggle({ period, onPeriodChange, disabled }) {
 function PopularSearchHeader({ period, onPeriodChange, disabled }) {
   return (
     <fieldset className="popular-search-header border-0 p-0 m-0 mb-2">
-      <div className="d-inline-flex align-items-center justify-content-center gap-2 flex-wrap">
+      <div className="d-flex align-items-center justify-content-start gap-2 flex-wrap">
         <legend className="popular-search-legend small mb-0">
           Popular searches:
         </legend>
@@ -136,7 +136,7 @@ export default function TopSearchKeywords({
           onPeriodChange={setPeriod}
           disabled
         />
-        <div className="d-flex flex-wrap justify-content-center gap-2">
+        <div className="d-flex flex-wrap justify-content-start gap-2">
           {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
             <span
               key={key}
@@ -166,7 +166,7 @@ export default function TopSearchKeywords({
       )}
       <PopularSearchHeader period={period} onPeriodChange={setPeriod} />
       {keywords.length > 0 ? (
-        <div className="d-flex flex-wrap justify-content-center gap-2">
+        <div className="d-flex flex-wrap justify-content-start gap-2">
           {keywords.map((keyword) => (
             <a
               key={keyword}

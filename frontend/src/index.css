@@ -195,8 +195,12 @@ ins.adsbygoogle iframe {
   );
 }
 
+.popular-searches-section {
+  text-align: start;
+}
+
 .popular-search-header {
-  text-align: center;
+  text-align: start;
 }
 
 .popular-search-legend {
@@ -252,4 +256,8 @@ ins.adsbygoogle iframe {
 
 .popular-searches-collapsed {
   margin-bottom: 0.75rem;
+}
+
+.popular-searches-toggle {
+  text-align: start;
 }
