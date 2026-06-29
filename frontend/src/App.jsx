@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import "./index.css";
 
+import AmazonAffiliateLinks from "./components/AmazonAffiliateLinks";
 import Footer from "./components/Footer";
 // --- Modular Components ---
 import Header from "./components/Header";
@@ -183,6 +184,8 @@ export default function App() {
           />
         }
       />
+
+      <AmazonAffiliateLinks />
 
       <SearchResults
         results={searchResults}

@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 )
@@ -24,6 +25,11 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 	var apiRequest events.APIGatewayProxyRequest
 	if err := json.Unmarshal(event, &apiRequest); err != nil {
 		return events.APIGatewayProxyResponse{}, err
+	}
+
+	path := normalizeAPIPath(apiRequest.Path)
+	if path == affiliateLinksPublicPath || strings.HasPrefix(path, affiliateLinksAdminPath) {
+		return routeAffiliateRequest(ctx, apiRequest)
 	}
 
 	return Search(ctx, apiRequest)

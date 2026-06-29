@@ -172,6 +172,15 @@ export const MAX_SEARCH_LENGTH = 150;
 
 export const API_BASE_URL = "https://api.gishathfetch.com/";
 
+export function getApiBaseUrl() {
+  if (import.meta.env.DEV) {
+    return "/";
+  }
+  return API_BASE_URL;
+}
+
+export const AFFILIATE_LINKS_URL = `${getApiBaseUrl()}affiliate-links`;
+
 export const BASE_URL = "https://gishathfetch.com/";
 
 // Same-origin on production (served from gishathfetch.com via CloudFront).

@@ -71,6 +71,18 @@ const (
 	SiteBaseURL = "https://gishathfetch.com/"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
+	// AffiliateLinksDynamoDBTableEnv is the DynamoDB table for Amazon affiliate links.
+	AffiliateLinksDynamoDBTableEnv = "AFFILIATE_LINKS_DYNAMODB_TABLE"
+	// AffiliateAdminAPIKeyEnv protects admin affiliate-link write endpoints.
+	AffiliateAdminAPIKeyEnv = "AFFILIATE_ADMIN_API_KEY"
+	// AffiliateImagesS3BucketEnv is the bucket used for uploaded affiliate images.
+	AffiliateImagesS3BucketEnv = "AFFILIATE_IMAGES_S3_BUCKET"
+	// AffiliateImagesS3DefaultBucket is the default bucket for affiliate images.
+	AffiliateImagesS3DefaultBucket = "gishathfetch.com"
+	// AffiliateImagesS3PrefixEnv is the object key prefix for affiliate images.
+	AffiliateImagesS3PrefixEnv = "AFFILIATE_IMAGES_S3_PREFIX"
+	// AffiliateImagesS3DefaultPrefix is the default object key prefix for affiliate images.
+	AffiliateImagesS3DefaultPrefix = "affiliate/images"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.

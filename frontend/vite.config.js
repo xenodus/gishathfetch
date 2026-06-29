@@ -36,6 +36,16 @@ export default defineConfig({
         target: "https://gishathfetch.com",
         changeOrigin: true,
       },
+      "/affiliate-links": {
+        target: "https://api.gishathfetch.com",
+        changeOrigin: true,
+        rewrite: (path) => path,
+      },
+      "/admin/affiliate-links": {
+        target: "https://api.gishathfetch.com",
+        changeOrigin: true,
+        rewrite: (path) => path,
+      },
     },
   },
 });

@@ -12,13 +12,17 @@ import (
 )
 
 func applyCORSHeaders(apiResponse *events.APIGatewayProxyResponse, origin string) {
+	applyCORSHeadersWithMethods(apiResponse, origin, "GET, OPTIONS")
+}
+
+func applyCORSHeadersWithMethods(apiResponse *events.APIGatewayProxyResponse, origin string, methods string) {
 	if !slices.Contains(config.GetAllowedOrigins(), origin) {
 		return
 	}
 	apiResponse.Headers = map[string]string{
 		"Access-Control-Allow-Origin":  origin,
-		"Access-Control-Allow-Methods": "GET, OPTIONS",
-		"Access-Control-Allow-Headers": "Content-Type",
+		"Access-Control-Allow-Methods": methods,
+		"Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Api-Key",
 		"Vary":                         "Origin",
 	}
 }
@@ -29,14 +33,24 @@ func jsonResponse(
 	statusCode int,
 	payload any,
 ) (events.APIGatewayProxyResponse, error) {
+	return jsonResponseWithMethods(apiResponse, origin, statusCode, payload, "GET, OPTIONS")
+}
+
+func jsonResponseWithMethods(
+	apiResponse events.APIGatewayProxyResponse,
+	origin string,
+	statusCode int,
+	payload any,
+	methods string,
+) (events.APIGatewayProxyResponse, error) {
 	apiResponse.StatusCode = statusCode
-	applyCORSHeaders(&apiResponse, origin)
+	applyCORSHeadersWithMethods(&apiResponse, origin, methods)
 
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
 	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(payload); err != nil {
-		return errorResponse(apiResponse, origin, "err marshalling response", http.StatusInternalServerError)
+		return errorResponseWithMethods(apiResponse, origin, "err marshalling response", http.StatusInternalServerError, methods)
 	}
 
 	apiResponse.Body = buf.String()
@@ -49,8 +63,18 @@ func errorResponse(
 	message string,
 	statusCode int,
 ) (events.APIGatewayProxyResponse, error) {
+	return errorResponseWithMethods(apiResponse, origin, message, statusCode, "GET, OPTIONS")
+}
+
+func errorResponseWithMethods(
+	apiResponse events.APIGatewayProxyResponse,
+	origin string,
+	message string,
+	statusCode int,
+	methods string,
+) (events.APIGatewayProxyResponse, error) {
 	apiResponse.StatusCode = statusCode
-	applyCORSHeaders(&apiResponse, origin)
+	applyCORSHeadersWithMethods(&apiResponse, origin, methods)
 
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
@@ -69,7 +93,11 @@ func errorResponse(
 }
 
 func optionsResponse(origin string) (events.APIGatewayProxyResponse, error) {
+	return optionsResponseWithMethods(origin, "GET, OPTIONS")
+}
+
+func optionsResponseWithMethods(origin string, methods string) (events.APIGatewayProxyResponse, error) {
 	apiResponse := events.APIGatewayProxyResponse{StatusCode: http.StatusNoContent}
-	applyCORSHeaders(&apiResponse, origin)
+	applyCORSHeadersWithMethods(&apiResponse, origin, methods)
 	return apiResponse, nil
 }
