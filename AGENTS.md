@@ -33,7 +33,7 @@ Notes:
 For any PR that includes UI changes:
 
 - Include screenshots in the PR description at both **desktop** and **mobile** resolutions.
-- Capture **surrounding page context**, not just a tight crop of the changed component. Show adjacent sections (e.g. form fields, headings, buttons) so reviewers can see how the change fits on the page.
+- **Take full-page screenshots** that include the visible UI changes. Avoid tight crops of a single component; reviewers should see the change in the context of the full page.
 - **Commit** screenshot files to the repo (e.g. under `docs/screenshots/`) and embed them using **`raw.githubusercontent.com` URLs from the PR branch**. Local paths (`/workspace/...`) and Cursor artifact URLs (`cursor.com/artifacts/...`) do not render on GitHub.
 
   ```markdown
@@ -67,8 +67,8 @@ export PATH="/usr/local/go/bin:$PATH"
 
 Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
-- Desktop and mobile screenshots, committed under `docs/screenshots/`
-- Include surrounding page context, not just the changed element
+- Desktop and mobile full-page screenshots, committed under `docs/screenshots/`
+- Include the visible UI changes in each screenshot
 - Embed with `raw.githubusercontent.com/<org>/<repo>/<branch>/...` URLs so images render in the PR description
 
 ### Known test behaviour
