@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
   DESKTOP_MIN_WIDTH_MEDIA_QUERY,
@@ -27,8 +28,7 @@ const PERIOD_OPTIONS = [
 ];
 
 // Stable selector for AdSense "Excluded areas" and google-anno-skip for ad intents.
-const SECTION_CLASS_NAME =
-  "popular-searches-section google-anno-skip mb-3";
+const SECTION_CLASS_NAME = "popular-searches-section google-anno-skip mb-3";
 
 function hasAnyKeywords(keywordsByPeriod) {
   return PERIOD_OPTIONS.some(
@@ -38,7 +38,8 @@ function hasAnyKeywords(keywordsByPeriod) {
 
 function PeriodToggle({ period, onPeriodChange, disabled }) {
   return (
-    <div className="popular-search-period-toggle">
+    <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
+      <legend className="visually-hidden">Popular search time range</legend>
       {PERIOD_OPTIONS.map((option) => (
         <button
           key={option.id}
@@ -53,24 +54,46 @@ function PeriodToggle({ period, onPeriodChange, disabled }) {
           {option.label}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }
 
-function PopularSearchHeader({ period, onPeriodChange, disabled }) {
-  return (
-    <fieldset className="popular-search-header border-0 p-0 m-0 mb-2">
-      <div className="d-flex align-items-center justify-content-start gap-2 flex-wrap">
-        <legend className="popular-search-legend small mb-0">
-          Popular searches:
-        </legend>
-        <PeriodToggle
-          period={period}
-          onPeriodChange={onPeriodChange}
-          disabled={disabled}
+function PopularSearchesToggle({ isExpanded, collapsible, panelId, onToggle }) {
+  const label = isExpanded ? "Popular searches" : "Show popular searches";
+
+  if (!collapsible) {
+    return (
+      <div className="popular-searches-header-static">
+        <TrendingUp
+          size={15}
+          aria-hidden="true"
+          className="popular-searches-icon"
         />
+        <span className="popular-searches-title">{label}</span>
       </div>
-    </fieldset>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="popular-searches-toggle"
+      aria-expanded={isExpanded}
+      aria-controls={panelId}
+      onClick={onToggle}
+    >
+      <TrendingUp
+        size={15}
+        aria-hidden="true"
+        className="popular-searches-icon"
+      />
+      <span className="popular-searches-title">{label}</span>
+      <ChevronDown
+        size={16}
+        aria-hidden="true"
+        className={`popular-searches-chevron${isExpanded ? " is-expanded" : ""}`}
+      />
+    </button>
   );
 }
 
@@ -90,7 +113,7 @@ export default function TopSearchKeywords({
   const [isExpanded, setIsExpanded] = useState(!collapsible);
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop);
-  const panelId = "popular-searches-panel";
+  const panelId = useId();
 
   useEffect(() => {
     if (collapseOnSearch) {
@@ -105,89 +128,62 @@ export default function TopSearchKeywords({
   const keywords = (keywordsByPeriod?.[period] ?? []).slice(0, displayLimit);
   const selectedPeriodLabel =
     PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? "";
+  const showContent = !collapsible || isExpanded;
 
-  if (collapsible && !isExpanded) {
-    return (
-      <div className={`${SECTION_CLASS_NAME} popular-searches-collapsed`}>
-        <button
-          type="button"
-          className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
-          aria-expanded="false"
-          aria-controls={panelId}
-          onClick={() => setIsExpanded(true)}
-        >
-          Show popular searches
-        </button>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className={SECTION_CLASS_NAME} id={panelId}>
-        {collapsible && (
-          <div className="mb-2">
-            <button
-              type="button"
-              className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
-              aria-expanded="true"
-              aria-controls={panelId}
-              onClick={() => setIsExpanded(false)}
-            >
-              Hide popular searches
-            </button>
-          </div>
-        )}
-        <PopularSearchHeader
-          period={period}
-          onPeriodChange={setPeriod}
-          disabled
-        />
-        <div className="d-flex flex-wrap justify-content-start gap-2">
-          {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
-            <span
-              key={key}
-              className="placeholder col-3 rounded-pill"
-              style={{ height: "31px" }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const handleToggle = () => {
+    setIsExpanded((expanded) => !expanded);
+  };
 
   return (
-    <div className={SECTION_CLASS_NAME} id={panelId}>
-      {collapsible && (
-        <div className="mb-2">
-          <button
-            type="button"
-            className="btn btn-link btn-sm p-0 text-decoration-none popular-searches-toggle"
-            aria-expanded="true"
-            aria-controls={panelId}
-            onClick={() => setIsExpanded(false)}
-          >
-            Hide popular searches
-          </button>
-        </div>
-      )}
-      <PopularSearchHeader period={period} onPeriodChange={setPeriod} />
-      {keywords.length > 0 ? (
-        <div className="d-flex flex-wrap justify-content-start gap-2">
-          {keywords.map((keyword) => (
-            <a
-              key={keyword}
-              href={buildSearchQueryUrl(BASE_URL, keyword)}
-              className="btn btn-sm popular-search-pill text-decoration-none"
-              aria-label={`Search for ${keyword}`}
-            >
-              {keyword}
-            </a>
-          ))}
-        </div>
-      ) : (
-        <div className="small text-muted">
-          No popular searches in the last {selectedPeriodLabel}.
+    <div
+      className={`${SECTION_CLASS_NAME}${
+        showContent ? " is-expanded" : " is-collapsed"
+      }`}
+    >
+      <PopularSearchesToggle
+        isExpanded={isExpanded}
+        collapsible={collapsible}
+        panelId={panelId}
+        onToggle={handleToggle}
+      />
+
+      {showContent && (
+        <div className="popular-searches-panel" id={panelId}>
+          <div className="popular-searches-controls">
+            <PeriodToggle
+              period={period}
+              onPeriodChange={setPeriod}
+              disabled={isLoading}
+            />
+          </div>
+
+          {isLoading ? (
+            <div className="popular-searches-pills">
+              {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
+                <span
+                  key={key}
+                  className="placeholder rounded-pill popular-search-pill-skeleton"
+                />
+              ))}
+            </div>
+          ) : keywords.length > 0 ? (
+            <div className="popular-searches-pills">
+              {keywords.map((keyword) => (
+                <a
+                  key={keyword}
+                  href={buildSearchQueryUrl(BASE_URL, keyword)}
+                  className="btn btn-sm popular-search-pill text-decoration-none"
+                  aria-label={`Search for ${keyword}`}
+                >
+                  {keyword}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="popular-searches-empty small text-muted mb-0">
+              No popular searches in the last {selectedPeriodLabel}.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -30,7 +30,12 @@ Notes:
 
 ## UI deliverables
 
-- For any PR that includes UI changes, include screenshots of the updated UI at both desktop and mobile resolutions.
+For any PR that includes UI changes:
+
+- Include screenshots in the PR description at both **desktop** and **mobile** resolutions.
+- **Take full-page screenshots** that include the visible UI changes. Avoid tight crops of a single component; reviewers should see the change in the context of the full page.
+- **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts used in the PR description.
+- Embed screenshots using **GitHub-hosted image URLs that render in PR descriptions** (for example `github.com/.../releases/download/...` or `github.com/user-attachments/assets/...`). Do not use `cursor.com/artifacts/...` URLs or uncommitted local file paths.
 
 ## Cursor Cloud specific instructions
 
@@ -55,10 +60,20 @@ export PATH="/usr/local/go/bin:$PATH"
 - Gateway/controller focused: `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
 - Frontend lint: `cd frontend && npm run lint`
 
+### UI screenshots
+
+Follow the [UI deliverables](#ui-deliverables) rules above. In short:
+
+- Desktop and mobile full-page screenshots with the visible UI changes
+- Do not commit screenshots to the repo; attach them only in the PR description
+- Use GitHub-hosted image URLs that render on GitHub (not Cursor artifact URLs)
+
 ### Known test behaviour
 
-- The `gateway/arcanesanctum` test hits a live website that blocks direct requests without a proxy. It will fail with "Forbidden (proxy_mode=direct proxy=none)" unless `DEDICATED_PROXY_*` env vars are set. This is expected in environments without proxy credentials.
-- Many gateway tests hit live upstream store websites, so transient network failures or rate-limiting can cause sporadic failures.
+- **Live gateway store tests** (`gateway/*/search_test.go`) hit real upstream store websites. They use `gatewaytest.RequireSearchOrProbe`: when search returns cards, field shape is validated; when inventory is empty, tests fall back to HTML/API **structure probes** instead of requiring in-stock results. Transient network failures or rate-limiting can still cause sporadic failures.
+- **BinderPOS live integration tests** (`gateway/binderpos/*_test.go`) are skipped by default. Set `RUN_BINDERPOS_LIVE_TESTS=1` to run live storefront/scrape checks against real stores (see also `docs/search-strategies-retries-timeouts.md`).
+- **`gateway/arcanesanctum`** is currently skipped because Arcane Sanctum is disabled in the controller; it is not expected to fail on `make test`.
+- Some live tests and structure probes may return **403 Forbidden** without `DEDICATED_PROXY_*` credentials when an upstream site blocks direct requests. That is expected in environments without proxy config.
 
 ### Frontend API connection
 
