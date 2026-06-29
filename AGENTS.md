@@ -30,7 +30,7 @@ Notes:
 
 ## UI deliverables
 
-- For any PR that includes UI changes, include screenshots of the updated UI at both desktop and mobile resolutions.
+- For any PR that includes UI changes, include screenshots of the updated UI at both desktop and mobile resolutions in the PR description.
 
 ## Cursor Cloud specific instructions
 
@@ -54,6 +54,10 @@ export PATH="/usr/local/go/bin:$PATH"
 - Full test suite: `make test` (from repo root)
 - Gateway/controller focused: `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
 - Frontend lint: `cd frontend && npm run lint`
+
+### UI screenshots
+
+- For any PR that includes UI changes, include screenshots of the updated UI at both desktop and mobile resolutions in the PR description.
 
 ### Known test behaviour
 
