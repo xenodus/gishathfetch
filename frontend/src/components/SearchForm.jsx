@@ -23,6 +23,7 @@ const SearchForm = ({
   searchError,
   storesWarning,
   onCancelSearch,
+  popularSearchesSlot,
 }) => {
   const wrapperRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -179,6 +180,8 @@ const SearchForm = ({
             </div>
           )}
         </div>
+
+        {popularSearchesSlot}
 
         <StoreSelector
           options={lgsOptions}

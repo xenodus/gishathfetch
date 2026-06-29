@@ -164,6 +164,14 @@ export default function App() {
         searchError={searchError}
         storesWarning={storesWarning}
         onCancelSearch={cancelSearch}
+        popularSearchesSlot={
+          !hasSearched ? (
+            <TopSearchKeywords
+              keywordsByPeriod={topSearchKeywordsByPeriod}
+              isLoading={isLoadingTopSearchKeywords}
+            />
+          ) : null
+        }
       />
 
       <SearchResults
@@ -184,10 +192,12 @@ export default function App() {
         baseUrl={BASE_URL}
       />
 
-      <TopSearchKeywords
-        keywordsByPeriod={topSearchKeywordsByPeriod}
-        isLoading={isLoadingTopSearchKeywords}
-      />
+      {hasSearched && (
+        <TopSearchKeywords
+          keywordsByPeriod={topSearchKeywordsByPeriod}
+          isLoading={isLoadingTopSearchKeywords}
+        />
+      )}
 
       <Footer
         cartCount={cart.length}
