@@ -35,8 +35,17 @@ func TestUseDynamicProxy(t *testing.T) {
 }
 
 func TestCKPriceLookupEnabled(t *testing.T) {
+	t.Run("defaults to enabled when dynamodb table is configured", func(t *testing.T) {
+		t.Setenv(CKPriceLookupEnabledEnv, "")
+		t.Setenv(CKDynamoDBTableEnv, "mtg-ck-prices")
+		if !CKPriceLookupEnabled() {
+			t.Fatalf("expected ck price lookup to be enabled when table is configured")
+		}
+	})
+
 	t.Run("defaults to disabled when unset", func(t *testing.T) {
 		t.Setenv(CKPriceLookupEnabledEnv, "")
+		t.Setenv(CKDynamoDBTableEnv, "")
 		if CKPriceLookupEnabled() {
 			t.Fatalf("expected ck price lookup to be disabled by default")
 		}

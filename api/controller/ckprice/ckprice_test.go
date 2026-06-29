@@ -91,3 +91,16 @@ func TestListingIsFresh(t *testing.T) {
 	}, now))
 	require.False(t, listingIsFresh(&cardkingdom.Listing{}, now))
 }
+
+func TestListingIsFresh_PrefersSyncedAt(t *testing.T) {
+	now := time.Date(2026, 6, 29, 12, 0, 0, 0, time.UTC)
+
+	require.True(t, listingIsFresh(&cardkingdom.Listing{
+		UpdatedAt: "2026-06-27T00:00:00Z",
+		SyncedAt:  "2026-06-29T03:00:00Z",
+	}, now))
+	require.False(t, listingIsFresh(&cardkingdom.Listing{
+		UpdatedAt: "2026-06-29T03:00:00Z",
+		SyncedAt:  "2026-06-27T03:00:00Z",
+	}, now))
+}

@@ -8,6 +8,7 @@ import { LGS_OPTIONS } from "../constants";
  *   storeErrors: object[],
  *   hasSearched: boolean,
  *   searchError: string | null,
+ *   cardKingdomPrice: object | null,
  * }} SearchHistoryState
  */
 
@@ -23,6 +24,7 @@ export function buildSearchHistoryState(snapshot) {
     storeErrors: snapshot.storeErrors,
     hasSearched: snapshot.hasSearched,
     searchError: snapshot.searchError,
+    cardKingdomPrice: snapshot.cardKingdomPrice ?? null,
   };
 }
 

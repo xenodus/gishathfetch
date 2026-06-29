@@ -109,7 +109,7 @@ func WebBotAuthTTL() time.Duration {
 func CKPriceLookupEnabled() bool {
 	rawValue := strings.TrimSpace(os.Getenv(CKPriceLookupEnabledEnv))
 	if rawValue == "" {
-		return false
+		return strings.TrimSpace(os.Getenv(CKDynamoDBTableEnv)) != ""
 	}
 
 	enabled, err := strconv.ParseBool(rawValue)
