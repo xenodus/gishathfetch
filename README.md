@@ -120,13 +120,6 @@ available same-origin through CloudFront. The object is uploaded with
 `Cache-Control: public, max-age=3600` so edge caches can serve it between daily
 exports without a separate invalidation.
 
-If the Lambda still has `ANALYTICS_S3_BUCKET` set to a legacy analytics bucket,
-remove it or set it to `gishathfetch.com`, and ensure the Lambda role can
-`PutObject` on:
-
-- `arn:aws:s3:::gishathfetch.com/analytics/top-search-keywords/*`
-- `arn:aws:s3:::gishathfetch.com/robots.txt`
-
 Frontend deploys exclude `robots.txt` from `aws s3 sync` so the daily Lambda export
 remains the source of truth for the live file.
 
