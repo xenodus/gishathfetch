@@ -57,8 +57,8 @@ const MapPage = () => {
           Where are the shops?
         </h1>
         <p className="text-muted mb-0">
-          Singapore MTG store locations on the map below. Tap a pin or shop name
-          for details.
+          Singapore MTG store locations on the Google map below. Tap a pin or
+          shop name for details.
         </p>
       </header>
 

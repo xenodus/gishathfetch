@@ -1,31 +1,26 @@
-import L from "leaflet";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { useEffect, useRef } from "react";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
+import { loadGoogleMaps } from "../utils/googleMaps";
 
-const defaultIcon = L.icon({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const SINGAPORE_CENTER = [1.3521, 103.8198];
+const SINGAPORE_CENTER = { lat: 1.3521, lng: 103.8198 };
 const DEFAULT_ZOOM = 11;
 
-function buildPopupContent(shop) {
+function escapeHtml(text) {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildInfoWindowContent(shop) {
   const searchUrl = `/?src=${encodeURIComponent(shop.searchStore)}`;
   return `
     <div class="store-map-popup">
-      <strong>${shop.name}</strong>
-      <div class="mt-1 small">${shop.address}</div>
+      <strong>${escapeHtml(shop.name)}</strong>
+      <div class="mt-1 small">${escapeHtml(shop.address)}</div>
       <div class="mt-2">
-        <a href="${shop.website}" target="_blank" rel="noreferrer">Website</a>
+        <a href="${escapeHtml(shop.website)}" target="_blank" rel="noreferrer">Website</a>
         &nbsp;|&nbsp;
         <a href="${searchUrl}">Search store</a>
       </div>
@@ -37,7 +32,9 @@ const StoreLocationMap = ({ stores, activeStoreId, onMarkerClick }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
+  const infoWindowRef = useRef(null);
   const onMarkerClickRef = useRef(onMarkerClick);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     onMarkerClickRef.current = onMarkerClick;
@@ -48,46 +45,71 @@ const StoreLocationMap = ({ stores, activeStoreId, onMarkerClick }) => {
       return;
     }
 
-    const map = L.map(mapContainerRef.current, {
-      scrollWheelZoom: true,
-    }).setView(SINGAPORE_CENTER, DEFAULT_ZOOM);
+    let isCancelled = false;
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19,
-    }).addTo(map);
+    loadGoogleMaps()
+      .then(({ Map: GoogleMap }) => {
+        if (isCancelled || !mapContainerRef.current) {
+          return;
+        }
 
-    const markers = {};
-    for (const shop of stores) {
-      const marker = L.marker([shop.lat, shop.lng], { icon: defaultIcon })
-        .addTo(map)
-        .bindPopup(buildPopupContent(shop));
+        const map = new GoogleMap(mapContainerRef.current, {
+          center: SINGAPORE_CENTER,
+          zoom: DEFAULT_ZOOM,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
 
-      marker.on("click", () => {
-        onMarkerClickRef.current?.(shop.id);
+        const infoWindow = new google.maps.InfoWindow();
+        const markers = {};
+
+        for (const shop of stores) {
+          const marker = new google.maps.Marker({
+            map,
+            position: { lat: shop.lat, lng: shop.lng },
+            title: shop.name,
+          });
+
+          marker.addListener("click", () => {
+            infoWindow.setContent(buildInfoWindowContent(shop));
+            infoWindow.open({ map, anchor: marker });
+            onMarkerClickRef.current?.(shop.id);
+          });
+
+          markers[shop.id] = marker;
+        }
+
+        if (stores.length > 0) {
+          const bounds = new google.maps.LatLngBounds();
+          for (const shop of stores) {
+            bounds.extend({ lat: shop.lat, lng: shop.lng });
+          }
+          map.fitBounds(bounds, 48);
+        }
+
+        mapRef.current = map;
+        markersRef.current = markers;
+        infoWindowRef.current = infoWindow;
+        setLoadError(null);
+      })
+      .catch((error) => {
+        if (!isCancelled) {
+          setLoadError(error.message);
+        }
       });
 
-      markers[shop.id] = marker;
-    }
-
-    if (stores.length > 0) {
-      const bounds = L.latLngBounds(stores.map((shop) => [shop.lat, shop.lng]));
-      map.fitBounds(bounds.pad(0.12));
-    }
-
-    mapRef.current = map;
-    markersRef.current = markers;
-
     return () => {
-      map.remove();
+      isCancelled = true;
+      infoWindowRef.current?.close();
+      infoWindowRef.current = null;
       mapRef.current = null;
       markersRef.current = {};
     };
   }, [stores]);
 
   useEffect(() => {
-    if (!activeStoreId || !mapRef.current) {
+    if (!activeStoreId || !mapRef.current || !infoWindowRef.current) {
       return;
     }
 
@@ -97,9 +119,21 @@ const StoreLocationMap = ({ stores, activeStoreId, onMarkerClick }) => {
       return;
     }
 
-    mapRef.current.setView([shop.lat, shop.lng], 14, { animate: true });
-    marker.openPopup();
+    mapRef.current.panTo({ lat: shop.lat, lng: shop.lng });
+    mapRef.current.setZoom(14);
+    infoWindowRef.current.setContent(buildInfoWindowContent(shop));
+    infoWindowRef.current.open({ map: mapRef.current, anchor: marker });
   }, [activeStoreId, stores]);
+
+  if (loadError) {
+    return (
+      <div className="store-location-map border border-dark d-flex align-items-center justify-content-center text-muted p-3 text-center">
+        Google Maps could not be loaded. Set{" "}
+        <code className="mx-1">VITE_GOOGLE_MAPS_API_KEY</code> for the
+        interactive map.
+      </div>
+    );
+  }
 
   return (
     <div
