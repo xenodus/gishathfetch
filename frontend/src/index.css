@@ -306,11 +306,6 @@ input#search:focus-visible {
   -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
-/* Parity fix: Google Ads z-index */
-ins.adsbygoogle {
-  z-index: 1000;
-}
-
 /* Prevent AdSense from causing horizontal scrolling in narrow containers (e.g. offcanvas) */
 .ad-large {
   max-width: 100%;
@@ -330,6 +325,26 @@ ins.adsbygoogle {
 
 ins.adsbygoogle iframe {
   display: block;
+}
+
+ins.adsbygoogle.adsbygoogle-noablate {
+  /* biome-ignore lint/complexity/noImportantStyles: Keep anchor ads above the fixed footer nav */
+  bottom: var(--footer-nav-height, 0px) !important;
+}
+
+.site-bottom-nav {
+  position: fixed;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1030;
+}
+
+.site-footer-spacer {
+  padding-bottom: calc(
+    var(--footer-nav-height, 3rem) +
+    var(--anchor-ad-height, 0px)
+  );
 }
 
 .bottom-nav-icon {
