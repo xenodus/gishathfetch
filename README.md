@@ -133,8 +133,8 @@ Example report shape:
     "last24Hours": { "start": "...", "end": "...", "keywords": [{"term": "Opt", "count": 4}] },
     "last7Days": { "startDate": "7daysAgo", "endDate": "today", "keywords": [] },
     "last30Days": { "startDate": "30daysAgo", "endDate": "today", "keywords": [] },
-    "last6Months": { "startDate": "6monthsAgo", "endDate": "today", "keywords": [] },
-    "last1Year": { "startDate": "365daysAgo", "endDate": "today", "keywords": [] }
+    "last6Months": { "startDate": "2025-12-28", "endDate": "today", "keywords": [] },
+    "last1Year": { "startDate": "2025-06-28", "endDate": "today", "keywords": [] }
   }
 }
 ```
