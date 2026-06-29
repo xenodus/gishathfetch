@@ -10,11 +10,13 @@ import (
 )
 
 type mockReporter struct {
-	last24Hours []ga4.SearchTermCount
-	last7Days   []ga4.SearchTermCount
-	last30Days  []ga4.SearchTermCount
-	last6Months []ga4.SearchTermCount
-	last1Year   []ga4.SearchTermCount
+	start6Months string
+	start1Year   string
+	last24Hours  []ga4.SearchTermCount
+	last7Days    []ga4.SearchTermCount
+	last30Days   []ga4.SearchTermCount
+	last6Months  []ga4.SearchTermCount
+	last1Year    []ga4.SearchTermCount
 }
 
 func (m *mockReporter) TopSearchTerms(_ context.Context, startDate, endDate string, limit int) ([]ga4.SearchTermCount, error) {
@@ -23,9 +25,9 @@ func (m *mockReporter) TopSearchTerms(_ context.Context, startDate, endDate stri
 		return trimTerms(m.last7Days, limit), nil
 	case startDate == "30daysAgo" && endDate == "today":
 		return trimTerms(m.last30Days, limit), nil
-	case startDate == "6monthsAgo" && endDate == "today":
+	case startDate == m.start6Months && endDate == "today":
 		return trimTerms(m.last6Months, limit), nil
-	case startDate == "365daysAgo" && endDate == "today":
+	case startDate == m.start1Year && endDate == "today":
 		return trimTerms(m.last1Year, limit), nil
 	default:
 		return nil, nil
@@ -64,7 +66,9 @@ func TestBuildReport(t *testing.T) {
 	}()
 
 	reporter := &mockReporter{
-		last24Hours: []ga4.SearchTermCount{{Term: "Opt", Count: 4}},
+		start6Months: ga4CalendarDate(fixedNow.AddDate(0, -6, 0)),
+		start1Year:   ga4CalendarDate(fixedNow.AddDate(-1, 0, 0)),
+		last24Hours:  []ga4.SearchTermCount{{Term: "Opt", Count: 4}},
 		last7Days:   []ga4.SearchTermCount{{Term: "Lightning Bolt", Count: 10}},
 		last30Days:  []ga4.SearchTermCount{{Term: "Sol Ring", Count: 20}},
 		last6Months: []ga4.SearchTermCount{{Term: "Opt", Count: 40}},
@@ -105,7 +109,7 @@ func TestBuildReport(t *testing.T) {
 	}
 
 	last6Months := report.Periods[periodLast6Months]
-	if last6Months.StartDate != "6monthsAgo" || last6Months.EndDate != "today" {
+	if last6Months.StartDate != "2025-12-28" || last6Months.EndDate != "today" {
 		t.Fatalf("unexpected 6mo window: %+v", last6Months)
 	}
 	if len(last6Months.Keywords) != 1 || last6Months.Keywords[0].Term != "Opt" {
@@ -113,7 +117,7 @@ func TestBuildReport(t *testing.T) {
 	}
 
 	last1Year := report.Periods[periodLast1Year]
-	if last1Year.StartDate != "365daysAgo" || last1Year.EndDate != "today" {
+	if last1Year.StartDate != "2025-06-28" || last1Year.EndDate != "today" {
 		t.Fatalf("unexpected 1yr window: %+v", last1Year)
 	}
 	if len(last1Year.Keywords) != 1 || last1Year.Keywords[0].Term != "Lightning Bolt" {
