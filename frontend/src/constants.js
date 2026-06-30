@@ -181,3 +181,8 @@ export const TOP_SEARCH_KEYWORDS_URL =
 export const TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT = 20;
 export const TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT = 10;
 export const DESKTOP_MIN_WIDTH_MEDIA_QUERY = "(min-width: 768px)";
+
+// UTM params for popular search pill links (GA4 session attribution).
+export const POPULAR_SEARCH_UTM_SOURCE = "popular_searches";
+export const POPULAR_SEARCH_UTM_MEDIUM = "internal";
+export const POPULAR_SEARCH_UTM_CAMPAIGN = "popular_searches";

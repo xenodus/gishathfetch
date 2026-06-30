@@ -7,7 +7,7 @@ import {
   TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT,
 } from "../constants";
 import useMediaQuery from "../hooks/useMediaQuery";
-import { buildSearchQueryUrl } from "../utils/searchUrl";
+import { buildPopularSearchUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-a",
@@ -145,6 +145,15 @@ export default function TopSearchKeywords({
     setIsExpanded((expanded) => !expanded);
   };
 
+  const handlePopularSearchClick = (keyword) => {
+    if (window.gtag) {
+      window.gtag("event", "popular_search_click", {
+        search_term: keyword,
+        popular_search_period: period,
+      });
+    }
+  };
+
   return (
     <div
       className={`${SECTION_CLASS_NAME}${
@@ -182,9 +191,10 @@ export default function TopSearchKeywords({
               {keywords.map((keyword) => (
                 <a
                   key={keyword}
-                  href={buildSearchQueryUrl(BASE_URL, keyword)}
+                  href={buildPopularSearchUrl(BASE_URL, keyword, period)}
                   className="btn btn-sm popular-search-pill text-decoration-none"
                   aria-label={`Search for ${keyword}`}
+                  onClick={() => handlePopularSearchClick(keyword)}
                 >
                   {keyword}
                 </a>

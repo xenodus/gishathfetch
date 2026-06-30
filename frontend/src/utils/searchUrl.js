@@ -1,4 +1,9 @@
-import { LGS_OPTIONS } from "../constants";
+import {
+  LGS_OPTIONS,
+  POPULAR_SEARCH_UTM_CAMPAIGN,
+  POPULAR_SEARCH_UTM_MEDIUM,
+  POPULAR_SEARCH_UTM_SOURCE,
+} from "../constants";
 
 /**
  * @typedef {{
@@ -99,6 +104,24 @@ export function buildSearchUrl(baseUrl, query, stores) {
 export function buildSearchQueryUrl(baseUrl, query) {
   const params = new URLSearchParams();
   params.set("s", query);
+  return `${baseUrl}?${params.toString()}`;
+}
+
+/**
+ * @param {string} baseUrl
+ * @param {string} query
+ * @param {string} [period]
+ * @returns {string}
+ */
+export function buildPopularSearchUrl(baseUrl, query, period) {
+  const params = new URLSearchParams();
+  params.set("s", query);
+  params.set("utm_source", POPULAR_SEARCH_UTM_SOURCE);
+  params.set("utm_medium", POPULAR_SEARCH_UTM_MEDIUM);
+  params.set("utm_campaign", POPULAR_SEARCH_UTM_CAMPAIGN);
+  if (period) {
+    params.set("utm_content", period);
+  }
   return `${baseUrl}?${params.toString()}`;
 }
 
