@@ -1,9 +1,28 @@
 import { useCallback, useState } from "react";
+import { cardsExactMatch, dedupeCartItems } from "../utils/cardIdentity";
 
-const cardsExactMatch = (a, b) =>
-  a.src === b.src &&
-  a.name === b.name &&
-  (a.extraInfo ?? "") === (b.extraInfo ?? "");
+const loadCartFromStorage = () => {
+  const storedCart = localStorage.getItem("cart");
+  if (!storedCart) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(storedCart);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const deduped = dedupeCartItems(parsed);
+    if (deduped.length !== parsed.length) {
+      localStorage.setItem("cart", JSON.stringify(deduped));
+    }
+    return deduped;
+  } catch (err) {
+    console.error("Failed to parse cart from localStorage:", err);
+    return [];
+  }
+};
 
 const formatSavedAt = (savedAt) => {
   if (!savedAt) return null;
@@ -34,18 +53,7 @@ const formatSavedAt = (savedAt) => {
 export { formatSavedAt };
 
 export default function useCart() {
-  const [cart, setCart] = useState(() => {
-    const storedCart = localStorage.getItem("cart");
-    if (storedCart) {
-      try {
-        return JSON.parse(storedCart);
-      } catch (err) {
-        console.error("Failed to parse cart from localStorage:", err);
-        return [];
-      }
-    }
-    return [];
-  });
+  const [cart, setCart] = useState(loadCartFromStorage);
   const [showCart, setShowCart] = useState(false);
 
   const addToCart = useCallback((card) => {
