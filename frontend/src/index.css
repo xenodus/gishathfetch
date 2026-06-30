@@ -412,6 +412,37 @@ ins.adsbygoogle.adsbygoogle-noablate {
   z-index: 1030;
 }
 
+.cart-action-feedback {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--footer-nav-height, 3rem) + 0.75rem);
+  z-index: 1040;
+  transform: translateX(-50%);
+  max-width: calc(100% - 2rem);
+  padding: 0.5rem 1rem;
+  border-radius: var(--bs-border-radius-pill);
+  background-color: var(--bs-success);
+  color: var(--bs-white);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
+  animation: cart-feedback-in 0.2s ease-out;
+  pointer-events: none;
+}
+
+@keyframes cart-feedback-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .site-footer-spacer {
   padding-bottom: calc(
     var(--footer-nav-height, 3rem) +
