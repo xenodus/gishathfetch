@@ -421,7 +421,7 @@ ins.adsbygoogle.adsbygoogle-noablate {
   width: 100%;
   padding: 0.375rem 1rem;
   border-top: 1px solid var(--bs-border-color-translucent);
-  background-color: var(--bs-secondary-bg);
+  background-color: var(--bs-body-bg);
   color: var(--bs-success);
   font-size: 0.875rem;
   font-weight: 600;
