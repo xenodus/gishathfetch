@@ -88,13 +88,25 @@ const Card = ({
               </a>
             </div>
           ) : inCart ? (
-            <button
-              type="button"
-              className="btn btn-outline-success btn-sm addCartBtn"
-              onClick={() => removeFromCartByCard(card)}
-            >
-              <CheckSquare size={12} className="cartIcon" /> Saved
-            </button>
+            <div className="d-flex justify-content-center gap-1">
+              <button
+                type="button"
+                className="btn btn-outline-success btn-sm addCartBtn"
+                onClick={() => addToCart(card)}
+                title="Update saved snapshot"
+              >
+                <CheckSquare size={12} className="cartIcon" /> Saved
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-danger btn-sm"
+                onClick={() => removeFromCartByCard(card)}
+                aria-label="Remove from saved"
+                title="Remove from saved"
+              >
+                <Trash2 size={12} className="cartIcon" />
+              </button>
+            </div>
           ) : (
             <button
               type="button"
