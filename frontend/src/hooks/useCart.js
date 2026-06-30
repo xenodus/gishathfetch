@@ -1,12 +1,9 @@
 import { useCallback, useState } from "react";
 
-const stripSavedAt = (item) => {
-  const { savedAt: _savedAt, ...card } = item;
-  return card;
-};
-
-const cardsMatch = (a, b) =>
-  JSON.stringify(stripSavedAt(a)) === JSON.stringify(stripSavedAt(b));
+const cardsExactMatch = (a, b) =>
+  a.src === b.src &&
+  a.name === b.name &&
+  (a.extraInfo ?? "") === (b.extraInfo ?? "");
 
 const formatSavedAt = (savedAt) => {
   if (!savedAt) return null;
@@ -53,11 +50,10 @@ export default function useCart() {
 
   const addToCart = useCallback((card) => {
     setCart((prev) => {
-      const exists = prev.some((item) => cardsMatch(item, card));
-
-      if (exists) return prev;
-
-      const newCart = [{ ...card, savedAt: Date.now() }, ...prev];
+      const withoutExactMatch = prev.filter(
+        (item) => !cardsExactMatch(item, card),
+      );
+      const newCart = [{ ...card, savedAt: Date.now() }, ...withoutExactMatch];
       try {
         localStorage.setItem("cart", JSON.stringify(newCart));
       } catch (err) {
@@ -90,7 +86,7 @@ export default function useCart() {
 
   const removeFromCartByCard = useCallback((card) => {
     setCart((prev) => {
-      const newCart = prev.filter((item) => !cardsMatch(item, card));
+      const newCart = prev.filter((item) => !cardsExactMatch(item, card));
       if (newCart.length === prev.length) return prev;
 
       try {
@@ -104,7 +100,7 @@ export default function useCart() {
 
   const isCardInCart = useCallback(
     (card) => {
-      return cart.some((item) => cardsMatch(item, card));
+      return cart.some((item) => cardsExactMatch(item, card));
     },
     [cart],
   );
