@@ -93,9 +93,10 @@ const Card = ({
                 type="button"
                 className="btn btn-outline-success btn-sm addCartBtn"
                 onClick={() => addToCart(card)}
+                aria-label="Update saved snapshot"
                 title="Update saved snapshot"
               >
-                <CheckSquare size={12} className="cartIcon" /> Saved
+                <CheckSquare size={12} className="cartIcon" /> Update
               </button>
               <button
                 type="button"
