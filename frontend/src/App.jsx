@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import "./index.css";
 
-import Footer from "./components/Footer";
 // --- Modular Components ---
+import CartActionFeedback from "./components/CartActionFeedback";
+import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SearchForm from "./components/SearchForm";
 import SearchResults from "./components/SearchResults";
@@ -25,6 +26,7 @@ export default function App() {
     cart,
     showCart,
     setShowCart,
+    cartActionFeedback,
     addToCart,
     removeFromCart,
     removeFromCartByCard,
@@ -208,6 +210,8 @@ export default function App() {
         onShowMap={() => setModalType("MAP")}
         onShowFaq={() => setModalType("FAQ")}
       />
+
+      <CartActionFeedback message={cartActionFeedback} />
 
       <Suspense fallback={null}>
         <CartOffcanvas

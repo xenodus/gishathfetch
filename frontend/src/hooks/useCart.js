@@ -1,5 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cardsExactMatch, dedupeCartItems } from "../utils/cardIdentity";
+
+const CART_FEEDBACK_DURATION_MS = 2500;
 
 const loadCartFromStorage = () => {
   const storedCart = localStorage.getItem("cart");
@@ -55,33 +57,75 @@ export { formatSavedAt };
 export default function useCart() {
   const [cart, setCart] = useState(loadCartFromStorage);
   const [showCart, setShowCart] = useState(false);
+  const [cartActionFeedback, setCartActionFeedback] = useState(null);
+  const feedbackTimeoutRef = useRef(null);
 
-  const addToCart = useCallback((card) => {
-    setCart((prev) => {
-      const withoutExactMatch = prev.filter(
-        (item) => !cardsExactMatch(item, card),
-      );
-      const newCart = [{ ...card, savedAt: Date.now() }, ...withoutExactMatch];
-      try {
-        localStorage.setItem("cart", JSON.stringify(newCart));
-      } catch (err) {
-        console.error("Failed to save cart to localStorage:", err);
-      }
-      return newCart;
-    });
+  const showCartActionFeedback = useCallback((message) => {
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+
+    setCartActionFeedback(message);
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setCartActionFeedback(null);
+      feedbackTimeoutRef.current = null;
+    }, CART_FEEDBACK_DURATION_MS);
   }, []);
 
-  const removeFromCart = useCallback((index) => {
-    setCart((prev) => {
-      const newCart = prev.filter((_, i) => i !== index);
-      try {
-        localStorage.setItem("cart", JSON.stringify(newCart));
-      } catch (err) {
-        console.error("Failed to save cart to localStorage:", err);
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
       }
-      return newCart;
-    });
+    };
   }, []);
+
+  const addToCart = useCallback(
+    (card) => {
+      let feedbackMessage = "Card saved";
+
+      setCart((prev) => {
+        const wasInCart = prev.some((item) => cardsExactMatch(item, card));
+        if (wasInCart) {
+          feedbackMessage = "Card updated";
+        }
+
+        const withoutExactMatch = prev.filter(
+          (item) => !cardsExactMatch(item, card),
+        );
+        const newCart = [
+          { ...card, savedAt: Date.now() },
+          ...withoutExactMatch,
+        ];
+        try {
+          localStorage.setItem("cart", JSON.stringify(newCart));
+        } catch (err) {
+          console.error("Failed to save cart to localStorage:", err);
+        }
+        return newCart;
+      });
+
+      showCartActionFeedback(feedbackMessage);
+    },
+    [showCartActionFeedback],
+  );
+
+  const removeFromCart = useCallback(
+    (index) => {
+      setCart((prev) => {
+        const newCart = prev.filter((_, i) => i !== index);
+        try {
+          localStorage.setItem("cart", JSON.stringify(newCart));
+        } catch (err) {
+          console.error("Failed to save cart to localStorage:", err);
+        }
+        return newCart;
+      });
+
+      showCartActionFeedback("Card removed");
+    },
+    [showCartActionFeedback],
+  );
 
   const clearCart = useCallback(() => {
     setCart([]);
@@ -90,21 +134,33 @@ export default function useCart() {
     } catch (err) {
       console.error("Failed to clear cart from localStorage:", err);
     }
-  }, []);
 
-  const removeFromCartByCard = useCallback((card) => {
-    setCart((prev) => {
-      const newCart = prev.filter((item) => !cardsExactMatch(item, card));
-      if (newCart.length === prev.length) return prev;
+    showCartActionFeedback("All saved cards removed");
+  }, [showCartActionFeedback]);
 
-      try {
-        localStorage.setItem("cart", JSON.stringify(newCart));
-      } catch (err) {
-        console.error("Failed to save cart to localStorage:", err);
+  const removeFromCartByCard = useCallback(
+    (card) => {
+      let removed = false;
+
+      setCart((prev) => {
+        const newCart = prev.filter((item) => !cardsExactMatch(item, card));
+        if (newCart.length === prev.length) return prev;
+
+        removed = true;
+        try {
+          localStorage.setItem("cart", JSON.stringify(newCart));
+        } catch (err) {
+          console.error("Failed to save cart to localStorage:", err);
+        }
+        return newCart;
+      });
+
+      if (removed) {
+        showCartActionFeedback("Card removed");
       }
-      return newCart;
-    });
-  }, []);
+    },
+    [showCartActionFeedback],
+  );
 
   const isCardInCart = useCallback(
     (card) => {
@@ -117,6 +173,7 @@ export default function useCart() {
     cart,
     showCart,
     setShowCart,
+    cartActionFeedback,
     addToCart,
     removeFromCart,
     removeFromCartByCard,
