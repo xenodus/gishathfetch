@@ -3,12 +3,14 @@ package gateway
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestReadResponseBody_plainJSON(t *testing.T) {
@@ -145,5 +147,64 @@ func TestWrapJSONDecodeError_preservesCause(t *testing.T) {
 	err := WrapJSONDecodeError(cause, nil, []byte("{bad"))
 	if !errors.Is(err, cause) {
 		t.Fatalf("expected wrapped cause, got %v", err)
+	}
+}
+
+func TestFormatHTTPRequestContext(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC))
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://thetcgmarketplace.com:3501/encoder/advancedsearch", bytes.NewReader([]byte(`{"name":"Opt"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.ContentLength = 15
+
+	msg := FormatHTTPRequestContext(req, "access_token_configured=false")
+	for _, want := range []string{
+		"method=POST",
+		"url=https://thetcgmarketplace.com:3501/encoder/advancedsearch",
+		"request_body_len=15",
+		"context_deadline=2026-07-01T12:00:00Z",
+		"access_token_configured=false",
+	} {
+		if !strings.Contains(msg, want) {
+			t.Fatalf("context %q missing %q", msg, want)
+		}
+	}
+}
+
+func TestWrapHTTPRequestError(t *testing.T) {
+	req, err := http.NewRequest(http.MethodPost, "https://example.com/api", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cause := errors.New("EOF")
+	err = WrapHTTPRequestError(cause, req)
+	if !errors.Is(err, cause) {
+		t.Fatalf("expected wrapped cause, got %v", err)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "http request failed") {
+		t.Fatalf("unexpected error: %s", msg)
+	}
+	if !strings.Contains(msg, "method=POST") || !strings.Contains(msg, "url=https://example.com/api") {
+		t.Fatalf("missing request context: %s", msg)
+	}
+}
+
+func TestWrapResponseBodyReadError(t *testing.T) {
+	resp := &http.Response{
+		Status:     "200 OK",
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+	}
+	cause := errors.New("unexpected EOF")
+	err := WrapResponseBodyReadError(cause, resp)
+	if !errors.Is(err, cause) {
+		t.Fatalf("expected wrapped cause, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "read response body failed") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

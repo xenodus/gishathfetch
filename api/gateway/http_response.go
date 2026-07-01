@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -83,6 +84,44 @@ func ResponseBodyPreview(body []byte, maxLen int) string {
 		return preview + "..."
 	}
 	return preview
+}
+
+// FormatHTTPRequestContext builds request metadata for transport-layer error messages.
+func FormatHTTPRequestContext(req *http.Request, extra ...string) string {
+	parts := make([]string, 0, 4+len(extra))
+	if req != nil {
+		parts = append(parts, "method="+req.Method)
+		if req.URL != nil {
+			parts = append(parts, "url="+req.URL.String())
+		}
+		if req.ContentLength >= 0 {
+			parts = append(parts, fmt.Sprintf("request_body_len=%d", req.ContentLength))
+		}
+		if deadline, ok := req.Context().Deadline(); ok {
+			parts = append(parts, "context_deadline="+deadline.UTC().Format(time.RFC3339))
+		}
+		if ctxErr := req.Context().Err(); ctxErr != nil {
+			parts = append(parts, "context_err="+ctxErr.Error())
+		}
+	}
+	parts = append(parts, extra...)
+	return strings.Join(parts, " ")
+}
+
+// WrapHTTPRequestError annotates an HTTP client/transport error with request context.
+func WrapHTTPRequestError(err error, req *http.Request, extra ...string) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("http request failed (%s): %w", FormatHTTPRequestContext(req, extra...), err)
+}
+
+// WrapResponseBodyReadError annotates a response body read error with HTTP context.
+func WrapResponseBodyReadError(err error, resp *http.Response) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("read response body failed (%s): %w", formatHTTPResponseContext(resp, nil), err)
 }
 
 func formatHTTPResponseContext(resp *http.Response, body []byte) string {

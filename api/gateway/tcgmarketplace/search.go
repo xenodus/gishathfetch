@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -87,7 +86,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 
-	res, err = getApiResponse(ctx, reqPayload)
+	res, err = getApiResponse(ctx, reqPayload, accessToken != "")
 	if err != nil {
 		return cards, err
 	}
@@ -159,7 +158,7 @@ func isSurgeFoil(extraInfo []string, name string) bool {
 	return false
 }
 
-func getApiResponse(ctx context.Context, payload []byte) (response, error) {
+func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured bool) (response, error) {
 	var res response
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
@@ -167,20 +166,28 @@ func getApiResponse(ctx context.Context, payload []byte) (response, error) {
 		return res, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.ContentLength = int64(len(payload))
+
+	var requestContext []string
+	if !accessTokenConfigured {
+		requestContext = append(requestContext, "access_token_configured=false")
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return res, err
+		return res, gateway.WrapHTTPRequestError(err, req, requestContext...)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := gateway.ReadResponseBody(resp)
 	if err != nil {
-		return res, err
+		return res, gateway.WrapResponseBodyReadError(err, resp)
 	}
-
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return res, err
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return res, fmt.Errorf("%s", gateway.FormatUnexpectedHTTPStatus(StoreName, resp, body))
+	}
+	if err = json.Unmarshal(body, &res); err != nil {
+		return res, gateway.WrapJSONDecodeError(err, resp, body)
 	}
 
 	return res, nil
