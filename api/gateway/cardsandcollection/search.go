@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -181,14 +180,16 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := gateway.ReadResponseBody(resp)
 	if err != nil {
 		return cards, err
 	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return cards, fmt.Errorf("%s", gateway.FormatUnexpectedHTTPStatus(s.Name, resp, body))
+	}
 
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return cards, err
+	if err = json.Unmarshal(body, &res); err != nil {
+		return cards, gateway.WrapJSONDecodeError(err, resp, body)
 	}
 
 	if res.Hits.Total > 0 {
