@@ -72,6 +72,13 @@ const Card = ({
         <div>
           {isCart ? (
             <div className="d-flex justify-content-center gap-1">
+              <a
+                href={`${baseUrl}?s=${encodeURIComponent(card.name)}&src=${encodeURIComponent(card.src)}`}
+                className="btn btn-primary btn-sm cartSearchBtn"
+                onClick={(e) => onSearchStore(e, card.name, card.src)}
+              >
+                <SearchIcon size={12} className="cartIcon" /> Search
+              </a>
               <button
                 type="button"
                 className="removeFromCartBtn btn btn-danger btn-sm"
@@ -79,19 +86,12 @@ const Card = ({
               >
                 <Trash2 size={12} className="cartIcon" /> Remove
               </button>
-              <a
-                href={`${baseUrl}?s=${encodeURIComponent(card.name)}&src=${encodeURIComponent(card.src)}`}
-                className="btn btn-primary btn-sm cartSearchBtn ms-1"
-                onClick={(e) => onSearchStore(e, card.name, card.src)}
-              >
-                <SearchIcon size={12} className="cartIcon" /> Search
-              </a>
             </div>
           ) : inCart ? (
             <div className="d-flex justify-content-center gap-1">
               <button
                 type="button"
-                className="btn btn-outline-success btn-sm addCartBtn"
+                className="btn btn-success btn-sm addCartBtn"
                 onClick={() => addToCart(card)}
                 aria-label="Update saved snapshot"
                 title="Update saved snapshot"
@@ -100,12 +100,12 @@ const Card = ({
               </button>
               <button
                 type="button"
-                className="btn btn-outline-danger btn-sm"
+                className="removeFromCartBtn btn btn-danger btn-sm"
                 onClick={() => removeFromCartByCard(card)}
                 aria-label="Remove from saved"
                 title="Remove from saved"
               >
-                <Trash2 size={12} className="cartIcon" />
+                <Trash2 size={12} className="cartIcon" /> Remove
               </button>
             </div>
           ) : (
