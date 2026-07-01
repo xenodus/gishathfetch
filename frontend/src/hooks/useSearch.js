@@ -84,7 +84,13 @@ export default function useSearch() {
       return;
     }
 
-    const newUrl = buildSearchUrl(BASE_URL, snapshot.query, snapshot.stores);
+    const existingParams = new URLSearchParams(window.location.search);
+    const newUrl = buildSearchUrl(
+      BASE_URL,
+      snapshot.query,
+      snapshot.stores,
+      existingParams,
+    );
     const title = snapshot.query
       ? `${snapshot.query} @ Gishath Fetch`
       : PAGE_TITLE;

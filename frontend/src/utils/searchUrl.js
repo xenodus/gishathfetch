@@ -65,11 +65,34 @@ export function parseStoresFromUrlParam(lgsParam) {
 }
 
 /**
+ * @param {string} key
+ * @returns {boolean}
+ */
+export function isTrackingParam(key) {
+  return key.toLowerCase().startsWith("utm_");
+}
+
+/**
+ * Copy utm_* params from source into target without overwriting keys already set.
+ *
+ * @param {URLSearchParams} sourceParams
+ * @param {URLSearchParams} targetParams
+ */
+export function mergeTrackingParams(sourceParams, targetParams) {
+  for (const [key, value] of sourceParams.entries()) {
+    if (isTrackingParam(key) && !targetParams.has(key)) {
+      targetParams.set(key, value);
+    }
+  }
+}
+
+/**
  * @param {string} query
  * @param {string[]} stores
+ * @param {URLSearchParams} [existingParams]
  * @returns {URLSearchParams}
  */
-export function buildSearchUrlParams(query, stores) {
+export function buildSearchUrlParams(query, stores, existingParams) {
   const params = new URLSearchParams();
   params.set("s", query);
 
@@ -82,6 +105,10 @@ export function buildSearchUrlParams(query, stores) {
     params.set("lgs", validStores.join(","));
   }
 
+  if (existingParams) {
+    mergeTrackingParams(existingParams, params);
+  }
+
   return params;
 }
 
@@ -89,10 +116,11 @@ export function buildSearchUrlParams(query, stores) {
  * @param {string} baseUrl
  * @param {string} query
  * @param {string[]} stores
+ * @param {URLSearchParams} [existingParams]
  * @returns {string}
  */
-export function buildSearchUrl(baseUrl, query, stores) {
-  const params = buildSearchUrlParams(query, stores);
+export function buildSearchUrl(baseUrl, query, stores, existingParams) {
+  const params = buildSearchUrlParams(query, stores, existingParams);
   return `${baseUrl}?${params.toString()}`;
 }
 
