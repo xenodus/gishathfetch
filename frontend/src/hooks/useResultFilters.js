@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getNameMatchTier } from "../utils/nameMatch.js";
 
 const DEFAULT_SORT = "price-asc";
 
@@ -51,6 +52,13 @@ export default function useResultFilters(results, searchQuery) {
     }
 
     filtered.sort((a, b) => {
+      const tierDiff =
+        getNameMatchTier(a.name, searchQuery) -
+        getNameMatchTier(b.name, searchQuery);
+      if (tierDiff !== 0) {
+        return tierDiff;
+      }
+
       if (sortBy === "price-desc") {
         return b.price - a.price;
       }
@@ -58,7 +66,7 @@ export default function useResultFilters(results, searchQuery) {
     });
 
     return filtered;
-  }, [results, sortBy, qualityFilter, foilOnly, cheapestPerStore]);
+  }, [results, sortBy, qualityFilter, foilOnly, cheapestPerStore, searchQuery]);
 
   const hasActiveFilters =
     qualityFilter !== "all" || foilOnly || cheapestPerStore;
