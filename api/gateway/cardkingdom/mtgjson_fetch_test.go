@@ -109,6 +109,7 @@ const sampleAllPrintingsSplitUUID = `{
           "uuid": "uuid-tony-80-url",
           "name": "Tony Stark // The Invincible Iron Man",
           "number": "80",
+          "side": "a",
           "purchaseUrls": {
             "cardKingdom": "https://www.cardkingdom.com/mtg/marvel-super-heroes/tony-stark",
             "cardKingdomFoil": "https://www.cardkingdom.com/mtg/marvel-super-heroes/tony-stark-foil"
@@ -118,12 +119,14 @@ const sampleAllPrintingsSplitUUID = `{
           "uuid": "uuid-tony-80-price",
           "name": "Tony Stark // The Invincible Iron Man",
           "number": "80",
+          "side": "b",
           "purchaseUrls": {}
         },
         {
           "uuid": "uuid-tony-363-url",
           "name": "Tony Stark // The Invincible Iron Man",
           "number": "363",
+          "side": "a",
           "purchaseUrls": {
             "cardKingdom": "https://www.cardkingdom.com/mtg/marvel-super-heroes-variants/tony-stark-0363-borderless",
             "cardKingdomFoil": "https://www.cardkingdom.com/mtg/marvel-super-heroes-variants/tony-stark-0363-borderless-foil"
@@ -133,6 +136,36 @@ const sampleAllPrintingsSplitUUID = `{
           "uuid": "uuid-tony-363-price",
           "name": "Tony Stark // The Invincible Iron Man",
           "number": "363",
+          "side": "b",
+          "purchaseUrls": {}
+        }
+      ]
+    }
+  }
+}`
+
+const sampleAllPrintingsJenniferWalters = `{
+  "meta": {"date": "2026-07-02"},
+  "data": {
+    "MSH": {
+      "name": "Marvel Super Heroes",
+      "cards": [
+        {
+          "uuid": "uuid-jw-18-url",
+          "name": "Jennifer Walters // The Sensational She-Hulk",
+          "faceName": "Jennifer Walters",
+          "number": "18",
+          "side": "a",
+          "purchaseUrls": {
+            "cardKingdom": "https://www.cardkingdom.com/mtg/marvel-super-heroes/jennifer-walters"
+          }
+        },
+        {
+          "uuid": "uuid-jw-18-price",
+          "name": "Jennifer Walters // The Sensational She-Hulk",
+          "faceName": "The Sensational She-Hulk",
+          "number": "18",
+          "side": "b",
           "purchaseUrls": {}
         }
       ]
@@ -163,7 +196,6 @@ func TestDecodeAllPrintingsSets(t *testing.T) {
 		updatedAt,
 	)
 	require.NoError(t, err)
-	require.Len(t, cheapest, 1)
 
 	listing := cheapest["lightning bolt"]
 	require.Equal(t, "Lightning Bolt", listing.CardName)
@@ -187,7 +219,6 @@ func TestDecodeAllPrintingsSets_MergesSplitUUIDPrintings(t *testing.T) {
 		updatedAt,
 	)
 	require.NoError(t, err)
-	require.Len(t, cheapest, 1)
 
 	listing := cheapest["tony stark // the invincible iron man"]
 	require.Equal(t, "Tony Stark // The Invincible Iron Man", listing.CardName)
@@ -195,6 +226,31 @@ func TestDecodeAllPrintingsSets_MergesSplitUUIDPrintings(t *testing.T) {
 	require.InDelta(t, 7.49, listing.PriceUsd, 0.001)
 	require.False(t, listing.IsFoil)
 	require.Equal(t, "https://www.cardkingdom.com/mtg/marvel-super-heroes/tony-stark", listing.URL)
+
+	faceListing := cheapest["tony stark"]
+	require.InDelta(t, 7.49, faceListing.PriceUsd, 0.001)
+}
+
+func TestDecodeAllPrintingsSets_MergesDoubleFacedFacesByNumber(t *testing.T) {
+	prices := map[string]ckUUIDPrice{
+		"uuid-jw-18-price": {normal: 10.99},
+	}
+	updatedAt := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
+
+	cheapest, err := decodeAllPrintingsSets(
+		json.NewDecoder(strings.NewReader(sampleAllPrintingsJenniferWalters)),
+		prices,
+		updatedAt,
+	)
+	require.NoError(t, err)
+
+	listing := cheapest["jennifer walters // the sensational she-hulk"]
+	require.Equal(t, "Jennifer Walters // The Sensational She-Hulk", listing.CardName)
+	require.InDelta(t, 10.99, listing.PriceUsd, 0.001)
+	require.Equal(t, "https://www.cardkingdom.com/mtg/marvel-super-heroes/jennifer-walters", listing.URL)
+
+	faceListing := cheapest["jennifer walters"]
+	require.InDelta(t, 10.99, faceListing.PriceUsd, 0.001)
 }
 
 func TestFetchCheapestFromMTGJSON_FromTestServers(t *testing.T) {

@@ -56,3 +56,30 @@ func TestBuildCheapestByName(t *testing.T) {
 	require.Equal(t, "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt", listing.URL)
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
 }
+
+func TestBuildCheapestByName_DoubleFacedCardIndexesFaceNames(t *testing.T) {
+	updatedAt := time.Date(2026, 7, 2, 12, 0, 0, 0, time.UTC)
+	products := []Product{
+		{
+			Name:        "Jennifer Walters",
+			Edition:     "Marvel Super Heroes",
+			PriceRetail: "10.99",
+			QtyRetail:   "8",
+			URL:         "mtg/marvel-super-heroes/jennifer-walters",
+			IsFoil:      "false",
+		},
+		{
+			Name:        "Jennifer Walters",
+			Edition:     "Marvel Super Heroes Variants",
+			PriceRetail: "24.99",
+			QtyRetail:   "3",
+			URL:         "mtg/marvel-super-heroes-variants/jennifer-walters-0328-borderless",
+			IsFoil:      "false",
+		},
+	}
+
+	cheapest := BuildCheapestByName(products, updatedAt)
+
+	require.InDelta(t, 10.99, cheapest["jennifer walters"].PriceUsd, 0.001)
+	require.Equal(t, "Marvel Super Heroes", cheapest["jennifer walters"].Edition)
+}

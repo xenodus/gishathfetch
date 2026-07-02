@@ -34,7 +34,9 @@ type ckUUIDPrice struct {
 type mtgjsonCard struct {
 	UUID         string `json:"uuid"`
 	Name         string `json:"name"`
+	FaceName     string `json:"faceName"`
 	Number       string `json:"number"`
+	Side         string `json:"side"`
 	PurchaseUrls struct {
 		CardKingdom     string `json:"cardKingdom"`
 		CardKingdomFoil string `json:"cardKingdomFoil"`
@@ -44,9 +46,11 @@ type mtgjsonCard struct {
 type printingKey struct {
 	number string
 	name   string
+	isDFC  bool
 }
 
 type printingAggregate struct {
+	cardName        string
 	cardKingdom     string
 	cardKingdomFoil string
 	price           ckUUIDPrice
@@ -280,8 +284,8 @@ func decodeSetCatalog(
 		for _, card := range set.Cards {
 			mergePrintingAggregate(aggregates, card, pricesByUUID)
 		}
-		for key, aggregate := range aggregates {
-			applyPrintingAggregate(cheapest, key.name, set.Name, aggregate, updatedAt)
+		for _, aggregate := range aggregates {
+			applyPrintingAggregate(cheapest, aggregate.cardName, set.Name, aggregate, updatedAt)
 		}
 	}
 
@@ -299,11 +303,9 @@ func mergePrintingAggregate(
 		return
 	}
 
-	key := printingKey{
-		number: strings.TrimSpace(card.Number),
-		name:   name,
-	}
+	key := printingKeyFor(card)
 	aggregate := aggregates[key]
+	aggregate.cardName = preferCardName(aggregate.cardName, name)
 
 	if card.PurchaseUrls.CardKingdom != "" {
 		aggregate.cardKingdom = card.PurchaseUrls.CardKingdom
@@ -321,6 +323,33 @@ func mergePrintingAggregate(
 	}
 
 	aggregates[key] = aggregate
+}
+
+func printingKeyFor(card mtgjsonCard) printingKey {
+	number := strings.TrimSpace(card.Number)
+	side := strings.TrimSpace(card.Side)
+	if side == "a" || side == "b" {
+		return printingKey{number: number, isDFC: true}
+	}
+	return printingKey{number: number, name: strings.TrimSpace(card.Name)}
+}
+
+func preferCardName(current string, candidate string) string {
+	current = strings.TrimSpace(current)
+	candidate = strings.TrimSpace(candidate)
+	if candidate == "" {
+		return current
+	}
+	if current == "" {
+		return candidate
+	}
+	if strings.Contains(candidate, doubleFacedNameSeparator) {
+		return candidate
+	}
+	if strings.Contains(current, doubleFacedNameSeparator) {
+		return current
+	}
+	return candidate
 }
 
 func applyPrintingAggregate(
@@ -367,13 +396,15 @@ func applyPrintingAggregate(
 }
 
 func considerCheapestListing(cheapest map[string]Listing, listing Listing) {
-	nameKey := strings.ToLower(strings.TrimSpace(listing.CardName))
-	if nameKey == "" || listing.PriceUsd <= 0 {
+	if listing.PriceUsd <= 0 {
 		return
 	}
-	existing, ok := cheapest[nameKey]
-	if !ok || listing.PriceUsd < existing.PriceUsd {
-		cheapest[nameKey] = listing
+
+	for _, nameKey := range NameLookupKeys(listing.CardName) {
+		existing, ok := cheapest[nameKey]
+		if !ok || listing.PriceUsd < existing.PriceUsd {
+			cheapest[nameKey] = listing
+		}
 	}
 }
 
