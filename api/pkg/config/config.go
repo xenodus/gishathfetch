@@ -76,6 +76,46 @@ const (
 	SiteBaseURL = "https://gishathfetch.com/"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
+	// AdminUsernameEnv is the admin login username.
+	AdminUsernameEnv = "ADMIN_USERNAME"
+	// AdminPasswordEnv is the admin login password.
+	AdminPasswordEnv = "ADMIN_PASSWORD"
+	// AdminSessionSecretEnv signs admin session cookies.
+	AdminSessionSecretEnv = "ADMIN_SESSION_SECRET"
+	// AdminLoginDynamoDBTableEnv stores login attempt logs and rate-limit state.
+	AdminLoginDynamoDBTableEnv = "ADMIN_LOGIN_DYNAMODB_TABLE"
+	// AdminLoginMaxFailuresPerIPEnv caps failed logins per IP inside the IP window.
+	AdminLoginMaxFailuresPerIPEnv = "ADMIN_LOGIN_MAX_FAILURES_PER_IP"
+	// AdminLoginIPWindowSecondsEnv is the rolling failure window for IP rate limits.
+	AdminLoginIPWindowSecondsEnv = "ADMIN_LOGIN_IP_WINDOW_SECONDS"
+	// AdminLoginIPLockoutSecondsEnv is how long an IP stays locked after exceeding the cap.
+	AdminLoginIPLockoutSecondsEnv = "ADMIN_LOGIN_IP_LOCKOUT_SECONDS"
+	// AdminLoginMaxFailuresPerUserEnv caps failed logins per username inside the user window.
+	AdminLoginMaxFailuresPerUserEnv = "ADMIN_LOGIN_MAX_FAILURES_PER_USER"
+	// AdminLoginUserWindowSecondsEnv is the rolling failure window for username rate limits.
+	AdminLoginUserWindowSecondsEnv = "ADMIN_LOGIN_USER_WINDOW_SECONDS"
+	// AdminLoginUserLockoutSecondsEnv is how long a username stays locked after exceeding the cap.
+	AdminLoginUserLockoutSecondsEnv = "ADMIN_LOGIN_USER_LOCKOUT_SECONDS"
+	// AdminSessionTTLEnv overrides admin session lifetime in seconds (default 8h).
+	AdminSessionTTLEnv = "ADMIN_SESSION_TTL_SECONDS"
+	// AdminAttemptLogRetentionDaysEnv overrides attempt-log TTL in days (default 90).
+	AdminAttemptLogRetentionDaysEnv = "ADMIN_ATTEMPT_LOG_RETENTION_DAYS"
+	// DefaultAdminLoginMaxFailuresPerIP is the default failed-login cap per IP.
+	DefaultAdminLoginMaxFailuresPerIP = 5
+	// DefaultAdminLoginIPWindow is the default rolling window for IP failures.
+	DefaultAdminLoginIPWindow = 15 * time.Minute
+	// DefaultAdminLoginIPLockout is the default IP lockout duration.
+	DefaultAdminLoginIPLockout = 15 * time.Minute
+	// DefaultAdminLoginMaxFailuresPerUser is the default failed-login cap per username.
+	DefaultAdminLoginMaxFailuresPerUser = 10
+	// DefaultAdminLoginUserWindow is the default rolling window for username failures.
+	DefaultAdminLoginUserWindow = 30 * time.Minute
+	// DefaultAdminLoginUserLockout is the default username lockout duration.
+	DefaultAdminLoginUserLockout = 30 * time.Minute
+	// DefaultAdminSessionTTL is the default admin session lifetime.
+	DefaultAdminSessionTTL = 8 * time.Hour
+	// DefaultAdminAttemptLogRetention is how long attempt logs are retained.
+	DefaultAdminAttemptLogRetention = 90 * 24 * time.Hour
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
@@ -131,4 +171,82 @@ func GetAllowedOrigins() []string {
 		"http://localhost:5173",
 		"http://localhost:63342", // JetBrains IDE built-in HTTP server (local dev only)
 	}
+}
+
+// AdminEnabled reports whether admin login is fully configured.
+func AdminEnabled() bool {
+	return strings.TrimSpace(os.Getenv(AdminUsernameEnv)) != "" &&
+		strings.TrimSpace(os.Getenv(AdminPasswordEnv)) != "" &&
+		strings.TrimSpace(os.Getenv(AdminSessionSecretEnv)) != "" &&
+		strings.TrimSpace(os.Getenv(AdminLoginDynamoDBTableEnv)) != ""
+}
+
+func AdminSessionTTL() time.Duration {
+	return durationFromEnv(AdminSessionTTLEnv, DefaultAdminSessionTTL)
+}
+
+func AdminAttemptLogRetention() time.Duration {
+	days := intFromEnv(AdminAttemptLogRetentionDaysEnv, int(DefaultAdminAttemptLogRetention.Hours()/24))
+	if days <= 0 {
+		days = int(DefaultAdminAttemptLogRetention.Hours() / 24)
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+
+type AdminLoginRateLimits struct {
+	MaxFailuresPerIP     int
+	IPWindow             time.Duration
+	IPLockout            time.Duration
+	MaxFailuresPerUser   int
+	UserWindow           time.Duration
+	UserLockout          time.Duration
+}
+
+func AdminLoginRateLimitsFromEnv() AdminLoginRateLimits {
+	return AdminLoginRateLimits{
+		MaxFailuresPerIP: intFromEnv(
+			AdminLoginMaxFailuresPerIPEnv,
+			DefaultAdminLoginMaxFailuresPerIP,
+		),
+		IPWindow: durationFromEnv(
+			AdminLoginIPWindowSecondsEnv,
+			DefaultAdminLoginIPWindow,
+		),
+		IPLockout: durationFromEnv(
+			AdminLoginIPLockoutSecondsEnv,
+			DefaultAdminLoginIPLockout,
+		),
+		MaxFailuresPerUser: intFromEnv(
+			AdminLoginMaxFailuresPerUserEnv,
+			DefaultAdminLoginMaxFailuresPerUser,
+		),
+		UserWindow: durationFromEnv(
+			AdminLoginUserWindowSecondsEnv,
+			DefaultAdminLoginUserWindow,
+		),
+		UserLockout: durationFromEnv(
+			AdminLoginUserLockoutSecondsEnv,
+			DefaultAdminLoginUserLockout,
+		),
+	}
+}
+
+func durationFromEnv(name string, fallback time.Duration) time.Duration {
+	seconds := intFromEnv(name, int(fallback.Seconds()))
+	if seconds <= 0 {
+		return fallback
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+func intFromEnv(name string, fallback int) int {
+	rawValue := strings.TrimSpace(os.Getenv(name))
+	if rawValue == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(rawValue)
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
 }

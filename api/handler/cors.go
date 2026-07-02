@@ -4,15 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"slices"
-
-	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/aws/aws-lambda-go/events"
 )
 
 func applyCORSHeaders(apiResponse *events.APIGatewayProxyResponse, origin string) {
-	if !slices.Contains(config.GetAllowedOrigins(), origin) {
+	if !isAllowedOrigin(origin) {
 		return
 	}
 	apiResponse.Headers = map[string]string{

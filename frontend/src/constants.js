@@ -172,6 +172,10 @@ export const MAX_SEARCH_LENGTH = 150;
 
 export const API_BASE_URL = "https://api.gishathfetch.com/";
 
+export const ADMIN_LOGIN_URL = `${API_BASE_URL}admin/login`;
+export const ADMIN_SESSION_URL = `${API_BASE_URL}admin/session`;
+export const ADMIN_LOGOUT_URL = `${API_BASE_URL}admin/logout`;
+
 export const BASE_URL = "https://gishathfetch.com/";
 
 // Same-origin on production (served from gishathfetch.com via CloudFront).

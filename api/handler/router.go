@@ -26,5 +26,9 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 		return events.APIGatewayProxyResponse{}, err
 	}
 
+	if isAdminPath(apiRequest.Path) {
+		return routeAdmin(ctx, apiRequest)
+	}
+
 	return Search(ctx, apiRequest)
 }
