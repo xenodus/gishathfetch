@@ -3,7 +3,6 @@ package ckprice
 import (
 	"context"
 	"log"
-	"strings"
 	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
@@ -28,14 +27,21 @@ func GetLatestPrice(ctx context.Context, store ckprices.Store, query string) (*c
 		return nil, nil
 	}
 
-	listing, err := store.GetByNameKey(ctx, strings.ToLower(strings.TrimSpace(verifiedName)))
-	if err != nil || listing == nil {
-		return nil, err
+	now := nowFunc()
+	var best *cardkingdom.Listing
+	for _, nameKey := range cardkingdom.NameLookupKeys(verifiedName) {
+		listing, err := store.GetByNameKey(ctx, nameKey)
+		if err != nil {
+			return nil, err
+		}
+		if listing == nil || !listingIsFresh(listing, now) {
+			continue
+		}
+		if best == nil || listing.PriceUsd < best.PriceUsd {
+			best = listing
+		}
 	}
-	if !listingIsFresh(listing, nowFunc()) {
-		return nil, nil
-	}
-	return listing, nil
+	return best, nil
 }
 
 func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
