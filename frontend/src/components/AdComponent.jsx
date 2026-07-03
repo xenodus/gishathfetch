@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const UNFILLED_COLLAPSE_MS = 2500;
+const LAZY_UNFILLED_COLLAPSE_MS = 5000;
 const LAZY_LOAD_ROOT_MARGIN = "200px";
 
 function hasFilledAd(insEl) {
@@ -58,11 +59,14 @@ const AdComponent = ({ lazyLoad = false, collapseWhenUnfilled = true }) => {
     if (!insEl) return;
 
     let cancelled = false;
+    const collapseMs = lazyLoad
+      ? LAZY_UNFILLED_COLLAPSE_MS
+      : UNFILLED_COLLAPSE_MS;
 
     const timeoutId = window.setTimeout(() => {
       if (cancelled) return;
       if (!hasFilledAd(insEl)) setCollapsed(true);
-    }, UNFILLED_COLLAPSE_MS);
+    }, collapseMs);
 
     const observer = new MutationObserver(() => {
       if (cancelled) return;
@@ -79,9 +83,20 @@ const AdComponent = ({ lazyLoad = false, collapseWhenUnfilled = true }) => {
       window.clearTimeout(timeoutId);
       observer.disconnect();
     };
-  }, [collapseWhenUnfilled, isNearViewport]);
+  }, [collapseWhenUnfilled, isNearViewport, lazyLoad]);
 
   if (collapsed) return null;
+
+  if (lazyLoad && !isNearViewport) {
+    return (
+      <div
+        ref={containerRef}
+        className="ad-large d-print-none w-100"
+        style={{ height: 1, overflow: "hidden" }}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <div
