@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	pricelistURL     = "https://api.cardkingdom.com/api/v2/pricelist"
-	pricelistTimeout = 3 * time.Minute
+	pricelistURL        = "https://api.cardkingdom.com/api/v2/pricelist"
+	pricelistTimeout    = 3 * time.Minute
+	ckPricelistAttempts = 3
 )
 
 var fetchPricelistBody = func(ctx context.Context) ([]byte, error) {
@@ -67,6 +68,21 @@ var fetchPricelistBody = func(ctx context.Context) ([]byte, error) {
 }
 
 func fetchCheapestFromCKPricelist(ctx context.Context) (map[string]Listing, error) {
+	var lastErr error
+	for attempt := 1; attempt <= ckPricelistAttempts; attempt++ {
+		listings, err := fetchCheapestFromCKPricelistOnce(ctx)
+		if err == nil {
+			return listings, nil
+		}
+		lastErr = err
+		if attempt < ckPricelistAttempts {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+	}
+	return nil, lastErr
+}
+
+func fetchCheapestFromCKPricelistOnce(ctx context.Context) (map[string]Listing, error) {
 	body, err := fetchPricelistBody(ctx)
 	if err != nil {
 		return nil, err

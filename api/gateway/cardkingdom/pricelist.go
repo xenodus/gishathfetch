@@ -3,6 +3,7 @@ package cardkingdom
 import (
 	"context"
 	"fmt"
+	"log"
 )
 
 const mtgjsonErrorPrefix = "ck price mtgjson"
@@ -19,6 +20,8 @@ func FetchCheapestByName(ctx context.Context) (map[string]Listing, error) {
 
 	if ckListings, ckErr := fetchCheapestFromCKPricelist(ctx); ckErr == nil {
 		mergeCheapestListings(listings, ckListings)
+	} else {
+		log.Printf("ck price refresh: card kingdom pricelist supplement skipped: %v", ckErr)
 	}
 
 	return listings, nil

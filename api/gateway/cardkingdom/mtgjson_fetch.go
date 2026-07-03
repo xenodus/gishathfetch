@@ -400,7 +400,7 @@ func considerCheapestListing(cheapest map[string]Listing, listing Listing) {
 		return
 	}
 
-	for _, nameKey := range NameLookupKeys(listing.CardName) {
+	for _, nameKey := range ListingNameKeys(listing) {
 		existing, ok := cheapest[nameKey]
 		if !ok || listing.PriceUsd < existing.PriceUsd {
 			cheapest[nameKey] = listing

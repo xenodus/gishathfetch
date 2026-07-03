@@ -30,6 +30,17 @@ func NameLookupKeys(cardName string) []string {
 	return uniqueNameKeys(keys)
 }
 
+// ListingNameKeys returns the lookup keys that should receive a listing when it is
+// indexed. Foil double-faced listings are stored only under the full combined
+// name so a variant foil price does not overwrite cheaper face-only names.
+func ListingNameKeys(listing Listing) []string {
+	keys := NameLookupKeys(listing.CardName)
+	if !listing.IsFoil || len(keys) <= 1 {
+		return keys
+	}
+	return keys[:1]
+}
+
 func uniqueNameKeys(keys []string) []string {
 	seen := make(map[string]struct{}, len(keys))
 	unique := make([]string, 0, len(keys))

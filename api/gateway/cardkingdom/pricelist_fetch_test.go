@@ -75,4 +75,25 @@ func TestMergeCheapestListings_PrefersCheaperFaceNameListing(t *testing.T) {
 
 	require.InDelta(t, 10.99, listings["jennifer walters"].PriceUsd, 0.001)
 	require.InDelta(t, 69.99, listings["jennifer walters // the sensational she-hulk"].PriceUsd, 0.001)
+	_, hasBackFace := listings["the sensational she-hulk"]
+	require.False(t, hasBackFace)
+}
+
+func TestConsiderCheapestListing_FoilDoubleFacedDoesNotPolluteFaceAlias(t *testing.T) {
+	updatedAt := time.Now().UTC().Format(time.RFC3339)
+	listings := make(map[string]Listing)
+	considerCheapestListing(listings, Listing{
+		CardName:  "Jennifer Walters // The Sensational She-Hulk",
+		Edition:   "Marvel Super Heroes",
+		PriceUsd:  69.99,
+		URL:       "https://mtgjson.com/links/d8187fd1eef32412",
+		IsFoil:    true,
+		UpdatedAt: updatedAt,
+	})
+
+	require.InDelta(t, 69.99, listings["jennifer walters // the sensational she-hulk"].PriceUsd, 0.001)
+	_, hasFrontFace := listings["jennifer walters"]
+	require.False(t, hasFrontFace)
+	_, hasBackFace := listings["the sensational she-hulk"]
+	require.False(t, hasBackFace)
 }
