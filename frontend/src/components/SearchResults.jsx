@@ -181,7 +181,10 @@ const SearchResults = ({
                             />
                             {showAd && (
                               <div className="col-12 mb-4">
-                                <AdComponent />
+                                <AdComponent
+                                  lazyLoad
+                                  collapseWhenUnfilled={false}
+                                />
                               </div>
                             )}
                           </React.Fragment>
