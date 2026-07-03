@@ -30,6 +30,30 @@ func NameLookupKeys(cardName string) []string {
 	return uniqueNameKeys(keys)
 }
 
+// DoubleFacedFaceNames returns normalized front and back face keys for a
+// double-faced card name split on " // ".
+func DoubleFacedFaceNames(cardName string) (front string, back string, ok bool) {
+	trimmed := strings.TrimSpace(cardName)
+	before, after, found := strings.Cut(trimmed, doubleFacedNameSeparator)
+	if !found {
+		return "", "", false
+	}
+	front = NormalizeNameKey(before)
+	back = NormalizeNameKey(after)
+	return front, back, front != "" && back != ""
+}
+
+// PriceLookupKeys returns the lookup keys used when resolving CK search prices.
+// Double-faced cards use the main (front) and back face names so the cheapest
+// physical card price wins instead of a foil variant indexed under the full name.
+func PriceLookupKeys(cardName string) []string {
+	front, back, ok := DoubleFacedFaceNames(cardName)
+	if !ok {
+		return []string{NormalizeNameKey(cardName)}
+	}
+	return uniqueNameKeys([]string{front, back})
+}
+
 // ListingNameKeys returns the lookup keys that should receive a listing when it is
 // indexed. Foil double-faced listings are stored only under the full combined
 // name so a variant foil price does not overwrite cheaper face-only names.

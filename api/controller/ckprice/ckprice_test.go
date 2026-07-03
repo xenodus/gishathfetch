@@ -110,12 +110,78 @@ func TestGetLatestPrice_PrefersCheapestDoubleFacedAlias(t *testing.T) {
 	listing, err := GetLatestPrice(context.Background(), store, "Jennifer Walters")
 	require.NoError(t, err)
 	require.Equal(t, []string{
-		"jennifer walters // the sensational she-hulk",
 		"jennifer walters",
 		"the sensational she-hulk",
 	}, store.getKeys)
 	require.Equal(t, 10.99, listing.PriceUsd)
 	require.Equal(t, "Jennifer Walters", listing.CardName)
+}
+
+func TestGetLatestPrice_DoubleFacedSkipsFullNameFoilVariant(t *testing.T) {
+	originalVerify := verifyCardNameFunc
+	defer func() { verifyCardNameFunc = originalVerify }()
+
+	verifyCardNameFunc = func(_ context.Context, _ string) (string, error) {
+		return "Jennifer Walters // The Sensational She-Hulk", nil
+	}
+
+	store := &mockStore{
+		listings: map[string]*cardkingdom.Listing{
+			"jennifer walters // the sensational she-hulk": {
+				CardName:  "Jennifer Walters // The Sensational She-Hulk",
+				PriceUsd:  69.99,
+				IsFoil:    true,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+			"jennifer walters": {
+				CardName:  "Jennifer Walters",
+				PriceUsd:  10.99,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+			"the sensational she-hulk": {
+				CardName:  "The Sensational She-Hulk",
+				PriceUsd:  14.99,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	listing, err := GetLatestPrice(context.Background(), store, "Jennifer Walters // The Sensational She-Hulk")
+	require.NoError(t, err)
+	require.Equal(t, []string{
+		"jennifer walters",
+		"the sensational she-hulk",
+	}, store.getKeys)
+	require.Equal(t, 10.99, listing.PriceUsd)
+	require.Equal(t, "Jennifer Walters", listing.CardName)
+}
+
+func TestGetLatestPrice_DoubleFacedFallsBackToFullName(t *testing.T) {
+	originalVerify := verifyCardNameFunc
+	defer func() { verifyCardNameFunc = originalVerify }()
+
+	verifyCardNameFunc = func(_ context.Context, _ string) (string, error) {
+		return "Tony Stark // The Invincible Iron Man", nil
+	}
+
+	store := &mockStore{
+		listings: map[string]*cardkingdom.Listing{
+			"tony stark // the invincible iron man": {
+				CardName:  "Tony Stark // The Invincible Iron Man",
+				PriceUsd:  7.49,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	listing, err := GetLatestPrice(context.Background(), store, "Tony Stark")
+	require.NoError(t, err)
+	require.Equal(t, []string{
+		"tony stark",
+		"the invincible iron man",
+		"tony stark // the invincible iron man",
+	}, store.getKeys)
+	require.Equal(t, 7.49, listing.PriceUsd)
 }
 
 func TestListingIsFresh(t *testing.T) {
