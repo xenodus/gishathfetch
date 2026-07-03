@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from "react";
+import { DESKTOP_MIN_WIDTH_MEDIA_QUERY } from "../constants";
+import useMediaQuery from "../hooks/useMediaQuery";
 import useResultFilters from "../hooks/useResultFilters";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
@@ -7,8 +9,9 @@ import ResultFilters from "./ResultFilters";
 import SkeletonCard from "./SkeletonCard";
 import StoreErrorsBanner from "./StoreErrorsBanner";
 
-// Display ad after every N results
-const AD_DISPLAY_INTERVAL = 8;
+// Display ad after every N results (fewer on mobile where cards are 2-wide)
+const AD_DISPLAY_INTERVAL_DESKTOP = 8;
+const AD_DISPLAY_INTERVAL_MOBILE = 4;
 
 const EmptySearchState = () => (
   <div className="mb-3 text-center py-4 px-3">
@@ -68,6 +71,11 @@ const SearchResults = ({
     hasActiveFilters,
     clearFilters,
   } = useResultFilters(results, searchQuery);
+
+  const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
+  const adDisplayInterval = isDesktop
+    ? AD_DISPLAY_INTERVAL_DESKTOP
+    : AD_DISPLAY_INTERVAL_MOBILE;
 
   const resultsAnchorRef = useRef(null);
   const wasSearchingRef = useRef(false);
@@ -162,8 +170,8 @@ const SearchResults = ({
                     <div className="row">
                       {filteredResults.map((card, i) => {
                         const showAd =
-                          filteredResults.length > AD_DISPLAY_INTERVAL &&
-                          (i + 1) % AD_DISPLAY_INTERVAL === 0 &&
+                          filteredResults.length > adDisplayInterval &&
+                          (i + 1) % adDisplayInterval === 0 &&
                           i + 1 !== filteredResults.length;
                         return (
                           <React.Fragment
