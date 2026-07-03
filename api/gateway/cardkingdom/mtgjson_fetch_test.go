@@ -253,6 +253,54 @@ func TestDecodeAllPrintingsSets_MergesDoubleFacedFacesByNumber(t *testing.T) {
 	require.InDelta(t, 10.99, faceListing.PriceUsd, 0.001)
 }
 
+func TestDecodeAllPrintingsSets_MergesDoubleFacedFacesUsingCheapestSidePrice(t *testing.T) {
+	prices := map[string]ckUUIDPrice{
+		"uuid-jw-18-url":   {normal: 14.99},
+		"uuid-jw-18-price": {normal: 10.99},
+	}
+	updatedAt := time.Date(2026, 7, 3, 0, 0, 0, 0, time.UTC)
+
+	const sample = `{
+  "meta": {"date": "2026-07-03"},
+  "data": {
+    "MSH": {
+      "name": "Marvel Super Heroes",
+      "cards": [
+        {
+          "uuid": "uuid-jw-18-url",
+          "name": "Jennifer Walters // The Sensational She-Hulk",
+          "faceName": "Jennifer Walters",
+          "number": "18",
+          "side": "a",
+          "purchaseUrls": {
+            "cardKingdom": "https://www.cardkingdom.com/mtg/marvel-super-heroes/jennifer-walters"
+          }
+        },
+        {
+          "uuid": "uuid-jw-18-price",
+          "name": "Jennifer Walters // The Sensational She-Hulk",
+          "faceName": "The Sensational She-Hulk",
+          "number": "18",
+          "side": "b",
+          "purchaseUrls": {}
+        }
+      ]
+    }
+  }
+}`
+
+	cheapest, err := decodeAllPrintingsSets(
+		json.NewDecoder(strings.NewReader(sample)),
+		prices,
+		updatedAt,
+	)
+	require.NoError(t, err)
+
+	listing := cheapest["jennifer walters // the sensational she-hulk"]
+	require.InDelta(t, 10.99, listing.PriceUsd, 0.001)
+	require.False(t, listing.IsFoil)
+}
+
 func TestFetchCheapestFromMTGJSON_FromTestServers(t *testing.T) {
 	pricesServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")

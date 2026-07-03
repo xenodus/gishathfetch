@@ -314,10 +314,10 @@ func mergePrintingAggregate(
 		aggregate.cardKingdomFoil = card.PurchaseUrls.CardKingdomFoil
 	}
 	if price, ok := pricesByUUID[card.UUID]; ok {
-		if price.normal > aggregate.price.normal {
+		if price.normal > 0 && (aggregate.price.normal <= 0 || price.normal < aggregate.price.normal) {
 			aggregate.price.normal = price.normal
 		}
-		if price.foil > aggregate.price.foil {
+		if price.foil > 0 && (aggregate.price.foil <= 0 || price.foil < aggregate.price.foil) {
 			aggregate.price.foil = price.foil
 		}
 	}
@@ -400,7 +400,7 @@ func considerCheapestListing(cheapest map[string]Listing, listing Listing) {
 		return
 	}
 
-	for _, nameKey := range NameLookupKeys(listing.CardName) {
+	for _, nameKey := range ListingNameKeys(listing) {
 		existing, ok := cheapest[nameKey]
 		if !ok || listing.PriceUsd < existing.PriceUsd {
 			cheapest[nameKey] = listing
