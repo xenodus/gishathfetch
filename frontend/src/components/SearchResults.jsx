@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { DESKTOP_MIN_WIDTH_MEDIA_QUERY } from "../constants";
 import useMediaQuery from "../hooks/useMediaQuery";
 import useResultFilters from "../hooks/useResultFilters";
@@ -12,6 +12,8 @@ import StoreErrorsBanner from "./StoreErrorsBanner";
 // Display ad after every N results (fewer on mobile where cards are 2-wide)
 const AD_DISPLAY_INTERVAL_DESKTOP = 8;
 const AD_DISPLAY_INTERVAL_MOBILE = 4;
+const MAX_IN_FEED_ADS_DESKTOP = 3;
+const MAX_IN_FEED_ADS_MOBILE = 2;
 
 const EmptySearchState = () => (
   <div className="mb-3 text-center py-4 px-3">
@@ -76,6 +78,29 @@ const SearchResults = ({
   const adDisplayInterval = isDesktop
     ? AD_DISPLAY_INTERVAL_DESKTOP
     : AD_DISPLAY_INTERVAL_MOBILE;
+  const maxInFeedAds = isDesktop
+    ? MAX_IN_FEED_ADS_DESKTOP
+    : MAX_IN_FEED_ADS_MOBILE;
+
+  const inFeedAdSlotIndices = useMemo(() => {
+    if (filteredResults.length <= adDisplayInterval) {
+      return new Set();
+    }
+
+    const slots = [];
+    for (let i = 0; i < filteredResults.length; i++) {
+      const position = i + 1;
+      if (
+        position % adDisplayInterval !== 0 ||
+        position === filteredResults.length
+      ) {
+        continue;
+      }
+      if (slots.length >= maxInFeedAds) break;
+      slots.push(i);
+    }
+    return new Set(slots);
+  }, [filteredResults.length, adDisplayInterval, maxInFeedAds]);
 
   const resultsAnchorRef = useRef(null);
   const wasSearchingRef = useRef(false);
@@ -168,36 +193,27 @@ const SearchResults = ({
                 ) : (
                   <div id="result" className="mb-3 text-center">
                     <div className="row">
-                      {filteredResults.map((card, i) => {
-                        const showAd =
-                          filteredResults.length > adDisplayInterval &&
-                          (i + 1) % adDisplayInterval === 0 &&
-                          i + 1 !== filteredResults.length;
-                        return (
-                          <React.Fragment
-                            key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
-                          >
-                            <Card
-                              card={card}
-                              index={i}
-                              isCardInCart={isCardInCart}
-                              addToCart={addToCart}
-                              removeFromCart={removeFromCart}
-                              removeFromCartByCard={removeFromCartByCard}
-                              onSearchStore={onSearchStore}
-                              baseUrl={baseUrl}
-                            />
-                            {showAd && (
-                              <div className="col-12 mb-4">
-                                <AdComponent
-                                  lazyLoad
-                                  collapseWhenUnfilled={false}
-                                />
-                              </div>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
+                      {filteredResults.map((card, i) => (
+                        <React.Fragment
+                          key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
+                        >
+                          <Card
+                            card={card}
+                            index={i}
+                            isCardInCart={isCardInCart}
+                            addToCart={addToCart}
+                            removeFromCart={removeFromCart}
+                            removeFromCartByCard={removeFromCartByCard}
+                            onSearchStore={onSearchStore}
+                            baseUrl={baseUrl}
+                          />
+                          {inFeedAdSlotIndices.has(i) && (
+                            <div className="col-12 mb-4">
+                              <AdComponent lazyLoad />
+                            </div>
+                          )}
+                        </React.Fragment>
+                      ))}
                     </div>
                   </div>
                 )}
