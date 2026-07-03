@@ -59,9 +59,10 @@ func TestDoubleFacedFaceNames(t *testing.T) {
 	require.Equal(t, "the sensational she-hulk", back)
 }
 
-func TestPriceLookupKeys_DoubleFacedCardUsesFaceNames(t *testing.T) {
+func TestPriceLookupKeys_DoubleFacedCardUsesAllAliases(t *testing.T) {
 	keys := PriceLookupKeys("Jennifer Walters // The Sensational She-Hulk")
 	require.Equal(t, []string{
+		"jennifer walters // the sensational she-hulk",
 		"jennifer walters",
 		"the sensational she-hulk",
 	}, keys)

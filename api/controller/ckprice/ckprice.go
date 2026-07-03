@@ -28,18 +28,7 @@ func GetLatestPrice(ctx context.Context, store ckprices.Store, query string) (*c
 	}
 
 	now := nowFunc()
-	lookupKeys := cardkingdom.PriceLookupKeys(verifiedName)
-	best, err := cheapestFreshListing(ctx, store, lookupKeys, now)
-	if err != nil {
-		return nil, err
-	}
-	if best == nil && len(lookupKeys) < len(cardkingdom.NameLookupKeys(verifiedName)) {
-		best, err = cheapestFreshListing(ctx, store, []string{cardkingdom.NormalizeNameKey(verifiedName)}, now)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return best, nil
+	return cheapestFreshListing(ctx, store, cardkingdom.PriceLookupKeys(verifiedName), now)
 }
 
 func cheapestFreshListing(

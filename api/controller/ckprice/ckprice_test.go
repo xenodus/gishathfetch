@@ -110,6 +110,7 @@ func TestGetLatestPrice_PrefersCheapestDoubleFacedAlias(t *testing.T) {
 	listing, err := GetLatestPrice(context.Background(), store, "Jennifer Walters")
 	require.NoError(t, err)
 	require.Equal(t, []string{
+		"jennifer walters // the sensational she-hulk",
 		"jennifer walters",
 		"the sensational she-hulk",
 	}, store.getKeys)
@@ -117,7 +118,7 @@ func TestGetLatestPrice_PrefersCheapestDoubleFacedAlias(t *testing.T) {
 	require.Equal(t, "Jennifer Walters", listing.CardName)
 }
 
-func TestGetLatestPrice_DoubleFacedSkipsFullNameFoilVariant(t *testing.T) {
+func TestGetLatestPrice_DoubleFacedChecksCombinedAndFaceNames(t *testing.T) {
 	originalVerify := verifyCardNameFunc
 	defer func() { verifyCardNameFunc = originalVerify }()
 
@@ -149,6 +150,7 @@ func TestGetLatestPrice_DoubleFacedSkipsFullNameFoilVariant(t *testing.T) {
 	listing, err := GetLatestPrice(context.Background(), store, "Jennifer Walters // The Sensational She-Hulk")
 	require.NoError(t, err)
 	require.Equal(t, []string{
+		"jennifer walters // the sensational she-hulk",
 		"jennifer walters",
 		"the sensational she-hulk",
 	}, store.getKeys)
@@ -156,7 +158,7 @@ func TestGetLatestPrice_DoubleFacedSkipsFullNameFoilVariant(t *testing.T) {
 	require.Equal(t, "Jennifer Walters", listing.CardName)
 }
 
-func TestGetLatestPrice_DoubleFacedFallsBackToFullName(t *testing.T) {
+func TestGetLatestPrice_DoubleFacedUsesCombinedNameWhenFacesMissing(t *testing.T) {
 	originalVerify := verifyCardNameFunc
 	defer func() { verifyCardNameFunc = originalVerify }()
 
@@ -177,9 +179,9 @@ func TestGetLatestPrice_DoubleFacedFallsBackToFullName(t *testing.T) {
 	listing, err := GetLatestPrice(context.Background(), store, "Tony Stark")
 	require.NoError(t, err)
 	require.Equal(t, []string{
+		"tony stark // the invincible iron man",
 		"tony stark",
 		"the invincible iron man",
-		"tony stark // the invincible iron man",
 	}, store.getKeys)
 	require.Equal(t, 7.49, listing.PriceUsd)
 }
