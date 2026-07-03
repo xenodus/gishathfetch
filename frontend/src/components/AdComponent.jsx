@@ -1,12 +1,46 @@
 import { useEffect, useRef, useState } from "react";
 
-const AdComponent = () => {
+const UNFILLED_COLLAPSE_MS = 2500;
+const LAZY_LOAD_ROOT_MARGIN = "200px";
+
+function hasFilledAd(insEl) {
+  if (!insEl?.isConnected) return false;
+  if (insEl.querySelector("iframe")) return true;
+  // Some fills won't use an iframe immediately; a non-trivial height is a good proxy.
+  return insEl.offsetHeight >= 50;
+}
+
+const AdComponent = ({ lazyLoad = false, collapseWhenUnfilled = true }) => {
+  const containerRef = useRef(null);
   const adInitialized = useRef(false);
   const insRef = useRef(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [isNearViewport, setIsNearViewport] = useState(!lazyLoad);
 
   useEffect(() => {
-    if (adInitialized.current) return;
+    if (!lazyLoad) return;
+
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: LAZY_LOAD_ROOT_MARGIN },
+    );
+
+    observer.observe(containerEl);
+
+    return () => observer.disconnect();
+  }, [lazyLoad]);
+
+  useEffect(() => {
+    if (!isNearViewport || adInitialized.current) return;
+
     adInitialized.current = true;
 
     try {
@@ -15,31 +49,24 @@ const AdComponent = () => {
     } catch (e) {
       console.error("AdSense error:", e);
     }
-  }, []);
+  }, [isNearViewport]);
 
   useEffect(() => {
+    if (!collapseWhenUnfilled || !isNearViewport) return;
+
     const insEl = insRef.current;
     if (!insEl) return;
 
     let cancelled = false;
 
-    const hasFilledAd = () => {
-      if (!insEl.isConnected) return false;
-      if (insEl.querySelector("iframe")) return true;
-      // Some fills won't use an iframe immediately; a non-trivial height is a good proxy.
-      return insEl.offsetHeight >= 50;
-    };
-
-    // Give AdSense a moment to render; if it doesn't fill, collapse this block.
     const timeoutId = window.setTimeout(() => {
       if (cancelled) return;
-      if (!hasFilledAd()) setCollapsed(true);
-    }, 2500);
+      if (!hasFilledAd(insEl)) setCollapsed(true);
+    }, UNFILLED_COLLAPSE_MS);
 
-    // If it does fill later, un-collapse.
     const observer = new MutationObserver(() => {
       if (cancelled) return;
-      if (hasFilledAd()) setCollapsed(false);
+      if (hasFilledAd(insEl)) setCollapsed(false);
     });
     observer.observe(insEl, {
       childList: true,
@@ -52,12 +79,13 @@ const AdComponent = () => {
       window.clearTimeout(timeoutId);
       observer.disconnect();
     };
-  }, []);
+  }, [collapseWhenUnfilled, isNearViewport]);
 
   if (collapsed) return null;
 
   return (
     <div
+      ref={containerRef}
       className="ad-large text-center d-print-none d-block d-sm-block w-100"
       style={{ overflow: "hidden" }}
     >
