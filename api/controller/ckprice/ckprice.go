@@ -18,6 +18,8 @@ var (
 )
 
 // GetLatestPrice verifies the query against Scryfall and returns the cheapest CK listing.
+// For double-faced cards it always checks the combined name, front face, and back
+// face together and returns the lowest fresh price across all three.
 func GetLatestPrice(ctx context.Context, store ckprices.Store, query string) (*cardkingdom.Listing, error) {
 	verifiedName, err := verifyCardNameFunc(ctx, query)
 	if err != nil {

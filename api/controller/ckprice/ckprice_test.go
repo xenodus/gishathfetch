@@ -158,7 +158,7 @@ func TestGetLatestPrice_DoubleFacedChecksCombinedAndFaceNames(t *testing.T) {
 	require.Equal(t, "Jennifer Walters", listing.CardName)
 }
 
-func TestGetLatestPrice_DoubleFacedUsesCombinedNameWhenFacesMissing(t *testing.T) {
+func TestGetLatestPrice_DoubleFacedAlwaysChecksCombinedFrontAndBack(t *testing.T) {
 	originalVerify := verifyCardNameFunc
 	defer func() { verifyCardNameFunc = originalVerify }()
 
@@ -184,6 +184,45 @@ func TestGetLatestPrice_DoubleFacedUsesCombinedNameWhenFacesMissing(t *testing.T
 		"the invincible iron man",
 	}, store.getKeys)
 	require.Equal(t, 7.49, listing.PriceUsd)
+}
+
+func TestGetLatestPrice_DoubleFacedPicksCheapestIncludingCombinedName(t *testing.T) {
+	originalVerify := verifyCardNameFunc
+	defer func() { verifyCardNameFunc = originalVerify }()
+
+	verifyCardNameFunc = func(_ context.Context, _ string) (string, error) {
+		return "Jennifer Walters // The Sensational She-Hulk", nil
+	}
+
+	store := &mockStore{
+		listings: map[string]*cardkingdom.Listing{
+			"jennifer walters // the sensational she-hulk": {
+				CardName:  "Jennifer Walters // The Sensational She-Hulk",
+				PriceUsd:  5.99,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+			"jennifer walters": {
+				CardName:  "Jennifer Walters",
+				PriceUsd:  10.99,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+			"the sensational she-hulk": {
+				CardName:  "The Sensational She-Hulk",
+				PriceUsd:  14.99,
+				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+			},
+		},
+	}
+
+	listing, err := GetLatestPrice(context.Background(), store, "Jennifer Walters // The Sensational She-Hulk")
+	require.NoError(t, err)
+	require.Equal(t, []string{
+		"jennifer walters // the sensational she-hulk",
+		"jennifer walters",
+		"the sensational she-hulk",
+	}, store.getKeys)
+	require.Equal(t, 5.99, listing.PriceUsd)
+	require.Equal(t, "Jennifer Walters // The Sensational She-Hulk", listing.CardName)
 }
 
 func TestListingIsFresh(t *testing.T) {

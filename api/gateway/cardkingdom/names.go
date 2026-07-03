@@ -44,10 +44,22 @@ func DoubleFacedFaceNames(cardName string) (front string, back string, ok bool) 
 }
 
 // PriceLookupKeys returns the lookup keys used when resolving CK search prices.
-// Double-faced cards check the combined name plus both face names; the cheapest
-// fresh listing across all aliases wins.
+// For double-faced cards the combined name, front face, and back face are always
+// checked together in a single pass; the cheapest fresh listing wins. The
+// combined name is not a fallback.
 func PriceLookupKeys(cardName string) []string {
-	return NameLookupKeys(cardName)
+	trimmed := strings.TrimSpace(cardName)
+	if trimmed == "" {
+		return nil
+	}
+
+	combined := NormalizeNameKey(trimmed)
+	front, back, ok := DoubleFacedFaceNames(trimmed)
+	if !ok {
+		return []string{combined}
+	}
+
+	return uniqueNameKeys([]string{combined, front, back})
 }
 
 // ListingNameKeys returns the lookup keys that should receive a listing when it is
