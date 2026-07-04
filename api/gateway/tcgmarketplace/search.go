@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,28 +24,30 @@ const cardLinkAPI = "https://thetcgmarketplace.com:3501/encoder/advancedsearch"
 const mtgCategoryNo = 3
 const accessTokenKey = "TCG_MARKETPLACE_ACCESS_TOKEN"
 
-type response struct {
+type apiEnvelope struct {
 	Status int `json:"status"`
 	Data   struct {
-		Message string `json:"message"`
-		Data    []struct {
-			Name                  string      `json:"name"`
-			Setcode               string      `json:"setcode"`
-			Setname               string      `json:"setname"`
-			Image                 string      `json:"image"`
-			Language              string      `json:"language"`
-			CrdFoilType           interface{} `json:"crd_foil_type"`
-			Rarity                string      `json:"rarity"`
-			Available             interface{} `json:"available"`
-			From                  interface{} `json:"from"`
-			NonFoilReferencePrice interface{} `json:"non_foil_reference_price"`
-			FoilReferencePrice    interface{} `json:"foil_reference_price"`
-			URL                   string      `json:"url"`
-		} `json:"data"`
+		Message string          `json:"message"`
+		Data    json.RawMessage `json:"data"`
 	} `json:"data"`
 	Meta struct {
 		Total int `json:"total"`
 	} `json:"meta"`
+}
+
+type cardItem struct {
+	Name                  string      `json:"name"`
+	Setcode               string      `json:"setcode"`
+	Setname               string      `json:"setname"`
+	Image                 string      `json:"image"`
+	Language              string      `json:"language"`
+	CrdFoilType           interface{} `json:"crd_foil_type"`
+	Rarity                string      `json:"rarity"`
+	Available             interface{} `json:"available"`
+	From                  interface{} `json:"from"`
+	NonFoilReferencePrice interface{} `json:"non_foil_reference_price"`
+	FoilReferencePrice    interface{} `json:"foil_reference_price"`
+	URL                   string      `json:"url"`
 }
 
 type Store struct {
@@ -69,7 +72,6 @@ func NewLGS() gateway.LGS {
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var (
-		res         response
 		cards       []gateway.Card
 		accessToken string
 	)
@@ -86,13 +88,13 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 
-	res, err = getApiResponse(ctx, reqPayload, accessToken != "")
+	items, err := getApiResponse(ctx, reqPayload, accessToken != "")
 	if err != nil {
 		return cards, err
 	}
 
-	if len(res.Data.Data) > 0 {
-		for _, card := range res.Data.Data {
+	if len(items) > 0 {
+		for _, card := range items {
 			stock, err := strconv.ParseInt(fmt.Sprint(card.Available), 10, 64)
 			if err != nil {
 				continue
@@ -158,12 +160,82 @@ func isSurgeFoil(extraInfo []string, name string) bool {
 	return false
 }
 
-func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured bool) (response, error) {
-	var res response
+func parseResponseBody(body []byte) ([]cardItem, error) {
+	var envelope apiEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, err
+	}
 
+	if envelope.Status != http.StatusOK {
+		return nil, apiError(envelope.Status, envelope.Data.Message, envelope.Data.Data)
+	}
+
+	return parseCardItems(envelope.Data.Data)
+}
+
+func parseCardItems(raw json.RawMessage) ([]cardItem, error) {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == `""` || trimmed == "null" {
+		return nil, nil
+	}
+	if !strings.HasPrefix(trimmed, "[") {
+		return nil, fmt.Errorf("%s API returned unexpected data payload: %s", StoreName, trimmed)
+	}
+
+	var cards []cardItem
+	if err := json.Unmarshal(raw, &cards); err != nil {
+		return nil, err
+	}
+	return cards, nil
+}
+
+func apiError(status int, message string, raw json.RawMessage) error {
+	detail := strings.TrimSpace(message)
+	if detail == "" {
+		detail = describeErrorPayload(raw)
+	}
+	if detail == "" {
+		detail = "unknown error"
+	}
+	return fmt.Errorf("%s API error (status=%d): %s", StoreName, status, detail)
+}
+
+func describeErrorPayload(raw json.RawMessage) string {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == `""` || trimmed == "null" {
+		return ""
+	}
+	if !strings.HasPrefix(trimmed, "{") {
+		return trimmed
+	}
+
+	var errData struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+		Syscall string `json:"syscall"`
+		Address string `json:"address"`
+		Port    int    `json:"port"`
+	}
+	if err := json.Unmarshal(raw, &errData); err != nil {
+		return trimmed
+	}
+
+	switch {
+	case errData.Code != "" && errData.Address != "":
+		return fmt.Sprintf("%s (%s:%d)", errData.Code, errData.Address, errData.Port)
+	case errData.Code != "":
+		return errData.Code
+	case errData.Message != "":
+		return errData.Message
+	default:
+		return trimmed
+	}
+}
+
+func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured bool) ([]cardItem, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.ContentLength = int64(len(payload))
@@ -175,20 +247,26 @@ func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured b
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return res, gateway.WrapHTTPRequestError(err, req, requestContext...)
+		return nil, gateway.WrapHTTPRequestError(err, req, requestContext...)
 	}
 	defer resp.Body.Close()
 
 	body, err := gateway.ReadResponseBody(resp)
 	if err != nil {
-		return res, gateway.WrapResponseBodyReadError(err, resp)
+		return nil, gateway.WrapResponseBodyReadError(err, resp)
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return res, fmt.Errorf("%s", gateway.FormatUnexpectedHTTPStatus(StoreName, resp, body))
-	}
-	if err = json.Unmarshal(body, &res); err != nil {
-		return res, gateway.WrapJSONDecodeError(err, resp, body)
+		return nil, fmt.Errorf("%s", gateway.FormatUnexpectedHTTPStatus(StoreName, resp, body))
 	}
 
-	return res, nil
+	items, err := parseResponseBody(body)
+	if err != nil {
+		var syntaxErr *json.SyntaxError
+		if errors.As(err, &syntaxErr) {
+			return nil, gateway.WrapJSONDecodeError(err, resp, body)
+		}
+		return nil, err
+	}
+
+	return items, nil
 }
