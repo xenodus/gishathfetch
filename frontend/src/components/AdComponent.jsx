@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ADSENSE_CLIENT, ADSENSE_DISPLAY_AD_SLOT } from "../constants";
 
-const UNFILLED_COLLAPSE_MS = 2500;
-const LAZY_UNFILLED_COLLAPSE_MS = 5000;
+const UNFILLED_COLLAPSE_MS = 2000;
+const LAZY_UNFILLED_COLLAPSE_MS = 4000;
 const LAZY_LOAD_ROOT_MARGIN = "200px";
 const ADSENSE_SCRIPT_WAIT_MS = 10000;
 
@@ -70,9 +70,9 @@ const AdComponent = ({
   layoutKey,
 }) => {
   const containerRef = useRef(null);
-  const adInitialized = useRef(false);
   const insRef = useRef(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [isFilled, setIsFilled] = useState(false);
   const [isNearViewport, setIsNearViewport] = useState(!lazyLoad);
   const isInFeedFormat = Boolean(layoutKey);
 
@@ -98,16 +98,22 @@ const AdComponent = ({
   }, [lazyLoad]);
 
   useEffect(() => {
-    if (!isNearViewport || adInitialized.current) return;
+    if (!isNearViewport) return;
 
     const insEl = insRef.current;
     if (!insEl) return;
 
-    adInitialized.current = true;
+    let cancelled = false;
 
-    return waitForAdSenseScript(() => {
+    const cleanupWait = waitForAdSenseScript(() => {
+      if (cancelled) return;
       pushAdSlot(insEl);
     });
+
+    return () => {
+      cancelled = true;
+      cleanupWait();
+    };
   }, [isNearViewport]);
 
   useEffect(() => {
@@ -123,12 +129,21 @@ const AdComponent = ({
 
     const maybeCollapse = () => {
       if (cancelled) return;
-      if (insEl.getAttribute("data-ad-status") === "unfilled") {
+
+      const adStatus = insEl.getAttribute("data-ad-status");
+      if (adStatus === "unfilled") {
         setCollapsed(true);
+        setIsFilled(false);
         return;
       }
-      if (hasFilledAd(insEl)) setCollapsed(false);
+
+      if (hasFilledAd(insEl)) {
+        setCollapsed(false);
+        setIsFilled(true);
+      }
     };
+
+    maybeCollapse();
 
     const timeoutId = window.setTimeout(() => {
       if (cancelled) return;
@@ -169,16 +184,21 @@ const AdComponent = ({
       className="ad-large text-center d-print-none d-block d-sm-block w-100"
       style={{ overflow: "hidden" }}
     >
-      <div className="text-center mb-2" style={{ fontSize: "11px" }}>
-        <a
-          href="https://www.patreon.com/GishathFetch"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Follow / Support Gishath Fetch on Patreon
-        </a>
-      </div>
-      <div style={{ minHeight: "90px", overflow: "hidden" }}>
+      {isFilled && (
+        <div className="text-center mb-2" style={{ fontSize: "11px" }}>
+          <a
+            href="https://www.patreon.com/GishathFetch"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Follow / Support Gishath Fetch on Patreon
+          </a>
+        </div>
+      )}
+      <div
+        className={isFilled ? "ad-slot-filled" : "ad-slot-pending"}
+        style={{ overflow: "hidden" }}
+      >
         <ins
           ref={insRef}
           className="adsbygoogle"
@@ -190,9 +210,11 @@ const AdComponent = ({
           {...(isInFeedFormat ? { "data-ad-layout-key": layoutKey } : {})}
         ></ins>
       </div>
-      <div className="text-secondary" style={{ fontSize: "11px" }}>
-        Advertisement
-      </div>
+      {isFilled && (
+        <div className="text-secondary" style={{ fontSize: "11px" }}>
+          Advertisement
+        </div>
+      )}
     </div>
   );
 };

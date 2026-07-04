@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   ADSENSE_IN_FEED_AD_SLOT,
   ADSENSE_IN_FEED_LAYOUT_KEY,
@@ -86,9 +86,9 @@ const SearchResults = ({
     ? MAX_IN_FEED_ADS_DESKTOP
     : MAX_IN_FEED_ADS_MOBILE;
 
-  const inFeedAdSlotIndices = useMemo(() => {
+  const inFeedAdSlots = useMemo(() => {
     if (filteredResults.length <= adDisplayInterval) {
-      return new Set();
+      return [];
     }
 
     const slots = [];
@@ -101,10 +101,23 @@ const SearchResults = ({
         continue;
       }
       if (slots.length >= maxInFeedAds) break;
-      slots.push(i);
+      slots.push({ cardIndex: i, slotIndex: slots.length });
     }
-    return new Set(slots);
+    return slots;
   }, [filteredResults.length, adDisplayInterval, maxInFeedAds]);
+
+  const inFeedAdSlotIndices = useMemo(
+    () => new Set(inFeedAdSlots.map(({ cardIndex }) => cardIndex)),
+    [inFeedAdSlots],
+  );
+
+  const inFeedAdSlotIndexByCard = useMemo(() => {
+    const slotIndexByCard = new Map();
+    for (const { cardIndex, slotIndex } of inFeedAdSlots) {
+      slotIndexByCard.set(cardIndex, slotIndex);
+    }
+    return slotIndexByCard;
+  }, [inFeedAdSlots]);
 
   const resultsAnchorRef = useRef(null);
   const wasSearchingRef = useRef(false);
@@ -197,11 +210,11 @@ const SearchResults = ({
                 ) : (
                   <div id="result" className="mb-3 text-center">
                     <div className="row">
-                      {filteredResults.map((card, i) => (
-                        <React.Fragment
-                          key={`${card.src}-${card.url}-${card.price}-${card.quality}`}
-                        >
+                      {filteredResults.flatMap((card, i) => {
+                        const cardKey = `${card.src}-${card.url}-${card.price}-${card.quality}`;
+                        const items = [
                           <Card
+                            key={cardKey}
                             card={card}
                             index={i}
                             isCardInCart={isCardInCart}
@@ -210,18 +223,26 @@ const SearchResults = ({
                             removeFromCartByCard={removeFromCartByCard}
                             onSearchStore={onSearchStore}
                             baseUrl={baseUrl}
-                          />
-                          {inFeedAdSlotIndices.has(i) && (
-                            <div className="col-12 mb-4">
+                          />,
+                        ];
+
+                        if (inFeedAdSlotIndices.has(i)) {
+                          items.push(
+                            <div
+                              key={`in-feed-ad-${inFeedAdSlotIndexByCard.get(i)}`}
+                              className="col-12 mb-4"
+                            >
                               <AdComponent
                                 lazyLoad
                                 slot={ADSENSE_IN_FEED_AD_SLOT}
                                 layoutKey={ADSENSE_IN_FEED_LAYOUT_KEY}
                               />
-                            </div>
-                          )}
-                        </React.Fragment>
-                      ))}
+                            </div>,
+                          );
+                        }
+
+                        return items;
+                      })}
                     </div>
                   </div>
                 )}
