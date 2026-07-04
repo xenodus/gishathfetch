@@ -187,13 +187,8 @@ export const POPULAR_SEARCH_UTM_SOURCE = "popular_searches";
 export const POPULAR_SEARCH_UTM_MEDIUM = "internal";
 export const POPULAR_SEARCH_UTM_CAMPAIGN = "popular_searches";
 
-// Google AdSense — use a separate ad unit per placement. Reusing the same slot
-// across footer + in-feed means AdSense only fills one instance per page (usually
-// the footer, which loads first). Create an In-feed ad unit in AdSense and set
-// ADSENSE_IN_FEED_AD_SLOT (and optional layout key) to the generated values.
+// Google AdSense — use a separate ad unit per placement.
 export const ADSENSE_CLIENT = "ca-pub-2393161407259792";
 export const ADSENSE_DISPLAY_AD_SLOT = "6707964257";
-/** @type {string} Dedicated in-feed slot — replace after creating an In-feed ad unit in AdSense. */
-export const ADSENSE_IN_FEED_AD_SLOT = "6707964257";
-/** @type {string | undefined} From AdSense In-feed ad code (`data-ad-layout-key`). */
-export const ADSENSE_IN_FEED_LAYOUT_KEY = undefined;
+export const ADSENSE_IN_FEED_AD_SLOT = "7667010672";
+export const ADSENSE_IN_FEED_LAYOUT_KEY = "-6t+ed+2i-1n-4w";

@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ADSENSE_CLIENT,
-  ADSENSE_DISPLAY_AD_SLOT,
-  ADSENSE_IN_FEED_LAYOUT_KEY,
-} from "../constants";
+import { ADSENSE_CLIENT, ADSENSE_DISPLAY_AD_SLOT } from "../constants";
 
 const UNFILLED_COLLAPSE_MS = 2500;
 const LAZY_UNFILLED_COLLAPSE_MS = 5000;
@@ -71,7 +67,7 @@ const AdComponent = ({
   lazyLoad = false,
   collapseWhenUnfilled = true,
   slot = ADSENSE_DISPLAY_AD_SLOT,
-  layoutKey = ADSENSE_IN_FEED_LAYOUT_KEY,
+  layoutKey,
 }) => {
   const containerRef = useRef(null);
   const adInitialized = useRef(false);
