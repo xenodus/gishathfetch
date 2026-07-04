@@ -403,6 +403,19 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   display: none !important;
 }
 
+.ad-large:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
+  /* biome-ignore lint/complexity/noImportantStyles: Collapse wrapper before React state catches up */
+  display: none !important;
+}
+
+.ad-slot-pending {
+  min-height: 0;
+}
+
+.ad-slot-filled {
+  min-height: 90px;
+}
+
 ins.adsbygoogle.adsbygoogle-noablate {
   margin-bottom: var(--footer-nav-height, 0px);
   /* biome-ignore lint/complexity/noImportantStyles: Cap Google anchor ad z-index below site footer */
