@@ -12,7 +12,7 @@ const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
   return (
     <>
       <div className="mt-4 site-footer-spacer">
-        <AdComponent />
+        <AdComponent lazyLoad />
       </div>
 
       {/* Fixed Bottom Navigation */}

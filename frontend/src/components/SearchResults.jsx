@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { DESKTOP_MIN_WIDTH_MEDIA_QUERY } from "../constants";
+import {
+  ADSENSE_IN_FEED_AD_SLOT,
+  ADSENSE_IN_FEED_LAYOUT_KEY,
+  DESKTOP_MIN_WIDTH_MEDIA_QUERY,
+} from "../constants";
 import useMediaQuery from "../hooks/useMediaQuery";
 import useResultFilters from "../hooks/useResultFilters";
 import AdComponent from "./AdComponent";
@@ -209,7 +213,11 @@ const SearchResults = ({
                           />
                           {inFeedAdSlotIndices.has(i) && (
                             <div className="col-12 mb-4">
-                              <AdComponent lazyLoad />
+                              <AdComponent
+                                lazyLoad
+                                slot={ADSENSE_IN_FEED_AD_SLOT}
+                                layoutKey={ADSENSE_IN_FEED_LAYOUT_KEY}
+                              />
                             </div>
                           )}
                         </React.Fragment>

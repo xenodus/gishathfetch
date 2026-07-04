@@ -398,6 +398,11 @@ ins.adsbygoogle iframe {
   display: block;
 }
 
+ins.adsbygoogle[data-ad-status="unfilled"] {
+  /* biome-ignore lint/complexity/noImportantStyles: Hide empty AdSense placeholders */
+  display: none !important;
+}
+
 ins.adsbygoogle.adsbygoogle-noablate {
   margin-bottom: var(--footer-nav-height, 0px);
   /* biome-ignore lint/complexity/noImportantStyles: Cap Google anchor ad z-index below site footer */
