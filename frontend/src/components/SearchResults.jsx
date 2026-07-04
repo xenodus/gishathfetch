@@ -227,13 +227,15 @@ const SearchResults = ({
                         ];
 
                         if (inFeedAdSlotIndices.has(i)) {
+                          const inFeedSlotIndex =
+                            inFeedAdSlotIndexByCard.get(i);
                           items.push(
                             <div
-                              key={`in-feed-ad-${inFeedAdSlotIndexByCard.get(i)}`}
+                              key={`in-feed-ad-${inFeedSlotIndex}`}
                               className="col-12 mb-4"
                             >
                               <AdComponent
-                                lazyLoad
+                                lazyLoad={inFeedSlotIndex !== 0}
                                 slot={ADSENSE_IN_FEED_AD_SLOT}
                                 layoutKey={ADSENSE_IN_FEED_LAYOUT_KEY}
                               />
