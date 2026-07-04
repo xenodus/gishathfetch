@@ -186,3 +186,9 @@ export const DESKTOP_MIN_WIDTH_MEDIA_QUERY = "(min-width: 768px)";
 export const POPULAR_SEARCH_UTM_SOURCE = "popular_searches";
 export const POPULAR_SEARCH_UTM_MEDIUM = "internal";
 export const POPULAR_SEARCH_UTM_CAMPAIGN = "popular_searches";
+
+// Google AdSense — use a separate ad unit per placement.
+export const ADSENSE_CLIENT = "ca-pub-2393161407259792";
+export const ADSENSE_DISPLAY_AD_SLOT = "6707964257";
+export const ADSENSE_IN_FEED_AD_SLOT = "7667010672";
+export const ADSENSE_IN_FEED_LAYOUT_KEY = "-6t+ed+2i-1n-4w";
