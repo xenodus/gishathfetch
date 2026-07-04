@@ -20,6 +20,16 @@ const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-h",
   "top-search-keyword-skeleton-i",
   "top-search-keyword-skeleton-j",
+  "top-search-keyword-skeleton-k",
+  "top-search-keyword-skeleton-l",
+  "top-search-keyword-skeleton-m",
+  "top-search-keyword-skeleton-n",
+  "top-search-keyword-skeleton-o",
+  "top-search-keyword-skeleton-p",
+  "top-search-keyword-skeleton-q",
+  "top-search-keyword-skeleton-r",
+  "top-search-keyword-skeleton-s",
+  "top-search-keyword-skeleton-t",
 ];
 
 const PERIOD_OPTIONS = [
@@ -99,8 +109,12 @@ function PopularSearchesToggle({ isExpanded, collapsible, panelId, onToggle }) {
   );
 }
 
-function getDisplayLimit(isDesktop) {
-  return isDesktop
+function getDisplayLimit(isDesktop, showAllKeywords) {
+  if (isDesktop) {
+    return TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT;
+  }
+
+  return showAllKeywords
     ? TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT
     : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
 }
@@ -116,8 +130,9 @@ export default function TopSearchKeywords({
   const [isExpanded, setIsExpanded] = useState(
     () => !collapsible || defaultExpanded,
   );
+  const [showAllKeywords, setShowAllKeywords] = useState(false);
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
-  const displayLimit = getDisplayLimit(isDesktop);
+  const displayLimit = getDisplayLimit(isDesktop, showAllKeywords);
   const panelId = useId();
 
   useEffect(() => {
@@ -132,11 +147,19 @@ export default function TopSearchKeywords({
     }
   }, [collapseOnSearch]);
 
+  const handlePeriodChange = (nextPeriod) => {
+    setPeriod(nextPeriod);
+    setShowAllKeywords(false);
+  };
+
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
     return null;
   }
 
-  const keywords = (keywordsByPeriod?.[period] ?? []).slice(0, displayLimit);
+  const allKeywords = keywordsByPeriod?.[period] ?? [];
+  const keywords = allKeywords.slice(0, displayLimit);
+  const hasMoreKeywords =
+    !isDesktop && allKeywords.length > TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
   const selectedPeriodLabel =
     PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? "";
   const showContent = !collapsible || isExpanded;
@@ -172,7 +195,7 @@ export default function TopSearchKeywords({
           <div className="popular-searches-controls">
             <PeriodToggle
               period={period}
-              onPeriodChange={setPeriod}
+              onPeriodChange={handlePeriodChange}
               disabled={isLoading}
             />
           </div>
@@ -187,19 +210,31 @@ export default function TopSearchKeywords({
               ))}
             </div>
           ) : keywords.length > 0 ? (
-            <div className="popular-searches-pills">
-              {keywords.map((keyword) => (
-                <a
-                  key={keyword}
-                  href={buildPopularSearchUrl(BASE_URL, keyword, period)}
-                  className="btn btn-sm popular-search-pill text-decoration-none"
-                  aria-label={`Search for ${keyword}`}
-                  onClick={() => handlePopularSearchClick(keyword)}
+            <>
+              <div className="popular-searches-pills">
+                {keywords.map((keyword) => (
+                  <a
+                    key={keyword}
+                    href={buildPopularSearchUrl(BASE_URL, keyword, period)}
+                    className="btn btn-sm popular-search-pill text-decoration-none"
+                    aria-label={`Search for ${keyword}`}
+                    onClick={() => handlePopularSearchClick(keyword)}
+                  >
+                    {keyword}
+                  </a>
+                ))}
+              </div>
+              {hasMoreKeywords && (
+                <button
+                  type="button"
+                  className="popular-searches-show-more"
+                  aria-expanded={showAllKeywords}
+                  onClick={() => setShowAllKeywords((expanded) => !expanded)}
                 >
-                  {keyword}
-                </a>
-              ))}
-            </div>
+                  {showAllKeywords ? "Show less" : "Show more"}
+                </button>
+              )}
+            </>
           ) : (
             <p className="popular-searches-empty small text-muted mb-0">
               No popular searches in the last {selectedPeriodLabel}.
