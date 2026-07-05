@@ -83,7 +83,7 @@ const Card = ({
               </a>
               <button
                 type="button"
-                className="btn btn-warning btn-sm cartFavSearchBtn"
+                className="btn btn-dark btn-sm cartFavSearchBtn"
                 disabled={!hasFavourites}
                 aria-label="Search with favourite stores"
                 title={
