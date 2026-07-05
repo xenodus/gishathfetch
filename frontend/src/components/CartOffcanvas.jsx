@@ -66,7 +66,7 @@ const CartOffcanvas = ({
           {!hasFavourites && (
             <output className="small text-muted mt-2 d-block">
               No stores have been added to favourites yet. Open Stores on the
-              search page and tap &ldquo;Save favourites&rdquo;.
+              search page and tap &ldquo;Save Fav.&rdquo;.
             </output>
           )}
         </div>

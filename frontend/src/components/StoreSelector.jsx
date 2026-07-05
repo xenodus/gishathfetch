@@ -132,7 +132,7 @@ const StoreSelector = memo(
                   onClick={onLoadFavourites}
                 >
                   <Star size={12} aria-hidden="true" className="me-1" />
-                  Load favourites
+                  Load Fav.
                 </button>
                 <button
                   type="button"
@@ -141,7 +141,7 @@ const StoreSelector = memo(
                   onClick={onSaveFavourites}
                 >
                   <Star size={12} aria-hidden="true" className="me-1" />
-                  Save favourites
+                  Save Fav.
                 </button>
               </fieldset>
               <span
