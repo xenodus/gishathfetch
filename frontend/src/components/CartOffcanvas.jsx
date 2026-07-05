@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Button, Form, Offcanvas } from "react-bootstrap";
-import { Search as SearchIcon, Star } from "react-feather";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
 
@@ -11,8 +10,6 @@ const CartOffcanvas = ({
   isCardInCart,
   removeFromCart,
   onSearchStore,
-  onSearchWithFavouriteStores,
-  hasFavourites,
   onClearCart,
   baseUrl,
 }) => {
@@ -49,26 +46,6 @@ const CartOffcanvas = ({
           When a card is saved, a snapshot of it from that point in time is
           taken. If there is any change in its price or availability, it will
           not be updated automatically.
-        </div>
-
-        <div className="mb-4">
-          <Button
-            variant="primary"
-            size="sm"
-            className="w-100 d-inline-flex align-items-center justify-content-center gap-1"
-            disabled={!hasFavourites}
-            onClick={onSearchWithFavouriteStores}
-          >
-            <Star size={14} aria-hidden="true" />
-            <SearchIcon size={14} aria-hidden="true" />
-            Search with favourite stores
-          </Button>
-          {!hasFavourites && (
-            <output className="small text-muted mt-2 d-block">
-              No stores have been added to favourites yet. Open Stores on the
-              search page and tap &ldquo;Save Fav.&rdquo;.
-            </output>
-          )}
         </div>
 
         {cart.length > 0 && (

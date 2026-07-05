@@ -41,7 +41,6 @@ export default function App() {
     saveFavourites,
     favouritesMatchSelection,
     favouriteStoresFeedback,
-    showFavouriteStoresFeedback,
   } = useFavouriteStores();
 
   const {
@@ -71,7 +70,6 @@ export default function App() {
     selectAllStores,
     selectNoStores,
     applyStoreSelection,
-    searchLastQueryWithStores,
     performSearch,
     cancelSearch,
     retrySearch,
@@ -167,28 +165,6 @@ export default function App() {
     saveFavourites(selectedStores);
   }, [saveFavourites, selectedStores]);
 
-  const handleSearchWithFavouriteStores = useCallback(() => {
-    if (!hasFavourites) {
-      return;
-    }
-
-    setShowCart(false);
-    setShowSuggestions(false);
-    const { searched } = searchLastQueryWithStores(favouriteStores);
-    if (!searched) {
-      showFavouriteStoresFeedback(
-        "Favourite stores applied. Enter a card name to search.",
-      );
-    }
-  }, [
-    favouriteStores,
-    hasFavourites,
-    searchLastQueryWithStores,
-    setShowCart,
-    setShowSuggestions,
-    showFavouriteStoresFeedback,
-  ]);
-
   // --- Main Render ---
   return (
     <div id="top" className="container-xl my-3 px-3 pb-3">
@@ -273,8 +249,6 @@ export default function App() {
           isCardInCart={isCardInCart}
           removeFromCart={removeFromCart}
           onSearchStore={handleCardSearch}
-          onSearchWithFavouriteStores={handleSearchWithFavouriteStores}
-          hasFavourites={hasFavourites}
           onClearCart={clearCart}
           baseUrl={BASE_URL}
         />
