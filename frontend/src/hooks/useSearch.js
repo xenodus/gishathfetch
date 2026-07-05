@@ -574,6 +574,32 @@ export default function useSearch() {
     persistSelectedStores([]);
   };
 
+  const applyStoreSelection = useCallback((stores) => {
+    setStoresWarning(null);
+    setSelectedStores(stores);
+    persistSelectedStores(stores);
+  }, []);
+
+  const searchLastQueryWithStores = useCallback(
+    (stores) => {
+      const resolvedStores = resolveStoresToSearch(stores);
+      applyStoreSelection(resolvedStores);
+
+      const { query } = lastSearchRef.current;
+      if (
+        query &&
+        query.length >= MIN_SEARCH_LENGTH &&
+        query.length <= MAX_SEARCH_LENGTH
+      ) {
+        performSearch(query, resolvedStores);
+        return { searched: true, query };
+      }
+
+      return { searched: false };
+    },
+    [applyStoreSelection, performSearch, resolveStoresToSearch],
+  );
+
   // --- Initialization ---
   // Note: performSearch is included in deps but is stable (empty dep array in useCallback)
   // This effect should only run once on mount, not when selectedStores changes
@@ -625,6 +651,8 @@ export default function useSearch() {
     toggleStore,
     selectAllStores,
     selectNoStores,
+    applyStoreSelection,
+    searchLastQueryWithStores,
     performSearch,
     cancelSearch,
     retrySearch,
