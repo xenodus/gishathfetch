@@ -2,7 +2,6 @@ import {
   CheckSquare,
   FolderPlus,
   Search as SearchIcon,
-  Star,
   Trash2,
 } from "react-feather";
 import { formatSavedAt } from "../hooks/useCart";
@@ -84,7 +83,7 @@ const Card = ({
               </a>
               <button
                 type="button"
-                className="btn btn-outline-primary btn-sm cartFavSearchBtn"
+                className="btn btn-warning btn-sm cartFavSearchBtn"
                 disabled={!hasFavourites}
                 aria-label="Search with favourite stores"
                 title={
@@ -94,7 +93,6 @@ const Card = ({
                 }
                 onClick={(e) => onSearchWithFavouriteStores?.(e, card.name)}
               >
-                <Star size={12} className="cartIcon" aria-hidden="true" />
                 <SearchIcon size={12} className="cartIcon" aria-hidden="true" />{" "}
                 Fav
               </button>
