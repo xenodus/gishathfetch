@@ -14,6 +14,10 @@ const StoreSelector = memo(
     onToggle,
     onSelectAll,
     onSelectNone,
+    onLoadFavourites,
+    onSaveFavourites,
+    hasFavourites = false,
+    favouritesMatchSelection = false,
     collapsible = true,
     collapseOnSearch = false,
     defaultExpanded = true,
@@ -91,7 +95,7 @@ const StoreSelector = memo(
             <div className="store-selector-controls">
               <fieldset className="store-selector-bulk-toggle border-0 p-0 m-0">
                 <legend className="visually-hidden">
-                  Select all or no stores
+                  Select all, no, or favourite stores
                 </legend>
                 <button
                   type="button"
@@ -112,6 +116,30 @@ const StoreSelector = memo(
                   onClick={onSelectNone}
                 >
                   None
+                </button>
+                <span
+                  className="store-selector-bulk-divider"
+                  aria-hidden="true"
+                />
+                <button
+                  type="button"
+                  className={`btn btn-sm store-selector-bulk-btn store-selector-fav-btn${
+                    favouritesMatchSelection ? " is-active" : ""
+                  }`}
+                  aria-pressed={favouritesMatchSelection}
+                  aria-label="Load favourite stores"
+                  disabled={!hasFavourites}
+                  onClick={onLoadFavourites}
+                >
+                  Load Favourite
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm store-selector-bulk-btn store-selector-fav-btn"
+                  aria-label="Save current selection as favourite stores"
+                  onClick={onSaveFavourites}
+                >
+                  Save Favourite
                 </button>
               </fieldset>
               <span

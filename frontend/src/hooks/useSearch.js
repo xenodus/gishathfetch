@@ -574,6 +574,12 @@ export default function useSearch() {
     persistSelectedStores([]);
   };
 
+  const applyStoreSelection = useCallback((stores) => {
+    setStoresWarning(null);
+    setSelectedStores(stores);
+    persistSelectedStores(stores);
+  }, []);
+
   // --- Initialization ---
   // Note: performSearch is included in deps but is stable (empty dep array in useCallback)
   // This effect should only run once on mount, not when selectedStores changes
@@ -625,6 +631,7 @@ export default function useSearch() {
     toggleStore,
     selectAllStores,
     selectNoStores,
+    applyStoreSelection,
     performSearch,
     cancelSearch,
     retrySearch,

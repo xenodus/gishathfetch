@@ -16,6 +16,7 @@ const Modals = lazy(() => import("./components/Modals"));
 import { BASE_URL, LGS_MAP, LGS_OPTIONS, MIN_SEARCH_LENGTH } from "./constants";
 // --- Hooks ---
 import useCart from "./hooks/useCart";
+import useFavouriteStores from "./hooks/useFavouriteStores";
 import useSearch from "./hooks/useSearch";
 import useTopSearchKeywords from "./hooks/useTopSearchKeywords";
 
@@ -33,6 +34,14 @@ export default function App() {
     clearCart,
     isCardInCart,
   } = useCart();
+
+  const {
+    favouriteStores,
+    hasFavourites,
+    saveFavourites,
+    favouritesMatchSelection,
+    favouriteStoresFeedback,
+  } = useFavouriteStores();
 
   const {
     searchQuery,
@@ -60,6 +69,7 @@ export default function App() {
     toggleStore,
     selectAllStores,
     selectNoStores,
+    applyStoreSelection,
     performSearch,
     cancelSearch,
     retrySearch,
@@ -143,6 +153,42 @@ export default function App() {
     ],
   );
 
+  const handleCardSearchWithFavourites = useCallback(
+    (e, cardName) => {
+      if (e?.preventDefault) e.preventDefault();
+      if (!hasFavourites) {
+        return;
+      }
+
+      setSearchQuery(cardName);
+      setShowCart(false);
+      setShowSuggestions(false);
+      applyStoreSelection(favouriteStores);
+      performSearch(cardName, favouriteStores);
+    },
+    [
+      applyStoreSelection,
+      favouriteStores,
+      hasFavourites,
+      performSearch,
+      setSearchQuery,
+      setShowCart,
+      setShowSuggestions,
+    ],
+  );
+
+  const handleLoadFavourites = useCallback(() => {
+    if (!hasFavourites) {
+      return;
+    }
+
+    applyStoreSelection(favouriteStores);
+  }, [applyStoreSelection, favouriteStores, hasFavourites]);
+
+  const handleSaveFavourites = useCallback(() => {
+    saveFavourites(selectedStores);
+  }, [saveFavourites, selectedStores]);
+
   // --- Main Render ---
   return (
     <div id="top" className="container-xl my-3 px-3 pb-3">
@@ -168,6 +214,10 @@ export default function App() {
         onStoreToggle={toggleStore}
         onSelectAll={selectAllStores}
         onSelectNone={selectNoStores}
+        onLoadFavourites={handleLoadFavourites}
+        onSaveFavourites={handleSaveFavourites}
+        hasFavourites={hasFavourites}
+        favouritesMatchSelection={favouritesMatchSelection(selectedStores)}
         onCloseSuggestions={() => setShowSuggestions(false)}
         searchError={searchError}
         storesWarning={storesWarning}
@@ -211,7 +261,9 @@ export default function App() {
         onShowFaq={() => setModalType("FAQ")}
       />
 
-      <CartActionFeedback message={cartActionFeedback} />
+      <CartActionFeedback
+        message={cartActionFeedback || favouriteStoresFeedback}
+      />
 
       <Suspense fallback={null}>
         <CartOffcanvas
@@ -221,6 +273,8 @@ export default function App() {
           isCardInCart={isCardInCart}
           removeFromCart={removeFromCart}
           onSearchStore={handleCardSearch}
+          onSearchWithFavouriteStores={handleCardSearchWithFavourites}
+          hasFavourites={hasFavourites}
           onClearCart={clearCart}
           baseUrl={BASE_URL}
         />

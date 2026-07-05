@@ -161,6 +161,25 @@ body {
   color: var(--bs-primary);
 }
 
+.store-selector-bulk-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.store-selector-bulk-divider {
+  display: inline-block;
+  width: 1px;
+  align-self: stretch;
+  min-height: 1.5rem;
+  margin: 0 0.125rem;
+  background-color: var(--bs-border-color);
+}
+
+.store-selector-fav-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
 .store-selector-count {
   white-space: nowrap;
 }
@@ -211,7 +230,8 @@ body {
 
 .addCartBtn,
 .removeFromCartBtn,
-.cartSearchBtn {
+.cartSearchBtn,
+.cartFavSearchBtn {
   font-size: 11px;
   padding-bottom: 5px;
 }

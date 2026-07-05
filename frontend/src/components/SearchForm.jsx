@@ -23,6 +23,10 @@ const SearchForm = ({
   onStoreToggle,
   onSelectAll,
   onSelectNone,
+  onLoadFavourites,
+  onSaveFavourites,
+  hasFavourites,
+  favouritesMatchSelection,
   onCloseSuggestions,
   searchError,
   storesWarning,
@@ -290,6 +294,10 @@ const SearchForm = ({
           onToggle={onStoreToggle}
           onSelectAll={onSelectAll}
           onSelectNone={onSelectNone}
+          onLoadFavourites={onLoadFavourites}
+          onSaveFavourites={onSaveFavourites}
+          hasFavourites={hasFavourites}
+          favouritesMatchSelection={favouritesMatchSelection}
           collapsible
           collapseOnSearch={isSearching}
           defaultExpanded={false}
