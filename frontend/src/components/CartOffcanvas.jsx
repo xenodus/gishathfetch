@@ -10,6 +10,8 @@ const CartOffcanvas = ({
   isCardInCart,
   removeFromCart,
   onSearchStore,
+  onSearchWithFavouriteStores,
+  hasFavourites,
   onClearCart,
   baseUrl,
 }) => {
@@ -78,6 +80,8 @@ const CartOffcanvas = ({
                     isCardInCart={isCardInCart}
                     removeFromCart={removeFromCart}
                     onSearchStore={onSearchStore}
+                    onSearchWithFavouriteStores={onSearchWithFavouriteStores}
+                    hasFavourites={hasFavourites}
                     baseUrl={baseUrl}
                   />
                 ))}
@@ -100,6 +104,10 @@ const CartOffcanvas = ({
                         isCardInCart={isCardInCart}
                         removeFromCart={removeFromCart}
                         onSearchStore={onSearchStore}
+                        onSearchWithFavouriteStores={
+                          onSearchWithFavouriteStores
+                        }
+                        hasFavourites={hasFavourites}
                         baseUrl={baseUrl}
                       />
                     ))}

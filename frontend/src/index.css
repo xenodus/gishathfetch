@@ -230,7 +230,8 @@ body {
 
 .addCartBtn,
 .removeFromCartBtn,
-.cartSearchBtn {
+.cartSearchBtn,
+.cartFavSearchBtn {
   font-size: 11px;
   padding-bottom: 5px;
 }

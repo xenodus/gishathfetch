@@ -153,6 +153,30 @@ export default function App() {
     ],
   );
 
+  const handleCardSearchWithFavourites = useCallback(
+    (e, cardName) => {
+      if (e?.preventDefault) e.preventDefault();
+      if (!hasFavourites) {
+        return;
+      }
+
+      setSearchQuery(cardName);
+      setShowCart(false);
+      setShowSuggestions(false);
+      applyStoreSelection(favouriteStores);
+      performSearch(cardName, favouriteStores);
+    },
+    [
+      applyStoreSelection,
+      favouriteStores,
+      hasFavourites,
+      performSearch,
+      setSearchQuery,
+      setShowCart,
+      setShowSuggestions,
+    ],
+  );
+
   const handleLoadFavourites = useCallback(() => {
     if (!hasFavourites) {
       return;
@@ -249,6 +273,8 @@ export default function App() {
           isCardInCart={isCardInCart}
           removeFromCart={removeFromCart}
           onSearchStore={handleCardSearch}
+          onSearchWithFavouriteStores={handleCardSearchWithFavourites}
+          hasFavourites={hasFavourites}
           onClearCart={clearCart}
           baseUrl={BASE_URL}
         />

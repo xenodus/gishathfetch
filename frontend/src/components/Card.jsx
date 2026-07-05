@@ -2,6 +2,7 @@ import {
   CheckSquare,
   FolderPlus,
   Search as SearchIcon,
+  Star,
   Trash2,
 } from "react-feather";
 import { formatSavedAt } from "../hooks/useCart";
@@ -15,6 +16,8 @@ const Card = ({
   removeFromCart,
   removeFromCartByCard,
   onSearchStore,
+  onSearchWithFavouriteStores,
+  hasFavourites = false,
   baseUrl,
 }) => {
   const qualityFoil = [];
@@ -71,7 +74,7 @@ const Card = ({
         </div>
         <div>
           {isCart ? (
-            <div className="d-flex justify-content-center gap-1">
+            <div className="d-flex flex-wrap justify-content-center gap-1">
               <a
                 href={`${baseUrl}?s=${encodeURIComponent(card.name)}&src=${encodeURIComponent(card.src)}`}
                 className="btn btn-primary btn-sm cartSearchBtn"
@@ -79,6 +82,22 @@ const Card = ({
               >
                 <SearchIcon size={12} className="cartIcon" /> Search
               </a>
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm cartFavSearchBtn"
+                disabled={!hasFavourites}
+                aria-label="Search with favourite stores"
+                title={
+                  hasFavourites
+                    ? "Search with favourite stores"
+                    : "Save favourite stores on the search page first"
+                }
+                onClick={(e) => onSearchWithFavouriteStores?.(e, card.name)}
+              >
+                <Star size={12} className="cartIcon" aria-hidden="true" />
+                <SearchIcon size={12} className="cartIcon" aria-hidden="true" />{" "}
+                Fav
+              </button>
               <button
                 type="button"
                 className="removeFromCartBtn btn btn-danger btn-sm"
