@@ -76,6 +76,7 @@ const AdComponent = ({
 }) => {
   const containerRef = useRef(null);
   const insRef = useRef(null);
+  const fallbackLoggedRef = useRef(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isFilled, setIsFilled] = useState(false);
   const [isNearViewport, setIsNearViewport] = useState(!lazyLoad);
@@ -138,8 +139,20 @@ const AdComponent = ({
       ? LAZY_UNFILLED_COLLAPSE_MS
       : UNFILLED_COLLAPSE_MS;
 
-    const tryDisplayFallback = () => {
+    const tryDisplayFallback = (reason) => {
       if (canFallbackToDisplay({ fallbackSlot, layoutKey, useFallback })) {
+        if (!fallbackLoggedRef.current) {
+          console.info(
+            "[AdComponent] In-feed ad unfilled; falling back to display ad",
+            {
+              reason,
+              inFeedSlot: slot,
+              displaySlot: fallbackSlot,
+              lazyLoad,
+            },
+          );
+          fallbackLoggedRef.current = true;
+        }
         setUseFallback(true);
         setIsFilled(false);
         return true;
@@ -152,7 +165,7 @@ const AdComponent = ({
 
       const adStatus = insEl.getAttribute("data-ad-status");
       if (adStatus === "unfilled") {
-        if (tryDisplayFallback()) return;
+        if (tryDisplayFallback("unfilled")) return;
         setCollapsed(true);
         setIsFilled(false);
         return;
@@ -169,7 +182,7 @@ const AdComponent = ({
     const timeoutId = window.setTimeout(() => {
       if (cancelled) return;
       if (!hasFilledAd(insEl)) {
-        if (tryDisplayFallback()) return;
+        if (tryDisplayFallback("timeout")) return;
         setCollapsed(true);
       }
     }, collapseMs);
@@ -194,6 +207,7 @@ const AdComponent = ({
     useFallback,
     fallbackSlot,
     layoutKey,
+    slot,
   ]);
 
   if (collapsed) return null;
