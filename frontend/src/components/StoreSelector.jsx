@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useMemo, useState } from "react";
-import { ChevronDown, MapPin, Star } from "react-feather";
+import { ChevronDown, MapPin } from "react-feather";
 
 const SECTION_CLASS_NAME = "store-selector-section google-anno-skip mb-3";
 
@@ -131,8 +131,7 @@ const StoreSelector = memo(
                   disabled={!hasFavourites}
                   onClick={onLoadFavourites}
                 >
-                  <Star size={12} aria-hidden="true" className="me-1" />
-                  Load Fav.
+                  Load Fav Stores
                 </button>
                 <button
                   type="button"
@@ -140,8 +139,7 @@ const StoreSelector = memo(
                   aria-label="Save current selection as favourite stores"
                   onClick={onSaveFavourites}
                 >
-                  <Star size={12} aria-hidden="true" className="me-1" />
-                  Save Fav.
+                  Save Fav Stores
                 </button>
               </fieldset>
               <span
