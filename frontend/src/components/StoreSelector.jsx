@@ -131,7 +131,7 @@ const StoreSelector = memo(
                   disabled={!hasFavourites}
                   onClick={onLoadFavourites}
                 >
-                  Load Fav Stores
+                  Load Fav. Stores
                 </button>
                 <button
                   type="button"
@@ -139,7 +139,7 @@ const StoreSelector = memo(
                   aria-label="Save current selection as favourite stores"
                   onClick={onSaveFavourites}
                 >
-                  Save Fav Stores
+                  Save Fav. Stores
                 </button>
               </fieldset>
               <span

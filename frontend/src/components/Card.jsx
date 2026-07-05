@@ -94,7 +94,7 @@ const Card = ({
                 onClick={(e) => onSearchWithFavouriteStores?.(e, card.name)}
               >
                 <SearchIcon size={12} className="cartIcon" aria-hidden="true" />{" "}
-                Fav
+                Fav.
               </button>
               <button
                 type="button"
