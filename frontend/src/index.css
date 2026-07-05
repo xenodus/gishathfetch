@@ -236,6 +236,11 @@ body {
   padding-bottom: 5px;
 }
 
+.cartFavSearchBtn:disabled {
+  opacity: 0.35;
+  filter: grayscale(0.5);
+}
+
 .animated-rainbow {
   background: linear-gradient(
     to left,
