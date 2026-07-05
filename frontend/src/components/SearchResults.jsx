@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
+  ADSENSE_DISPLAY_AD_SLOT,
   ADSENSE_IN_FEED_AD_SLOT,
   ADSENSE_IN_FEED_LAYOUT_KEY,
   DESKTOP_MIN_WIDTH_MEDIA_QUERY,
@@ -238,6 +239,7 @@ const SearchResults = ({
                                 lazyLoad={inFeedSlotIndex !== 0}
                                 slot={ADSENSE_IN_FEED_AD_SLOT}
                                 layoutKey={ADSENSE_IN_FEED_LAYOUT_KEY}
+                                fallbackSlot={ADSENSE_DISPLAY_AD_SLOT}
                               />
                             </div>,
                           );

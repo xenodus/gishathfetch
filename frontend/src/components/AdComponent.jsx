@@ -63,18 +63,27 @@ function waitForAdSenseScript(callback) {
   };
 }
 
+function canFallbackToDisplay({ fallbackSlot, layoutKey, useFallback }) {
+  return Boolean(fallbackSlot && layoutKey && !useFallback);
+}
+
 const AdComponent = ({
   lazyLoad = false,
   collapseWhenUnfilled = true,
   slot = ADSENSE_DISPLAY_AD_SLOT,
   layoutKey,
+  fallbackSlot,
 }) => {
   const containerRef = useRef(null);
   const insRef = useRef(null);
   const [collapsed, setCollapsed] = useState(false);
   const [isFilled, setIsFilled] = useState(false);
   const [isNearViewport, setIsNearViewport] = useState(!lazyLoad);
-  const isInFeedFormat = Boolean(layoutKey);
+  const [useFallback, setUseFallback] = useState(false);
+
+  const activeSlot = useFallback && fallbackSlot ? fallbackSlot : slot;
+  const activeLayoutKey = useFallback ? undefined : layoutKey;
+  const isInFeedFormat = Boolean(activeLayoutKey);
 
   useEffect(() => {
     if (!lazyLoad) return;
@@ -97,6 +106,8 @@ const AdComponent = ({
     return () => observer.disconnect();
   }, [lazyLoad]);
 
+  // Re-run when switching to display fallback so adsbygoogle.push targets the new <ins>.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: useFallback remounts the ad slot.
   useEffect(() => {
     if (!isNearViewport) return;
 
@@ -114,7 +125,7 @@ const AdComponent = ({
       cancelled = true;
       cleanupWait();
     };
-  }, [isNearViewport]);
+  }, [isNearViewport, useFallback]);
 
   useEffect(() => {
     if (!collapseWhenUnfilled || !isNearViewport) return;
@@ -127,11 +138,21 @@ const AdComponent = ({
       ? LAZY_UNFILLED_COLLAPSE_MS
       : UNFILLED_COLLAPSE_MS;
 
+    const tryDisplayFallback = () => {
+      if (canFallbackToDisplay({ fallbackSlot, layoutKey, useFallback })) {
+        setUseFallback(true);
+        setIsFilled(false);
+        return true;
+      }
+      return false;
+    };
+
     const maybeCollapse = () => {
       if (cancelled) return;
 
       const adStatus = insEl.getAttribute("data-ad-status");
       if (adStatus === "unfilled") {
+        if (tryDisplayFallback()) return;
         setCollapsed(true);
         setIsFilled(false);
         return;
@@ -147,7 +168,10 @@ const AdComponent = ({
 
     const timeoutId = window.setTimeout(() => {
       if (cancelled) return;
-      if (!hasFilledAd(insEl)) setCollapsed(true);
+      if (!hasFilledAd(insEl)) {
+        if (tryDisplayFallback()) return;
+        setCollapsed(true);
+      }
     }, collapseMs);
 
     const observer = new MutationObserver(maybeCollapse);
@@ -163,7 +187,14 @@ const AdComponent = ({
       window.clearTimeout(timeoutId);
       observer.disconnect();
     };
-  }, [collapseWhenUnfilled, isNearViewport, lazyLoad]);
+  }, [
+    collapseWhenUnfilled,
+    isNearViewport,
+    lazyLoad,
+    useFallback,
+    fallbackSlot,
+    layoutKey,
+  ]);
 
   if (collapsed) return null;
 
@@ -200,14 +231,15 @@ const AdComponent = ({
         style={{ overflow: "hidden" }}
       >
         <ins
+          key={useFallback ? "display-fallback" : "primary"}
           ref={insRef}
           className="adsbygoogle"
           style={{ display: "block", width: "100%", maxWidth: "100%" }}
           data-ad-client={ADSENSE_CLIENT}
-          data-ad-slot={slot}
+          data-ad-slot={activeSlot}
           data-ad-format={isInFeedFormat ? "fluid" : "auto"}
           data-full-width-responsive={isInFeedFormat ? undefined : "true"}
-          {...(isInFeedFormat ? { "data-ad-layout-key": layoutKey } : {})}
+          {...(isInFeedFormat ? { "data-ad-layout-key": activeLayoutKey } : {})}
         ></ins>
       </div>
       {isFilled && (
