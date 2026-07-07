@@ -119,9 +119,25 @@ function getDisplayLimit(isDesktop, showAllKeywords) {
     : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
 }
 
+function isMatchingPopularSearch(keyword, searchQuery) {
+  const normalizedKeyword = String(keyword ?? "")
+    .trim()
+    .toLowerCase();
+  const normalizedQuery = String(searchQuery ?? "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    normalizedKeyword.length > 0 &&
+    normalizedQuery.length > 0 &&
+    normalizedKeyword === normalizedQuery
+  );
+}
+
 export default function TopSearchKeywords({
   keywordsByPeriod,
   isLoading,
+  searchQuery = "",
   collapsible = false,
   collapseOnSearch = false,
   defaultExpanded = false,
@@ -212,17 +228,27 @@ export default function TopSearchKeywords({
           ) : keywords.length > 0 ? (
             <>
               <div className="popular-searches-pills">
-                {keywords.map((keyword) => (
-                  <a
-                    key={keyword}
-                    href={buildPopularSearchUrl(BASE_URL, keyword, period)}
-                    className="btn btn-sm popular-search-pill text-decoration-none"
-                    aria-label={`Search for ${keyword}`}
-                    onClick={() => handlePopularSearchClick(keyword)}
-                  >
-                    {keyword}
-                  </a>
-                ))}
+                {keywords.map((keyword) => {
+                  const isActive = isMatchingPopularSearch(
+                    keyword,
+                    searchQuery,
+                  );
+
+                  return (
+                    <a
+                      key={keyword}
+                      href={buildPopularSearchUrl(BASE_URL, keyword, period)}
+                      className={`btn btn-sm popular-search-pill text-decoration-none${
+                        isActive ? " is-active" : ""
+                      }`}
+                      aria-label={`Search for ${keyword}`}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => handlePopularSearchClick(keyword)}
+                    >
+                      {keyword}
+                    </a>
+                  );
+                })}
               </div>
               {hasMoreKeywords && (
                 <button

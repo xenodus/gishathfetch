@@ -623,8 +623,14 @@ ins.adsbygoogle.adsbygoogle-noablate {
   color: var(--bs-secondary-color);
 }
 
-.popular-search-pill:hover,
-.popular-search-pill:focus-visible {
+.popular-search-pill.is-active {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: var(--bs-white);
+}
+
+.popular-search-pill:hover:not(.is-active),
+.popular-search-pill:focus-visible:not(.is-active) {
   background-color: rgba(var(--bs-primary-rgb), 0.15);
   border-color: var(--bs-primary);
   color: var(--bs-primary);

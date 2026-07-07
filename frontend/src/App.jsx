@@ -226,6 +226,7 @@ export default function App() {
           <TopSearchKeywords
             keywordsByPeriod={topSearchKeywordsByPeriod}
             isLoading={isLoadingTopSearchKeywords}
+            searchQuery={searchQuery}
             collapsible
             collapseOnSearch={isSearching}
             defaultExpanded={
