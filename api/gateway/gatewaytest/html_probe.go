@@ -3,7 +3,6 @@ package gatewaytest
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -76,7 +75,7 @@ func RequireHTMLBodyContains(t *testing.T, ctx context.Context, probeURL string,
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := gateway.ReadResponseBody(resp)
 	require.NoError(t, err)
 	require.Contains(t, string(body), marker, fmt.Sprintf("page %s missing marker %q", probeURL, marker))
 }
