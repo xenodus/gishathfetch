@@ -73,40 +73,50 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	doc.Find("ul.product-grid li").Each(func(i int, se *goquery.Selection) {
-		c := gateway.Card{
-			Source: s.Name,
-		}
-
-		// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
-		c.Name = strings.TrimSpace(strings.Replace(se.Find("h3.card__heading.h5 a").Text(), "[Foil]", "", -1))
-
-		c.IsFoil = strings.Contains(strings.ToLower(se.Find("h3.card__heading.h5 a").Text()), "[foil]")
-
-		c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
-		c.Img = se.Find("div.card__media img").AttrOr("src", "")
-		c.InStock = true
-
-		price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
-		if err != nil {
-			c.InStock = false
-		}
-		c.Price = price
-
-		// url
-		cleanPageURL, err := url.Parse(c.Url)
-		if err != nil {
-			log.Printf("error parsing url for %s with value [%s]: %v", s.Name, c.Url, err)
-			return
-		}
-		cleanPageURL.RawQuery = url.Values{
-			"utm_source": []string{config.UtmSource},
-		}.Encode()
-		c.Url = cleanPageURL.String()
-
-		if c.Name != "" && c.InStock {
-			cards = append(cards, c)
+		card, ok := parseProductCard(se, s.Name)
+		if ok {
+			cards = append(cards, card)
 		}
 	})
 
 	return cards, nil
+}
+
+func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bool) {
+	// Shopify's availability filter can still surface sold-out listings; the theme
+	// marks them with price--sold-out and a "Sold out" badge.
+	if se.Find("div.price.price--sold-out").Length() > 0 {
+		return gateway.Card{}, false
+	}
+
+	c := gateway.Card{
+		Source: storeName,
+	}
+
+	// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
+	heading := se.Find("h3.card__heading.h5 a")
+	c.Name = strings.TrimSpace(strings.Replace(heading.Text(), "[Foil]", "", -1))
+	c.IsFoil = strings.Contains(strings.ToLower(heading.Text()), "[foil]")
+
+	c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
+	c.Img = se.Find("div.card__media img").AttrOr("src", "")
+	c.InStock = true
+
+	price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
+	if err != nil {
+		c.InStock = false
+	}
+	c.Price = price
+
+	cleanPageURL, err := url.Parse(c.Url)
+	if err != nil {
+		log.Printf("error parsing url for %s with value [%s]: %v", storeName, c.Url, err)
+		return gateway.Card{}, false
+	}
+	cleanPageURL.RawQuery = url.Values{
+		"utm_source": []string{config.UtmSource},
+	}.Encode()
+	c.Url = cleanPageURL.String()
+
+	return c, c.Name != "" && c.InStock
 }
