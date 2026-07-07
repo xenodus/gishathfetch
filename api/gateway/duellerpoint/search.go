@@ -63,7 +63,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 	defer resp.Body.Close()
 
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	body, err := gateway.ReadResponseBody(resp)
+	if err != nil {
+		return cards, err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
 	if err != nil {
 		return cards, err
 	}
