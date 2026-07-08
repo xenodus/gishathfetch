@@ -7,6 +7,11 @@ import {
 } from "../constants";
 import useMediaQuery from "../hooks/useMediaQuery";
 import useResultFilters from "../hooks/useResultFilters";
+import {
+  buildSearchResultFeedItems,
+  computeInFeedAdSlots,
+  searchResultCardKey,
+} from "../utils/searchResultFeed";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
 import CardKingdomPrice from "./CardKingdomPrice";
@@ -87,37 +92,41 @@ const SearchResults = ({
     ? MAX_IN_FEED_ADS_DESKTOP
     : MAX_IN_FEED_ADS_MOBILE;
 
-  const inFeedAdSlots = useMemo(() => {
-    if (filteredResults.length <= adDisplayInterval) {
-      return [];
-    }
-
-    const slots = [];
-    for (let i = 0; i < filteredResults.length; i++) {
-      const position = i + 1;
-      if (
-        position % adDisplayInterval !== 0 ||
-        position === filteredResults.length
-      ) {
-        continue;
-      }
-      if (slots.length >= maxInFeedAds) break;
-      slots.push({ cardIndex: i, slotIndex: slots.length });
-    }
-    return slots;
-  }, [filteredResults.length, adDisplayInterval, maxInFeedAds]);
-
-  const inFeedAdSlotIndices = useMemo(
-    () => new Set(inFeedAdSlots.map(({ cardIndex }) => cardIndex)),
-    [inFeedAdSlots],
+  const inFeedAdSlots = useMemo(
+    () =>
+      computeInFeedAdSlots(
+        filteredResults.length,
+        adDisplayInterval,
+        maxInFeedAds,
+      ),
+    [filteredResults.length, adDisplayInterval, maxInFeedAds],
   );
 
-  const inFeedAdSlotIndexByCard = useMemo(() => {
-    const slotIndexByCard = new Map();
-    for (const { cardIndex, slotIndex } of inFeedAdSlots) {
-      slotIndexByCard.set(cardIndex, slotIndex);
+  const resultFeedItems = useMemo(
+    () =>
+      buildSearchResultFeedItems(filteredResults, {
+        adDisplayInterval,
+        maxInFeedAds,
+      }),
+    [filteredResults, adDisplayInterval, maxInFeedAds],
+  );
+
+  const inFeedAdElementsBySlot = useMemo(() => {
+    const elementsBySlot = new Map();
+    for (const { slotIndex } of inFeedAdSlots) {
+      elementsBySlot.set(
+        slotIndex,
+        <div key={`in-feed-ad-${slotIndex}`} className="col-12 mb-4">
+          <AdComponent
+            lazyLoad={slotIndex !== 0}
+            slot={ADSENSE_IN_FEED_AD_SLOT}
+            layoutKey={ADSENSE_IN_FEED_LAYOUT_KEY}
+            fallbackSlot={ADSENSE_DISPLAY_AD_SLOT}
+          />
+        </div>,
+      );
     }
-    return slotIndexByCard;
+    return elementsBySlot;
   }, [inFeedAdSlots]);
 
   const resultsAnchorRef = useRef(null);
@@ -211,41 +220,24 @@ const SearchResults = ({
                 ) : (
                   <div id="result" className="mb-3 text-center">
                     <div className="row">
-                      {filteredResults.flatMap((card, i) => {
-                        const cardKey = `${card.src}-${card.url}-${card.price}-${card.quality}`;
-                        const items = [
+                      {resultFeedItems.map((item) => {
+                        if (item.type === "ad") {
+                          return inFeedAdElementsBySlot.get(item.slotIndex);
+                        }
+
+                        return (
                           <Card
-                            key={cardKey}
-                            card={card}
-                            index={i}
+                            key={searchResultCardKey(item.card)}
+                            card={item.card}
+                            index={item.cardIndex}
                             isCardInCart={isCardInCart}
                             addToCart={addToCart}
                             removeFromCart={removeFromCart}
                             removeFromCartByCard={removeFromCartByCard}
                             onSearchStore={onSearchStore}
                             baseUrl={baseUrl}
-                          />,
-                        ];
-
-                        if (inFeedAdSlotIndices.has(i)) {
-                          const inFeedSlotIndex =
-                            inFeedAdSlotIndexByCard.get(i);
-                          items.push(
-                            <div
-                              key={`in-feed-ad-${inFeedSlotIndex}`}
-                              className="col-12 mb-4"
-                            >
-                              <AdComponent
-                                lazyLoad={inFeedSlotIndex !== 0}
-                                slot={ADSENSE_IN_FEED_AD_SLOT}
-                                layoutKey={ADSENSE_IN_FEED_LAYOUT_KEY}
-                                fallbackSlot={ADSENSE_DISPLAY_AD_SLOT}
-                              />
-                            </div>,
-                          );
-                        }
-
-                        return items;
+                          />
+                        );
                       })}
                     </div>
                   </div>
