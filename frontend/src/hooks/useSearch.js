@@ -315,7 +315,21 @@ export default function useSearch() {
 
   performSearchRef.current = performSearch;
 
+  const invalidateInFlightSearch = useCallback(() => {
+    if (searchAbortControllerRef.current) {
+      searchAbortControllerRef.current.abort();
+      searchAbortControllerRef.current = null;
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    activeSearchRequestIdRef.current += 1;
+    userCancelledRef.current = false;
+  }, []);
+
   const applyHistoryState = useCallback((state) => {
+    invalidateInFlightSearch();
     restoringHistoryRef.current = true;
     skipSuggestionsRef.current = true;
     setShowSuggestions(false);
@@ -373,7 +387,7 @@ export default function useSearch() {
       applyHomeSeo();
     }
     restoringHistoryRef.current = false;
-  }, []);
+  }, [invalidateInFlightSearch]);
 
   useEffect(() => {
     const onPopState = (event) => {

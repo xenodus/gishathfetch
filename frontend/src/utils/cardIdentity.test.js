@@ -24,6 +24,19 @@ assert.equal(normalizeExtraInfo([]), "");
 assert.equal(normalizeExtraInfo(undefined), "");
 assert.equal(normalizeExtraInfo("[Set B] [Set A]"), "[Set A] [Set B]");
 
+assert.equal(
+  normalizeExtraInfo("[Modern Horizons 2] (Borderless)"),
+  "(Borderless) [Modern Horizons 2]",
+);
+assert.notEqual(
+  normalizeExtraInfo("[Modern Horizons 2] (Borderless)"),
+  normalizeExtraInfo("[Modern Horizons 2] (Retro Frame)"),
+);
+assert.notEqual(
+  normalizeExtraInfo("[MH2] Borderless"),
+  normalizeExtraInfo("[MH2] Retro Frame"),
+);
+
 assert.ok(
   cardsExactMatch(base, {
     ...base,
@@ -67,6 +80,14 @@ const deduped = dedupeCartItems([
 ]);
 assert.equal(deduped.length, 2);
 assert.equal(deduped[0].url, "https://example.com/new");
+
+const legacyOrder = dedupeCartItems([
+  { ...base, savedAt: 1, url: "https://example.com/old" },
+  { ...base, savedAt: 2, url: "https://example.com/new" },
+]);
+assert.equal(legacyOrder.length, 1);
+assert.equal(legacyOrder[0].url, "https://example.com/new");
+
 assert.equal(cardIdentityKey(base), cardIdentityKey({ ...base, savedAt: 99 }));
 
 console.log("cardIdentity tests passed");

@@ -20,8 +20,21 @@ export const normalizeExtraInfo = (extraInfo) => {
   const bracketParts = [...trimmed.matchAll(/\[([^\]]+)\]/g)].map(
     (match) => `[${match[1].trim()}]`,
   );
-  if (bracketParts.length > 0) {
-    return [...new Set(bracketParts)].sort().join(" ");
+  const parenParts = [...trimmed.matchAll(/\(([^)]+)\)/g)].map(
+    (match) => `(${match[1].trim()})`,
+  );
+  const taggedParts = [...new Set([...bracketParts, ...parenParts])].sort();
+  if (taggedParts.length > 0) {
+    const remainder = normalizeText(
+      trimmed
+        .replace(/\[[^\]]+\]/g, " ")
+        .replace(/\([^)]+\)/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
+    return remainder
+      ? `${taggedParts.join(" ")} ${remainder}`.trim()
+      : taggedParts.join(" ");
   }
 
   return trimmed;
@@ -40,16 +53,24 @@ export const cardsExactMatch = (a, b) =>
   cardIdentityKey(a) === cardIdentityKey(b);
 
 export const dedupeCartItems = (items) => {
+  const bestByKey = new Map();
+  for (const item of items) {
+    const key = cardIdentityKey(item);
+    const existing = bestByKey.get(key);
+    if (!existing || (item.savedAt ?? 0) >= (existing.savedAt ?? 0)) {
+      bestByKey.set(key, item);
+    }
+  }
+
   const seen = new Set();
   const deduped = [];
-
   for (const item of items) {
     const key = cardIdentityKey(item);
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    deduped.push(item);
+    deduped.push(bestByKey.get(key));
   }
 
   return deduped;
