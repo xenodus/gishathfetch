@@ -130,7 +130,7 @@ func newProxyClient(proxyURL string) (*http.Client, error) {
 }
 
 func fetchAndMapProducts(ctx context.Context, client *http.Client, apiURL string, opts Options) ([]gateway.Card, error) {
-	products, err := fetchProducts(ctx, client, apiURL)
+	products, err := fetchProducts(ctx, client, apiURL, suggestRequestOptsFromConfig(opts.Config))
 	if err != nil {
 		return nil, err
 	}

@@ -94,10 +94,9 @@ func TestResolveVariantCardsCorrectsFoilPerVariant(t *testing.T) {
 	require.True(t, cards[1].IsFoil)
 }
 
-// TestResolveVariantCardsFallsBackOnError verifies that a failed detail fetch
-// preserves the predictive-search card so a transient upstream error does not
-// drop the store from the results.
-func TestResolveVariantCardsFallsBackOnError(t *testing.T) {
+// TestResolveVariantCardsDropsOnError verifies that a failed detail fetch omits
+// the product rather than returning a misleading predictive-search price_min.
+func TestResolveVariantCardsDropsOnError(t *testing.T) {
 	srv := newDetailServer(t, "", http.StatusInternalServerError)
 	defer srv.Close()
 
@@ -107,8 +106,7 @@ func TestResolveVariantCardsFallsBackOnError(t *testing.T) {
 
 	cards := resolveVariantCards(context.Background(), srv.Client(), cfg, product, base)
 
-	require.Len(t, cards, 1)
-	require.Equal(t, base.Price, cards[0].Price)
+	require.Empty(t, cards)
 }
 
 // TestResolveVariantCardsDropsWhenAllOutOfStock verifies that a product whose

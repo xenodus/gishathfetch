@@ -101,7 +101,7 @@ func TestDoSuggestGETWithRetry_SucceedsAfter429WithRetryAfter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
 	defer cancel()
 
-	body, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL)
+	body, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
 	if err != nil {
 		t.Fatalf("expected success after Retry-After retry, got %v", err)
 	}
@@ -128,7 +128,7 @@ func TestDoSuggestGETWithRetry_SucceedsAfterTransient503(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
 	defer cancel()
 
-	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL)
+	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
 	if err != nil {
 		t.Fatalf("expected success after retries, got %v", err)
 	}
@@ -148,7 +148,7 @@ func TestDoSuggestGETWithRetry_ExhaustsRetriesOnPersistent429(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
 	defer cancel()
 
-	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL)
+	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
 	if err == nil {
 		t.Fatal("expected error after exhausting retries")
 	}
@@ -157,6 +157,31 @@ func TestDoSuggestGETWithRetry_ExhaustsRetriesOnPersistent429(t *testing.T) {
 	}
 	if got := calls.Load(); got != int32(suggestRetryMaxAttempts) {
 		t.Fatalf("expected %d calls, got %d", suggestRetryMaxAttempts, got)
+	}
+}
+
+func TestDoSuggestGETWithRetry_SendsShopifyLocalizationCookie(t *testing.T) {
+	var gotCookie string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if c, err := r.Cookie("localization"); err == nil {
+			gotCookie = c.Value
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("{}"))
+	}))
+	defer server.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
+	defer cancel()
+
+	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{
+		shopifyLocalization: ShopifyLocalizationSingapore,
+	})
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if gotCookie != ShopifyLocalizationSingapore {
+		t.Fatalf("expected localization cookie %q, got %q", ShopifyLocalizationSingapore, gotCookie)
 	}
 }
 
@@ -171,7 +196,7 @@ func TestDoSuggestGETWithRetry_DoesNotRetryNonRetriableStatus(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
 	defer cancel()
 
-	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL)
+	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
 	if err == nil {
 		t.Fatal("expected error for 404 response")
 	}

@@ -17,10 +17,18 @@ const SearchPath = "/search/suggest.json"
 // search endpoint will return per request (the platform caps this at 10).
 const predictiveSearchLimit = "10"
 
+// ShopifyLocalizationSingapore is the Shopify market cookie value for
+// Singapore storefronts. Without it, Accept-Language defaults can return
+// prices from a different market than the public site shows to local users.
+const ShopifyLocalizationSingapore = "SG"
+
 // Config identifies a Shopify storefront that exposes predictive search.
 type Config struct {
 	StoreName string
 	BaseURL   string
+	// ShopifyLocalization, when set, is sent as Shopify's localization cookie on
+	// suggest and product JSON requests so responses use that market's prices.
+	ShopifyLocalization string
 }
 
 // Options controls query shaping and product-to-card mapping for a search.
@@ -127,8 +135,8 @@ func buildSuggestURL(opts Options) (string, error) {
 // the raw products. Transient rate-limit/5xx responses are retried on the same
 // transport, honoring Retry-After when Shopify provides it. Persistent failures
 // are reported as errors so the caller can fall back to another transport.
-func fetchProducts(ctx context.Context, client *http.Client, apiURL string) ([]Product, error) {
-	body, err := doSuggestGETWithRetry(ctx, client, apiURL)
+func fetchProducts(ctx context.Context, client *http.Client, apiURL string, reqOpts suggestRequestOpts) ([]Product, error) {
+	body, err := doSuggestGETWithRetry(ctx, client, apiURL, reqOpts)
 	if err != nil {
 		return nil, err
 	}
