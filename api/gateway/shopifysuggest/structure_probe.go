@@ -23,7 +23,7 @@ func ProbeSuggestStructure(ctx context.Context, opts Options) error {
 
 	var lastErr error
 	for _, attempt := range buildSearchAttempts() {
-		body, err := doSuggestGETWithRetry(ctx, attempt.client, apiURL)
+		body, err := doSuggestGETWithRetry(ctx, attempt.client, apiURL, suggestRequestOptsFromConfig(opts.Config))
 		if err != nil {
 			lastErr = annotateSuggestAttemptError(1, attempt.strategy, err)
 			continue

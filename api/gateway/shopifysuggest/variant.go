@@ -40,15 +40,13 @@ type productVariant struct {
 // product's variants (name, set, image, URL); the variant supplies price,
 // stock, condition, and foil.
 //
-// If the detail request fails, the predictive-search card is returned as a
-// resilience fallback so a transient upstream error does not drop the store
-// from results. That fallback price is the predictive-search price_min, which
-// is the pre-existing (pre-resolution) behavior.
+// If the detail request fails, the product is omitted so a misleading
+// predictive-search price_min is never shown to users.
 func resolveVariantCards(ctx context.Context, client *http.Client, cfg Config, product Product, base gateway.Card) []gateway.Card {
-	detail, err := fetchProductDetail(ctx, client, cfg.BaseURL, product.Handle)
+	detail, err := fetchProductDetail(ctx, client, cfg, product.Handle)
 	if err != nil {
 		log.Printf("shopifysuggest: variant resolution failed for %s [%s]: %v", cfg.StoreName, product.Handle, err)
-		return []gateway.Card{base}
+		return nil
 	}
 
 	cards := make([]gateway.Card, 0, len(detail.Variants))
@@ -72,18 +70,18 @@ func resolveVariantCards(ctx context.Context, client *http.Client, cfg Config, p
 // fetchProductDetail retrieves and decodes a Shopify product JSON document for
 // the given handle using the supplied client (which carries whichever transport
 // won the suggest fallback).
-func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, handle string) (productDetail, error) {
+func fetchProductDetail(ctx context.Context, client *http.Client, cfg Config, handle string) (productDetail, error) {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
 		return productDetail{}, fmt.Errorf("shopifysuggest: empty product handle")
 	}
 
-	base, err := url.Parse(strings.TrimSpace(baseURL))
+	base, err := url.Parse(strings.TrimSpace(cfg.BaseURL))
 	if err != nil {
-		return productDetail{}, fmt.Errorf("shopifysuggest: invalid base URL %q: %w", baseURL, err)
+		return productDetail{}, fmt.Errorf("shopifysuggest: invalid base URL %q: %w", cfg.BaseURL, err)
 	}
 	if base.Host == "" {
-		return productDetail{}, fmt.Errorf("shopifysuggest: invalid base URL %q: missing host", baseURL)
+		return productDetail{}, fmt.Errorf("shopifysuggest: invalid base URL %q: missing host", cfg.BaseURL)
 	}
 
 	// Preserve the base URL's scheme and host; only the path identifies the
@@ -93,7 +91,7 @@ func fetchProductDetail(ctx context.Context, client *http.Client, baseURL, handl
 	detailURL.RawQuery = ""
 	detailURL.Fragment = ""
 
-	body, err := doSuggestGETWithRetry(ctx, client, detailURL.String())
+	body, err := doSuggestGETWithRetry(ctx, client, detailURL.String(), suggestRequestOptsFromConfig(cfg))
 	if err != nil {
 		return productDetail{}, err
 	}

@@ -36,7 +36,7 @@ func TestFetchProductsRateLimited(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := fetchProducts(context.Background(), srv.Client(), srv.URL)
+	_, err := fetchProducts(context.Background(), srv.Client(), srv.URL, suggestRequestOpts{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "429")
 	require.Equal(t, int32(suggestRetryMaxAttempts), calls.Load())
@@ -49,7 +49,7 @@ func TestFetchProductsSuccess(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	products, err := fetchProducts(context.Background(), srv.Client(), srv.URL)
+	products, err := fetchProducts(context.Background(), srv.Client(), srv.URL, suggestRequestOpts{})
 	require.NoError(t, err)
 	require.Len(t, products, 1)
 	require.Equal(t, "Opt", products[0].Title)
@@ -63,7 +63,7 @@ func TestFetchProductsSuccessGzip(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	products, err := fetchProducts(context.Background(), srv.Client(), srv.URL)
+	products, err := fetchProducts(context.Background(), srv.Client(), srv.URL, suggestRequestOpts{})
 	require.NoError(t, err)
 	require.Len(t, products, 1)
 	require.Equal(t, "Opt", products[0].Title)

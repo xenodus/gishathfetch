@@ -42,11 +42,20 @@ func isRetriableSuggestStatus(status int) bool {
 	return ok
 }
 
+// suggestRequestOpts configures outbound suggest and product-JSON GET requests.
+type suggestRequestOpts struct {
+	shopifyLocalization string
+}
+
+func suggestRequestOptsFromConfig(cfg Config) suggestRequestOpts {
+	return suggestRequestOpts{shopifyLocalization: cfg.ShopifyLocalization}
+}
+
 // doSuggestGETWithRetry sends a GET request, retrying transient rate-limit/5xx
 // responses and network errors with jittered exponential backoff bounded by
 // ctx. Each send uses a fresh User-Agent. On success it returns the response
 // body. On failure it returns the last observed error.
-func doSuggestGETWithRetry(ctx context.Context, client *http.Client, requestURL string) ([]byte, error) {
+func doSuggestGETWithRetry(ctx context.Context, client *http.Client, requestURL string, reqOpts suggestRequestOpts) ([]byte, error) {
 	var lastErr error
 
 	for attempt := 0; attempt < suggestRetryMaxAttempts; attempt++ {
@@ -61,6 +70,9 @@ func doSuggestGETWithRetry(ctx context.Context, client *http.Client, requestURL 
 			PageURL: pageURL,
 		}); err != nil {
 			return nil, err
+		}
+		if reqOpts.shopifyLocalization != "" {
+			req.AddCookie(&http.Cookie{Name: "localization", Value: reqOpts.shopifyLocalization})
 		}
 
 		resp, err := client.Do(req)
