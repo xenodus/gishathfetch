@@ -2,12 +2,14 @@ package binderpos
 
 import (
 	"time"
+
+	"mtg-price-checker-sg/pkg/config"
 )
 
 const (
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
-	binderposAttemptTimeout = 10 * time.Second
+	binderposAttemptTimeout = config.SearchAttemptTimeout
 
 	// binderposDecklistMaxAttempts bounds how many times a single decklist call
 	// is sent (initial try plus retries) when the shared portal host responds

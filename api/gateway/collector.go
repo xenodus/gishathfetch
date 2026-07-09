@@ -245,7 +245,7 @@ func configureRequestOptimizations(c *colly.Collector, enforceDedicatedProxyLeas
 // Base collector defaults used by all optimized collectors.
 func applyCollectorDefaults(c *colly.Collector) {
 	c.DisableCookies()
-	c.SetRequestTimeout(config.PerSiteTimeout)
+	c.SetRequestTimeout(config.SearchAttemptTimeout)
 }
 
 // Dedicated proxy lease lifecycle helpers.

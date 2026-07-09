@@ -52,6 +52,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	var cards []gateway.Card
 
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
+	c.SetRequestTimeout(config.AgoraSearchAttemptTimeout)
 
 	c.OnHTML("div#store_listingcontainer", func(e *colly.HTMLElement) {
 		e.ForEach("div.store-item", func(_ int, el *colly.HTMLElement) {

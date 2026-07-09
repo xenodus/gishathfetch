@@ -9,7 +9,9 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Per-store deadline | 20s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. |
-| Colly request timeout (default scrapers) | 20s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.PerSiteTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
+| Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step, Shopify suggest transport, and default colly scrape request. |
+| Agora per-attempt timeout | 10s | `config.AgoraSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/agora/search.go` | Agora keeps a longer single-scrape cap. |
+| Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
 | BinderPOS store concurrency | 12 | `binderposMaxConcurrent` in `api/controller/search.go` | Semaphore limits how many binderpos-backed shops run at once. Non-binderpos stores are not limited by this gate. |
@@ -46,14 +48,14 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **api-direct** → 3) **scrap-dedicated** → 4) **scrap-direct** → 5) **api-dynamic** → 6) **scrap-dynamic** | **10s** per step: `binderposAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same `binderposAttemptTimeout`. |
-| `shopifyDomain` **empty** or **`ScrapOnly`** | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps) | **10s** per step (same constant). No API attempts. |
+| `shopifyDomain` **non-empty** (normal) | 1) **api-dedicated** → 2) **api-direct** → 3) **scrap-dedicated** → 4) **scrap-direct** → 5) **api-dynamic** → 6) **scrap-dynamic** | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same constant. |
+| `shopifyDomain` **empty** or **`ScrapOnly`** | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps) | **5s** per step (same constant). No API attempts. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | **api-dedicated** proxy selection (storefront HTTP client) | Round-robin | `nextBinderposStorefrontProxyURL` + `binderposDedicatedProxySeq` in `api/gateway/binderpos/storefront_client.go` | When `UseLeasedDedicatedProxy` is **false** (default in `api/pkg/config/config.go`), each storefront API call cycles **proxy₁ → … → proxyₙ** then repeats, using all URLs from `GetDedicatedProxyURLs()`. When `UseLeasedDedicatedProxy` is **true**, selection is unchanged: `LeaseDedicatedProxyURL` from the dedicated pool. |
 | **api-dynamic** proxy selection (storefront HTTP client) | Fixed env URL | `searchByStorefrontAPIDynamic` in `api/gateway/binderpos/storefront_client.go` | Uses `DYNAMIC_PROXY` as the authenticated proxy URL for the final BinderPOS API fallback attempt. |
-| Colly for BinderPOS scrapes | 10s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Tighter than generic `PerSiteTimeout` (20s) for binderpos scrape collectors. |
+| Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
 | “Retries” | N/A (sequential fallbacks) | `searchWithFallback` | Stops on first **success**; returns last error if all attempts fail. This is **not** exponential backoff retry of a single request. |
 
 ---
