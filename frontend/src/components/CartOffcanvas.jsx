@@ -23,8 +23,33 @@ const CartOffcanvas = ({
     }
   };
 
+  const displayedCart = useMemo(() => {
+    const withIndex = cart.map((card, index) => ({
+      ...card,
+      originalIndex: index,
+    }));
+
+    if (sortOption === "name-asc") {
+      return [...withIndex].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, {
+          sensitivity: "base",
+        }),
+      );
+    }
+
+    if (sortOption === "name-desc") {
+      return [...withIndex].sort((a, b) =>
+        (b.name || "").localeCompare(a.name || "", undefined, {
+          sensitivity: "base",
+        }),
+      );
+    }
+
+    return withIndex;
+  }, [cart, sortOption]);
+
   const groupedCart = useMemo(() => {
-    if (sortOption === "default") return null;
+    if (sortOption !== "store") return null;
 
     const groups = {};
     cart.forEach((card, index) => {
@@ -61,6 +86,8 @@ const CartOffcanvas = ({
               size="sm"
             >
               <option value="default">Saved Order</option>
+              <option value="name-asc">Card Name Asc</option>
+              <option value="name-desc">Card Name Desc</option>
               <option value="store">Store</option>
             </Form.Select>
           </Form.Group>
@@ -68,14 +95,15 @@ const CartOffcanvas = ({
 
         {cart.length > 0 ? (
           <>
-            {sortOption === "default" && (
+            {(sortOption === "default" ||
+              sortOption === "name-asc" ||
+              sortOption === "name-desc") && (
               <div className="row">
-                {cart.map((card, i) => (
+                {displayedCart.map((card) => (
                   <Card
-                    // biome-ignore lint/suspicious/noArrayIndexKey: Cart items do not have unique IDs
-                    key={i}
+                    key={card.originalIndex}
                     card={card}
-                    index={i}
+                    index={card.originalIndex}
                     isCart={true}
                     isCardInCart={isCardInCart}
                     removeFromCart={removeFromCart}
