@@ -182,7 +182,7 @@ before being returned.
 1. The handler parses `s` (the search string, minimum 3 characters) and an
    optional `lgs` filter (comma-separated store names; empty means all stores).
 2. The controller instantiates each selected store and runs **one goroutine per
-   store**, each bounded by a 20s per-site timeout (`config.PerSiteTimeout`).
+   store**, each bounded by a 16s per-site timeout (`config.PerSiteTimeout`).
 3. Each store's results are merged into a shared aggregator. A per-store failure
    is recorded but never blocks the others, so a search returns whatever
    succeeded (partial success).

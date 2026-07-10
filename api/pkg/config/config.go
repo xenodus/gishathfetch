@@ -19,7 +19,7 @@ const (
 	EnvProd  = "prod"
 	EnvLocal = "local"
 	UseProxy         = true
-	PerSiteTimeout   = 20 * time.Second
+	PerSiteTimeout   = 16 * time.Second
 	// SearchAttemptTimeout bounds a single search strategy attempt (BinderPOS step,
 	// Shopify suggest transport, or default colly scrape).
 	SearchAttemptTimeout = 5 * time.Second
