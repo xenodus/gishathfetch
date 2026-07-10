@@ -106,27 +106,23 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
 
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		inStockCards, storeErrors, searchErr = searchFunc(ctx, controller.SearchInput{
 			SearchString: searchString,
 			Lgs:          lgs,
 		})
-	}()
+	})
 
 	if config.CKPriceLookupEnabled() {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			price, err := lookupCKPriceFunc(ctx, searchString)
 			if err != nil {
 				log.Printf("ck price lookup for [%s]: %v", searchString, err)
 				return
 			}
 			ckPrice = price
-		}()
+		})
 	}
 
 	wg.Wait()

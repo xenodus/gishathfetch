@@ -81,8 +81,8 @@ func buildSafeSearchURL(baseUrl, searchUrlTemplate, searchStr string) string {
 
 	if len(parts) > 1 {
 		qVals := url.Values{}
-		pairs := strings.Split(parts[1], "&")
-		for _, pair := range pairs {
+		pairs := strings.SplitSeq(parts[1], "&")
+		for pair := range pairs {
 			kv := strings.SplitN(pair, "=", 2)
 			if len(kv) == 2 {
 				val := kv[1]
@@ -319,7 +319,7 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 			addNowAttrs := el.ChildAttrs("div.addNow", "onclick")
 
 			if len(addNowTexts) > 0 {
-				for i := 0; i < len(addNowTexts); i++ {
+				for i := range addNowTexts {
 					isInstock = addNowTexts[i] != ""
 
 					if isInstock {

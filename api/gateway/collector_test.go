@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -324,13 +325,7 @@ func TestRandomBrowserUserAgent(t *testing.T) {
 		t.Fatalf("expected random browser user-agent to be non-empty")
 	}
 
-	found := false
-	for _, candidate := range browserUserAgents {
-		if got == candidate {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(browserUserAgents, got)
 	if !found {
 		t.Fatalf("expected user-agent to be chosen from browserUserAgents list, got %q", got)
 	}

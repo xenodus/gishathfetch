@@ -94,7 +94,7 @@ func TestParseRetryAfter(t *testing.T) {
 }
 
 func TestDecklistBackoffDelayIsBoundedAndGrows(t *testing.T) {
-	for attempt := 0; attempt < 6; attempt++ {
+	for attempt := range 6 {
 		d := decklistBackoffDelay(attempt)
 		if d <= 0 {
 			t.Fatalf("attempt %d: expected positive delay, got %s", attempt, d)

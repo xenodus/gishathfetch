@@ -96,7 +96,7 @@ func RequireMoxAndLotusAPIStructure(t *testing.T, ctx context.Context, query str
 // RequireCardsAndCollectionAPIStructure verifies the catalog search API response shape.
 func RequireCardsAndCollectionAPIStructure(t *testing.T, ctx context.Context, baseURL, query string) {
 	t.Helper()
-	requestBody := []byte(fmt.Sprintf(`{"query":{"bool":{"should":[{"simple_query_string":{"query":"%s","fields":["name","setCode","setName"],"default_operator":"AND"}},{"multi_match":{"query":"%s","type":"phrase_prefix","fields":["name","setCode","setName"]}}]}},"post_filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory4":{"filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory.raw":{"terms":{"field":"productCategory.raw","size":50}},"productCategory.raw_count":{"cardinality":{"field":"productCategory.raw"}}}}},"size":20,"sort":[{"quantityOnSale":"desc"}]}`, query, query))
+	requestBody := fmt.Appendf(nil, `{"query":{"bool":{"should":[{"simple_query_string":{"query":"%s","fields":["name","setCode","setName"],"default_operator":"AND"}},{"multi_match":{"query":"%s","type":"phrase_prefix","fields":["name","setCode","setName"]}}]}},"post_filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory4":{"filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory.raw":{"terms":{"field":"productCategory.raw","size":50}},"productCategory.raw_count":{"cardinality":{"field":"productCategory.raw"}}}}},"size":20,"sort":[{"quantityOnSale":"desc"}]}`, query, query)
 	RequireJSONStructure(t, ctx, JSONProbe{
 		Method: "POST",
 		URL:    strings.TrimRight(baseURL, "/") + "/api/catalog/",
@@ -140,7 +140,7 @@ func RequireCardsCentralAPIStructure(t *testing.T, ctx context.Context, baseURL,
 // RequireTCGMarketplaceAPIStructure verifies the TCG Marketplace advanced search API shape.
 func RequireTCGMarketplaceAPIStructure(t *testing.T, ctx context.Context, accessToken, query string) {
 	t.Helper()
-	requestBody := []byte(fmt.Sprintf(`{"access_token":%q,"name":%q,"category":3,"order":"name_asc"}`, accessToken, query))
+	requestBody := fmt.Appendf(nil, `{"access_token":%q,"name":%q,"category":3,"order":"name_asc"}`, accessToken, query)
 	RequireJSONStructure(t, ctx, JSONProbe{
 		Method: "POST",
 		URL:    "https://thetcgmarketplace.com:3501/encoder/advancedsearch",

@@ -28,18 +28,18 @@ type response struct {
 	Data   struct {
 		Message string `json:"message"`
 		Data    []struct {
-			Name                  string      `json:"name"`
-			Setcode               string      `json:"setcode"`
-			Setname               string      `json:"setname"`
-			Image                 string      `json:"image"`
-			Language              string      `json:"language"`
-			CrdFoilType           interface{} `json:"crd_foil_type"`
-			Rarity                string      `json:"rarity"`
-			Available             interface{} `json:"available"`
-			From                  interface{} `json:"from"`
-			NonFoilReferencePrice interface{} `json:"non_foil_reference_price"`
-			FoilReferencePrice    interface{} `json:"foil_reference_price"`
-			URL                   string      `json:"url"`
+			Name                  string `json:"name"`
+			Setcode               string `json:"setcode"`
+			Setname               string `json:"setname"`
+			Image                 string `json:"image"`
+			Language              string `json:"language"`
+			CrdFoilType           any    `json:"crd_foil_type"`
+			Rarity                string `json:"rarity"`
+			Available             any    `json:"available"`
+			From                  any    `json:"from"`
+			NonFoilReferencePrice any    `json:"non_foil_reference_price"`
+			FoilReferencePrice    any    `json:"foil_reference_price"`
+			URL                   string `json:"url"`
 		} `json:"data"`
 	} `json:"data"`
 	Meta struct {
