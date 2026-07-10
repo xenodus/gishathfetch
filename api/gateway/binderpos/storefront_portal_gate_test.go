@@ -10,7 +10,7 @@ import (
 
 func TestAcquireBinderposPortalSlotLimitsConcurrency(t *testing.T) {
 	releases := make([]func(), 0, binderposPortalMaxConcurrent)
-	for i := 0; i < binderposPortalMaxConcurrent; i++ {
+	for i := range binderposPortalMaxConcurrent {
 		release, err := acquireBinderposPortalSlot(context.Background())
 		if err != nil {
 			t.Fatalf("unexpected error acquiring slot %d: %v", i, err)

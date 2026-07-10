@@ -43,7 +43,7 @@ func isRetriableDecklistStatus(status int) bool {
 func doDecklistRequestWithRetry(ctx context.Context, client *http.Client, newRequest func() (*http.Request, error)) (*http.Response, error) {
 	var lastErr error
 
-	for attempt := 0; attempt < binderposDecklistMaxAttempts; attempt++ {
+	for attempt := range binderposDecklistMaxAttempts {
 		req, err := newRequest()
 		if err != nil {
 			return nil, err

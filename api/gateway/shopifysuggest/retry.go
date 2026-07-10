@@ -58,7 +58,7 @@ func suggestRequestOptsFromConfig(cfg Config) suggestRequestOpts {
 func doSuggestGETWithRetry(ctx context.Context, client *http.Client, requestURL string, reqOpts suggestRequestOpts) ([]byte, error) {
 	var lastErr error
 
-	for attempt := 0; attempt < suggestRetryMaxAttempts; attempt++ {
+	for attempt := range suggestRetryMaxAttempts {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 		if err != nil {
 			return nil, err

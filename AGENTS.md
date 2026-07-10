@@ -53,7 +53,7 @@ For any PR that includes UI changes:
 
 ### Go version requirement
 
-The project requires Go 1.26.3 (per `api/go.mod`). The update script installs it to `/usr/local/go`. You must have `/usr/local/go/bin` in your PATH:
+The project requires Go 1.26.5 (per `api/go.mod`). The update script installs it to `/usr/local/go`. You must have `/usr/local/go/bin` in your PATH:
 
 ```bash
 export PATH="/usr/local/go/bin:$PATH"

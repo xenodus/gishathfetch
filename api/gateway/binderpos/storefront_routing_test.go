@@ -37,7 +37,7 @@ func TestShouldStartWithDecklist_SplitsConsecutiveCallsEvenly(t *testing.T) {
 
 	const calls = 10
 	decklistCount := 0
-	for i := 0; i < calls; i++ {
+	for range calls {
 		if shouldStartWithDecklist() {
 			decklistCount++
 		}

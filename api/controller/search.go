@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
 	// "mtg-price-checker-sg/gateway/arcanesanctum"
@@ -139,8 +140,6 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	start := time.Now()
 
 	for shopName, lgs := range shops {
-		shopName := shopName
-		lgs := lgs
 		wg.Go(func() {
 			searchShop(ctx, searchString, shopName, lgs, binderposGate, aggregator)
 		})
@@ -218,9 +217,7 @@ func (f *fetchResultAggregator) snapshot() ([]gateway.Card, map[string]error, []
 
 	cards := append([]gateway.Card(nil), f.cards...)
 	siteErrors := make(map[string]error, len(f.siteErrors))
-	for shopName, err := range f.siteErrors {
-		siteErrors[shopName] = err
-	}
+	maps.Copy(siteErrors, f.siteErrors)
 	discordErrorMessages := append([]string(nil), f.discordErrorMessages...)
 
 	return cards, siteErrors, discordErrorMessages
@@ -361,13 +358,13 @@ func parseSearchErrorMessage(message, searchString string) (shopName, details st
 
 	withoutPrefix := strings.TrimPrefix(message, prefix)
 	const shopSuffix = "] for ["
-	shopSuffixIndex := strings.Index(withoutPrefix, shopSuffix)
-	if shopSuffixIndex == -1 {
+	before, after, ok0 := strings.Cut(withoutPrefix, shopSuffix)
+	if !ok0 {
 		return "", "", false
 	}
 
-	shopName = withoutPrefix[:shopSuffixIndex]
-	withoutShop := withoutPrefix[shopSuffixIndex+len(shopSuffix):]
+	shopName = before
+	withoutShop := after
 
 	searchSuffix := fmt.Sprintf("%s]: ", searchString)
 	if !strings.HasPrefix(withoutShop, searchSuffix) {

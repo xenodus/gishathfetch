@@ -36,10 +36,10 @@ type dynamoRecord struct {
 }
 
 type syncMetadataRecord struct {
-	NameKey       string `dynamodbav:"nameKey"`
-	CardName      string `dynamodbav:"cardName"`
-	SyncedAt      string `dynamodbav:"syncedAt"`
-	ListingCount  int    `dynamodbav:"listingCount"`
+	NameKey      string `dynamodbav:"nameKey"`
+	CardName     string `dynamodbav:"cardName"`
+	SyncedAt     string `dynamodbav:"syncedAt"`
+	ListingCount int    `dynamodbav:"listingCount"`
 }
 
 type DynamoDBStore struct {
@@ -123,10 +123,7 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 	})
 
 	for start := 0; start < len(writeRequests); start += batchWriteLimit {
-		end := start + batchWriteLimit
-		if end > len(writeRequests) {
-			end = len(writeRequests)
-		}
+		end := min(start+batchWriteLimit, len(writeRequests))
 		batch := writeRequests[start:end]
 		if err := s.writeBatch(ctx, batch); err != nil {
 			return "", err
