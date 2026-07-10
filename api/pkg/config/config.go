@@ -19,7 +19,12 @@ const (
 	EnvProd  = "prod"
 	EnvLocal = "local"
 	UseProxy         = true
-	PerSiteTimeout   = 20 * time.Second
+	PerSiteTimeout   = 16 * time.Second
+	// SearchAttemptTimeout bounds a single search strategy attempt (BinderPOS step,
+	// Shopify suggest transport, or default colly scrape).
+	SearchAttemptTimeout = 5 * time.Second
+	// AgoraSearchAttemptTimeout is the per-attempt cap for Agora Hobby only.
+	AgoraSearchAttemptTimeout = 10 * time.Second
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
 	// dynamic-proxy fallback attempts, which BinderPOS now reserves for the
 	// final fallback after dedicated and direct/no-proxy attempts.

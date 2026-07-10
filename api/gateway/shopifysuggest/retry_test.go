@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"mtg-price-checker-sg/pkg/config"
 )
 
 func TestIsRetriableSuggestStatus(t *testing.T) {
@@ -98,7 +100,7 @@ func TestDoSuggestGETWithRetry_SucceedsAfter429WithRetryAfter(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.SearchAttemptTimeout)
 	defer cancel()
 
 	body, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
@@ -125,7 +127,7 @@ func TestDoSuggestGETWithRetry_SucceedsAfterTransient503(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.SearchAttemptTimeout)
 	defer cancel()
 
 	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
@@ -145,7 +147,7 @@ func TestDoSuggestGETWithRetry_ExhaustsRetriesOnPersistent429(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.SearchAttemptTimeout)
 	defer cancel()
 
 	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})
@@ -171,7 +173,7 @@ func TestDoSuggestGETWithRetry_SendsShopifyLocalizationCookie(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.SearchAttemptTimeout)
 	defer cancel()
 
 	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{
@@ -193,7 +195,7 @@ func TestDoSuggestGETWithRetry_DoesNotRetryNonRetriableStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), suggestAttemptTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), config.SearchAttemptTimeout)
 	defer cancel()
 
 	_, err := doSuggestGETWithRetry(ctx, server.Client(), server.URL, suggestRequestOpts{})

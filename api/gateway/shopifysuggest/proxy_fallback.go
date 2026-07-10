@@ -6,15 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"sync/atomic"
-	"time"
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/config"
 )
-
-// suggestAttemptTimeout bounds a single suggest endpoint attempt so a slow or
-// throttling upstream cannot stall the whole fallback chain.
-const suggestAttemptTimeout = 10 * time.Second
 
 // shopifySuggestDedicatedProxySeq advances once per dedicated-proxy suggest
 // attempt so traffic round-robins evenly across the configured dedicated
@@ -64,7 +60,7 @@ func buildSearchAttempts() []searchAttempt {
 	attempts := []searchAttempt{
 		{
 			strategy: "direct",
-			client:   &http.Client{Timeout: suggestAttemptTimeout},
+			client:   &http.Client{Timeout: config.SearchAttemptTimeout},
 		},
 	}
 
@@ -122,7 +118,7 @@ func newProxyClient(proxyURL string) (*http.Client, error) {
 	}
 
 	return &http.Client{
-		Timeout: suggestAttemptTimeout,
+		Timeout: config.SearchAttemptTimeout,
 		Transport: &http.Transport{
 			Proxy: http.ProxyURL(parsedProxyURL),
 		},
