@@ -25,12 +25,14 @@ func NewLGS() gateway.LGS {
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	return shopifysuggest.Search(ctx, shopifysuggest.Options{
 		Config: shopifysuggest.Config{
-			StoreName: s.Name,
-			BaseURL:   s.BaseUrl,
+			StoreName:           s.Name,
+			BaseURL:             s.BaseUrl,
+			ShopifyLocalization: shopifysuggest.ShopifyLocalizationSingapore,
 		},
-		SearchStr:   searchStr,
-		BuildQuery:  shopifysuggest.FyendalQuery,
-		QueryValues: shopifysuggest.FyendalQueryValues,
-		MapProduct:  shopifysuggest.MapFyendalProduct,
+		SearchStr:       searchStr,
+		BuildQuery:      shopifysuggest.FyendalQuery,
+		QueryValues:     shopifysuggest.FyendalQueryValues,
+		MapProduct:      shopifysuggest.MapFyendalProduct,
+		ResolveVariants: true,
 	})
 }

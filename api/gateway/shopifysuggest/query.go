@@ -25,8 +25,9 @@ func BinderposQueryValues(searchStr string) url.Values {
 // results at Shopify's 10-product limit.
 func FyendalQueryValues(searchStr string) url.Values {
 	return url.Values{
-		"q":                {searchStr},
-		"resources[type]":  {"product"},
+		"q": {searchStr},
+		"resources[type]": {"product"},
+		"resources[options][unavailable_products]": {"last"},
 		"resources[limit]": {predictiveSearchLimit},
 	}
 }
