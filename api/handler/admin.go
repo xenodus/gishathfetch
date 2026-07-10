@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -322,10 +323,5 @@ func applyAdminCORSHeaders(apiResponse *events.APIGatewayProxyResponse, origin s
 }
 
 func isAllowedOrigin(origin string) bool {
-	for _, allowed := range config.GetAllowedOrigins() {
-		if origin == allowed {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(config.GetAllowedOrigins(), origin)
 }
