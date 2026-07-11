@@ -65,8 +65,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When `DEDICATED_PROXY_*` is configured, each search picks one dedicated proxy uniformly at random. |
-| Colly scrapers (Agora) | Random dedicated proxy | `NewOptimizedCollectorNoRetry` in `api/gateway/agora/search.go` | Uses `applyInitialProxy` via `configureRequestOptimizations`. |
-| `net/http` scrapers / APIs | Random dedicated proxy | `NewOutboundHTTPClient` in `api/gateway/outbound_get.go` | Used by Cards Central, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace instead of `http.DefaultClient`. |
+| `net/http` scrapers / APIs | Random dedicated proxy | `NewOutboundHTTPClient` in `api/gateway/outbound_get.go` | Used by Agora, Cards Central, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace instead of `http.DefaultClient`. |
 
 ---
 

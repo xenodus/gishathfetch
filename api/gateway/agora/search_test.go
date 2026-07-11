@@ -2,13 +2,44 @@ package agora
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"testing"
 
 	"mtg-price-checker-sg/gateway/gatewaytest"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_ParseStoreItemSkipsOutOfStock(t *testing.T) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(outOfStockStoreItemHTML))
+	require.NoError(t, err)
+
+	apiURL, err := url.Parse(StoreBaseURL + StoreSearchPath + "?category=mtg&searchfield=Abrade")
+	require.NoError(t, err)
+
+	card, ok := parseStoreItem(doc.Find("div.store-item").First(), StoreName, apiURL, "Abrade")
+	require.False(t, ok)
+	require.Empty(t, card.Name)
+}
+
+func Test_ParseStoreItemKeepsInStock(t *testing.T) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(inStockStoreItemHTML))
+	require.NoError(t, err)
+
+	apiURL, err := url.Parse(StoreBaseURL + StoreSearchPath + "?category=mtg&searchfield=Abrade")
+	require.NoError(t, err)
+
+	card, ok := parseStoreItem(doc.Find("div.store-item").First(), StoreName, apiURL, "Abrade")
+	require.True(t, ok)
+	require.Equal(t, "Abrade FOIL", card.Name)
+	require.True(t, card.InStock)
+	require.True(t, card.IsFoil)
+	require.Equal(t, 2.0, card.Price)
+	require.Equal(t, "[DMU]", card.ExtraInfo[0])
+	require.Contains(t, card.Url, "utm_source=")
+}
 
 func Test_Search(t *testing.T) {
 	s := NewLGS()
