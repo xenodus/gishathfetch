@@ -71,12 +71,12 @@ func TestGetDedicatedProxyReturnsEmptyStringsWhenEnvVarsAreEmpty(t *testing.T) {
 	}
 }
 
-func TestGetDedicatedProxyParsesPartialSegments(t *testing.T) {
-	// Slots 1–3: partial pipe segments; 4–7: unset (empty string).
+func TestGetDedicatedProxyRejectsPartialSegments(t *testing.T) {
 	raw := []string{
-		"host-1",             // missing port/username/password
-		"host-2|2222",        // missing username/password
-		"host-3|3333|user-3", // missing password
+		"host-1",
+		"host-2|2222",
+		"host-3|3333|user-3",
+		"host-4|4444|user-4|pass-4|extra",
 		"", "", "", "",
 	}
 	for i, v := range raw {
@@ -86,20 +86,9 @@ func TestGetDedicatedProxyParsesPartialSegments(t *testing.T) {
 	got := GetDedicatedProxy()
 	require.Len(t, got, 7)
 
-	require.Equal(t, "host-1", got[0].Host)
-	require.Equal(t, "", got[0].Port)
-	require.Equal(t, "", got[0].Username)
-	require.Equal(t, "", got[0].Password)
-
-	require.Equal(t, "host-2", got[1].Host)
-	require.Equal(t, "2222", got[1].Port)
-	require.Equal(t, "", got[1].Username)
-	require.Equal(t, "", got[1].Password)
-
-	require.Equal(t, "host-3", got[2].Host)
-	require.Equal(t, "3333", got[2].Port)
-	require.Equal(t, "user-3", got[2].Username)
-	require.Equal(t, "", got[2].Password)
+	for i := 0; i < 4; i++ {
+		require.Equal(t, DedicatedProxy{}, got[i], "slot %d should reject non-4-segment config", i+1)
+	}
 }
 
 func TestBuildProxyURL(t *testing.T) {
