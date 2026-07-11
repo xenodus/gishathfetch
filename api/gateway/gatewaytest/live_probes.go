@@ -39,10 +39,11 @@ func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, 
 	pageURL, err := url.Parse(probeURL)
 	require.NoError(t, err)
 	RequireHTMLStructure(t, ctx, HTMLProbe{
-		URL:              probeURL,
-		PrimarySelector:  "ul.product-grid li",
-		FallbackSelector: "ul.product-grid",
-		PageURL:          pageURL,
+		URL:                probeURL,
+		PrimarySelector:    "ul.product-grid li",
+		FallbackSelector:   "ul.product-grid",
+		PageURL:            pageURL,
+		ShopifySGDCurrency: true,
 	})
 }
 

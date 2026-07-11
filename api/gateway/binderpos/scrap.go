@@ -52,6 +52,7 @@ func (i impl) scrapWithCollectorFactory(
 func newBinderposCollector(ctx context.Context) (*colly.Collector, error) {
 	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
+	configureShopifyStorefrontCollector(c)
 	return c, nil
 }
 
@@ -61,13 +62,24 @@ func newDynamicNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
 		return nil, err
 	}
 	c.SetRequestTimeout(binderposAttemptTimeout)
+	configureShopifyStorefrontCollector(c)
 	return c, nil
 }
 
 func newDirectNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
+	configureShopifyStorefrontCollector(c)
 	return c, nil
+}
+
+func configureShopifyStorefrontCollector(c *colly.Collector) {
+	c.OnRequest(func(r *colly.Request) {
+		if r == nil || r.Headers == nil {
+			return
+		}
+		gateway.ApplyShopifySGDCurrencyCookie(r.Headers)
+	})
 }
 
 // buildSafeSearchURL safely constructs the URL using url.URL and url.Values to isolate user string input.
