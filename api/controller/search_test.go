@@ -348,7 +348,7 @@ func TestBuildStoreErrors_IncludesHTTPStatusCode(t *testing.T) {
 		"Arcane Sanctum": fmt.Errorf(
 			"attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
 		),
-		"Shopify Store": fmt.Errorf("shopifysuggest: unexpected status 429"),
+		"Cards Central": fmt.Errorf("unexpected status for Cards Central: 429 Too Many Requests"),
 	})
 
 	if len(storeErrors) != 2 {
@@ -368,9 +368,9 @@ func TestBuildStoreErrors_IncludesHTTPStatusCode(t *testing.T) {
 		t.Fatalf("expected enriched error message, got %q", arcane.Error)
 	}
 
-	shopify := byStore["Shopify Store"]
-	if shopify.StatusCode != http.StatusTooManyRequests {
-		t.Fatalf("expected status 429 for Shopify Store, got %d", shopify.StatusCode)
+	cardsCentral := byStore["Cards Central"]
+	if cardsCentral.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("expected status 429 for Cards Central, got %d", cardsCentral.StatusCode)
 	}
 }
 

@@ -18,7 +18,7 @@ func TestFormatHTTPStatus(t *testing.T) {
 
 func TestExtractHTTPStatusCode(t *testing.T) {
 	tests := map[string]int{
-		"shopifysuggest: unexpected status 429":                 429,
+		"unexpected status 429":                                 429,
 		"binderpos decklist request failed status=503 body=...": 503,
 		"unexpected status for Cards Central: 503 Service Unavailable": 503,
 		"403 Forbidden (proxy_mode=direct proxy=none)":            403,
@@ -39,10 +39,10 @@ func TestEnrichErrorWithHTTPStatus(t *testing.T) {
 	}
 
 	alreadyHasCode := EnrichErrorWithHTTPStatus(
-		errors.New("shopifysuggest: unexpected status 429"),
+		errors.New("unexpected status 429"),
 		http.StatusTooManyRequests,
 	)
-	if got := alreadyHasCode.Error(); got != "shopifysuggest: unexpected status 429" {
+	if got := alreadyHasCode.Error(); got != "unexpected status 429" {
 		t.Fatalf("expected existing status to remain unchanged, got %q", got)
 	}
 }

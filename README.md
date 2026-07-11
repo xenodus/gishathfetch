@@ -199,16 +199,12 @@ before being returned.
   the same `portal.binderpos.com`, so this extra gate prevents bursts that
   trigger 429/503 throttling.
 
-### Three kinds of stores
+### Two kinds of stores
 
 **Non-BinderPOS stores** (e.g. Agora, Cards Central, Cards & Collections,
 Dueller's Point, 5 Mana, Mox & Lotus, TCG Marketplace) each implement a single
 bespoke `Search` — a custom JSON API call or one HTML scrape — with no
 multi-strategy fallback. On failure the store simply contributes nothing.
-
-**Shopify suggest gateway** (`api/gateway/shopifysuggest/`) implements predictive
-search (`/search/suggest.json`) with store-specific query and mapping helpers.
-It remains available for reuse but is not wired to any live store at present.
 
 **BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one
