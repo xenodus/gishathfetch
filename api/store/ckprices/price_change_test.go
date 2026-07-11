@@ -39,6 +39,38 @@ func TestComputePriceChangePercent(t *testing.T) {
 	})
 }
 
+func TestPriceChangesByPercentFromListings(t *testing.T) {
+	percent := func(value int) *int {
+		return &value
+	}
+	listing := func(nameKey string, change int) PriceChangeListing {
+		return PriceChangeListing{
+			NameKey: nameKey,
+			Listing: cardkingdom.Listing{
+				CardName:           nameKey,
+				PriceChangePercent: percent(change),
+			},
+		}
+	}
+
+	listings := []PriceChangeListing{
+		listing("a", 30),
+		listing("b", 10),
+		listing("c", -30),
+		listing("d", -10),
+	}
+
+	bottom := priceChangesByPercentFromListings(listings, true, 2)
+	require.Len(t, bottom, 2)
+	require.Equal(t, -30, *bottom[0].PriceChangePercent)
+	require.Equal(t, -10, *bottom[1].PriceChangePercent)
+
+	top := priceChangesByPercentFromListings(listings, false, 2)
+	require.Len(t, top, 2)
+	require.Equal(t, 30, *top[0].PriceChangePercent)
+	require.Equal(t, 10, *top[1].PriceChangePercent)
+}
+
 func TestTopBottomPriceChanges(t *testing.T) {
 	percent := func(value int) *int {
 		return &value

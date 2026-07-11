@@ -71,3 +71,11 @@ func topBottomPriceChanges(listings []PriceChangeListing, limit int) TopBottomPr
 		Bottom: bottom,
 	}
 }
+
+func priceChangesByPercentFromListings(listings []PriceChangeListing, ascending bool, limit int) []PriceChangeListing {
+	rankings := topBottomPriceChanges(listings, limit)
+	if ascending {
+		return rankings.Bottom
+	}
+	return rankings.Top
+}

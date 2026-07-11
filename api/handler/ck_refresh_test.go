@@ -15,6 +15,10 @@ func (m *mockCKRefreshStore) GetByNameKey(_ context.Context, _ string) (*cardkin
 	return nil, nil
 }
 
+func (m *mockCKRefreshStore) GetPriceChangesByPercent(_ context.Context, _ bool, _ int) ([]ckprices.PriceChangeListing, error) {
+	return nil, nil
+}
+
 func (m *mockCKRefreshStore) GetTopBottomPriceChanges(_ context.Context) (*ckprices.TopBottomPriceChanges, error) {
 	return &ckprices.TopBottomPriceChanges{}, nil
 }
