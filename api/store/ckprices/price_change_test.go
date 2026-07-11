@@ -1,6 +1,7 @@
 package ckprices
 
 import (
+	"strconv"
 	"testing"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
@@ -36,6 +37,62 @@ func TestComputePriceChangePercent(t *testing.T) {
 	t.Run("missing previous price", func(t *testing.T) {
 		require.Nil(t, computePriceChangePercent(0, 4.99))
 	})
+}
+
+func TestTopBottomPriceChanges(t *testing.T) {
+	percent := func(value int) *int {
+		return &value
+	}
+	listing := func(nameKey string, change int) PriceChangeListing {
+		return PriceChangeListing{
+			NameKey: nameKey,
+			Listing: cardkingdom.Listing{
+				CardName:           nameKey,
+				PriceChangePercent: percent(change),
+			},
+		}
+	}
+
+	listings := make([]PriceChangeListing, 0, 51)
+	for i := 1; i <= 25; i++ {
+		listings = append(listings, listing("increase-"+strconv.Itoa(i), i))
+	}
+	for i := 1; i <= 25; i++ {
+		listings = append(listings, listing("decrease-"+strconv.Itoa(i), -i))
+	}
+	listings = append(listings, PriceChangeListing{
+		NameKey: "no-change",
+		Listing: cardkingdom.Listing{CardName: "No Change"},
+	})
+
+	rankings := topBottomPriceChanges(listings, PriceChangeRankingLimit)
+
+	require.Len(t, rankings.Top, PriceChangeRankingLimit)
+	require.Equal(t, 25, *rankings.Top[0].PriceChangePercent)
+	require.Equal(t, 6, *rankings.Top[19].PriceChangePercent)
+
+	require.Len(t, rankings.Bottom, PriceChangeRankingLimit)
+	require.Equal(t, -25, *rankings.Bottom[0].PriceChangePercent)
+	require.Equal(t, -6, *rankings.Bottom[19].PriceChangePercent)
+}
+
+func TestPriceChangeListingFromRecord(t *testing.T) {
+	change := 15
+	listing, ok := priceChangeListingFromRecord(dynamoRecord{
+		NameKey:            "lightning bolt",
+		CardName:           "Lightning Bolt",
+		PriceUsd:           1.49,
+		PriceChangePercent: &change,
+	})
+	require.True(t, ok)
+	require.Equal(t, "lightning bolt", listing.NameKey)
+	require.Equal(t, 15, *listing.PriceChangePercent)
+
+	_, ok = priceChangeListingFromRecord(dynamoRecord{NameKey: syncMetadataKey})
+	require.False(t, ok)
+
+	_, ok = priceChangeListingFromRecord(dynamoRecord{NameKey: "new card", CardName: "New Card"})
+	require.False(t, ok)
 }
 
 func TestListingsWithPriceChange(t *testing.T) {

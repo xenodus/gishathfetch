@@ -2,6 +2,8 @@ package ckprices
 
 import (
 	"math"
+	"slices"
+	"strings"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 )
@@ -27,4 +29,45 @@ func listingsWithPriceChange(
 		enriched[nameKey] = listing
 	}
 	return enriched
+}
+
+func topBottomPriceChanges(listings []PriceChangeListing, limit int) TopBottomPriceChanges {
+	if limit <= 0 {
+		limit = PriceChangeRankingLimit
+	}
+
+	changed := make([]PriceChangeListing, 0, len(listings))
+	for _, listing := range listings {
+		if listing.PriceChangePercent == nil {
+			continue
+		}
+		changed = append(changed, listing)
+	}
+
+	top := append([]PriceChangeListing(nil), changed...)
+	slices.SortFunc(top, func(a, b PriceChangeListing) int {
+		if *a.PriceChangePercent != *b.PriceChangePercent {
+			return *b.PriceChangePercent - *a.PriceChangePercent
+		}
+		return strings.Compare(a.NameKey, b.NameKey)
+	})
+	if len(top) > limit {
+		top = top[:limit]
+	}
+
+	bottom := append([]PriceChangeListing(nil), changed...)
+	slices.SortFunc(bottom, func(a, b PriceChangeListing) int {
+		if *a.PriceChangePercent != *b.PriceChangePercent {
+			return *a.PriceChangePercent - *b.PriceChangePercent
+		}
+		return strings.Compare(a.NameKey, b.NameKey)
+	})
+	if len(bottom) > limit {
+		bottom = bottom[:limit]
+	}
+
+	return TopBottomPriceChanges{
+		Top:    top,
+		Bottom: bottom,
+	}
 }

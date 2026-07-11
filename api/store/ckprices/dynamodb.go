@@ -85,17 +85,44 @@ func (s *DynamoDBStore) GetByNameKey(ctx context.Context, nameKey string) (*card
 		return nil, err
 	}
 
-	return &cardkingdom.Listing{
-		CardName:           record.CardName,
-		Edition:            record.Edition,
-		PriceUsd:           record.PriceUsd,
-		PriceChangePercent: record.PriceChangePercent,
-		URL:                record.URL,
-		Quantity:           record.Quantity,
-		IsFoil:             record.IsFoil,
-		UpdatedAt:          record.UpdatedAt,
-		SyncedAt:           record.SyncedAt,
-	}, nil
+	listing, ok := listingFromRecord(record)
+	if !ok {
+		return nil, nil
+	}
+	return &listing, nil
+}
+
+func (s *DynamoDBStore) GetTopBottomPriceChanges(ctx context.Context) (*TopBottomPriceChanges, error) {
+	listings := make([]PriceChangeListing, 0)
+	var exclusiveStartKey map[string]types.AttributeValue
+
+	for {
+		output, err := s.client.Scan(ctx, &dynamodb.ScanInput{
+			TableName:         aws.String(s.tableName),
+			ExclusiveStartKey: exclusiveStartKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		for _, item := range output.Items {
+			var record dynamoRecord
+			if err := attributevalue.UnmarshalMap(item, &record); err != nil {
+				return nil, err
+			}
+			if listing, ok := priceChangeListingFromRecord(record); ok {
+				listings = append(listings, listing)
+			}
+		}
+
+		if len(output.LastEvaluatedKey) == 0 {
+			break
+		}
+		exclusiveStartKey = output.LastEvaluatedKey
+	}
+
+	rankings := topBottomPriceChanges(listings, PriceChangeRankingLimit)
+	return &rankings, nil
 }
 
 func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (string, error) {
@@ -160,6 +187,37 @@ func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, synced
 		UpdatedAt:          listing.UpdatedAt,
 		SyncedAt:           syncedAt,
 	}
+}
+
+func listingFromRecord(record dynamoRecord) (cardkingdom.Listing, bool) {
+	if record.NameKey == syncMetadataKey {
+		return cardkingdom.Listing{}, false
+	}
+	return cardkingdom.Listing{
+		CardName:           record.CardName,
+		Edition:            record.Edition,
+		PriceUsd:           record.PriceUsd,
+		PriceChangePercent: record.PriceChangePercent,
+		URL:                record.URL,
+		Quantity:           record.Quantity,
+		IsFoil:             record.IsFoil,
+		UpdatedAt:          record.UpdatedAt,
+		SyncedAt:           record.SyncedAt,
+	}, true
+}
+
+func priceChangeListingFromRecord(record dynamoRecord) (PriceChangeListing, bool) {
+	if record.NameKey == syncMetadataKey || record.PriceChangePercent == nil {
+		return PriceChangeListing{}, false
+	}
+	listing, ok := listingFromRecord(record)
+	if !ok {
+		return PriceChangeListing{}, false
+	}
+	return PriceChangeListing{
+		NameKey: record.NameKey,
+		Listing: listing,
+	}, true
 }
 
 func (s *DynamoDBStore) batchGetExisting(ctx context.Context, nameKeys []string) (map[string]dynamoRecord, error) {
