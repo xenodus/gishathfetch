@@ -86,7 +86,7 @@ func TestGetDedicatedProxyRejectsPartialSegments(t *testing.T) {
 	got := GetDedicatedProxy()
 	require.Len(t, got, 7)
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		require.Equal(t, DedicatedProxy{}, got[i], "slot %d should reject non-4-segment config", i+1)
 	}
 }

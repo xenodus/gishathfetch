@@ -19,3 +19,10 @@ func TestParseFyendalNameAndFoil(t *testing.T) {
 	require.Equal(t, "Lightning Bolt", name)
 	require.False(t, isFoil)
 }
+
+func TestFyendalPriceTextFromSpans(t *testing.T) {
+	require.Equal(t, "$3.00 SGD", fyendalPriceTextFromSpans("$3.00 SGD", ""))
+	require.Equal(t, "$3.00 SGD", fyendalPriceTextFromSpans("", "Sale price$3.00 SGD"))
+	require.Equal(t, "$30.00 SGD", fyendalPriceTextFromSpans("", "Sale price$30.00 SGD"))
+	require.Equal(t, "", fyendalPriceTextFromSpans("", ""))
+}

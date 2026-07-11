@@ -39,8 +39,9 @@ func ProbeScrapeStructure(ctx context.Context, scrapVariant int, baseURL, search
 	}
 
 	resp, err := gateway.DoOutboundGET(ctx, searchURL, gateway.OutboundRequestOptions{
-		Style:   gateway.OutboundStyleHTML,
-		PageURL: pageURL,
+		Style:              gateway.OutboundStyleHTML,
+		PageURL:            pageURL,
+		ShopifySGDCurrency: true,
 	}, binderposAttemptTimeout)
 	if err != nil {
 		return err

@@ -17,10 +17,11 @@ import (
 
 // HTMLProbe fetches a storefront page and checks that expected markup is present.
 type HTMLProbe struct {
-	URL            string
+	URL              string
 	PrimarySelector  string
 	FallbackSelector string
-	PageURL        *url.URL
+	PageURL          *url.URL
+	ShopifySGDCurrency bool
 }
 
 // RequireHTMLStructure verifies the probe URL returns HTTP 200 and contains the
@@ -38,8 +39,9 @@ func RequireHTMLStructure(t *testing.T, ctx context.Context, probe HTMLProbe) {
 	}
 
 	resp, err := gateway.DoOutboundGET(ctx, probe.URL, gateway.OutboundRequestOptions{
-		Style:   gateway.OutboundStyleHTML,
-		PageURL: pageURL,
+		Style:              gateway.OutboundStyleHTML,
+		PageURL:            pageURL,
+		ShopifySGDCurrency: probe.ShopifySGDCurrency,
 	}, 20*time.Second)
 	require.NoError(t, err)
 	defer resp.Body.Close()

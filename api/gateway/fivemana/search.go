@@ -51,8 +51,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
-		Style:   gateway.OutboundStyleHTML,
-		PageURL: apiURL,
+		Style:              gateway.OutboundStyleHTML,
+		PageURL:            apiURL,
+		ShopifySGDCurrency: true,
 	}); err != nil {
 		return cards, err
 	}

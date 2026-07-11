@@ -37,6 +37,10 @@ func TestParsePrice(t *testing.T) {
 			givenPrice: "SGD 1234.56",
 			expResult:  1234.56,
 		},
+		"rejects USD prices": {
+			givenPrice: "$3.00 USD",
+			expErr:     true,
+		},
 		"invalid float64": {
 			givenPrice: "From SGD S$ABC",
 			expErr:     true,

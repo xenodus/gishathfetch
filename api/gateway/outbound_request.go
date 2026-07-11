@@ -26,6 +26,8 @@ type OutboundRequestOptions struct {
 	SkipDirect bool
 	// SkipWebBotAuth uses a browser User-Agent and omits Web Bot Auth signing.
 	SkipWebBotAuth bool
+	// ShopifySGDCurrency sets cart_currency/localization cookies for Shopify storefronts.
+	ShopifySGDCurrency bool
 }
 
 // PrepareOutboundRequest applies per-domain pacing, browser-like headers, a
@@ -52,6 +54,10 @@ func PrepareOutboundRequest(ctx context.Context, req *http.Request, opts Outboun
 
 	if opts.Accept != "" {
 		req.Header.Set("Accept", opts.Accept)
+	}
+
+	if opts.ShopifySGDCurrency {
+		ApplyShopifySGDCurrencyCookie(&req.Header)
 	}
 
 	if opts.SkipWebBotAuth {
