@@ -67,6 +67,13 @@ const (
 	AnalyticsS3KeyPrefixEnv = "ANALYTICS_S3_KEY_PREFIX"
 	// AnalyticsS3DefaultKeyPrefix is the default object key prefix under the frontend bucket.
 	AnalyticsS3DefaultKeyPrefix = "analytics/top-search-keywords"
+	// CKPriceChangesS3Bucket is the frontend S3 bucket for exported CK price change reports.
+	CKPriceChangesS3Bucket = AnalyticsS3DefaultBucket
+	// CKPriceChangesS3KeyPrefix is the object key prefix for exported CK price change reports.
+	CKPriceChangesS3KeyPrefix = "analytics/ck-price-changes"
+	// CKPriceChangesLatestJSONCacheControl is applied to latest.json so CloudFront can cache it
+	// between daily exports without a separate invalidation.
+	CKPriceChangesLatestJSONCacheControl = AnalyticsLatestJSONCacheControl
 	// AnalyticsLatestJSONCacheControl is applied to latest.json so CloudFront can cache it
 	// between daily exports without a separate invalidation.
 	AnalyticsLatestJSONCacheControl = "public, max-age=3600"
