@@ -68,8 +68,8 @@ func resolveVariantCards(ctx context.Context, client *http.Client, cfg Config, p
 }
 
 // fetchProductDetail retrieves and decodes a Shopify product JSON document for
-// the given handle using the supplied client (which carries whichever transport
-// won the suggest fallback).
+// the given handle using the supplied client (typically from productDetailClient,
+// which round-robins dedicated proxies across variant resolution requests).
 func fetchProductDetail(ctx context.Context, client *http.Client, cfg Config, handle string) (productDetail, error) {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {

@@ -27,9 +27,9 @@ type searchAttempt struct {
 // searchWithProxyFallback runs the suggest request through an ordered set of
 // transports, returning the first successful result. Each transport retries
 // transient rate-limit/5xx responses on the same connection (honoring
-// Retry-After) before the chain advances, so a healthy direct connection never
-// incurs proxy cost while a rate-limited endpoint still resolves via dedicated
-// and then dynamic proxies.
+// Retry-After) before the chain advances. Dedicated proxies are tried first so
+// cloud/datacenter egress is less likely to trip Shopify throttling; direct and
+// dynamic transports follow when dedicated is unavailable or exhausted.
 func searchWithProxyFallback(ctx context.Context, opts Options, apiURL string) ([]gateway.Card, error) {
 	return runSearchAttempts(ctx, buildSearchAttempts(), opts, apiURL)
 }
@@ -53,26 +53,44 @@ func runSearchAttempts(ctx context.Context, attempts []searchAttempt, opts Optio
 	return cards, err
 }
 
-// buildSearchAttempts builds the ordered fallback chain. The direct attempt is
-// always present; the dedicated and dynamic proxy attempts are appended only
-// when their respective proxies are configured.
+// buildSearchAttempts builds the ordered fallback chain: dedicated proxy (when
+// configured), then direct, then dynamic proxy (when configured).
 func buildSearchAttempts() []searchAttempt {
-	attempts := []searchAttempt{
-		{
-			strategy: "direct",
-			client:   &http.Client{Timeout: config.SearchAttemptTimeout},
-		},
-	}
+	var attempts []searchAttempt
 
 	if client, ok := dedicatedProxyClient(); ok {
 		attempts = append(attempts, searchAttempt{strategy: "dedicated", client: client})
 	}
+
+	attempts = append(attempts, searchAttempt{
+		strategy: "direct",
+		client:   &http.Client{Timeout: config.SearchAttemptTimeout},
+	})
 
 	if client, ok := dynamicProxyClient(); ok {
 		attempts = append(attempts, searchAttempt{strategy: "dynamic", client: client})
 	}
 
 	return attempts
+}
+
+// productDetailClient selects the HTTP client for a product JSON fetch. Tests may
+// replace this to inject a local client.
+var productDetailClient = defaultProductDetailClient
+
+// defaultProductDetailClient returns a fresh client for each product detail
+// request. Dedicated proxies are round-robined so variant resolution spreads
+// load across IPs instead of reusing the transport that won the suggest
+// fallback. When no dedicated proxies are configured, direct is used, then
+// dynamic when available.
+func defaultProductDetailClient() *http.Client {
+	if client, ok := dedicatedProxyClient(); ok {
+		return client
+	}
+	if client, ok := dynamicProxyClient(); ok {
+		return client
+	}
+	return &http.Client{Timeout: config.SearchAttemptTimeout}
 }
 
 // dedicatedProxyClient returns an HTTP client bound to the next dedicated proxy
@@ -130,7 +148,7 @@ func fetchAndMapProducts(ctx context.Context, client *http.Client, apiURL string
 	if err != nil {
 		return nil, err
 	}
-	return mapProducts(ctx, client, opts, products), nil
+	return mapProducts(ctx, opts, products), nil
 }
 
 func annotateSuggestAttemptError(attempt int, strategy string, err error) error {

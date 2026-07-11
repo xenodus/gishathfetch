@@ -17,6 +17,11 @@ const SearchPath = "/search/suggest.json"
 // search endpoint will return per request (the platform caps this at 10).
 const predictiveSearchLimit = "10"
 
+// variantResolveMaxProducts caps how many suggest products receive a follow-up
+// /products/<handle>.js fetch when ResolveVariants is enabled. Additional
+// eligible products are mapped from predictive-search fields only.
+const variantResolveMaxProducts = 5
+
 // ShopifyLocalizationSingapore is the Shopify market cookie value for
 // Singapore storefronts. Without it, Accept-Language defaults can return
 // prices from a different market than the public site shows to local users.
@@ -83,13 +88,13 @@ type suggestResponse struct {
 // products into cards using the supplied options.
 //
 // Shopify's predictive search endpoint can rate limit (HTTP 429) or otherwise
-// throttle direct traffic. Each transport retries transient failures on the
+// throttle traffic. Each transport retries transient failures on the
 // same connection, honoring Retry-After when present, before the request is
-// attempted through an ordered fallback chain: a direct connection first, then
-// a dedicated proxy, and finally the shared dynamic proxy. The first transport
-// that succeeds wins; later transports only run when the previous one exhausts
-// its retries (network failure, persistent non-200 status such as 429, or an
-// unparsable body).
+// attempted through an ordered fallback chain: a dedicated proxy first (when
+// configured), then a direct connection, and finally the shared dynamic proxy.
+// The first transport that succeeds wins; later transports only run when the
+// previous one exhausts its retries (network failure, persistent non-200 status
+// such as 429, or an unparsable body).
 func Search(ctx context.Context, opts Options) ([]gateway.Card, error) {
 	if opts.MapProduct == nil {
 		return nil, fmt.Errorf("shopifysuggest: MapProduct is required")
@@ -149,15 +154,19 @@ func fetchProducts(ctx context.Context, client *http.Client, apiURL string, reqO
 }
 
 // mapProducts filters the suggest products down to in-stock Magic cards and
-// maps them into gateway cards. When opts.ResolveVariants is set, each product
-// is expanded into one card per in-stock variant (see resolveVariantCards);
-// otherwise a single card is emitted from the predictive-search fields.
+// maps them into gateway cards. When opts.ResolveVariants is set, the first
+// variantResolveMaxProducts eligible products are expanded into one card per
+// in-stock variant (see resolveVariantCards); additional eligible products
+// use predictive-search fields only. When ResolveVariants is false, each
+// product emits a single suggest card.
 //
-// The HTTP client is threaded through so variant resolution reuses the same
-// transport that won the suggest fallback (direct, dedicated, or dynamic
-// proxy), avoiding a fresh, possibly-throttled connection per product.
-func mapProducts(ctx context.Context, client *http.Client, opts Options, products []Product) []gateway.Card {
+// Product detail requests use productDetailClient, which round-robins dedicated
+// proxies so variant resolution does not pile onto the transport that fetched
+// suggest.json.
+func mapProducts(ctx context.Context, opts Options, products []Product) []gateway.Card {
 	cards := make([]gateway.Card, 0, len(products))
+	variantResolveRemaining := variantResolveMaxProducts
+
 	for _, product := range products {
 		if !product.Available {
 			continue
@@ -176,7 +185,16 @@ func mapProducts(ctx context.Context, client *http.Client, opts Options, product
 			continue
 		}
 
-		cards = append(cards, resolveVariantCards(ctx, client, opts.Config, product, base)...)
+		if variantResolveRemaining > 0 {
+			resolved := resolveVariantCards(ctx, productDetailClient(), opts.Config, product, base)
+			if len(resolved) > 0 {
+				cards = append(cards, resolved...)
+			}
+			variantResolveRemaining--
+			continue
+		}
+
+		cards = append(cards, base)
 	}
 	return cards
 }

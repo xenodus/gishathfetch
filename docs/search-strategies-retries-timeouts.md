@@ -73,6 +73,17 @@ Constants live in `frontend/src/hooks/useSearch.js` (and related).
 
 ---
 
+## Backend: Shopify suggest (`api/gateway/shopifysuggest`)
+
+| Item | Value | Source | Notes |
+|------|--------|--------|--------|
+| Proxy fallback order | **dedicated → direct → dynamic** | `buildSearchAttempts` in `api/gateway/shopifysuggest/proxy_fallback.go` | Dedicated proxies are tried first when configured; direct and dynamic follow. |
+| Product detail client | **round-robin dedicated**, else dynamic, else direct | `defaultProductDetailClient` in `api/gateway/shopifysuggest/proxy_fallback.go` | Each `/products/<handle>.js` fetch uses the next dedicated proxy instead of reusing the suggest transport. |
+| Per-transport retries | 3 | `suggestRetryMaxAttempts` in `api/gateway/shopifysuggest/retry.go` | Retries 429/5xx on the same transport with capped backoff / Retry-After before advancing. |
+| Variant resolution cap | 5 products | `variantResolveMaxProducts` in `api/gateway/shopifysuggest/search.go` | When `ResolveVariants` is true, only the first five eligible suggest products fetch `/products/<handle>.js`; later products use suggest fields only. |
+
+---
+
 ## How to keep this file accurate
 
 1. When adding or changing **timeouts, intervals, concurrency, or strategy order**, update the relevant table and cite the file (paths above are stable).

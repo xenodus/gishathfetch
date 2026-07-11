@@ -84,14 +84,14 @@ func TestRunSearchAttemptsFallsBackOnRateLimit(t *testing.T) {
 	defer srv.Close()
 
 	attempts := []searchAttempt{
-		{strategy: "direct", client: srv.Client()},
 		{strategy: "dedicated", client: srv.Client()},
+		{strategy: "direct", client: srv.Client()},
 	}
 
 	cards, err := runSearchAttempts(context.Background(), attempts, Options{Config: Config{StoreName: "Test"}, MapProduct: mapAllProducts}, srv.URL)
 	require.NoError(t, err)
 	require.Len(t, cards, 1)
-	require.Equal(t, int32(suggestRetryMaxAttempts+1), hits.Load(), "expected direct retries then dedicated success")
+	require.Equal(t, int32(suggestRetryMaxAttempts+1), hits.Load(), "expected dedicated retries then direct success")
 }
 
 // TestRunSearchAttemptsReturnsLastError verifies that when every transport
@@ -131,8 +131,8 @@ func TestRunSearchAttemptsStopsAtFirstSuccess(t *testing.T) {
 	defer shouldNotBeHit.Close()
 
 	attempts := []searchAttempt{
-		{strategy: "direct", client: healthy.Client()},
-		{strategy: "dedicated", client: shouldNotBeHit.Client()},
+		{strategy: "dedicated", client: healthy.Client()},
+		{strategy: "direct", client: shouldNotBeHit.Client()},
 	}
 
 	cards, err := runSearchAttempts(context.Background(), attempts, Options{Config: Config{StoreName: "Test"}, MapProduct: mapAllProducts}, healthy.URL)
@@ -158,19 +158,71 @@ func TestBuildSearchAttemptsProxyConfiguration(t *testing.T) {
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 	attempts = buildSearchAttempts()
 	require.Len(t, attempts, 2)
-	require.Equal(t, "direct", attempts[0].strategy)
-	require.Equal(t, "dedicated", attempts[1].strategy)
+	require.Equal(t, "dedicated", attempts[0].strategy)
+	require.Equal(t, "direct", attempts[1].strategy)
 
 	t.Setenv("DYNAMIC_PROXY", "http://5.6.7.8:9090")
 	attempts = buildSearchAttempts()
 	require.Len(t, attempts, 3)
+	require.Equal(t, "dedicated", attempts[0].strategy)
+	require.Equal(t, "direct", attempts[1].strategy)
 	require.Equal(t, "dynamic", attempts[2].strategy)
 
 	t.Setenv("USE_DYNAMIC_PROXY", "false")
 	attempts = buildSearchAttempts()
 	require.Len(t, attempts, 2)
-	require.Equal(t, "direct", attempts[0].strategy)
-	require.Equal(t, "dedicated", attempts[1].strategy)
+	require.Equal(t, "dedicated", attempts[0].strategy)
+	require.Equal(t, "direct", attempts[1].strategy)
+}
+
+func TestProductDetailClientRotatesDedicatedProxies(t *testing.T) {
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_3", "9.10.11.12|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_4", "")
+	t.Setenv("DEDICATED_PROXY_5", "")
+	t.Setenv("DEDICATED_PROXY_6", "")
+	t.Setenv("DEDICATED_PROXY_7", "")
+	t.Setenv("DYNAMIC_PROXY", "")
+
+	seen := make([]string, 0, 3)
+	for range 3 {
+		client := defaultProductDetailClient()
+		require.NotNil(t, client)
+		transport, ok := client.Transport.(*http.Transport)
+		require.True(t, ok)
+		require.NotNil(t, transport.Proxy)
+		req, err := http.NewRequest(http.MethodGet, "https://shop.example/products/card.js", nil)
+		require.NoError(t, err)
+		proxyURL, err := transport.Proxy(req)
+		require.NoError(t, err)
+		require.NotNil(t, proxyURL)
+		seen = append(seen, proxyURL.Host)
+	}
+
+	require.Equal(t, []string{"1.2.3.4:8080", "5.6.7.8:8080", "9.10.11.12:8080"}, seen)
+}
+
+func TestProductDetailClientFallsBackToDirectWithoutProxies(t *testing.T) {
+	t.Setenv("DEDICATED_PROXY_1", "")
+	t.Setenv("DEDICATED_PROXY_2", "")
+	t.Setenv("DEDICATED_PROXY_3", "")
+	t.Setenv("DEDICATED_PROXY_4", "")
+	t.Setenv("DEDICATED_PROXY_5", "")
+	t.Setenv("DEDICATED_PROXY_6", "")
+	t.Setenv("DEDICATED_PROXY_7", "")
+	t.Setenv("DYNAMIC_PROXY", "")
+
+	client := defaultProductDetailClient()
+	require.NotNil(t, client)
+	transport, ok := client.Transport.(*http.Transport)
+	if ok && transport != nil && transport.Proxy != nil {
+		req, err := http.NewRequest(http.MethodGet, "https://shop.example/products/card.js", nil)
+		require.NoError(t, err)
+		proxyURL, err := transport.Proxy(req)
+		require.NoError(t, err)
+		require.Nil(t, proxyURL)
+	}
 }
 
 func gzipJSON(t *testing.T, body string) []byte {
