@@ -20,7 +20,6 @@ func TestDynamoRecordFromListing(t *testing.T) {
 		PriceUsd:           1.49,
 		PriceChangePercent: &priceChangePercent,
 		URL:                "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
-		Quantity:           0,
 		IsFoil:             false,
 		UpdatedAt:          "2026-06-28T00:00:00Z",
 	}, syncedAt)
@@ -44,6 +43,14 @@ func TestDynamoRecordFromListing_OmitsPriceChangeIndexWithoutPercent(t *testing.
 
 	require.Nil(t, record.PriceChangePercent)
 	require.Nil(t, record.PriceChangeIndexPK)
+}
+
+func TestDynamoRecordMarshalOmitsQuantity(t *testing.T) {
+	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
+	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{UpdatedAt: "2026-06-28T00:00:00Z"}, syncedAt)
+	item, err := attributevalue.MarshalMap(record)
+	require.NoError(t, err)
+	require.NotContains(t, item, "quantity")
 }
 
 func TestDynamoRecordMarshalIncludesSyncedAt(t *testing.T) {

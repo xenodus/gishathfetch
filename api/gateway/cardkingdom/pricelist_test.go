@@ -32,7 +32,6 @@ func TestUnmarshalPricelistPayload(t *testing.T) {
 	cheapest := BuildCheapestByName(payload.Data, mustParseTime(t, "2026-06-28T07:07:57Z"))
 	listing := cheapest["lightning bolt"]
 	require.InDelta(t, 0.35, listing.PriceUsd, 0.001)
-	require.Equal(t, 15, listing.Quantity)
 }
 
 func mustParseTime(t *testing.T, value string) time.Time {

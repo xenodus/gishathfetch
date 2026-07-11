@@ -366,7 +366,6 @@ func applyPrintingAggregate(
 			Edition:   setName,
 			PriceUsd:  aggregate.price.normal,
 			URL:       aggregate.cardKingdom,
-			Quantity:  0,
 			IsFoil:    false,
 			UpdatedAt: updatedAtValue,
 		})
@@ -389,7 +388,6 @@ func applyPrintingAggregate(
 		Edition:   setName,
 		PriceUsd:  aggregate.price.foil,
 		URL:       foilURL,
-		Quantity:  0,
 		IsFoil:    true,
 		UpdatedAt: updatedAtValue,
 	})
