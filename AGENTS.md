@@ -20,6 +20,12 @@ Notes:
 - Keep domain logic and gateway/scraper concerns separated; avoid shortcut coupling across layers.
 - Favor small, testable changes over broad refactors unless the task explicitly requires larger restructuring.
 
+## End of session
+
+- Before finishing every session, run `go fix` on the backend:
+  - `cd api && go fix ./...`
+- If `go fix` changes any files, include those changes in the same commit/PR as the session work.
+
 ## Required validation before raising a PR
 
 - Run repository tests before opening/updating a PR:
