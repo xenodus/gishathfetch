@@ -9,7 +9,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Per-store deadline | 16s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. |
-| Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step, Shopify suggest transport, and default colly scrape request. |
+| Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step and default colly scrape request. |
 | Agora per-attempt timeout | 10s | `config.AgoraSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/agora/search.go` | Agora keeps a longer single-scrape cap. |
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
@@ -70,17 +70,6 @@ Constants live in `frontend/src/hooks/useSearch.js` (and related).
 | Search progress UI tick | 1000ms | `SEARCH_PROGRESS_INTERVAL_MS`; animates the “Searching LGS . . .” label. |
 | Programmatic search delay on load (URL with `?s=`) | 100ms | `setTimeout` before `performSearch` in the mount `useEffect`. |
 | API `fetch` timeout / retries | None in code | Uses browser `fetch` with `AbortController` only; no app-level timeout or automatic retry. |
-
----
-
-## Backend: Shopify suggest (`api/gateway/shopifysuggest`)
-
-| Item | Value | Source | Notes |
-|------|--------|--------|--------|
-| Proxy fallback order | **dedicated → direct → dynamic** | `buildSearchAttempts` in `api/gateway/shopifysuggest/proxy_fallback.go` | Dedicated proxies are tried first when configured; direct and dynamic follow. |
-| Product detail client | **round-robin dedicated**, else dynamic, else direct | `defaultProductDetailClient` in `api/gateway/shopifysuggest/proxy_fallback.go` | Each `/products/<handle>.js` fetch uses the next dedicated proxy instead of reusing the suggest transport. |
-| Per-transport retries | 3 | `suggestRetryMaxAttempts` in `api/gateway/shopifysuggest/retry.go` | Retries 429/5xx on the same transport with capped backoff / Retry-After before advancing. |
-| Variant resolution cap | 5 products | `variantResolveMaxProducts` in `api/gateway/shopifysuggest/search.go` | When `ResolveVariants` is true, only the first five eligible suggest products fetch `/products/<handle>.js`; later products use suggest fields only. |
 
 ---
 
