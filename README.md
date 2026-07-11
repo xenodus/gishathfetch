@@ -195,10 +195,7 @@ Example report shape:
 
 #### IAM permissions for `mtg-price-ck-refresh`
 
-The shared `lambda-mtg` role must allow `s3:PutObject` on the export prefix (defaults to `arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`). Optional Lambda environment variables:
-
-- `CK_PRICE_CHANGES_S3_BUCKET` — destination bucket (default `gishathfetch.com`)
-- `CK_PRICE_CHANGES_S3_KEY_PREFIX` — object key prefix (default `analytics/ck-price-changes`)
+The shared `lambda-mtg` role must allow `s3:PutObject` on the export prefix (`arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`).
 
 ## 🔎 Search flow
 

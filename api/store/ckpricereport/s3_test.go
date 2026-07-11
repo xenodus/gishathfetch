@@ -39,19 +39,16 @@ func (m *mockS3Client) PutObject(_ context.Context, input *s3.PutObjectInput, _ 
 	return &s3.PutObjectOutput{}, nil
 }
 
-func TestNewS3WriterDefaultsToFrontendBucket(t *testing.T) {
-	t.Setenv(config.CKPriceChangesS3BucketEnv, "")
-	t.Setenv(config.CKPriceChangesS3KeyPrefixEnv, "")
-
+func TestNewS3WriterUsesFrontendExportPath(t *testing.T) {
 	writer, err := NewS3Writer(context.Background())
 	if err != nil {
 		t.Fatalf("new s3 writer: %v", err)
 	}
-	if writer.bucket != config.CKPriceChangesS3DefaultBucket {
-		t.Fatalf("expected bucket %q, got %q", config.CKPriceChangesS3DefaultBucket, writer.bucket)
+	if writer.bucket != config.CKPriceChangesS3Bucket {
+		t.Fatalf("expected bucket %q, got %q", config.CKPriceChangesS3Bucket, writer.bucket)
 	}
-	if writer.prefix != config.CKPriceChangesS3DefaultKeyPrefix {
-		t.Fatalf("expected prefix %q, got %q", config.CKPriceChangesS3DefaultKeyPrefix, writer.prefix)
+	if writer.prefix != config.CKPriceChangesS3KeyPrefix {
+		t.Fatalf("expected prefix %q, got %q", config.CKPriceChangesS3KeyPrefix, writer.prefix)
 	}
 }
 
@@ -59,8 +56,8 @@ func TestS3Writer_WriteUploadsLatestObject(t *testing.T) {
 	mockClient := &mockS3Client{}
 	writer := &S3Writer{
 		client: mockClient,
-		bucket: config.CKPriceChangesS3DefaultBucket,
-		prefix: config.CKPriceChangesS3DefaultKeyPrefix,
+		bucket: config.CKPriceChangesS3Bucket,
+		prefix: config.CKPriceChangesS3KeyPrefix,
 	}
 
 	report := &Report{
@@ -79,7 +76,7 @@ func TestS3Writer_WriteUploadsLatestObject(t *testing.T) {
 		t.Fatalf("expected 1 object, got %d", len(mockClient.objects))
 	}
 
-	latestKey := config.CKPriceChangesS3DefaultKeyPrefix + "/latest.json"
+	latestKey := config.CKPriceChangesS3KeyPrefix + "/latest.json"
 	object, ok := mockClient.objects[latestKey]
 	if !ok {
 		t.Fatalf("missing latest object")

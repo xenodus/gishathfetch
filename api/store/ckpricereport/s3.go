@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 
 	"mtg-price-checker-sg/pkg/config"
 
@@ -35,18 +33,8 @@ var loadAWSConfig = func(ctx context.Context) (aws.Config, error) {
 	return awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(config.AWSRegion))
 }
 
-// NewS3Writer builds an S3 writer from environment configuration.
+// NewS3Writer builds an S3 writer for the frontend CK price change export path.
 func NewS3Writer(ctx context.Context) (*S3Writer, error) {
-	bucket := strings.TrimSpace(os.Getenv(config.CKPriceChangesS3BucketEnv))
-	if bucket == "" {
-		bucket = config.CKPriceChangesS3DefaultBucket
-	}
-
-	prefix := strings.Trim(strings.TrimSpace(os.Getenv(config.CKPriceChangesS3KeyPrefixEnv)), "/")
-	if prefix == "" {
-		prefix = config.CKPriceChangesS3DefaultKeyPrefix
-	}
-
 	cfg, err := loadAWSConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -54,8 +42,8 @@ func NewS3Writer(ctx context.Context) (*S3Writer, error) {
 
 	return &S3Writer{
 		client: s3.NewFromConfig(cfg),
-		bucket: bucket,
-		prefix: prefix,
+		bucket: config.CKPriceChangesS3Bucket,
+		prefix: config.CKPriceChangesS3KeyPrefix,
 	}, nil
 }
 
