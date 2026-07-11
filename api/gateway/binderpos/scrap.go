@@ -244,6 +244,17 @@ func parseFyendalNameAndFoil(title string) (string, bool) {
 	return trimmed, false
 }
 
+func fyendalPriceTextFromSpans(moneyText, priceText string) string {
+	if trimmed := strings.TrimSpace(moneyText); trimmed != "" {
+		return trimmed
+	}
+
+	text := strings.TrimSpace(priceText)
+	text = strings.TrimPrefix(text, "Sale price")
+	text = strings.TrimPrefix(text, "Regular price")
+	return strings.TrimSpace(text)
+}
+
 // fyendal hobby
 func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
 	searchURL := buildSafeSearchURL(baseUrl, searchUrl, fyendalSearchQuery(searchStr))
@@ -270,7 +281,10 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 				return
 			}
 
-			priceStr := el.ChildText("div.product-item__price-list span.money")
+			priceStr := fyendalPriceTextFromSpans(
+				el.ChildText("div.product-item__price-list span.money"),
+				el.ChildText("div.product-item__price-list span.price"),
+			)
 			price, err := util.ParsePrice(priceStr)
 			if err != nil || price <= 0 {
 				log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)

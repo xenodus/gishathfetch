@@ -12,6 +12,7 @@ func ParsePrice(price string) (float64, error) {
 	priceStr = strings.Replace(priceStr, "$", "", -1)
 	priceStr = strings.Replace(priceStr, ",", "", -1)
 	priceStr = strings.Replace(priceStr, "SGD", "", -1)
+	priceStr = strings.Replace(priceStr, "USD", "", -1)
 	priceStr = strings.TrimSpace(priceStr)
 	return strconv.ParseFloat(priceStr, 64)
 }
