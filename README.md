@@ -63,6 +63,7 @@ flowchart TB
     EB -->|action: ck-price-refresh-run| RefreshLambda
     RefreshLambda -->|download bz2 archives| MTGJSON
     RefreshLambda -->|batch write cheapest CK retail| DDB
+    RefreshLambda -->|write latest.json| S3
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
     AnalyticsLambda -->|GA4 Data API| GA4
     AnalyticsLambda -->|write latest.json| S3
@@ -78,7 +79,7 @@ flowchart TB
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Search API | API Gateway → `api.gishathfetch.com` | Routes `GET /?s=...&lgs=...` to the search Lambda |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional CK price lookup from DynamoDB |
-| CK refresh Lambda | `mtg-price-ck-refresh` | Daily MTGJSON download and DynamoDB index rebuild |
+| CK refresh Lambda | `mtg-price-ck-refresh` | Daily MTGJSON download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
 | Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
 | CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
@@ -155,6 +156,7 @@ sequenceDiagram
     participant R as mtg-price-ck-refresh
     participant M as MTGJSON
     participant D as DynamoDB
+    participant S3 as S3 gishathfetch.com
     participant S as mtg-price-scrapper
     participant SF as Scryfall
     participant U as User
@@ -162,6 +164,8 @@ sequenceDiagram
     EB->>R: daily ck-price-refresh-run
     R->>M: download AllPricesToday + AllPrintings
     R->>D: PutAll cheapest CK retail by name
+    R->>D: query top/bottom 20 price changes
+    R->>S3: analytics/ck-price-changes/latest.json
     U->>S: GET /?s=Lightning+Bolt
     par LGS scrape + CK lookup
         S->>S: scrape selected stores
@@ -170,6 +174,31 @@ sequenceDiagram
     end
     S-->>U: data + cardKingdomPrice
 ```
+
+S3 output (default bucket `gishathfetch.com`, prefix `analytics/ck-price-changes/`):
+
+- `latest.json` — most recent export of the top 20 CK price increases and decreases, overwritten on each daily run
+
+The export Lambda writes to the same bucket as the frontend SPA so the report can be served same-origin through CloudFront when needed. The object is uploaded with `Cache-Control: public, max-age=3600`.
+
+Example report shape:
+
+```json
+{
+  "generatedAt": "2026-07-11T12:00:00Z",
+  "syncedAt": "2026-07-11T00:00:00Z",
+  "rankingLimit": 20,
+  "top": [{"nameKey": "lightning bolt", "cardName": "Lightning Bolt", "priceUsd": 1.25, "priceChangePercent": 15}],
+  "bottom": [{"nameKey": "counterspell", "cardName": "Counterspell", "priceUsd": 0.75, "priceChangePercent": -10}]
+}
+```
+
+#### IAM permissions for `mtg-price-ck-refresh`
+
+The shared `lambda-mtg` role must allow `s3:PutObject` on the export prefix (defaults to `arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`). Optional Lambda environment variables:
+
+- `CK_PRICE_CHANGES_S3_BUCKET` — destination bucket (default `gishathfetch.com`)
+- `CK_PRICE_CHANGES_S3_KEY_PREFIX` — object key prefix (default `analytics/ck-price-changes`)
 
 ## 🔎 Search flow
 
