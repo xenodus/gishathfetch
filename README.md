@@ -211,12 +211,11 @@ storefront's Shopify predictive search endpoint (`/search/suggest.json`) through
 a shared gateway. Results are filtered to in-stock Magic singles and mapped into
 cards using store-specific title/tag conventions (Fyendal Hobby additionally
 scopes suggest to its MTG singles product type). On error the chain advances
-through proxy tiers (**direct → dedicated → dynamic**); an empty but error-free
+through proxy tiers (**dedicated → direct → dynamic**); an empty but error-free
 response counts as success and stops the chain. Each attempt is bounded by a 10s
 timeout (`suggestAttemptTimeout`).
 
-MTG Asia and Grey Ogre Games additionally **resolve variants**: after suggest
-returns a product, a follow-up request to `/products/<handle>.js` emits one card
+MTG Asia, Grey Ogre Games, and Fyendal Hobby additionally **resolve variants** for the first five suggest products: a follow-up request to `/products/<handle>.js` emits one card
 per in-stock variant with the variant's real price and condition. Shopify's
 predictive search only reports a product-level `price_min` (the cheapest variant
 regardless of stock), so variant resolution ensures the cheapest *purchasable*
@@ -227,10 +226,10 @@ resilience fallback.
 flowchart TD
     A[Shopify suggest store search] --> B[GET /search/suggest.json]
     B --> C{error?}
-    C -- direct failed --> D[dedicated proxy]
+    C -- dedicated failed --> D[direct]
     C -- success --> E[filter in-stock Magic products]
     D --> F{error?}
-    F -- dedicated failed --> G[dynamic proxy]
+    F -- direct failed --> G[dynamic proxy]
     F -- success --> E
     G --> E
     E --> H{ResolveVariants?}

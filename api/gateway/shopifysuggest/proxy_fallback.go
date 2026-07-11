@@ -27,9 +27,9 @@ type searchAttempt struct {
 // searchWithProxyFallback runs the suggest request through an ordered set of
 // transports, returning the first successful result. Each transport retries
 // transient rate-limit/5xx responses on the same connection (honoring
-// Retry-After) before the chain advances, so a healthy direct connection never
-// incurs proxy cost while a rate-limited endpoint still resolves via dedicated
-// and then dynamic proxies.
+// Retry-After) before the chain advances. Dedicated proxies are tried first so
+// cloud/datacenter egress is less likely to trip Shopify throttling; direct and
+// dynamic transports follow when dedicated is unavailable or exhausted.
 func searchWithProxyFallback(ctx context.Context, opts Options, apiURL string) ([]gateway.Card, error) {
 	return runSearchAttempts(ctx, buildSearchAttempts(), opts, apiURL)
 }
@@ -53,20 +53,19 @@ func runSearchAttempts(ctx context.Context, attempts []searchAttempt, opts Optio
 	return cards, err
 }
 
-// buildSearchAttempts builds the ordered fallback chain. The direct attempt is
-// always present; the dedicated and dynamic proxy attempts are appended only
-// when their respective proxies are configured.
+// buildSearchAttempts builds the ordered fallback chain: dedicated proxy (when
+// configured), then direct, then dynamic proxy (when configured).
 func buildSearchAttempts() []searchAttempt {
-	attempts := []searchAttempt{
-		{
-			strategy: "direct",
-			client:   &http.Client{Timeout: config.SearchAttemptTimeout},
-		},
-	}
+	var attempts []searchAttempt
 
 	if client, ok := dedicatedProxyClient(); ok {
 		attempts = append(attempts, searchAttempt{strategy: "dedicated", client: client})
 	}
+
+	attempts = append(attempts, searchAttempt{
+		strategy: "direct",
+		client:   &http.Client{Timeout: config.SearchAttemptTimeout},
+	})
 
 	if client, ok := dynamicProxyClient(); ok {
 		attempts = append(attempts, searchAttempt{strategy: "dynamic", client: client})
