@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
+	"mtg-price-checker-sg/store/ckprices"
 
 	"github.com/stretchr/testify/require"
 )
@@ -22,6 +23,14 @@ func (m *mockStore) GetByNameKey(_ context.Context, nameKey string) (*cardkingdo
 		return m.listings[nameKey], nil
 	}
 	return m.listing, nil
+}
+
+func (m *mockStore) GetPriceChangesByPercent(_ context.Context, _ bool, _ int) ([]ckprices.PriceChangeListing, error) {
+	return nil, nil
+}
+
+func (m *mockStore) GetTopBottomPriceChanges(_ context.Context) (*ckprices.TopBottomPriceChanges, error) {
+	return &ckprices.TopBottomPriceChanges{}, nil
 }
 
 func (m *mockStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {

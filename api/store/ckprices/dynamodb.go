@@ -18,21 +18,26 @@ import (
 )
 
 const (
-	batchWriteLimit   = 25
-	syncMetadataKey   = "__sync__"
-	syncMetadataLabel = "CK price sync metadata"
+	batchGetLimit            = 100
+	batchWriteLimit          = 25
+	priceChangeIndexName     = "priceChangePercent-index"
+	priceChangeIndexPKValue  = "CURRENT"
+	syncMetadataKey          = "__sync__"
+	syncMetadataLabel        = "CK price sync metadata"
 )
 
 type dynamoRecord struct {
-	NameKey   string  `dynamodbav:"nameKey"`
-	CardName  string  `dynamodbav:"cardName"`
-	Edition   string  `dynamodbav:"edition"`
-	PriceUsd  float64 `dynamodbav:"priceUsd"`
-	URL       string  `dynamodbav:"url"`
-	Quantity  int     `dynamodbav:"quantity"`
-	IsFoil    bool    `dynamodbav:"isFoil"`
-	UpdatedAt string  `dynamodbav:"updatedAt"`
-	SyncedAt  string  `dynamodbav:"syncedAt"`
+	NameKey            string  `dynamodbav:"nameKey"`
+	CardName           string  `dynamodbav:"cardName"`
+	Edition            string  `dynamodbav:"edition"`
+	PriceUsd           float64 `dynamodbav:"priceUsd"`
+	PriceChangePercent *int    `dynamodbav:"priceChangePercent,omitempty"`
+	PriceChangeIndexPK *string `dynamodbav:"priceChangeIndexPK,omitempty"`
+	URL                string  `dynamodbav:"url"`
+	Quantity           int     `dynamodbav:"quantity"`
+	IsFoil             bool    `dynamodbav:"isFoil"`
+	UpdatedAt          string  `dynamodbav:"updatedAt"`
+	SyncedAt           string  `dynamodbav:"syncedAt"`
 }
 
 type syncMetadataRecord struct {
@@ -83,19 +88,106 @@ func (s *DynamoDBStore) GetByNameKey(ctx context.Context, nameKey string) (*card
 		return nil, err
 	}
 
-	return &cardkingdom.Listing{
-		CardName:  record.CardName,
-		Edition:   record.Edition,
-		PriceUsd:  record.PriceUsd,
-		URL:       record.URL,
-		Quantity:  record.Quantity,
-		IsFoil:    record.IsFoil,
-		UpdatedAt: record.UpdatedAt,
-		SyncedAt:  record.SyncedAt,
+	listing, ok := listingFromRecord(record)
+	if !ok {
+		return nil, nil
+	}
+	return &listing, nil
+}
+
+func (s *DynamoDBStore) GetPriceChangesByPercent(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
+	if limit <= 0 {
+		limit = PriceChangeRankingLimit
+	}
+
+	listings, err := s.queryPriceChangesByPercent(ctx, ascending, limit)
+	if err == nil {
+		return listings, nil
+	}
+	if !isMissingPriceChangeIndex(err) {
+		return nil, err
+	}
+
+	scanned, scanErr := s.scanPriceChangeListings(ctx)
+	if scanErr != nil {
+		return nil, scanErr
+	}
+	return priceChangesByPercentFromListings(scanned, ascending, limit), nil
+}
+
+func (s *DynamoDBStore) GetTopBottomPriceChanges(ctx context.Context) (*TopBottomPriceChanges, error) {
+	top, err := s.GetPriceChangesByPercent(ctx, false, PriceChangeRankingLimit)
+	if err != nil {
+		return nil, err
+	}
+	bottom, err := s.GetPriceChangesByPercent(ctx, true, PriceChangeRankingLimit)
+	if err != nil {
+		return nil, err
+	}
+	return &TopBottomPriceChanges{
+		Top:    top,
+		Bottom: bottom,
 	}, nil
 }
 
+func (s *DynamoDBStore) queryPriceChangesByPercent(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
+	output, err := s.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(s.tableName),
+		IndexName:              aws.String(priceChangeIndexName),
+		KeyConditionExpression: aws.String("priceChangeIndexPK = :pk"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pk": &types.AttributeValueMemberS{Value: priceChangeIndexPKValue},
+		},
+		ScanIndexForward: aws.Bool(ascending),
+		Limit:            aws.Int32(int32(limit)),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return priceChangeListingsFromItems(output.Items)
+}
+
+func (s *DynamoDBStore) scanPriceChangeListings(ctx context.Context) ([]PriceChangeListing, error) {
+	listings := make([]PriceChangeListing, 0)
+	var exclusiveStartKey map[string]types.AttributeValue
+
+	for {
+		output, err := s.client.Scan(ctx, &dynamodb.ScanInput{
+			TableName:         aws.String(s.tableName),
+			ExclusiveStartKey: exclusiveStartKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		batch, err := priceChangeListingsFromItems(output.Items)
+		if err != nil {
+			return nil, err
+		}
+		listings = append(listings, batch...)
+
+		if len(output.LastEvaluatedKey) == 0 {
+			break
+		}
+		exclusiveStartKey = output.LastEvaluatedKey
+	}
+
+	return listings, nil
+}
+
 func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (string, error) {
+	nameKeys := make([]string, 0, len(listings))
+	for nameKey := range listings {
+		nameKeys = append(nameKeys, nameKey)
+	}
+
+	existing, err := s.batchGetExisting(ctx, nameKeys)
+	if err != nil {
+		return "", err
+	}
+	listings = listingsWithPriceChange(existing, listings)
+
 	syncedAt := time.Now().UTC().Format(time.RFC3339)
 	writeRequests := make([]types.WriteRequest, 0, len(listings)+1)
 	for nameKey, listing := range listings {
@@ -134,17 +226,128 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 }
 
 func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, syncedAt string) dynamoRecord {
-	return dynamoRecord{
-		NameKey:   nameKey,
-		CardName:  listing.CardName,
-		Edition:   listing.Edition,
-		PriceUsd:  listing.PriceUsd,
-		URL:       listing.URL,
-		Quantity:  listing.Quantity,
-		IsFoil:    listing.IsFoil,
-		UpdatedAt: listing.UpdatedAt,
-		SyncedAt:  syncedAt,
+	record := dynamoRecord{
+		NameKey:            nameKey,
+		CardName:           listing.CardName,
+		Edition:            listing.Edition,
+		PriceUsd:           listing.PriceUsd,
+		PriceChangePercent: listing.PriceChangePercent,
+		URL:                listing.URL,
+		Quantity:           listing.Quantity,
+		IsFoil:             listing.IsFoil,
+		UpdatedAt:          listing.UpdatedAt,
+		SyncedAt:           syncedAt,
 	}
+	if listing.PriceChangePercent != nil {
+		indexPK := priceChangeIndexPKValue
+		record.PriceChangeIndexPK = &indexPK
+	}
+	return record
+}
+
+func listingFromRecord(record dynamoRecord) (cardkingdom.Listing, bool) {
+	if record.NameKey == syncMetadataKey {
+		return cardkingdom.Listing{}, false
+	}
+	return cardkingdom.Listing{
+		CardName:           record.CardName,
+		Edition:            record.Edition,
+		PriceUsd:           record.PriceUsd,
+		PriceChangePercent: record.PriceChangePercent,
+		URL:                record.URL,
+		Quantity:           record.Quantity,
+		IsFoil:             record.IsFoil,
+		UpdatedAt:          record.UpdatedAt,
+		SyncedAt:           record.SyncedAt,
+	}, true
+}
+
+func priceChangeListingFromRecord(record dynamoRecord) (PriceChangeListing, bool) {
+	if record.NameKey == syncMetadataKey || record.PriceChangePercent == nil {
+		return PriceChangeListing{}, false
+	}
+	listing, ok := listingFromRecord(record)
+	if !ok {
+		return PriceChangeListing{}, false
+	}
+	return PriceChangeListing{
+		NameKey: record.NameKey,
+		Listing: listing,
+	}, true
+}
+
+func priceChangeListingsFromItems(items []map[string]types.AttributeValue) ([]PriceChangeListing, error) {
+	listings := make([]PriceChangeListing, 0, len(items))
+	for _, item := range items {
+		var record dynamoRecord
+		if err := attributevalue.UnmarshalMap(item, &record); err != nil {
+			return nil, err
+		}
+		if listing, ok := priceChangeListingFromRecord(record); ok {
+			listings = append(listings, listing)
+		}
+	}
+	return listings, nil
+}
+
+func isMissingPriceChangeIndex(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "index") &&
+		(strings.Contains(message, "not found") ||
+			strings.Contains(message, "does not have the specified index") ||
+			strings.Contains(message, "validationexception"))
+}
+
+func (s *DynamoDBStore) batchGetExisting(ctx context.Context, nameKeys []string) (map[string]dynamoRecord, error) {
+	existing := make(map[string]dynamoRecord, len(nameKeys))
+	if len(nameKeys) == 0 {
+		return existing, nil
+	}
+
+	for start := 0; start < len(nameKeys); start += batchGetLimit {
+		end := min(start+batchGetLimit, len(nameKeys))
+		batch := nameKeys[start:end]
+
+		keys := make([]map[string]types.AttributeValue, len(batch))
+		for i, nameKey := range batch {
+			keys[i] = map[string]types.AttributeValue{
+				"nameKey": &types.AttributeValueMemberS{Value: nameKey},
+			}
+		}
+
+		pending := map[string]types.KeysAndAttributes{
+			s.tableName: {Keys: keys},
+		}
+		for len(pending) > 0 {
+			output, err := s.client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
+				RequestItems: pending,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			for _, item := range output.Responses[s.tableName] {
+				var record dynamoRecord
+				if err := attributevalue.UnmarshalMap(item, &record); err != nil {
+					return nil, err
+				}
+				if record.NameKey == syncMetadataKey {
+					continue
+				}
+				existing[record.NameKey] = record
+			}
+
+			if len(output.UnprocessedKeys) == 0 {
+				break
+			}
+			pending = output.UnprocessedKeys
+		}
+	}
+
+	return existing, nil
 }
 
 func (s *DynamoDBStore) writeBatch(ctx context.Context, batch []types.WriteRequest) error {
