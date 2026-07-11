@@ -25,7 +25,7 @@ func Test_Search(t *testing.T) {
 			BaseURL:       StoreBaseURL,
 			SearchURL:     StoreSearchURL,
 			ShopifyDomain: StoreShopifyDomain,
-			ScrapOnly:     ScrapOnly,
+			ScrapOnly:     false,
 			Query:         "Abrade",
 		})
 	})

@@ -12,10 +12,6 @@ const StoreBaseURL = "https://www.mtg-asia.com"
 const StoreShopifyDomain = "mtgasia.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
 
-// ScrapOnly skips the shared BinderPOS decklist portal while retaining the
-// Shopify domain mapping for documentation and live integration tests.
-const ScrapOnly = true
-
 type Store struct {
 	Name         string
 	BaseUrl      string
@@ -40,6 +36,6 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		StoreShopifyDomain,
 		s.SearchUrl,
 		searchStr,
-		ScrapOnly,
+		false,
 	)
 }
