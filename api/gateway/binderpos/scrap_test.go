@@ -55,6 +55,13 @@ func Test_Scrap(t *testing.T) {
 			searchUrl:    "/search?q=%s",
 			searchStr:    "Abrade",
 		},
+		"variant 4": {
+			scrapVariant: 4,
+			storeName:    "Fyendal Hobby",
+			baseUrl:      "https://fyendalhobby.com",
+			searchUrl:    "/search?q=%s",
+			searchStr:    "Abrade",
+		},
 		"variant 5": {
 			scrapVariant: 5,
 			storeName:    "Arcane Sanctum",

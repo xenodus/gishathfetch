@@ -41,6 +41,8 @@ func (i impl) scrapWithCollectorFactory(
 		return scrapVariant2(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 3:
 		return scrapVariant3(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
+	case 4:
+		return scrapVariant4(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 5:
 		return scrapVariant5(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	}
@@ -220,6 +222,95 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 					}
 				})
 			}
+		})
+	})
+
+	return cards, gateway.VisitWithProxyInfo(c, searchURL)
+}
+
+const fyendalMTGSingleProductType = "MTG Single Cards"
+
+func fyendalSearchQuery(searchStr string) string {
+	return fmt.Sprintf(`product_type:%q AND %s`, fyendalMTGSingleProductType, searchStr)
+}
+
+const fyendalFoilTitlePrefix = "[foil]"
+
+func parseFyendalNameAndFoil(title string) (string, bool) {
+	trimmed := strings.TrimSpace(title)
+	if strings.HasPrefix(strings.ToLower(trimmed), fyendalFoilTitlePrefix) {
+		return strings.TrimSpace(trimmed[len(fyendalFoilTitlePrefix):]), true
+	}
+	return trimmed, false
+}
+
+// fyendal hobby
+func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
+	searchURL := buildSafeSearchURL(baseUrl, searchUrl, fyendalSearchQuery(searchStr))
+	var cards []gateway.Card
+
+	c, err := collectorFactory(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		e.ForEach("div.product-item.product-item--vertical", func(_ int, el *colly.HTMLElement) {
+			if strings.Contains(el.Text, "Sold out") {
+				return
+			}
+
+			variantID := el.ChildAttr("form.product-item__action-list input[name='id']", "value")
+			if strings.TrimSpace(variantID) == "" {
+				return
+			}
+
+			title := strings.TrimSpace(el.ChildText("a.product-item__title"))
+			if title == "" {
+				return
+			}
+
+			priceStr := el.ChildText("div.product-item__price-list span.money")
+			price, err := util.ParsePrice(priceStr)
+			if err != nil || price <= 0 {
+				log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)
+				return
+			}
+
+			link := el.ChildAttr("a.product-item__image-wrapper", "href")
+			if link == "" {
+				link = el.ChildAttr("a.product-item__title", "href")
+			}
+			if link == "" {
+				return
+			}
+
+			img := strings.TrimSpace(el.ChildAttr("img.product-item__primary-image", "src"))
+			if strings.HasPrefix(img, "//") {
+				img = "https:" + img
+			}
+
+			name, isFoil := parseFyendalNameAndFoil(title)
+
+			cleanPageURL, err := url.Parse(strings.TrimSpace(baseUrl + link))
+			if err != nil {
+				log.Printf("error parsing url for %s with value [%s]: %v", storeName, link, err)
+				return
+			}
+			cleanPageURL.RawQuery = url.Values{
+				"variant":    []string{variantID},
+				"utm_source": []string{config.UtmSource},
+			}.Encode()
+
+			cards = append(cards, gateway.Card{
+				Name:    name,
+				Url:     strings.TrimSpace(cleanPageURL.String()),
+				InStock: true,
+				IsFoil:  isFoil,
+				Price:   price,
+				Source:  storeName,
+				Img:     img,
+			})
 		})
 	})
 

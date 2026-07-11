@@ -28,7 +28,11 @@ type StructureProbeConfig struct {
 // HTML markers for the scrap variant are still present. It does not require
 // matching in-stock inventory.
 func ProbeScrapeStructure(ctx context.Context, scrapVariant int, baseURL, searchURLTemplate, searchStr string) error {
-	searchURL := buildSafeSearchURL(baseURL, searchURLTemplate, searchStr+" mtg")
+	searchQuery := searchStr + " mtg"
+	if scrapVariant == 4 {
+		searchQuery = fyendalSearchQuery(searchStr)
+	}
+	searchURL := buildSafeSearchURL(baseURL, searchURLTemplate, searchQuery)
 	pageURL, err := url.Parse(searchURL)
 	if err != nil {
 		return err
@@ -115,6 +119,8 @@ func scrapeStructureSelectors(scrapVariant int) (primary, fallback string) {
 		return "div[data-product-variants]", "div.product-card-list2"
 	case 3:
 		return "div.productCard__card", "div.productChip__grid"
+	case 4:
+		return "div.product-item.product-item--vertical", "a.product-item__title"
 	case 5:
 		return "div.product-grid-container ul.product-grid", "div.product-grid-container"
 	default:

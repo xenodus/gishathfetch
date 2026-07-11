@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"mtg-price-checker-sg/gateway/binderpos"
 	"mtg-price-checker-sg/gateway/gatewaytest"
-	"mtg-price-checker-sg/gateway/shopifysuggest"
 
 	"github.com/joho/godotenv"
 )
@@ -20,17 +20,13 @@ func Test_Search(t *testing.T) {
 	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
 		URLContains: StoreBaseURL + "/products/",
 	}, func(t *testing.T, ctx context.Context) {
-		shopifysuggest.RequireSuggestStructure(t, ctx, shopifysuggest.Options{
-			Config: shopifysuggest.Config{
-				StoreName:           StoreName,
-				BaseURL:             StoreBaseURL,
-				ShopifyLocalization: shopifysuggest.ShopifyLocalizationSingapore,
-			},
-			SearchStr:       "Abrade",
-			BuildQuery:      shopifysuggest.FyendalQuery,
-			QueryValues:     shopifysuggest.FyendalQueryValues,
-			MapProduct:      shopifysuggest.MapFyendalProduct,
-			ResolveVariants: true,
+		binderpos.RequireStorefrontStructure(t, ctx, binderpos.StructureProbeConfig{
+			ScrapVariant:  4,
+			BaseURL:       StoreBaseURL,
+			SearchURL:     StoreSearchURL,
+			ShopifyDomain: StoreShopifyDomain,
+			ScrapOnly:     ScrapOnly,
+			Query:         "Abrade",
 		})
 	})
 }

@@ -190,6 +190,14 @@ func binderposStoreSearchCases() []binderposStoreSearchCase {
 			query:         "Abrade",
 		},
 		{
+			storeName:     "Fyendal Hobby",
+			baseURL:       "https://fyendalhobby.com",
+			shopifyDomain: "fyendal-hobby.myshopify.com",
+			searchURL:     "/search?q=%s",
+			scrapVariant:  4,
+			query:         "Abrade",
+		},
+		{
 			storeName:     "Arcane Sanctum",
 			baseURL:       "https://arcanesanctumtcg.com",
 			shopifyDomain: "30uetm-1y.myshopify.com",

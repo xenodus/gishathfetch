@@ -206,41 +206,13 @@ Dueller's Point, 5 Mana, Mox & Lotus, TCG Marketplace) each implement a single
 bespoke `Search` — a custom JSON API call or one HTML scrape — with no
 multi-strategy fallback. On failure the store simply contributes nothing.
 
-**Shopify suggest stores** (Fyendal Hobby, MTG Asia, Grey Ogre Games) query each
-storefront's Shopify predictive search endpoint (`/search/suggest.json`) through
-a shared gateway. Results are filtered to in-stock Magic singles and mapped into
-cards using store-specific title/tag conventions (Fyendal Hobby additionally
-scopes suggest to its MTG singles product type). On error the chain advances
-through proxy tiers (**dedicated → direct → dynamic**); an empty but error-free
-response counts as success and stops the chain. Each attempt is bounded by a 10s
-timeout (`suggestAttemptTimeout`).
-
-MTG Asia, Grey Ogre Games, and Fyendal Hobby additionally **resolve variants** for the first five suggest products: a follow-up request to `/products/<handle>.js` emits one card
-per in-stock variant with the variant's real price and condition. Shopify's
-predictive search only reports a product-level `price_min` (the cheapest variant
-regardless of stock), so variant resolution ensures the cheapest *purchasable*
-price is reported. If the detail request fails, the suggest card is kept as a
-resilience fallback.
-
-```mermaid
-flowchart TD
-    A[Shopify suggest store search] --> B[GET /search/suggest.json]
-    B --> C{error?}
-    C -- dedicated failed --> D[direct]
-    C -- success --> E[filter in-stock Magic products]
-    D --> F{error?}
-    F -- direct failed --> G[dynamic proxy]
-    F -- success --> E
-    G --> E
-    E --> H{ResolveVariants?}
-    H -- yes --> I[GET /products/handle.js per product on rotating dedicated proxy]
-    I --> J[one card per in-stock variant]
-    H -- no --> K[one card per suggest product]
-```
+**Shopify suggest gateway** (`api/gateway/shopifysuggest/`) implements predictive
+search (`/search/suggest.json`) with store-specific query and mapping helpers.
+It remains available for reuse but is not wired to any live store at present.
 
 **BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
-Hideout, Mana Pro, OneMTG) share one gateway that can read listings from two
-sources:
+Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one
+gateway that can read listings from two sources:
 
 - **Decklist** — a POST to the shared `portal.binderpos.com` decklist endpoint.
 - **Scrape** — an HTML scrape of the store's own storefront.
