@@ -19,23 +19,17 @@ func parseDedicatedProxy(raw string) DedicatedProxy {
 		return DedicatedProxy{}
 	}
 
-	parts := strings.SplitN(raw, "|", 4)
+	parts := strings.Split(raw, "|")
+	if len(parts) != 4 {
+		return DedicatedProxy{}
+	}
 
-	// Be defensive: if there are fewer than 4 segments, fill what we can.
-	proxy := DedicatedProxy{}
-	if len(parts) > 0 {
-		proxy.Host = strings.TrimSpace(parts[0])
+	return DedicatedProxy{
+		Host:     strings.TrimSpace(parts[0]),
+		Port:     strings.TrimSpace(parts[1]),
+		Username: strings.TrimSpace(parts[2]),
+		Password: strings.TrimSpace(parts[3]),
 	}
-	if len(parts) > 1 {
-		proxy.Port = strings.TrimSpace(parts[1])
-	}
-	if len(parts) > 2 {
-		proxy.Username = strings.TrimSpace(parts[2])
-	}
-	if len(parts) > 3 {
-		proxy.Password = strings.TrimSpace(parts[3])
-	}
-	return proxy
 }
 
 func GetDedicatedProxy() []DedicatedProxy {
