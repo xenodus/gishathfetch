@@ -149,38 +149,6 @@ retail listing per card name, and batch-writes the index. Search verifies the
 query against Scryfall before looking up DynamoDB and omits stale entries older
 than 48 hours.
 
-To query the largest price movers without scanning the full table, add a sparse
-GSI named `priceChangePercent-index` on `CK_DYNAMODB_TABLE`:
-
-- Partition key: `priceChangeIndexPK` (String)
-- Sort key: `priceChangePercent` (Number)
-
-The refresh job writes `priceChangeIndexPK = "CURRENT"` only for listings that
-have a `priceChangePercent`. `GetPriceChangesByPercent(ctx, true, 20)` is then
-equivalent to `ORDER BY priceChangePercent ASC LIMIT 20`, and
-`GetPriceChangesByPercent(ctx, false, 20)` is `ORDER BY priceChangePercent DESC
-LIMIT 20`. Until the GSI exists, those methods fall back to a table scan.
-
-```bash
-aws dynamodb update-table \
-  --table-name "$CK_DYNAMODB_TABLE" \
-  --attribute-definitions \
-      AttributeName=priceChangeIndexPK,AttributeType=S \
-      AttributeName=priceChangePercent,AttributeType=N \
-  --global-secondary-index-updates '[
-    {
-      "Create": {
-        "IndexName": "priceChangePercent-index",
-        "KeySchema": [
-          {"AttributeName": "priceChangeIndexPK", "KeyType": "HASH"},
-          {"AttributeName": "priceChangePercent", "KeyType": "RANGE"}
-        ],
-        "Projection": {"ProjectionType": "ALL"}
-      }
-    }
-  ]'
-```
-
 ```mermaid
 sequenceDiagram
     participant EB as EventBridge
