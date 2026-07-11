@@ -19,6 +19,25 @@ func clearProxyEnv(t *testing.T) {
 	t.Setenv("DYNAMIC_PROXY", "")
 }
 
+func TestNewOutboundHTTPClient(t *testing.T) {
+	clearProxyEnv(t)
+
+	t.Run("returns direct client when no proxy is configured", func(t *testing.T) {
+		client, err := NewOutboundHTTPClient(2 * time.Second)
+		require.NoError(t, err)
+		require.NotNil(t, client)
+		require.Nil(t, client.Transport)
+	})
+
+	t.Run("returns dedicated proxy client when configured", func(t *testing.T) {
+		t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+		client, err := NewOutboundHTTPClient(2 * time.Second)
+		require.NoError(t, err)
+		require.NotNil(t, client)
+		require.NotNil(t, client.Transport)
+	})
+}
+
 func TestDoOutboundGET_DirectSuccess(t *testing.T) {
 	clearProxyEnv(t)
 

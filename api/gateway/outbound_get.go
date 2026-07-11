@@ -117,6 +117,17 @@ func outboundStatusFailure(strategy string, resp *http.Response) string {
 	return msg + " (" + trimmed + ")"
 }
 
+// NewOutboundHTTPClient returns an HTTP client that routes through a random dedicated
+// proxy when configured, otherwise dynamic proxy, otherwise direct. The policy matches
+// optimized colly collectors used by non-BinderPOS scrapers.
+func NewOutboundHTTPClient(timeout time.Duration) (*http.Client, error) {
+	_, proxyURL := selectOutboundProxy("")
+	if proxyURL == "" {
+		return &http.Client{Timeout: timeout}, nil
+	}
+	return newProxyHTTPClient(proxyURL, timeout)
+}
+
 func newProxyHTTPClient(proxyURL string, timeout time.Duration) (*http.Client, error) {
 	parsedProxyURL, err := url.Parse(proxyURL)
 	if err != nil {

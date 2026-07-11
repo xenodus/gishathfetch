@@ -3,6 +3,7 @@ package agora
 import (
 	"context"
 	"log"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 
-	"github.com/gocolly/colly/v2"
+	"github.com/PuerkitoBio/goquery"
 )
 
 const StoreName = "Agora Hobby"
@@ -34,9 +35,11 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	var cards []gateway.Card
+
 	baseURL, err := url.Parse(s.BaseUrl)
 	if err != nil {
-		return nil, err
+		return cards, err
 	}
 
 	apiURL := &url.URL{
@@ -48,79 +51,107 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 			"searchfield": {searchStr},
 		}.Encode(),
 	}
-	searchURL := apiURL.String()
-	var cards []gateway.Card
 
-	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
-	c.SetRequestTimeout(config.AgoraSearchAttemptTimeout)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
+	if err != nil {
+		return cards, err
+	}
+	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
+		Style:   gateway.OutboundStyleHTML,
+		PageURL: apiURL,
+	}); err != nil {
+		return cards, err
+	}
 
-	c.OnHTML("div#store_listingcontainer", func(e *colly.HTMLElement) {
-		e.ForEach("div.store-item", func(_ int, el *colly.HTMLElement) {
-			var (
-				isInstock bool
-				price     float64
-				quality   string
-			)
+	client, err := gateway.NewOutboundHTTPClient(config.AgoraSearchAttemptTimeout)
+	if err != nil {
+		return cards, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return cards, err
+	}
+	defer resp.Body.Close()
 
-			// in stock
-			if el.ChildText("div.store-item-stock") != "Stock: 0" {
-				isInstock = true
-			}
+	body, err := gateway.ReadResponseBody(resp)
+	if err != nil {
+		return cards, err
+	}
 
-			// price
-			priceStr := strings.TrimSpace(el.ChildText("div.store-item-price"))
-			priceStr = strings.Replace(priceStr, "$", "", -1)
-			priceStr = strings.Replace(priceStr, ",", "", -1)
-			price, _ = strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return cards, err
+	}
 
-			// quality
-			qualityStr := el.ChildText("div.store-item-cat")
-			qualityStrSlice := strings.Split(qualityStr, " - ")
-			if len(qualityStrSlice) == 2 {
-				quality = strings.TrimSpace(qualityStrSlice[1])
-			}
-
-			var (
-				extraInfo []string
-				set       string
-			)
-			if strings.Contains(el.ChildText("div.store-item-cat"), "]") {
-				set = el.ChildText("div.store-item-cat")[:strings.Index(el.ChildText("div.store-item-cat"), "]")+1]
-				extraInfo = append(extraInfo, set)
-			}
-
-			// name
-			name := el.ChildText("div.store-item-title")
-
-			// url
-			cleanPageURL, err := url.Parse(strings.TrimSpace(searchURL))
-			if err != nil {
-				log.Printf("error parsing url for %s with value [%s]: %v", s.Name, searchURL, err)
-				return
-			}
-			cleanPageURL.RawQuery = url.Values{
-				"category":    []string{storeCategoryMTG},
-				"searchfield": []string{searchStr},
-				"utm_source":  []string{config.UtmSource},
-			}.Encode()
-
-			if !isInstock || price <= 0 {
-				return
-			}
-
-			cards = append(cards, gateway.Card{
-				Name:      strings.TrimSpace(name),
-				Url:       strings.TrimSpace(cleanPageURL.String()),
-				InStock:   true,
-				IsFoil:    strings.Contains(name, "FOIL"), // case sensitive
-				Price:     price,
-				Source:    s.Name,
-				Img:       strings.TrimSpace(el.ChildAttr("div.store-item-img", "data-img")),
-				Quality:   util.MapQuality(quality),
-				ExtraInfo: extraInfo,
-			})
-		})
+	doc.Find("div#store_listingcontainer div.store-item").Each(func(_ int, se *goquery.Selection) {
+		card, ok := parseStoreItem(se, s.Name, apiURL, searchStr)
+		if ok {
+			cards = append(cards, card)
+		}
 	})
 
-	return cards, gateway.VisitWithProxyInfo(c, searchURL)
+	return cards, nil
+}
+
+func parseStoreItem(se *goquery.Selection, storeName string, apiURL *url.URL, searchStr string) (gateway.Card, bool) {
+	if se.Find("div.store-item-stock").Text() == "Stock: 0" {
+		return gateway.Card{}, false
+	}
+
+	priceStr := strings.TrimSpace(se.Find("div.store-item-price").Text())
+	priceStr = strings.Replace(priceStr, "$", "", -1)
+	priceStr = strings.Replace(priceStr, ",", "", -1)
+	price, err := strconv.ParseFloat(strings.TrimSpace(priceStr), 64)
+	if err != nil || price <= 0 {
+		return gateway.Card{}, false
+	}
+
+	categoryText := se.Find("div.store-item-cat").Text()
+	quality := ""
+	qualityParts := strings.Split(categoryText, " - ")
+	if len(qualityParts) == 2 {
+		quality = strings.TrimSpace(qualityParts[1])
+	}
+
+	var extraInfo []string
+	if strings.Contains(categoryText, "]") {
+		set := categoryText[:strings.Index(categoryText, "]")+1]
+		extraInfo = append(extraInfo, set)
+	}
+
+	name := strings.TrimSpace(se.Find("div.store-item-title").Text())
+	if name == "" {
+		return gateway.Card{}, false
+	}
+
+	cardURL, err := buildCardURL(apiURL, searchStr)
+	if err != nil {
+		log.Printf("error parsing url for %s with value [%s]: %v", storeName, apiURL.String(), err)
+		return gateway.Card{}, false
+	}
+
+	return gateway.Card{
+		Name:      name,
+		Url:       cardURL,
+		InStock:   true,
+		IsFoil:    strings.Contains(name, "FOIL"),
+		Price:     price,
+		Source:    storeName,
+		Img:       strings.TrimSpace(se.Find("div.store-item-img").AttrOr("data-img", "")),
+		Quality:   util.MapQuality(quality),
+		ExtraInfo: extraInfo,
+	}, true
+}
+
+func buildCardURL(apiURL *url.URL, searchStr string) (string, error) {
+	cleanPageURL, err := url.Parse(apiURL.String())
+	if err != nil {
+		return "", err
+	}
+	cleanPageURL.RawQuery = url.Values{
+		"category":    []string{storeCategoryMTG},
+		"searchfield": []string{searchStr},
+		"utm_source":  []string{config.UtmSource},
+	}.Encode()
+	return cleanPageURL.String(), nil
 }
