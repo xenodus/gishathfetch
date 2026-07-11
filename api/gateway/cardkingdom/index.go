@@ -18,13 +18,11 @@ func BuildCheapestByName(products []Product, updatedAt time.Time) map[string]Lis
 			continue
 		}
 
-		quantity64, _ := product.QtyRetail.Int64()
 		considerCheapestListing(cheapestByName, Listing{
 			CardName:  product.Name,
 			Edition:   product.Edition,
 			PriceUsd:  priceUsd,
 			URL:       listingBaseURL + strings.TrimPrefix(product.URL, "/"),
-			Quantity:  int(quantity64),
 			IsFoil:    strings.EqualFold(strings.TrimSpace(product.IsFoil), "true"),
 			UpdatedAt: updatedAtValue,
 		})
