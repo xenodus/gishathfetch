@@ -18,21 +18,23 @@ import (
 )
 
 const (
+	batchGetLimit     = 100
 	batchWriteLimit   = 25
 	syncMetadataKey   = "__sync__"
 	syncMetadataLabel = "CK price sync metadata"
 )
 
 type dynamoRecord struct {
-	NameKey   string  `dynamodbav:"nameKey"`
-	CardName  string  `dynamodbav:"cardName"`
-	Edition   string  `dynamodbav:"edition"`
-	PriceUsd  float64 `dynamodbav:"priceUsd"`
-	URL       string  `dynamodbav:"url"`
-	Quantity  int     `dynamodbav:"quantity"`
-	IsFoil    bool    `dynamodbav:"isFoil"`
-	UpdatedAt string  `dynamodbav:"updatedAt"`
-	SyncedAt  string  `dynamodbav:"syncedAt"`
+	NameKey            string  `dynamodbav:"nameKey"`
+	CardName           string  `dynamodbav:"cardName"`
+	Edition            string  `dynamodbav:"edition"`
+	PriceUsd           float64 `dynamodbav:"priceUsd"`
+	PriceChangePercent *int    `dynamodbav:"priceChangePercent,omitempty"`
+	URL                string  `dynamodbav:"url"`
+	Quantity           int     `dynamodbav:"quantity"`
+	IsFoil             bool    `dynamodbav:"isFoil"`
+	UpdatedAt          string  `dynamodbav:"updatedAt"`
+	SyncedAt           string  `dynamodbav:"syncedAt"`
 }
 
 type syncMetadataRecord struct {
@@ -84,18 +86,30 @@ func (s *DynamoDBStore) GetByNameKey(ctx context.Context, nameKey string) (*card
 	}
 
 	return &cardkingdom.Listing{
-		CardName:  record.CardName,
-		Edition:   record.Edition,
-		PriceUsd:  record.PriceUsd,
-		URL:       record.URL,
-		Quantity:  record.Quantity,
-		IsFoil:    record.IsFoil,
-		UpdatedAt: record.UpdatedAt,
-		SyncedAt:  record.SyncedAt,
+		CardName:           record.CardName,
+		Edition:            record.Edition,
+		PriceUsd:           record.PriceUsd,
+		PriceChangePercent: record.PriceChangePercent,
+		URL:                record.URL,
+		Quantity:           record.Quantity,
+		IsFoil:             record.IsFoil,
+		UpdatedAt:          record.UpdatedAt,
+		SyncedAt:           record.SyncedAt,
 	}, nil
 }
 
 func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (string, error) {
+	nameKeys := make([]string, 0, len(listings))
+	for nameKey := range listings {
+		nameKeys = append(nameKeys, nameKey)
+	}
+
+	existing, err := s.batchGetExisting(ctx, nameKeys)
+	if err != nil {
+		return "", err
+	}
+	listings = listingsWithPriceChange(existing, listings)
+
 	syncedAt := time.Now().UTC().Format(time.RFC3339)
 	writeRequests := make([]types.WriteRequest, 0, len(listings)+1)
 	for nameKey, listing := range listings {
@@ -135,16 +149,66 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 
 func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, syncedAt string) dynamoRecord {
 	return dynamoRecord{
-		NameKey:   nameKey,
-		CardName:  listing.CardName,
-		Edition:   listing.Edition,
-		PriceUsd:  listing.PriceUsd,
-		URL:       listing.URL,
-		Quantity:  listing.Quantity,
-		IsFoil:    listing.IsFoil,
-		UpdatedAt: listing.UpdatedAt,
-		SyncedAt:  syncedAt,
+		NameKey:            nameKey,
+		CardName:           listing.CardName,
+		Edition:            listing.Edition,
+		PriceUsd:           listing.PriceUsd,
+		PriceChangePercent: listing.PriceChangePercent,
+		URL:                listing.URL,
+		Quantity:           listing.Quantity,
+		IsFoil:             listing.IsFoil,
+		UpdatedAt:          listing.UpdatedAt,
+		SyncedAt:           syncedAt,
 	}
+}
+
+func (s *DynamoDBStore) batchGetExisting(ctx context.Context, nameKeys []string) (map[string]dynamoRecord, error) {
+	existing := make(map[string]dynamoRecord, len(nameKeys))
+	if len(nameKeys) == 0 {
+		return existing, nil
+	}
+
+	for start := 0; start < len(nameKeys); start += batchGetLimit {
+		end := min(start+batchGetLimit, len(nameKeys))
+		batch := nameKeys[start:end]
+
+		keys := make([]map[string]types.AttributeValue, len(batch))
+		for i, nameKey := range batch {
+			keys[i] = map[string]types.AttributeValue{
+				"nameKey": &types.AttributeValueMemberS{Value: nameKey},
+			}
+		}
+
+		pending := map[string]types.KeysAndAttributes{
+			s.tableName: {Keys: keys},
+		}
+		for len(pending) > 0 {
+			output, err := s.client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
+				RequestItems: pending,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			for _, item := range output.Responses[s.tableName] {
+				var record dynamoRecord
+				if err := attributevalue.UnmarshalMap(item, &record); err != nil {
+					return nil, err
+				}
+				if record.NameKey == syncMetadataKey {
+					continue
+				}
+				existing[record.NameKey] = record
+			}
+
+			if len(output.UnprocessedKeys) == 0 {
+				break
+			}
+			pending = output.UnprocessedKeys
+		}
+	}
+
+	return existing, nil
 }
 
 func (s *DynamoDBStore) writeBatch(ctx context.Context, batch []types.WriteRequest) error {

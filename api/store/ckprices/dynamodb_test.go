@@ -13,19 +13,23 @@ import (
 
 func TestDynamoRecordFromListing(t *testing.T) {
 	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
+	priceChangePercent := 12
 	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
-		CardName:  "Lightning Bolt",
-		Edition:   "Fourth Edition",
-		PriceUsd:  1.49,
-		URL:       "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
-		Quantity:  0,
-		IsFoil:    false,
-		UpdatedAt: "2026-06-28T00:00:00Z",
+		CardName:           "Lightning Bolt",
+		Edition:            "Fourth Edition",
+		PriceUsd:           1.49,
+		PriceChangePercent: &priceChangePercent,
+		URL:                "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
+		Quantity:           0,
+		IsFoil:             false,
+		UpdatedAt:          "2026-06-28T00:00:00Z",
 	}, syncedAt)
 
 	require.Equal(t, "lightning bolt", record.NameKey)
 	require.Equal(t, "2026-06-28T00:00:00Z", record.UpdatedAt)
 	require.Equal(t, syncedAt, record.SyncedAt)
+	require.NotNil(t, record.PriceChangePercent)
+	require.Equal(t, 12, *record.PriceChangePercent)
 }
 
 func TestDynamoRecordMarshalIncludesSyncedAt(t *testing.T) {
@@ -37,6 +41,21 @@ func TestDynamoRecordMarshalIncludesSyncedAt(t *testing.T) {
 	av, ok := item["syncedAt"].(*types.AttributeValueMemberS)
 	require.True(t, ok)
 	require.Equal(t, syncedAt, av.Value)
+}
+
+func TestDynamoRecordMarshalIncludesPriceChangePercent(t *testing.T) {
+	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
+	priceChangePercent := -8
+	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
+		UpdatedAt:          "2026-06-28T00:00:00Z",
+		PriceChangePercent: &priceChangePercent,
+	}, syncedAt)
+	item, err := attributevalue.MarshalMap(record)
+	require.NoError(t, err)
+	require.Contains(t, item, "priceChangePercent")
+	av, ok := item["priceChangePercent"].(*types.AttributeValueMemberN)
+	require.True(t, ok)
+	require.Equal(t, "-8", av.Value)
 }
 
 func TestSyncMetadataRecordMarshal(t *testing.T) {

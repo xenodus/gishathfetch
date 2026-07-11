@@ -14,12 +14,13 @@ type Product struct {
 
 // Listing is the cheapest in-stock Card Kingdom offer for a card name.
 type Listing struct {
-	CardName  string  `json:"cardName"`
-	Edition   string  `json:"edition"`
-	PriceUsd  float64 `json:"priceUsd"`
-	URL       string  `json:"url"`
-	Quantity  int     `json:"quantity"`
-	IsFoil    bool    `json:"isFoil"`
-	UpdatedAt string  `json:"updatedAt,omitempty"`
-	SyncedAt  string  `json:"syncedAt,omitempty"`
+	CardName           string  `json:"cardName"`
+	Edition            string  `json:"edition"`
+	PriceUsd           float64 `json:"priceUsd"`
+	PriceChangePercent *int    `json:"priceChangePercent,omitempty"`
+	URL                string  `json:"url"`
+	Quantity           int     `json:"quantity"`
+	IsFoil             bool    `json:"isFoil"`
+	UpdatedAt          string  `json:"updatedAt,omitempty"`
+	SyncedAt           string  `json:"syncedAt,omitempty"`
 }
