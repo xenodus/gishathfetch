@@ -268,28 +268,39 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func(
 	return leasedDedicatedProxyURL, releaseDedicatedProxy
 }
 
-// applyInitialProxy configures the transport for the first and only request for this collector, mirroring
-// the prior "initial attempt" proxy policy without any follow-up attempts.
-func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL string) (string, string) {
+// selectOutboundProxy picks the proxy mode and URL for a single outbound attempt.
+// When leasedDedicatedProxyURL is non-empty it is used; otherwise a random dedicated
+// proxy is chosen when configured, then dynamic proxy, then direct.
+func selectOutboundProxy(leasedDedicatedProxyURL string) (mode string, proxyURL string) {
 	if !config.UseProxy {
-		return clearProxy(c)
+		return "direct", ""
 	}
 	if leasedDedicatedProxyURL != "" {
-		c.SetProxy(leasedDedicatedProxyURL)
 		return "dedicated", leasedDedicatedProxyURL
 	}
 	if proxyURL, ok := randomDedicatedProxyURL(""); ok {
-		c.SetProxy(proxyURL)
 		return "dedicated", proxyURL
 	}
 	if proxyURL := DynamicProxyURL(); proxyURL != "" {
-		if err := c.SetProxy(proxyURL); err == nil {
-			return "dynamic", proxyURL
-		} else {
+		return "dynamic", proxyURL
+	}
+	return "direct", ""
+}
+
+// applyInitialProxy configures the transport for the first and only request for this collector, mirroring
+// the prior "initial attempt" proxy policy without any follow-up attempts.
+func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL string) (string, string) {
+	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL)
+	if proxyURL == "" {
+		return clearProxy(c)
+	}
+	if err := c.SetProxy(proxyURL); err != nil {
+		if mode == "dynamic" {
 			log.Printf("invalid dynamic proxy configured: %v", err)
 		}
+		return clearProxy(c)
 	}
-	return clearProxy(c)
+	return mode, proxyURL
 }
 
 // Colly callback registration helpers.

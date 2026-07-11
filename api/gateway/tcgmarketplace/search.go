@@ -173,7 +173,11 @@ func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured b
 		requestContext = append(requestContext, "access_token_configured=false")
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	client, err := gateway.NewOutboundHTTPClient(config.SearchAttemptTimeout)
+	if err != nil {
+		return res, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return res, gateway.WrapHTTPRequestError(err, req, requestContext...)
 	}
