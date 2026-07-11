@@ -22,13 +22,15 @@ func Test_Search(t *testing.T) {
 	}, func(t *testing.T, ctx context.Context) {
 		shopifysuggest.RequireSuggestStructure(t, ctx, shopifysuggest.Options{
 			Config: shopifysuggest.Config{
-				StoreName: StoreName,
-				BaseURL:   StoreBaseURL,
+				StoreName:           StoreName,
+				BaseURL:             StoreBaseURL,
+				ShopifyLocalization: shopifysuggest.ShopifyLocalizationSingapore,
 			},
-			SearchStr:   "Abrade",
-			BuildQuery:  shopifysuggest.FyendalQuery,
-			QueryValues: shopifysuggest.FyendalQueryValues,
-			MapProduct:  shopifysuggest.MapFyendalProduct,
+			SearchStr:       "Abrade",
+			BuildQuery:      shopifysuggest.FyendalQuery,
+			QueryValues:     shopifysuggest.FyendalQueryValues,
+			MapProduct:      shopifysuggest.MapFyendalProduct,
+			ResolveVariants: true,
 		})
 	})
 }
