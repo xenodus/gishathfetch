@@ -160,10 +160,10 @@ func fetchProducts(ctx context.Context, client *http.Client, apiURL string, reqO
 // use predictive-search fields only. When ResolveVariants is false, each
 // product emits a single suggest card.
 //
-// The HTTP client is threaded through so variant resolution reuses the same
-// transport that won the suggest fallback (direct, dedicated, or dynamic
-// proxy), avoiding a fresh, possibly-throttled connection per product.
-func mapProducts(ctx context.Context, client *http.Client, opts Options, products []Product) []gateway.Card {
+// Product detail requests use productDetailClient, which round-robins dedicated
+// proxies so variant resolution does not pile onto the transport that fetched
+// suggest.json.
+func mapProducts(ctx context.Context, opts Options, products []Product) []gateway.Card {
 	cards := make([]gateway.Card, 0, len(products))
 	variantResolveRemaining := variantResolveMaxProducts
 
@@ -186,7 +186,7 @@ func mapProducts(ctx context.Context, client *http.Client, opts Options, product
 		}
 
 		if variantResolveRemaining > 0 {
-			resolved := resolveVariantCards(ctx, client, opts.Config, product, base)
+			resolved := resolveVariantCards(ctx, productDetailClient(), opts.Config, product, base)
 			if len(resolved) > 0 {
 				cards = append(cards, resolved...)
 			}

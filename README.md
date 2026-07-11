@@ -233,7 +233,7 @@ flowchart TD
     F -- success --> E
     G --> E
     E --> H{ResolveVariants?}
-    H -- yes --> I[GET /products/handle.js per product]
+    H -- yes --> I[GET /products/handle.js per product on rotating dedicated proxy]
     I --> J[one card per in-stock variant]
     H -- no --> K[one card per suggest product]
 ```

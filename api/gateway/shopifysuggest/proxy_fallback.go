@@ -74,6 +74,25 @@ func buildSearchAttempts() []searchAttempt {
 	return attempts
 }
 
+// productDetailClient selects the HTTP client for a product JSON fetch. Tests may
+// replace this to inject a local client.
+var productDetailClient = defaultProductDetailClient
+
+// defaultProductDetailClient returns a fresh client for each product detail
+// request. Dedicated proxies are round-robined so variant resolution spreads
+// load across IPs instead of reusing the transport that won the suggest
+// fallback. When no dedicated proxies are configured, direct is used, then
+// dynamic when available.
+func defaultProductDetailClient() *http.Client {
+	if client, ok := dedicatedProxyClient(); ok {
+		return client
+	}
+	if client, ok := dynamicProxyClient(); ok {
+		return client
+	}
+	return &http.Client{Timeout: config.SearchAttemptTimeout}
+}
+
 // dedicatedProxyClient returns an HTTP client bound to the next dedicated proxy
 // in round-robin order, or ok=false when none are configured.
 func dedicatedProxyClient() (*http.Client, bool) {
@@ -129,7 +148,7 @@ func fetchAndMapProducts(ctx context.Context, client *http.Client, apiURL string
 	if err != nil {
 		return nil, err
 	}
-	return mapProducts(ctx, client, opts, products), nil
+	return mapProducts(ctx, opts, products), nil
 }
 
 func annotateSuggestAttemptError(attempt int, strategy string, err error) error {

@@ -57,7 +57,11 @@ func TestMapProductsVariantResolveLimit(t *testing.T) {
 		},
 	}
 
-	cards := mapProducts(context.Background(), srv.Client(), opts, products)
+	oldProductDetailClient := productDetailClient
+	productDetailClient = func() *http.Client { return srv.Client() }
+	t.Cleanup(func() { productDetailClient = oldProductDetailClient })
+
+	cards := mapProducts(context.Background(), opts, products)
 
 	require.Equal(t, int32(variantResolveMaxProducts), detailCalls.Load())
 	require.Len(t, cards, variantResolveMaxProducts+2)
