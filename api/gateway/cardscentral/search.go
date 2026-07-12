@@ -71,10 +71,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 
-	client, err := gateway.NewOutboundHTTPClient(15 * time.Second)
-	if err != nil {
-		return cards, err
-	}
+	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return cards, err
