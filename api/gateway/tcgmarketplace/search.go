@@ -161,25 +161,22 @@ func isSurgeFoil(extraInfo []string, name string) bool {
 func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured bool) (response, error) {
 	var res response
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
-	if err != nil {
-		return res, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.ContentLength = int64(len(payload))
-
 	var requestContext []string
 	if !accessTokenConfigured {
 		requestContext = append(requestContext, "access_token_configured=false")
 	}
 
-	client, err := gateway.NewOutboundHTTPClient(config.SearchAttemptTimeout)
+	resp, err := gateway.DoOutboundRoundTrip(ctx, gateway.OutboundRequestOptions{}, config.SearchAttemptTimeout, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.ContentLength = int64(len(payload))
+		return req, nil
+	})
 	if err != nil {
-		return res, err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return res, gateway.WrapHTTPRequestError(err, req, requestContext...)
+		return res, gateway.WrapHTTPRequestError(err, nil, requestContext...)
 	}
 	defer resp.Body.Close()
 

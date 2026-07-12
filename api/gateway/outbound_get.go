@@ -18,16 +18,31 @@ type outboundAttempt struct {
 }
 
 // DoOutboundGET performs a GET with direct, dedicated-proxy, and dynamic-proxy
-// fallback. Transient 403/429 responses advance to the next transport.
+// fallback. Transient errors and 403/429 responses advance to the next transport.
 func DoOutboundGET(
 	ctx context.Context,
 	requestURL string,
 	opts OutboundRequestOptions,
 	timeout time.Duration,
 ) (*http.Response, error) {
+	return DoOutboundRoundTrip(ctx, opts, timeout, func() (*http.Request, error) {
+		return http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	})
+}
+
+// DoOutboundRoundTrip performs an HTTP round trip with direct, dedicated-proxy,
+// and dynamic-proxy fallback. Transient errors and 403/429 responses advance to
+// the next transport. buildReq is called for each attempt so callers can supply
+// a fresh request body when needed.
+func DoOutboundRoundTrip(
+	ctx context.Context,
+	opts OutboundRequestOptions,
+	timeout time.Duration,
+	buildReq func() (*http.Request, error),
+) (*http.Response, error) {
 	var failures []string
 	for _, attempt := range buildOutboundGETAttempts(timeout, opts.SkipDirect) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+		req, err := buildReq()
 		if err != nil {
 			return nil, err
 		}
@@ -47,9 +62,9 @@ func DoOutboundGET(
 		return resp, nil
 	}
 	if len(failures) == 0 {
-		return nil, fmt.Errorf("outbound get failed")
+		return nil, fmt.Errorf("outbound request failed")
 	}
-	return nil, fmt.Errorf("outbound get failed: %s", strings.Join(failures, "; "))
+	return nil, fmt.Errorf("outbound request failed: %s", strings.Join(failures, "; "))
 }
 
 func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool) []outboundAttempt {

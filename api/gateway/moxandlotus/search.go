@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -139,18 +138,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}.Encode(),
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{}); err != nil {
-		return cards, err
-	}
-	client, err := gateway.NewOutboundHTTPClient(config.SearchAttemptTimeout)
-	if err != nil {
-		return cards, err
-	}
-	resp, err := client.Do(req)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{}, config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}

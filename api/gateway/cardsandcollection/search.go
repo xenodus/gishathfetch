@@ -166,19 +166,14 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 
 	apiURL := s.BaseUrl + StoreApiURL
 	requestBody := fmt.Appendf(nil, `{"query":{"bool":{"should":[{"simple_query_string":{"query":"%s","fields":["name","setCode","setName"],"default_operator":"AND"}},{"multi_match":{"query":"%s","type":"phrase_prefix","fields":["name","setCode","setName"]}}]}},"post_filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory4":{"filter":{"bool":{"must":{"terms":{"collectableContext.raw":["MTG","ACCESSORY"]}}}},"aggs":{"productCategory.raw":{"terms":{"field":"productCategory.raw","size":50}},"productCategory.raw_count":{"cardinality":{"field":"productCategory.raw"}}}}},"size":20,"sort":[{"quantityOnSale":"desc"}]}`, searchStr, searchStr)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewBuffer(requestBody))
-	if err != nil {
-		return cards, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{}); err != nil {
-		return cards, err
-	}
-	client, err := gateway.NewOutboundHTTPClient(config.SearchAttemptTimeout)
-	if err != nil {
-		return cards, err
-	}
-	resp, err := client.Do(req)
+	resp, err := gateway.DoOutboundRoundTrip(ctx, gateway.OutboundRequestOptions{}, config.SearchAttemptTimeout, func() (*http.Request, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewBuffer(requestBody))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		return req, nil
+	})
 	if err != nil {
 		return cards, err
 	}

@@ -3,7 +3,6 @@ package agora
 import (
 	"context"
 	"log"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -52,22 +51,10 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}.Encode(),
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
-	if err != nil {
-		return cards, err
-	}
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
 		Style:   gateway.OutboundStyleHTML,
 		PageURL: apiURL,
-	}); err != nil {
-		return cards, err
-	}
-
-	client, err := gateway.NewOutboundHTTPClient(config.AgoraSearchAttemptTimeout)
-	if err != nil {
-		return cards, err
-	}
-	resp, err := client.Do(req)
+	}, config.AgoraSearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
