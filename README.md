@@ -121,8 +121,17 @@ available same-origin through CloudFront. The object is uploaded with
 `Cache-Control: public, max-age=3600` so edge caches can serve it between daily
 exports without a separate invalidation.
 
-Frontend deploys exclude `robots.txt` from `aws s3 sync` so the daily Lambda export
-remains the source of truth for the live file.
+Frontend deploys exclude `robots.txt` and `ads.txt` from `aws s3 sync` so the daily
+Lambda export and any manually managed ad-network file remain the source of truth
+for those objects. Stale Vite hashed bundles under `assets/` are pruned in a
+separate `aws s3 sync ... --delete` scoped to that prefix only.
+
+#### IAM permissions for GitHub Actions deploy
+
+The `github-actions-gishathfetch-deploy` role (used by `.github/workflows/deploy-on-merge.yml`)
+must allow `s3:DeleteObject` on `arn:aws:s3:::gishathfetch.com/assets/*` so asset
+pruning succeeds. Without it, deploy fails after upload and old hashed bundles
+remain in the bucket.
 
 Example report shape:
 
