@@ -23,21 +23,34 @@ var (
 	ckPriceReportNowFunc = time.Now
 )
 
-func runCKPriceRefresh(ctx context.Context) error {
+func runCKPriceRefresh(ctx context.Context) (err error) {
 	log.Printf("ck price refresh: started")
+	var refreshedCount int
+	var topCount int
+	var bottomCount int
+	var generatedAt string
+
+	defer func() {
+		if err != nil {
+			sendJobDiscordAlert(formatCKPriceRefreshFailure(err))
+			return
+		}
+		sendJobDiscordAlert(formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount, generatedAt))
+	}()
+
 	store, err := newCKRefreshStoreFunc(ctx)
 	if err != nil {
 		log.Printf("ck price refresh: failed opening dynamodb store: %v", err)
 		return err
 	}
 
-	count, err := refreshCKPricesFunc(ctx, store)
+	refreshedCount, err = refreshCKPricesFunc(ctx, store)
 	if err != nil {
 		log.Printf("ck price refresh: failed: %v", err)
 		return err
 	}
 
-	log.Printf("ck price refresh: finished refreshed=%d", count)
+	log.Printf("ck price refresh: finished refreshed=%d", refreshedCount)
 
 	changes, err := store.GetTopBottomPriceChanges(ctx)
 	if err != nil {
@@ -57,6 +70,9 @@ func runCKPriceRefresh(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("ck price refresh: exported price changes top=%d bottom=%d generatedAt=%s", len(report.Top), len(report.Bottom), report.GeneratedAt)
+	topCount = len(report.Top)
+	bottomCount = len(report.Bottom)
+	generatedAt = report.GeneratedAt
+	log.Printf("ck price refresh: exported price changes top=%d bottom=%d generatedAt=%s", topCount, bottomCount, generatedAt)
 	return nil
 }

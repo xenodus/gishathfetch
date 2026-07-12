@@ -24,8 +24,17 @@ var (
 	}
 )
 
-func runAnalyticsKeywordsExport(ctx context.Context) error {
+func runAnalyticsKeywordsExport(ctx context.Context) (err error) {
 	log.Printf("analytics keywords export: started")
+	var generatedAt string
+
+	defer func() {
+		if err != nil {
+			sendJobDiscordAlert(formatAnalyticsKeywordsExportFailure(err))
+			return
+		}
+		sendJobDiscordAlert(formatAnalyticsKeywordsExportSuccess(generatedAt))
+	}()
 
 	reporter, err := newGA4ReporterFunc(ctx)
 	if err != nil {
@@ -51,6 +60,7 @@ func runAnalyticsKeywordsExport(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("analytics keywords export: finished generatedAt=%s", report.GeneratedAt)
+	generatedAt = report.GeneratedAt
+	log.Printf("analytics keywords export: finished generatedAt=%s", generatedAt)
 	return nil
 }
