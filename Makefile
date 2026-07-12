@@ -40,6 +40,7 @@ frontend-update: frontend-build
 		--delete \
 		--exclude ".well-known/http-message-signatures-directory" \
 		--exclude "robots.txt" \
+		--exclude "ads.txt" \
 		--exclude "analytics/*"
 	@if [ -f frontend/dist/.well-known/http-message-signatures-directory ]; then \
 		export AWS_PAGER="" && aws s3 cp frontend/dist/.well-known/http-message-signatures-directory \
