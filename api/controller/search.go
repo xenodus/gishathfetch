@@ -262,7 +262,7 @@ func recoverShopPanic(shopName string, aggregator *fetchResultAggregator) {
 }
 
 func recordShopSearchError(searchString, shopName string, err error, aggregator *fetchResultAggregator) {
-	if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+	if !errors.Is(err, context.Canceled) {
 		errMsg := fmt.Sprintf(
 			"Error encountered searching [%s] for [%s]: %s",
 			shopName,
