@@ -8,18 +8,31 @@ import (
 	"os"
 )
 
+const (
+	DiscordWebhookURLEnv    = "DISCORD_WEBHOOK_URL"
+	JobDiscordWebhookURLEnv = "JOB_DISCORD_WEBHOOK_URL"
+)
+
 type DiscordPayload struct {
 	Content string `json:"content"`
 }
 
-// SendDiscordAlert sends a message to the configured Discord Webhook URL.
+// SendDiscordAlert sends a message to the search-error Discord webhook.
 // It is fire-and-forget; errors are logged but not returned to disrupt the main flow.
 func SendDiscordAlert(message string) {
-	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
+	sendDiscordWebhook(DiscordWebhookURLEnv, message)
+}
+
+// SendJobDiscordAlert sends a message to the scheduled-job Discord webhook.
+// It is fire-and-forget; errors are logged but not returned to disrupt the main flow.
+func SendJobDiscordAlert(message string) {
+	sendDiscordWebhook(JobDiscordWebhookURLEnv, message)
+}
+
+func sendDiscordWebhook(webhookURLEnv, message string) {
+	webhookURL := os.Getenv(webhookURLEnv)
 	if webhookURL == "" {
-		// Log warning only once or just ignore if not configured?
-		// Better to log so user knows why alerts aren't sending.
-		log.Println("DISCORD_WEBHOOK_URL not set, skipping alert")
+		log.Printf("%s not set, skipping alert", webhookURLEnv)
 		return
 	}
 

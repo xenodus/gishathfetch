@@ -15,11 +15,18 @@ func init() {
 }
 
 func TestSendDiscordAlert(t *testing.T) {
-	// 1. Test Case: Success
+	testSendDiscordWebhook(t, DiscordWebhookURLEnv, SendDiscordAlert)
+}
+
+func TestSendJobDiscordAlert(t *testing.T) {
+	testSendDiscordWebhook(t, JobDiscordWebhookURLEnv, SendJobDiscordAlert)
+}
+
+func testSendDiscordWebhook(t *testing.T, webhookURLEnv string, sendAlert func(string)) {
+	t.Helper()
+
 	t.Run("Success", func(t *testing.T) {
-		// Mock server
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// specific assertions
 			if r.Method != http.MethodPost {
 				t.Errorf("Expected POST request, got %s", r.Method)
 			}
@@ -36,41 +43,44 @@ func TestSendDiscordAlert(t *testing.T) {
 				t.Errorf("Expected content 'Test Message', got '%s'", payload.Content)
 			}
 
-			w.WriteHeader(http.StatusNoContent) // 204 is typical for webhooks
+			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer server.Close()
 
-		// Set ENV to mock server
-		t.Setenv("DISCORD_WEBHOOK_URL", server.URL)
-
-		// Call function
-		SendDiscordAlert("Test Message")
+		t.Setenv(webhookURLEnv, server.URL)
+		sendAlert("Test Message")
 	})
 
-	// 2. Test Case: No URL set (Should not panic)
 	t.Run("No URL Set", func(t *testing.T) {
-		t.Setenv("DISCORD_WEBHOOK_URL", "")
-		SendDiscordAlert("Should result in log but no panic")
+		t.Setenv(webhookURLEnv, "")
+		sendAlert("Should result in log but no panic")
 	})
 
-	// 3. Test Case: Server Error (Should handle gracefully)
 	t.Run("Server Error", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer server.Close()
 
-		t.Setenv("DISCORD_WEBHOOK_URL", server.URL)
-
-		SendDiscordAlert("Test Message")
+		t.Setenv(webhookURLEnv, server.URL)
+		sendAlert("Test Message")
 	})
 }
 
 func TestSendDiscordAlert_Integration(t *testing.T) {
-	webhookURL := os.Getenv("DISCORD_WEBHOOK_URL")
+	webhookURL := os.Getenv(DiscordWebhookURLEnv)
 	if webhookURL == "" {
 		t.Skip("DISCORD_WEBHOOK_URL not set, skipping integration test")
 	}
 
 	SendDiscordAlert("Integration Test Message (Ignore this)")
+}
+
+func TestSendJobDiscordAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv(JobDiscordWebhookURLEnv)
+	if webhookURL == "" {
+		t.Skip("JOB_DISCORD_WEBHOOK_URL not set, skipping integration test")
+	}
+
+	SendJobDiscordAlert("Integration Test Message (Ignore this)")
 }
