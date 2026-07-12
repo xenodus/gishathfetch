@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"mtg-price-checker-sg/gateway"
@@ -499,6 +500,95 @@ func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 	}
 	if !strings.Contains(got, "- Recovered from panic in shop [PanicShop]: shop panic") {
 		t.Fatalf("expected PanicShop details in alert, got: %s", got)
+	}
+}
+
+func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToDiscord(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"Timeout Shop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, context.DeadlineExceeded
+			},
+		},
+	}
+
+	var mu sync.Mutex
+	alertMessages := make([]string, 0, 1)
+	alertDone := make(chan struct{}, 1)
+
+	originalSendDiscordAlert := sendDiscordAlert
+	sendDiscordAlert = func(message string) {
+		mu.Lock()
+		alertMessages = append(alertMessages, message)
+		mu.Unlock()
+		select {
+		case alertDone <- struct{}{}:
+		default:
+		}
+	}
+	t.Cleanup(func() {
+		sendDiscordAlert = originalSendDiscordAlert
+	})
+
+	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	if len(siteErrors) != 1 {
+		t.Fatalf("expected 1 site error, got %d", len(siteErrors))
+	}
+	if !errors.Is(siteErrors["Timeout Shop"], context.DeadlineExceeded) {
+		t.Fatalf("expected deadline exceeded site error, got %v", siteErrors["Timeout Shop"])
+	}
+
+	select {
+	case <-alertDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for timeout discord alert")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(alertMessages) != 1 {
+		t.Fatalf("expected exactly 1 alert, got %d", len(alertMessages))
+	}
+	if !strings.Contains(alertMessages[0], "- [Timeout Shop] context deadline exceeded") {
+		t.Fatalf("expected timeout shop in alert, got: %s", alertMessages[0])
+	}
+}
+
+func TestFetchCardsConcurrently_SkipsCanceledForDiscord(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"Canceled Shop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, context.Canceled
+			},
+		},
+	}
+
+	alertSent := make(chan struct{}, 1)
+	originalSendDiscordAlert := sendDiscordAlert
+	sendDiscordAlert = func(message string) {
+		select {
+		case alertSent <- struct{}{}:
+		default:
+		}
+	}
+	t.Cleanup(func() {
+		sendDiscordAlert = originalSendDiscordAlert
+	})
+
+	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	if len(siteErrors) != 1 {
+		t.Fatalf("expected 1 site error, got %d", len(siteErrors))
+	}
+	if !errors.Is(siteErrors["Canceled Shop"], context.Canceled) {
+		t.Fatalf("expected canceled site error, got %v", siteErrors["Canceled Shop"])
+	}
+
+	select {
+	case <-alertSent:
+		t.Fatal("did not expect discord alert for canceled search")
+	case <-time.After(200 * time.Millisecond):
 	}
 }
 
