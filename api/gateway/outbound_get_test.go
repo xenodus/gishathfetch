@@ -1,8 +1,10 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -94,4 +96,55 @@ func TestDoOutboundGET_DirectForbiddenWithoutProxy(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "direct: status 403")
+}
+
+func TestDoOutboundGET_ContinuesAfterDirectTimeout(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "127.0.0.1|9|u|p")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		50*time.Millisecond,
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "direct:")
+	require.Contains(t, err.Error(), "dedicated-1:")
+}
+
+func TestDoOutboundRoundTrip_RebuildsPOSTBodyPerAttempt(t *testing.T) {
+	clearProxyEnv(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Equal(t, `{"q":"test"}`, string(body))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	payload := []byte(`{"q":"test"}`)
+	resp, err := DoOutboundRoundTrip(
+		context.Background(),
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		2*time.Second,
+		func() (*http.Request, error) {
+			return http.NewRequestWithContext(
+				context.Background(),
+				http.MethodPost,
+				server.URL,
+				bytes.NewBuffer(payload),
+			)
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
 }

@@ -6,7 +6,6 @@ import (
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -46,22 +45,11 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}.Encode(),
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
-	if err != nil {
-		return cards, err
-	}
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
 		Style:              gateway.OutboundStyleHTML,
 		PageURL:            apiURL,
 		ShopifySGDCurrency: true,
-	}); err != nil {
-		return cards, err
-	}
-	client, err := gateway.NewOutboundHTTPClient(config.SearchAttemptTimeout)
-	if err != nil {
-		return cards, err
-	}
-	resp, err := client.Do(req)
+	}, config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
