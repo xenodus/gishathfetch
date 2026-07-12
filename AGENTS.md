@@ -90,7 +90,7 @@ Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
 ### Frontend API connection
 
-The frontend SPA points to `api.gishathfetch.com` (see `frontend/src/constants.js`). CORS headers on the API allow `gishathfetch.com` and local dev origins (`localhost:5173`). To test the full search flow through the browser, either use the computerUse agent to navigate (it works via fetch from the page) or add a Vite proxy configuration temporarily (revert before committing).
+The frontend SPA points to `api.gishathfetch.com` (see `frontend/src/constants.js`). The Go code allows `http://localhost:5173` in CORS origins, but the production API Gateway may not forward the `Origin` header correctly, resulting in missing `Access-Control-Allow-Origin` responses. To test the full search flow locally in a browser, add a Vite proxy configuration temporarily (revert before committing). The frontend UI itself loads and renders correctly without the API — only live search requires a working API connection.
 
 ### Backend local mode
 
