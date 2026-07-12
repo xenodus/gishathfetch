@@ -37,8 +37,10 @@ generate-signature-directory:
 
 frontend-update: frontend-build
 	aws s3 sync frontend/dist s3://gishathfetch.com \
+		--delete \
 		--exclude ".well-known/http-message-signatures-directory" \
-		--exclude "robots.txt"
+		--exclude "robots.txt" \
+		--exclude "analytics/*"
 	@if [ -f frontend/dist/.well-known/http-message-signatures-directory ]; then \
 		export AWS_PAGER="" && aws s3 cp frontend/dist/.well-known/http-message-signatures-directory \
 			s3://gishathfetch.com/.well-known/http-message-signatures-directory \
