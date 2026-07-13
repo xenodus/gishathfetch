@@ -306,7 +306,7 @@ export default function TopSearchKeywords({
             <PeriodToggle
               period={period}
               onPeriodChange={handlePeriodChange}
-              disabled={isLoading || showPriceIncreases}
+              disabled={isLoading}
             />
             <button
               type="button"
