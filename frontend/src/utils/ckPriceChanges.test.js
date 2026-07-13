@@ -11,7 +11,7 @@ test("formatPriceChangeUsd formats signed dollar amounts", () => {
   assert.equal(formatPriceChangeUsd(10), "+$10.00");
   assert.equal(formatPriceChangeUsd(-0.25), "-$0.25");
   assert.equal(formatPriceChangeUsd(-10), "-$10.00");
-  assert.equal(formatPriceChangeUsd(0), "$0.00");
+  assert.equal(formatPriceChangeUsd(0), null);
   assert.equal(formatPriceChangeUsd(null), null);
   assert.equal(formatPriceChangeUsd(Number.NaN), null);
 });

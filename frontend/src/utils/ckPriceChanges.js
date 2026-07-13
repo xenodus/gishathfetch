@@ -6,13 +6,13 @@ export function formatPriceChangeUsd(usd) {
   const rounded = Math.round(usd * 100) / 100;
   const amount = Math.abs(rounded).toFixed(2);
 
+  if (rounded === 0) {
+    return null;
+  }
   if (rounded > 0) {
     return `+$${amount}`;
   }
-  if (rounded < 0) {
-    return `-$${amount}`;
-  }
-  return `$${amount}`;
+  return `-$${amount}`;
 }
 
 function parseCKPriceChangeListings(listings, limit = 20) {
