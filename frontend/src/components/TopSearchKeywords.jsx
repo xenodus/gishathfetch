@@ -9,7 +9,7 @@ import {
 } from "../constants";
 import useCKPriceChanges from "../hooks/useCKPriceChanges";
 import useMediaQuery from "../hooks/useMediaQuery";
-import { formatPriceChangePercent } from "../utils/ckPriceChanges";
+import { formatPriceChangeUsd } from "../utils/ckPriceChanges";
 import { buildPopularSearchUrl, buildSearchQueryUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
@@ -165,7 +165,7 @@ function CKPriceChangeContent({
     <div className="popular-searches-pills">
       {items.map((item) => {
         const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
-        const changeLabel = formatPriceChangePercent(item.priceChangePercent, {
+        const changeLabel = formatPriceChangeUsd(item.priceChangeUsd, {
           absolute: !isRiser,
         });
         const ariaLabel = changeLabel
