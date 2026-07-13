@@ -329,11 +329,11 @@ export default function TopSearchKeywords({
               }`}
               aria-pressed={showPriceIncreases}
               aria-controls={contentPanelId}
-              aria-label="Top risers in 24 hours"
+              aria-label="Top dollar risers in 24 hours"
               disabled={isLoadingPriceIncreases}
               onClick={handlePriceIncreasesSelect}
             >
-              Top risers (24h)
+              Top $ risers (24h)
             </button>
           </div>
 
