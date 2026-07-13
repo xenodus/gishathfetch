@@ -126,9 +126,6 @@ function CKPriceIncreasesPanel({
   if (isLoading) {
     return (
       <div className="trending-price-increases" id={panelId}>
-        <p className="trending-price-increases-heading small text-muted mb-2">
-          Top CK price increases
-        </p>
         <div className="popular-searches-pills">
           {LOADING_SKELETON_KEYS.slice(0, CK_PRICE_CHANGES_DISPLAY_LIMIT).map(
             (key) => (
@@ -163,29 +160,25 @@ function CKPriceIncreasesPanel({
 
   return (
     <div className="trending-price-increases" id={panelId}>
-      <p className="trending-price-increases-heading small text-muted mb-2">
-        Top CK price increases
-      </p>
-      <ol className="trending-price-increases-list mb-0">
-        {priceIncreases.map((item, index) => {
+      <div className="popular-searches-pills">
+        {priceIncreases.map((item) => {
           const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
 
           return (
-            <li key={`${item.cardName}-${index}`}>
-              <a
-                href={buildSearchQueryUrl(BASE_URL, item.cardName)}
-                className={`trending-price-increase-link${
-                  isActive ? " is-active" : ""
-                }`}
-                aria-label={`Search for ${item.cardName}`}
-                aria-current={isActive ? "page" : undefined}
-              >
-                {item.cardName}
-              </a>
-            </li>
+            <a
+              key={item.cardName}
+              href={buildSearchQueryUrl(BASE_URL, item.cardName)}
+              className={`btn btn-sm popular-search-pill text-decoration-none${
+                isActive ? " is-active" : ""
+              }`}
+              aria-label={`Search for ${item.cardName}`}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {item.cardName}
+            </a>
           );
         })}
-      </ol>
+      </div>
     </div>
   );
 }
