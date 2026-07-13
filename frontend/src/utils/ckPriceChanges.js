@@ -1,11 +1,22 @@
-export function formatPriceChangePercent(percent, { absolute = false } = {}) {
-  if (typeof percent !== "number" || !Number.isFinite(percent)) {
+export function formatPriceChangeUsd(usd, { absolute = false } = {}) {
+  if (typeof usd !== "number" || !Number.isFinite(usd)) {
     return null;
   }
 
-  const rounded = Math.round(percent * 10) / 10;
-  const value = absolute ? Math.abs(rounded) : rounded;
-  return Number.isInteger(value) ? `${value}%` : `${value.toFixed(1)}%`;
+  const value = absolute ? Math.abs(usd) : usd;
+  const rounded = Math.round(value * 100) / 100;
+  const amount = Math.abs(rounded).toFixed(2);
+
+  if (absolute) {
+    return `$${amount}`;
+  }
+  if (rounded > 0) {
+    return `+$${amount}`;
+  }
+  if (rounded < 0) {
+    return `-$${amount}`;
+  }
+  return `$${amount}`;
 }
 
 function parseCKPriceChangeListings(listings, limit = 20) {
@@ -16,9 +27,10 @@ function parseCKPriceChangeListings(listings, limit = 20) {
   return listings
     .map((item) => ({
       cardName: typeof item?.cardName === "string" ? item.cardName.trim() : "",
-      priceChangePercent:
-        typeof item?.priceChangePercent === "number"
-          ? item.priceChangePercent
+      priceChangeUsd:
+        typeof item?.priceChangeUsd === "number" &&
+        Number.isFinite(item.priceChangeUsd)
+          ? item.priceChangeUsd
           : null,
     }))
     .filter((item) => item.cardName.length > 0)
