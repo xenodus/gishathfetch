@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { ChevronDown, TrendingUp } from "react-feather";
+import { ArrowUp, ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
   CK_PRICE_CHANGES_DISPLAY_LIMIT,
@@ -9,6 +9,7 @@ import {
 } from "../constants";
 import useCKPriceIncreases from "../hooks/useCKPriceIncreases";
 import useMediaQuery from "../hooks/useMediaQuery";
+import { formatPriceChangePercent } from "../utils/ckPriceChanges";
 import { buildPopularSearchUrl, buildSearchQueryUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
@@ -50,7 +51,12 @@ function hasAnyKeywords(keywordsByPeriod) {
   );
 }
 
-function PeriodToggle({ period, onPeriodChange, disabled, showPriceIncreases }) {
+function PeriodToggle({
+  period,
+  onPeriodChange,
+  disabled,
+  showPriceIncreases,
+}) {
   return (
     <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
       <legend className="visually-hidden">Trending search time range</legend>
@@ -154,18 +160,28 @@ function CKPriceIncreasesContent({
     <div className="popular-searches-pills">
       {priceIncreases.map((item) => {
         const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
+        const changeLabel = formatPriceChangePercent(item.priceChangePercent);
+        const ariaLabel = changeLabel
+          ? `Search for ${item.cardName}, up ${changeLabel}`
+          : `Search for ${item.cardName}`;
 
         return (
           <a
             key={item.cardName}
             href={buildSearchQueryUrl(BASE_URL, item.cardName)}
-            className={`btn btn-sm popular-search-pill text-decoration-none${
+            className={`btn btn-sm popular-search-pill popular-search-pill--riser text-decoration-none${
               isActive ? " is-active" : ""
             }`}
-            aria-label={`Search for ${item.cardName}`}
+            aria-label={ariaLabel}
             aria-current={isActive ? "page" : undefined}
           >
-            {item.cardName}
+            {changeLabel ? (
+              <span className="popular-search-pill-change" aria-hidden="true">
+                <ArrowUp size={11} strokeWidth={2.5} />
+                <span>{changeLabel}</span>
+              </span>
+            ) : null}
+            <span className="popular-search-pill-name">{item.cardName}</span>
           </a>
         );
       })}

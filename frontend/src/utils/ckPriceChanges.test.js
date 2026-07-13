@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseCKPriceIncreases } from "./ckPriceChanges.js";
+import {
+  formatPriceChangePercent,
+  parseCKPriceIncreases,
+} from "./ckPriceChanges.js";
+
+test("formatPriceChangePercent formats whole and fractional percentages", () => {
+  assert.equal(formatPriceChangePercent(15), "15%");
+  assert.equal(formatPriceChangePercent(12.34), "12.3%");
+  assert.equal(formatPriceChangePercent(null), null);
+  assert.equal(formatPriceChangePercent(Number.NaN), null);
+});
 
 test("parseCKPriceIncreases returns top card names up to the display limit", () => {
   const payload = {
