@@ -16,7 +16,6 @@ This document records **where** the app configures search behavior, **timeouts**
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
 | BinderPOS store concurrency | 12 | `binderposMaxConcurrent` in `api/controller/search.go` | Semaphore limits how many binderpos-backed shops run at once. Non-binderpos stores are not limited by this gate. |
 | BinderPOS dedicated proxy per search request | 1 lease | `fetchCardsConcurrently` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When the search includes any BinderPOS store and dedicated proxies are configured, the controller acquires **one** dedicated-proxy lease for the whole request. All BinderPOS `scrap-dedicated` attempts share that URL via context; the lease is released when the search finishes. |
-| BinderPOS shared portal-host concurrency | 4 | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Separate semaphore limiting concurrent decklist requests to the single shared host `portal.binderpos.com`. Every binderpos store's primary lookup funnels into this one host, so this caps the per-host burst independently of the per-store gate above. Acquired in `searchByBinderposDecklistAPI`; respects context cancellation. |
 
 ---
 
@@ -25,7 +24,6 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Minimum interval between requests to the **same host** | 200ms | `domainRequestMinInterval` in `api/gateway/domain_rate_limiter.go` | Per reservation: `reservedUntil = nextAllowed + minInterval`. The first request for a host is immediate; later requests wait until the prior reservation expires. If the wait is cancelled, the limiter can roll back that reservation. |
-| Always-paced (shared) hosts | `portal.binderpos.com` | `RegisterAlwaysPacedDomain` / `alwaysPacedDomains` in `api/gateway/domain_rate_limiter.go`; registered in `api/gateway/binderpos/storefront_portal_gate.go` `init` | Hosts in this set stay paced **even when a caller opts out** via `WithDomainRequestPacingDisabled`. The opt-out is meant for per-store hosts (a store's first attempt), where skipping the inter-request delay is safe; on a shared host it would let concurrent stores burst the same upstream and cause 429/503. |
 
 ## Backend: dedicated proxy env (`api/gateway/util/dedicated_proxy.go`)
 
@@ -43,22 +41,19 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 ---
 
-## Backend: BinderPOS (storefront + scraper fallbacks)
+## Backend: BinderPOS (storefront scraper fallbacks)
 
 `api/gateway/binderpos/storefront_fallback.go` and `api/gateway/binderpos/storefront_search.go` define a **sequential multi-strategy** flow (not the same as colly “retry n times on failure” for one URL).
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| `shopifyDomain` **non-empty** (normal, `BinderposScrapOnly` **false**) | Interleaved decklist + scrap (50/50 lead family): dedicated/direct of lead family, then follow family, then dynamic of each. See `orderDecklistAndScrap` in `storefront_search.go`. | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. HTTP clients in `storefront_client.go` use the same constant. |
-| `shopifyDomain` **empty**, **`ScrapOnly`**, or **`BinderposScrapOnly`** (default **true**) | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps) | **5s** per step (same constant). No decklist attempts in production search. Decklist API code remains for structure probes and live tests. |
+| All BinderPOS stores | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps) | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | **scrap-dedicated** proxy selection (colly) | Request-scoped lease when BinderPOS stores are searched; otherwise random dedicated | `fetchCardsConcurrently` + `selectOutboundProxy` in `api/gateway/collector.go` | When a search includes BinderPOS stores, the controller holds one dedicated-proxy lease and pins it on the search context. All `scrap-dedicated` attempts reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
-| **decklist-dedicated** proxy selection (storefront HTTP client) | Round-robin (when decklist strategies run) | `nextBinderposStorefrontProxyURL` + `binderposDedicatedProxySeq` in `api/gateway/binderpos/storefront_client.go` | Used only when `BinderposScrapOnly` is **false** and `shopifyDomain` is set. When `UseLeasedDedicatedProxy` is **true**, `LeaseDedicatedProxyURL` from the dedicated pool. |
-| **api-dynamic** proxy selection (storefront HTTP client) | Fixed env URL | `searchByStorefrontAPIDynamic` in `api/gateway/binderpos/storefront_client.go` | Uses `DYNAMIC_PROXY` as the authenticated proxy URL for the final BinderPOS API fallback attempt. |
 | Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
-| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **decklist** attempt without error is inconclusive: remaining decklist attempts are skipped and later strategies may run. An empty **scrap** attempt without error is **final** and no further strategies run. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single request. |
+| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty attempt without error is **final** and no further strategies run. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single request. |
 
 ---
 

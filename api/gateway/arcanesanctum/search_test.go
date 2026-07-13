@@ -25,8 +25,6 @@ func Test_Search(t *testing.T) {
 			ScrapVariant:  5,
 			BaseURL:       StoreBaseURL,
 			SearchURL:     StoreSearchURL,
-			ShopifyDomain: StoreShopifyDomain,
-			ScrapOnly:     ScrapOnly,
 			Query:         "signet",
 		})
 	})

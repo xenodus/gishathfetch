@@ -16,12 +16,10 @@ import (
 
 // StructureProbeConfig identifies a BinderPOS storefront for structure checks.
 type StructureProbeConfig struct {
-	ScrapVariant  int
-	BaseURL       string
-	SearchURL     string
-	ShopifyDomain string
-	ScrapOnly     bool
-	Query         string
+	ScrapVariant int
+	BaseURL      string
+	SearchURL    string
+	Query        string
 }
 
 // ProbeScrapeStructure fetches the storefront search page and verifies expected
@@ -73,15 +71,7 @@ func ProbeScrapeStructure(ctx context.Context, scrapVariant int, baseURL, search
 		scrapVariant, searchURL, primary, fallback)
 }
 
-// ProbeDecklistStructure posts to the BinderPOS decklist portal and verifies
-// the response still unmarshals as a decklist line array.
-func ProbeDecklistStructure(ctx context.Context, shopifyDomain, searchStr string) error {
-	client := &http.Client{Timeout: binderposAttemptTimeout}
-	_, err := searchByBinderposDecklistAPI(ctx, client, 2, "structure-probe", "https://example.com", shopifyDomain, searchStr)
-	return err
-}
-
-// RequireStorefrontStructure verifies scrape and/or decklist upstream structures.
+// RequireStorefrontStructure verifies the storefront scrape upstream structure.
 func RequireStorefrontStructure(t *testing.T, ctx context.Context, cfg StructureProbeConfig) {
 	t.Helper()
 	query := cfg.Query
@@ -89,21 +79,7 @@ func RequireStorefrontStructure(t *testing.T, ctx context.Context, cfg Structure
 		query = "Abrade"
 	}
 
-	scrapeErr := ProbeScrapeStructure(ctx, cfg.ScrapVariant, cfg.BaseURL, cfg.SearchURL, query)
-	if scrapeErr == nil {
-		return
-	}
-
-	if !cfg.ScrapOnly && strings.TrimSpace(cfg.ShopifyDomain) != "" {
-		decklistErr := ProbeDecklistStructure(ctx, cfg.ShopifyDomain, query)
-		if decklistErr == nil {
-			return
-		}
-		require.Failf(t, "binderpos storefront structure check failed",
-			"scrape=%v; decklist=%v", scrapeErr, decklistErr)
-	}
-
-	require.NoError(t, scrapeErr)
+	require.NoError(t, ProbeScrapeStructure(ctx, cfg.ScrapVariant, cfg.BaseURL, cfg.SearchURL, query))
 }
 
 // RequireScrapeStructure is a testify wrapper around ProbeScrapeStructure.

@@ -34,7 +34,6 @@ func Test_Search(t *testing.T) {
 			ScrapVariant:  1,
 			BaseURL:       StoreBaseURL,
 			SearchURL:     StoreSearchURL,
-			ShopifyDomain: StoreShopifyDomain,
 			Query:         "Abrade",
 		})
 	})
