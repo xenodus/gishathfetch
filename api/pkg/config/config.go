@@ -89,6 +89,10 @@ const (
 // When false, each request picks a random dedicated proxy instead of acquiring a lease.
 const UseLeasedDedicatedProxy = false
 
+// BinderposScrapOnly routes BinderPOS storefront search through scrape strategies only.
+// Decklist API code remains available for structure probes and live integration tests.
+var BinderposScrapOnly = true
+
 func UseDynamicProxy() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
 	if rawValue == "" {

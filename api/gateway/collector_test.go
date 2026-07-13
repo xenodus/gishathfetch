@@ -23,7 +23,7 @@ func TestInitialProxy(t *testing.T) {
 
 	t.Run("uses leased dedicated when provided", func(t *testing.T) {
 		leased := "http://lease:1"
-		mode, proxyURL := applyInitialProxy(c, leased)
+		mode, proxyURL := applyInitialProxy(c, leased, "")
 		if mode != "dedicated" || proxyURL != leased {
 			t.Fatalf("expected dedicated leased, got mode=%q url=%q", mode, proxyURL)
 		}
@@ -35,7 +35,7 @@ func TestInitialProxy(t *testing.T) {
 			t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
 		}
 		t.Setenv("DEDICATED_PROXY_1", "1.1.1.1|8080|user|pass")
-		mode, proxyURL := applyInitialProxy(c2, "")
+		mode, proxyURL := applyInitialProxy(c2, "", "")
 		if mode != "dedicated" {
 			t.Fatalf("expected dedicated mode, got %q", mode)
 		}
@@ -48,7 +48,7 @@ func TestInitialProxy(t *testing.T) {
 		c2 := colly.NewCollector()
 		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|9000|dynamic-user|dynamic-pass")
 
-		mode, proxyURL := applyInitialProxy(c2, "")
+		mode, proxyURL := applyInitialProxy(c2, "", "")
 		if mode != "dynamic" {
 			t.Fatalf("expected dynamic mode, got %q", mode)
 		}
@@ -62,7 +62,7 @@ func TestInitialProxy(t *testing.T) {
 		t.Setenv("DYNAMIC_PROXY", "dynamic-proxy|9000|dynamic-user|dynamic-pass")
 		t.Setenv("USE_DYNAMIC_PROXY", "false")
 
-		mode, proxyURL := applyInitialProxy(c2, "")
+		mode, proxyURL := applyInitialProxy(c2, "", "")
 		if mode != "direct" || proxyURL != "" {
 			t.Fatalf("expected direct mode with no proxy, got mode=%q url=%q", mode, proxyURL)
 		}
