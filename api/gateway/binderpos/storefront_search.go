@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 )
 
 // ArcaneSanctumStoreName is the LGS name for Arcane Sanctum; referenced by store-specific gateway packages.
@@ -67,7 +68,7 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 }
 
 func selectStorefrontStrategies(scrapOnly bool, shopifyDomain string, scrap, decklist [3]storefrontStrategy) []storefrontStrategy {
-	if scrapOnly || strings.TrimSpace(shopifyDomain) == "" {
+	if scrapOnly || config.BinderposScrapOnly || strings.TrimSpace(shopifyDomain) == "" {
 		return []storefrontStrategy{scrap[0], scrap[1], scrap[2]}
 	}
 	return orderDecklistAndScrap(decklist, scrap)

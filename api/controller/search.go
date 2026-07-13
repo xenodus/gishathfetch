@@ -7,6 +7,7 @@ import (
 	"log"
 	"maps"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/gateway/agora"
 	// "mtg-price-checker-sg/gateway/arcanesanctum"
 	"mtg-price-checker-sg/gateway/cardaffinity"
@@ -137,11 +138,19 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	aggregator := newFetchResultAggregator(len(shops))
 	binderposGate := make(chan struct{}, binderposMaxConcurrent)
 
+	searchCtx := ctx
+	if searchIncludesBinderposStore(shops) {
+		if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, util.GetDedicatedProxyURLs()); err == nil {
+			defer release()
+			searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
+		}
+	}
+
 	start := time.Now()
 
 	for shopName, lgs := range shops {
 		wg.Go(func() {
-			searchShop(ctx, searchString, shopName, lgs, binderposGate, aggregator)
+			searchShop(searchCtx, searchString, shopName, lgs, binderposGate, aggregator)
 		})
 	}
 
@@ -467,6 +476,15 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 func isBinderposStore(shopName string) bool {
 	_, ok := binderposStoreNames[shopName]
 	return ok
+}
+
+func searchIncludesBinderposStore(shops map[string]gateway.LGS) bool {
+	for shopName := range shops {
+		if isBinderposStore(shopName) {
+			return true
+		}
+	}
+	return false
 }
 
 func isArtCard(s string) bool {

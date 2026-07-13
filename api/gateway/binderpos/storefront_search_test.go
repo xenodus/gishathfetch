@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"mtg-price-checker-sg/pkg/config"
+
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
@@ -230,7 +232,11 @@ func TestSelectStorefrontStrategies_ScrapOnly(t *testing.T) {
 		assertStrategyOrder(t, []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}, strategyNames(got))
 	})
 
-	t.Run("domain without scrapOnly uses decklist and scrap", func(t *testing.T) {
+	t.Run("domain without scrapOnly uses decklist and scrap when BinderposScrapOnly is false", func(t *testing.T) {
+		previousScrapOnly := config.BinderposScrapOnly
+		config.BinderposScrapOnly = false
+		t.Cleanup(func() { config.BinderposScrapOnly = previousScrapOnly })
+
 		previousSelector := shouldStartWithDecklist
 		shouldStartWithDecklist = func() bool { return true }
 		t.Cleanup(func() { shouldStartWithDecklist = previousSelector })
@@ -241,6 +247,15 @@ func TestSelectStorefrontStrategies_ScrapOnly(t *testing.T) {
 			"scrap-dedicated", "scrap-direct",
 			"decklist-dynamic", "scrap-dynamic",
 		}, strategyNames(got))
+	})
+
+	t.Run("BinderposScrapOnly with domain keeps scrape strategies only", func(t *testing.T) {
+		previousScrapOnly := config.BinderposScrapOnly
+		config.BinderposScrapOnly = true
+		t.Cleanup(func() { config.BinderposScrapOnly = previousScrapOnly })
+
+		got := selectStorefrontStrategies(false, "shop.example.com", scrap, decklist)
+		assertStrategyOrder(t, []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}, strategyNames(got))
 	})
 }
 

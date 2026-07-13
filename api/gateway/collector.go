@@ -154,7 +154,7 @@ func NewOptimizedCollector(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, ctx, false)
 	return c
 }
 
@@ -162,7 +162,7 @@ func NewOptimizedCollectorNoRetry(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, ctx, false)
 	return c
 }
 
@@ -170,7 +170,7 @@ func NewOptimizedCollectorNoRetryDirect(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, ctx, false)
 	forceCollectorDirectProxy(c)
 	return c
 }
@@ -184,7 +184,7 @@ func NewOptimizedCollectorNoRetryDynamic(ctx context.Context) (*colly.Collector,
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, ctx, false)
 	if err := forceCollectorProxy(c, "dynamic", proxyURL); err != nil {
 		return nil, fmt.Errorf("invalid dynamic proxy configured: %w", err)
 	}
@@ -195,16 +195,16 @@ func NewOptimizedCollectorForBinderpos(ctx context.Context) *colly.Collector {
 	c := colly.NewCollector(
 		colly.StdlibContext(ctx),
 	)
-	configureRequestOptimizations(c, config.UseLeasedDedicatedProxy)
+	configureRequestOptimizations(c, ctx, config.UseLeasedDedicatedProxy)
 	return c
 }
 
 func ConfigureRequestOptimizations(c *colly.Collector) {
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, context.Background(), false)
 }
 
 func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
-	configureRequestOptimizations(c, false)
+	configureRequestOptimizations(c, context.Background(), false)
 }
 
 func forceCollectorDirectProxy(c *colly.Collector) {
@@ -233,11 +233,12 @@ func forceCollectorProxy(c *colly.Collector, mode, proxyURL string) error {
 }
 
 // Core request optimization pipeline. Gateway colly requests do not retry; each lookup is a single attempt.
-func configureRequestOptimizations(c *colly.Collector, enforceDedicatedProxyLease bool) {
+func configureRequestOptimizations(c *colly.Collector, ctx context.Context, enforceDedicatedProxyLease bool) {
 	applyCollectorDefaults(c)
 
-	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease)
-	registerRequestHandler(c, leasedDedicatedProxyURL)
+	requestDedicatedProxyURL, _ := RequestDedicatedProxyURL(ctx)
+	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease, requestDedicatedProxyURL)
+	registerRequestHandler(c, leasedDedicatedProxyURL, requestDedicatedProxyURL)
 	registerScrapedHandler(c, releaseDedicatedProxy)
 	registerNoRetryErrorHandler(c, releaseDedicatedProxy)
 }
@@ -249,9 +250,12 @@ func applyCollectorDefaults(c *colly.Collector) {
 }
 
 // Dedicated proxy lease lifecycle helpers.
-func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func()) {
+func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool, requestDedicatedProxyURL string) (string, func()) {
 	var leasedDedicatedProxyURL string
 	releaseLeasedDedicatedProxy := func() {}
+	if requestDedicatedProxyURL != "" {
+		return "", releaseLeasedDedicatedProxy
+	}
 	if enforceDedicatedProxyLease && config.UseProxy && config.UseLeasedDedicatedProxy {
 		if proxyURL, ok := dedicatedProxyLeases.acquire(util.GetDedicatedProxyURLs()); ok {
 			leasedDedicatedProxyURL = proxyURL
@@ -269,11 +273,15 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool) (string, func(
 }
 
 // selectOutboundProxy picks the proxy mode and URL for a single outbound attempt.
-// When leasedDedicatedProxyURL is non-empty it is used; otherwise a random dedicated
-// proxy is chosen when configured, then dynamic proxy, then direct.
-func selectOutboundProxy(leasedDedicatedProxyURL string) (mode string, proxyURL string) {
+// When requestDedicatedProxyURL is set the search holds one dedicated lease for
+// the whole request; otherwise a per-collector lease or random dedicated proxy
+// is chosen when configured, then dynamic proxy, then direct.
+func selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL string) (mode string, proxyURL string) {
 	if !config.UseProxy {
 		return "direct", ""
+	}
+	if requestDedicatedProxyURL != "" {
+		return "dedicated", requestDedicatedProxyURL
 	}
 	if leasedDedicatedProxyURL != "" {
 		return "dedicated", leasedDedicatedProxyURL
@@ -289,8 +297,8 @@ func selectOutboundProxy(leasedDedicatedProxyURL string) (mode string, proxyURL 
 
 // applyInitialProxy configures the transport for the first and only request for this collector, mirroring
 // the prior "initial attempt" proxy policy without any follow-up attempts.
-func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL string) (string, string) {
-	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL)
+func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL, requestDedicatedProxyURL string) (string, string) {
+	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL)
 	if proxyURL == "" {
 		return clearProxy(c)
 	}
@@ -304,8 +312,8 @@ func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL string) (stri
 }
 
 // Colly callback registration helpers.
-func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL string) {
-	initialProxyMode, initialProxyURL := applyInitialProxy(c, leasedDedicatedProxyURL)
+func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL, requestDedicatedProxyURL string) {
+	initialProxyMode, initialProxyURL := applyInitialProxy(c, leasedDedicatedProxyURL, requestDedicatedProxyURL)
 	c.OnRequest(func(r *colly.Request) {
 		if r == nil || r.URL == nil {
 			return
