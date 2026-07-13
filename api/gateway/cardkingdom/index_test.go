@@ -52,6 +52,39 @@ func TestBuildCheapestByName(t *testing.T) {
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
 }
 
+func TestBuildCheapestByName_ExcludesWorldChampionshipDecks(t *testing.T) {
+	updatedAt := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	products := []Product{
+		{
+			Name:        "Birds of Paradise",
+			Edition:     "World Championships",
+			PriceRetail: "12.99",
+			URL:         "mtg/world-championships/birds-of-paradise",
+			IsFoil:      "false",
+		},
+		{
+			Name:        "Birds of Paradise",
+			Edition:     "8th Edition",
+			PriceRetail: "16.99",
+			URL:         "mtg/8th-edition/birds-of-paradise",
+			IsFoil:      "false",
+		},
+		{
+			Name:        "Birds of Paradise",
+			Edition:     "Ravnica",
+			PriceRetail: "17.99",
+			URL:         "mtg/ravnica/birds-of-paradise",
+			IsFoil:      "false",
+		},
+	}
+
+	cheapest := BuildCheapestByName(products, updatedAt)
+
+	require.Len(t, cheapest, 1)
+	require.InDelta(t, 16.99, cheapest["birds of paradise"].PriceUsd, 0.001)
+	require.Equal(t, "8th Edition", cheapest["birds of paradise"].Edition)
+}
+
 func TestBuildCheapestByName_DoubleFacedCardIndexesFaceNames(t *testing.T) {
 	updatedAt := time.Date(2026, 7, 2, 12, 0, 0, 0, time.UTC)
 	products := []Product{

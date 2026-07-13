@@ -173,6 +173,38 @@ const sampleAllPrintingsJenniferWalters = `{
   }
 }`
 
+const sampleAllPrintingsWorldChampionshipDecks = `{
+  "meta": {"date": "2026-06-28"},
+  "data": {
+    "WC04": {
+      "name": "World Championship Decks 2004",
+      "cards": [
+        {
+          "uuid": "uuid-wcd-bolt",
+          "name": "Lightning Bolt",
+          "number": "1",
+          "purchaseUrls": {
+            "cardKingdom": "https://www.cardkingdom.com/mtg/world-championships/lightning-bolt"
+          }
+        }
+      ]
+    },
+    "4ED": {
+      "name": "Fourth Edition",
+      "cards": [
+        {
+          "uuid": "uuid-bolt-4ed",
+          "name": "Lightning Bolt",
+          "number": "162",
+          "purchaseUrls": {
+            "cardKingdom": "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt"
+          }
+        }
+      ]
+    }
+  }
+}`
+
 func TestParseCKPricesByUUID(t *testing.T) {
 	prices, updatedAt, err := parseCKPricesByUUID([]byte(sampleAllPricesToday))
 	require.NoError(t, err)
@@ -204,6 +236,25 @@ func TestDecodeAllPrintingsSets(t *testing.T) {
 	require.False(t, listing.IsFoil)
 	require.Equal(t, "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt", listing.URL)
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
+}
+
+func TestDecodeAllPrintingsSets_ExcludesWorldChampionshipDecks(t *testing.T) {
+	prices := map[string]ckUUIDPrice{
+		"uuid-wcd-bolt": {normal: 0.99},
+		"uuid-bolt-4ed": {normal: 1.49},
+	}
+	updatedAt := time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC)
+
+	cheapest, err := decodeAllPrintingsSets(
+		json.NewDecoder(strings.NewReader(sampleAllPrintingsWorldChampionshipDecks)),
+		prices,
+		updatedAt,
+	)
+	require.NoError(t, err)
+
+	listing := cheapest["lightning bolt"]
+	require.Equal(t, "Fourth Edition", listing.Edition)
+	require.InDelta(t, 1.49, listing.PriceUsd, 0.001)
 }
 
 func TestDecodeAllPrintingsSets_MergesSplitUUIDPrintings(t *testing.T) {
