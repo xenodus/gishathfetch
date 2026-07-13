@@ -17,6 +17,15 @@ func computePriceChangePercent(previousPriceUsd, currentPriceUsd float64) *int {
 	return &changePercent
 }
 
+func computePriceChangeUsd(previousPriceUsd, currentPriceUsd float64) *float64 {
+	if previousPriceUsd <= 0 {
+		return nil
+	}
+
+	changeUsd := math.Round((currentPriceUsd-previousPriceUsd)*100) / 100
+	return &changeUsd
+}
+
 func listingsWithPriceChange(
 	existing map[string]dynamoRecord,
 	listings map[string]cardkingdom.Listing,
@@ -27,6 +36,7 @@ func listingsWithPriceChange(
 			previousPriceUsd := previous.PriceUsd
 			listing.PreviousPriceUsd = &previousPriceUsd
 			listing.PriceChangePercent = computePriceChangePercent(previousPriceUsd, listing.PriceUsd)
+			listing.PriceChangeUsd = computePriceChangeUsd(previousPriceUsd, listing.PriceUsd)
 		}
 		enriched[nameKey] = listing
 	}

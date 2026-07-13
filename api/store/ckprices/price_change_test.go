@@ -39,6 +39,36 @@ func TestComputePriceChangePercent(t *testing.T) {
 	})
 }
 
+func TestComputePriceChangeUsd(t *testing.T) {
+	t.Run("increase", func(t *testing.T) {
+		change := computePriceChangeUsd(10, 12)
+		require.NotNil(t, change)
+		require.InDelta(t, 2, *change, 0.001)
+	})
+
+	t.Run("decrease", func(t *testing.T) {
+		change := computePriceChangeUsd(10, 8)
+		require.NotNil(t, change)
+		require.InDelta(t, -2, *change, 0.001)
+	})
+
+	t.Run("rounds to cents", func(t *testing.T) {
+		change := computePriceChangeUsd(1.00, 1.10)
+		require.NotNil(t, change)
+		require.InDelta(t, 0.10, *change, 0.001)
+	})
+
+	t.Run("no change", func(t *testing.T) {
+		change := computePriceChangeUsd(4.99, 4.99)
+		require.NotNil(t, change)
+		require.InDelta(t, 0, *change, 0.001)
+	})
+
+	t.Run("missing previous price", func(t *testing.T) {
+		require.Nil(t, computePriceChangeUsd(0, 4.99))
+	})
+}
+
 func TestPriceChangesByPercentFromListings(t *testing.T) {
 	percent := func(value int) *int {
 		return &value
@@ -141,12 +171,17 @@ func TestListingsWithPriceChange(t *testing.T) {
 
 	require.NotNil(t, enriched["lightning bolt"].PriceChangePercent)
 	require.Equal(t, 10, *enriched["lightning bolt"].PriceChangePercent)
+	require.NotNil(t, enriched["lightning bolt"].PriceChangeUsd)
+	require.InDelta(t, 0.10, *enriched["lightning bolt"].PriceChangeUsd, 0.001)
 	require.NotNil(t, enriched["lightning bolt"].PreviousPriceUsd)
 	require.Equal(t, 1.00, *enriched["lightning bolt"].PreviousPriceUsd)
 	require.NotNil(t, enriched["counterspell"].PriceChangePercent)
 	require.Equal(t, -10, *enriched["counterspell"].PriceChangePercent)
+	require.NotNil(t, enriched["counterspell"].PriceChangeUsd)
+	require.InDelta(t, -0.20, *enriched["counterspell"].PriceChangeUsd, 0.001)
 	require.NotNil(t, enriched["counterspell"].PreviousPriceUsd)
 	require.Equal(t, 2.00, *enriched["counterspell"].PreviousPriceUsd)
 	require.Nil(t, enriched["new card"].PriceChangePercent)
+	require.Nil(t, enriched["new card"].PriceChangeUsd)
 	require.Nil(t, enriched["new card"].PreviousPriceUsd)
 }

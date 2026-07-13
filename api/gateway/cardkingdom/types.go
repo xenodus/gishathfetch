@@ -18,6 +18,7 @@ type Listing struct {
 	PriceUsd           float64  `json:"priceUsd"`
 	PreviousPriceUsd   *float64 `json:"previousPriceUsd,omitempty"`
 	PriceChangePercent *int     `json:"priceChangePercent,omitempty"`
+	PriceChangeUsd     *float64 `json:"priceChangeUsd,omitempty"`
 	URL                string  `json:"url"`
 	IsFoil             bool    `json:"isFoil"`
 	UpdatedAt          string  `json:"updatedAt,omitempty"`
