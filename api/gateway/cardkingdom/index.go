@@ -13,6 +13,10 @@ func BuildCheapestByName(products []Product, updatedAt time.Time) map[string]Lis
 	updatedAtValue := updatedAt.UTC().Format(time.RFC3339)
 
 	for _, product := range products {
+		if excludedCKPriceEdition(product.Edition) {
+			continue
+		}
+
 		priceUsd, err := product.PriceRetail.Float64()
 		if err != nil || priceUsd <= 0 {
 			continue

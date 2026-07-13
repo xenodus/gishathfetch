@@ -279,6 +279,9 @@ func decodeSetCatalog(
 		if err := decoder.Decode(&set); err != nil {
 			return err
 		}
+		if excludedCKPriceEdition(set.Name) {
+			continue
+		}
 
 		aggregates := make(map[printingKey]printingAggregate)
 		for _, card := range set.Cards {
