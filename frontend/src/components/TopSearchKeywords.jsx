@@ -9,7 +9,10 @@ import {
 } from "../constants";
 import useCKPriceChanges from "../hooks/useCKPriceChanges";
 import useMediaQuery from "../hooks/useMediaQuery";
-import { formatPriceChangeUsd } from "../utils/ckPriceChanges";
+import {
+  formatPriceChangeUsd,
+  hasNonZeroUsdPriceChanges,
+} from "../utils/ckPriceChanges";
 import { buildPopularSearchUrl, buildSearchQueryUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
@@ -260,6 +263,23 @@ export default function TopSearchKeywords({
     }
   }, [collapseOnSearch]);
 
+  useEffect(() => {
+    if (!hasLoadedPriceChanges && !isLoadingPriceChanges) {
+      void loadPriceChanges();
+    }
+  }, [hasLoadedPriceChanges, isLoadingPriceChanges, loadPriceChanges]);
+
+  const showPriceChangeControls =
+    hasLoadedPriceChanges &&
+    !priceChangesError &&
+    hasNonZeroUsdPriceChanges(priceIncreases, priceDrops);
+
+  useEffect(() => {
+    if (!showPriceChangeControls && priceChangeView) {
+      setPriceChangeView(null);
+    }
+  }, [showPriceChangeControls, priceChangeView]);
+
   const handlePeriodChange = (nextPeriod) => {
     if (!priceChangeView && nextPeriod === period) {
       return;
@@ -296,7 +316,7 @@ export default function TopSearchKeywords({
   };
 
   const handlePriceChangeSelect = async (view) => {
-    if (priceChangeView === view) {
+    if (!showPriceChangeControls || priceChangeView === view) {
       return;
     }
 
@@ -331,36 +351,40 @@ export default function TopSearchKeywords({
               disabled={isLoading}
               priceChangeView={priceChangeView}
             />
-            <button
-              type="button"
-              className={`btn btn-sm popular-search-period-btn${
-                priceChangeView === "risers" ? " is-active" : ""
-              }`}
-              aria-pressed={priceChangeView === "risers"}
-              aria-controls={contentPanelId}
-              aria-label="Top dollar risers in 24 hours"
-              disabled={isLoadingPriceChanges}
-              onClick={() => handlePriceChangeSelect("risers")}
-            >
-              Top $ risers (24h)
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm popular-search-period-btn${
-                priceChangeView === "drops" ? " is-active" : ""
-              }`}
-              aria-pressed={priceChangeView === "drops"}
-              aria-controls={contentPanelId}
-              aria-label="Top dollar drops in 24 hours"
-              disabled={isLoadingPriceChanges}
-              onClick={() => handlePriceChangeSelect("drops")}
-            >
-              Top $ drops (24 Hrs)
-            </button>
+            {showPriceChangeControls ? (
+              <>
+                <button
+                  type="button"
+                  className={`btn btn-sm popular-search-period-btn${
+                    priceChangeView === "risers" ? " is-active" : ""
+                  }`}
+                  aria-pressed={priceChangeView === "risers"}
+                  aria-controls={contentPanelId}
+                  aria-label="Top dollar risers in 24 hours"
+                  disabled={isLoadingPriceChanges}
+                  onClick={() => handlePriceChangeSelect("risers")}
+                >
+                  Top $ risers (24h)
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm popular-search-period-btn${
+                    priceChangeView === "drops" ? " is-active" : ""
+                  }`}
+                  aria-pressed={priceChangeView === "drops"}
+                  aria-controls={contentPanelId}
+                  aria-label="Top dollar drops in 24 hours"
+                  disabled={isLoadingPriceChanges}
+                  onClick={() => handlePriceChangeSelect("drops")}
+                >
+                  Top $ drops (24 Hrs)
+                </button>
+              </>
+            ) : null}
           </div>
 
           <div id={contentPanelId}>
-            {priceChangeView === "risers" ? (
+            {showPriceChangeControls && priceChangeView === "risers" ? (
               <CKPriceChangeContent
                 variant="riser"
                 isLoading={isLoadingPriceChanges}
@@ -369,7 +393,7 @@ export default function TopSearchKeywords({
                 searchQuery={searchQuery}
                 emptyMessage="No CK price increases available."
               />
-            ) : priceChangeView === "drops" ? (
+            ) : showPriceChangeControls && priceChangeView === "drops" ? (
               <CKPriceChangeContent
                 variant="drop"
                 isLoading={isLoadingPriceChanges}
