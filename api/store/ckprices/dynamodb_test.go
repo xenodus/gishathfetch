@@ -14,6 +14,7 @@ import (
 func TestDynamoRecordFromListing(t *testing.T) {
 	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
 	priceChangePercent := 12
+	priceChangeUsd := 0.16
 	previousPriceUsd := 1.33
 	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
 		CardName:           "Lightning Bolt",
@@ -21,6 +22,7 @@ func TestDynamoRecordFromListing(t *testing.T) {
 		PriceUsd:           1.49,
 		PreviousPriceUsd:   &previousPriceUsd,
 		PriceChangePercent: &priceChangePercent,
+		PriceChangeUsd:     &priceChangeUsd,
 		URL:                "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
 		IsFoil:             false,
 		UpdatedAt:          "2026-06-28T00:00:00Z",
@@ -33,6 +35,8 @@ func TestDynamoRecordFromListing(t *testing.T) {
 	require.Equal(t, 1.33, *record.PreviousPriceUsd)
 	require.NotNil(t, record.PriceChangePercent)
 	require.Equal(t, 12, *record.PriceChangePercent)
+	require.NotNil(t, record.PriceChangeUsd)
+	require.InDelta(t, 0.16, *record.PriceChangeUsd, 0.001)
 	require.NotNil(t, record.PriceChangeIndexPK)
 	require.Equal(t, priceChangeIndexPKValue, *record.PriceChangeIndexPK)
 }
@@ -66,6 +70,23 @@ func TestDynamoRecordMarshalIncludesSyncedAt(t *testing.T) {
 	av, ok := item["syncedAt"].(*types.AttributeValueMemberS)
 	require.True(t, ok)
 	require.Equal(t, syncedAt, av.Value)
+}
+
+func TestDynamoRecordMarshalIncludesPriceChangeUsd(t *testing.T) {
+	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
+	priceChangeUsd := 0.25
+	previousPriceUsd := 1.00
+	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
+		UpdatedAt:        "2026-06-28T00:00:00Z",
+		PreviousPriceUsd: &previousPriceUsd,
+		PriceChangeUsd:   &priceChangeUsd,
+	}, syncedAt)
+	item, err := attributevalue.MarshalMap(record)
+	require.NoError(t, err)
+	require.Contains(t, item, "priceChangeUsd")
+	av, ok := item["priceChangeUsd"].(*types.AttributeValueMemberN)
+	require.True(t, ok)
+	require.Equal(t, "0.25", av.Value)
 }
 
 func TestDynamoRecordMarshalIncludesPriceChangePercent(t *testing.T) {
