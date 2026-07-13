@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowUp, ChevronDown, TrendingUp } from "react-feather";
+import { ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
   CK_PRICE_CHANGES_DISPLAY_LIMIT,
@@ -108,20 +108,6 @@ function TrendingSectionToggle({ isExpanded, collapsible, panelId, onToggle }) {
         className={`popular-searches-chevron${isExpanded ? " is-expanded" : ""}`}
       />
     </button>
-  );
-}
-
-function CKPriceIncreasesButtonLabel() {
-  return (
-    <>
-      Top ${" "}
-      <ArrowUp
-        size={12}
-        aria-hidden="true"
-        className="trending-price-increases-btn-icon"
-      />{" "}
-      (24 Hrs)
-    </>
   );
 }
 
