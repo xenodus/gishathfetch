@@ -1,15 +1,11 @@
-export function formatPriceChangeUsd(usd, { absolute = false } = {}) {
+export function formatPriceChangeUsd(usd) {
   if (typeof usd !== "number" || !Number.isFinite(usd)) {
     return null;
   }
 
-  const value = absolute ? Math.abs(usd) : usd;
-  const rounded = Math.round(value * 100) / 100;
+  const rounded = Math.round(usd * 100) / 100;
   const amount = Math.abs(rounded).toFixed(2);
 
-  if (absolute) {
-    return `$${amount}`;
-  }
   if (rounded > 0) {
     return `+$${amount}`;
   }
