@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { ChevronDown, TrendingUp } from "react-feather";
+import { ArrowUp, ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
   CK_PRICE_CHANGES_DISPLAY_LIMIT,
@@ -108,6 +108,20 @@ function TrendingSectionToggle({ isExpanded, collapsible, panelId, onToggle }) {
         className={`popular-searches-chevron${isExpanded ? " is-expanded" : ""}`}
       />
     </button>
+  );
+}
+
+function CKPriceIncreasesButtonLabel() {
+  return (
+    <>
+      Highest ${" "}
+      <ArrowUp
+        size={12}
+        aria-hidden="true"
+        className="trending-price-increases-btn-icon"
+      />{" "}
+      (24 Hrs)
+    </>
   );
 }
 
@@ -312,12 +326,11 @@ export default function TopSearchKeywords({
               }`}
               aria-expanded={showPriceIncreases}
               aria-controls={`${panelId}-price-increases`}
+              aria-label="Highest dollar increase in 24 hours"
               disabled={isLoadingPriceIncreases}
               onClick={handlePriceIncreasesToggle}
             >
-              {showPriceIncreases
-                ? "Hide CK price increases"
-                : "Show CK price increases"}
+              <CKPriceIncreasesButtonLabel />
             </button>
           </div>
 

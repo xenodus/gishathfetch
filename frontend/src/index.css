@@ -675,11 +675,18 @@ ins.adsbygoogle.adsbygoogle-noablate {
 }
 
 .trending-price-increases-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
   font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-border-color);
   background-color: var(--bs-body-bg);
   color: var(--bs-secondary-color);
+}
+
+.trending-price-increases-btn-icon {
+  flex-shrink: 0;
 }
 
 .trending-price-increases-btn.is-active {
