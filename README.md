@@ -240,10 +240,6 @@ before being returned.
 ### Concurrency gates
 
 - At most **12** BinderPOS stores search concurrently (`binderposMaxConcurrent`).
-- At most **4** decklist requests hit the shared portal host at once
-  (`binderposPortalMaxConcurrent`). Every BinderPOS store's decklist call targets
-  the same `portal.binderpos.com`, so this extra gate prevents bursts that
-  trigger 429/503 throttling.
 
 ### Two kinds of stores
 
@@ -254,48 +250,32 @@ multi-strategy fallback. On failure the store simply contributes nothing.
 
 **BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one
-gateway that can read listings from two sources:
+gateway that reads listings by scraping each store's own Shopify storefront.
 
-- **Decklist** — a POST to the shared `portal.binderpos.com` decklist endpoint.
-- **Scrape** — an HTML scrape of the store's own storefront.
+### BinderPOS scrape fallback chain
 
-### BinderPOS decklist-vs-scrape 50/50 lead
-
-Each BinderPOS store **leads** its search with either the decklist portal or its
-own storefront scrape. The choice is a deterministic round-robin
-(`shouldStartWithDecklist`), so across the stores in a single search roughly half
-lead with the shared portal and half lead with their own domains. This halves the
-first-attempt burst on `portal.binderpos.com`. The family that is not chosen as
-the lead still runs as a fallback, and within each family attempts escalate
+Each BinderPOS store tries up to three scrape strategies in order, escalating
 across proxy tiers (**dedicated → direct → dynamic**), with the dynamic proxy
-reserved for last.
+reserved for last:
+
+`scrap-dedicated` → `scrap-direct` → `scrap-dynamic`
 
 ```mermaid
 flowchart TD
-    A[BinderPOS store search] --> B{shouldStartWithDecklist?<br/>50/50 round-robin}
-    B -- decklist lead --> C[decklist-dedicated → decklist-direct<br/>→ scrap-dedicated → scrap-direct<br/>→ decklist-dynamic → scrap-dynamic]
-    B -- scrap lead --> D[scrap-dedicated → scrap-direct<br/>→ decklist-dedicated → decklist-direct<br/>→ scrap-dynamic → decklist-dynamic]
+    A[BinderPOS store search] --> B[scrap-dedicated]
+    B -- error --> C[scrap-direct]
+    C -- error --> D[scrap-dynamic]
+    B -- cards or empty success --> E[Return result]
+    C -- cards or empty success --> E
+    D -- cards, empty, or error --> E
 ```
-
-Resulting attempt order:
-
-| Lead | Attempt order |
-|------|---------------|
-| Decklist | `decklist-dedicated` → `decklist-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dynamic` → `scrap-dynamic` |
-| Scrape | `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic` |
-
-Stores without a Shopify domain mapping, or with `ScrapOnly` set, skip the decklist
-portal and only scrape: `scrap-dedicated` → `scrap-direct` → `scrap-dynamic`.
 
 ### Fallback rules
 
 - The chain advances to the next attempt **on error only**. An empty but
   error-free result counts as success and stops the chain (no further fallback).
-- Each attempt is bounded by a 10s timeout (`binderposAttemptTimeout`). The first
+- Each attempt is bounded by a 5s timeout (`binderposAttemptTimeout`). The first
   attempt starts immediately; later attempts honor per-domain request pacing.
-- The decklist path additionally retries transient portal errors (429/5xx and
-  network errors, honoring `Retry-After`) internally before yielding to the next
-  attempt in the chain.
 
 ## 🗂️ Repository layout
 

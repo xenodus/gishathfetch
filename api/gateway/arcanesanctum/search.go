@@ -9,12 +9,7 @@ import (
 
 const StoreName = binderpos.ArcaneSanctumStoreName
 const StoreBaseURL = "https://arcanesanctumtcg.com"
-const StoreShopifyDomain = "30uetm-1y.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
-
-// ScrapOnly skips the shared BinderPOS decklist portal while retaining the
-// Shopify domain mapping for documentation and live integration tests.
-const ScrapOnly = true
 
 type Store struct {
 	Name         string
@@ -33,13 +28,5 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Search(ctx,
-		5,
-		s.Name,
-		s.BaseUrl,
-		StoreShopifyDomain,
-		s.SearchUrl,
-		searchStr,
-		ScrapOnly,
-	)
+	return s.BinderposGwy.Search(ctx, 5, s.Name, s.BaseUrl, s.SearchUrl, searchStr)
 }
