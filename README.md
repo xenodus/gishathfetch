@@ -195,7 +195,27 @@ Example report shape:
 
 #### IAM permissions for `mtg-price-ck-refresh`
 
-The shared `lambda-mtg` role must allow `s3:PutObject` on the export prefix (`arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`).
+The shared `lambda-mtg` role must allow:
+
+- `s3:PutObject` on the export prefix (`arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`)
+- `dynamodb:Query` on both CK price-change GSIs:
+  - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangePercent-index`
+  - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index`
+
+The daily export ranks top/bottom price changes by USD (`priceChangeUsd-index`). If that GSI is missing from the role policy, the Lambda fails after the DynamoDB refresh with `AccessDeniedException` on `dynamodb:Query`.
+
+Example inline policy statement to add (merge with existing DynamoDB permissions on the role):
+
+```json
+{
+  "Effect": "Allow",
+  "Action": "dynamodb:Query",
+  "Resource": [
+    "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangePercent-index",
+    "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index"
+  ]
+}
+```
 
 ## 🔎 Search flow
 
