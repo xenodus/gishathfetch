@@ -44,7 +44,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
-	t.Run("treats an empty but error-free attempt as success", func(t *testing.T) {
+	t.Run("continues after an empty but error-free attempt", func(t *testing.T) {
 		cards, err := runFallbackAttempts(
 			fallbackAttempt{strategy: "decklist-dedicated", fn: func() ([]gateway.Card, error) {
 				return nil, errors.New("decklist dedicated failed")
@@ -53,12 +53,28 @@ func TestRunFallbackAttempts(t *testing.T) {
 				return []gateway.Card{}, nil
 			}},
 			fallbackAttempt{strategy: "scrap-direct", fn: func() ([]gateway.Card, error) {
-				t.Fatal("later attempt should not run after an empty success")
-				return nil, nil
+				return []gateway.Card{{Name: "scrap-direct"}}, nil
 			}},
 		)
 		if err != nil {
-			t.Fatalf("expected nil error when an attempt succeeds with empty result, got %v", err)
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if len(cards) != 1 || cards[0].Name != "scrap-direct" {
+			t.Fatalf("expected scrap-direct card, got %+v", cards)
+		}
+	})
+
+	t.Run("returns empty only after the final attempt succeeds without cards", func(t *testing.T) {
+		cards, err := runFallbackAttempts(
+			fallbackAttempt{strategy: "decklist-dedicated", fn: func() ([]gateway.Card, error) {
+				return []gateway.Card{}, nil
+			}},
+			fallbackAttempt{strategy: "scrap-direct", fn: func() ([]gateway.Card, error) {
+				return []gateway.Card{}, nil
+			}},
+		)
+		if err != nil {
+			t.Fatalf("expected nil error when the final attempt is empty, got %v", err)
 		}
 		if len(cards) != 0 {
 			t.Fatalf("expected zero cards, got %+v", cards)

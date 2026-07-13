@@ -12,9 +12,11 @@ type fallbackAttempt struct {
 }
 
 // runFallbackAttempts runs the supplied attempts in order, returning the first
-// result that succeeds (a nil error, even with zero cards). Each attempt's error
-// is annotated with its position and strategy name so the final error reflects
-// the last attempt tried.
+// result that returns cards. An attempt that finishes without error but finds no
+// cards is treated as inconclusive and the next strategy is tried; only the
+// final attempt may return an empty result. Each attempt's error is annotated
+// with its position and strategy name so the final error reflects the last
+// attempt tried.
 func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 	var (
 		cards []gateway.Card
@@ -24,7 +26,7 @@ func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 	for idx, attempt := range attempts {
 		cards, err = attempt.fn()
 		err = annotateAttemptError(idx+1, attempt.strategy, err)
-		if err == nil {
+		if err == nil && (len(cards) > 0 || idx == len(attempts)-1) {
 			return cards, nil
 		}
 	}
