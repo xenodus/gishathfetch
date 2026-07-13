@@ -175,13 +175,13 @@ function CKPriceIncreasesContent({
             aria-label={ariaLabel}
             aria-current={isActive ? "page" : undefined}
           >
+            <span className="popular-search-pill-name">{item.cardName}</span>
             {changeLabel ? (
               <span className="popular-search-pill-change" aria-hidden="true">
                 <ArrowUp size={11} strokeWidth={2.5} />
                 <span>{changeLabel}</span>
               </span>
             ) : null}
-            <span className="popular-search-pill-name">{item.cardName}</span>
           </a>
         );
       })}
