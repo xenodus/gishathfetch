@@ -96,9 +96,8 @@ func orderDecklistAndScrap(decklist, scrap [3]storefrontStrategy) []storefrontSt
 }
 
 // runStorefrontStrategies runs the ordered strategies through the shared
-// fallback runner, advancing to the next only when the previous one returns an
-// error. The first attempt starts immediately; later attempts honor per-domain
-// request pacing. Each attempt is bounded by binderposAttemptTimeout.
+// fallback runner. The first attempt starts immediately; later attempts honor
+// per-domain request pacing. Each attempt is bounded by binderposAttemptTimeout.
 func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrategy) ([]gateway.Card, error) {
 	attempts := make([]fallbackAttempt, len(strategies))
 	for idx := range strategies {
@@ -106,6 +105,7 @@ func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrate
 		applyRequestPacing := idx != 0
 		attempts[idx] = fallbackAttempt{
 			strategy: strategy.name,
+			family:   strategyFamilyFromName(strategy.name),
 			fn: func() ([]gateway.Card, error) {
 				return runWithAttemptTimeout(ctx, applyRequestPacing, strategy.run)
 			},
