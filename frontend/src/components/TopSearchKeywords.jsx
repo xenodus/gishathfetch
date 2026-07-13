@@ -165,9 +165,7 @@ function CKPriceChangeContent({
     <div className="popular-searches-pills">
       {items.map((item) => {
         const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
-        const changeLabel = formatPriceChangeUsd(item.priceChangeUsd, {
-          absolute: !isRiser,
-        });
+        const changeLabel = formatPriceChangeUsd(item.priceChangeUsd);
         const ariaLabel = changeLabel
           ? `Search for ${item.cardName}, ${directionWord} ${changeLabel}`
           : `Search for ${item.cardName}`;
