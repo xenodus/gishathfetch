@@ -21,6 +21,7 @@ const (
 	batchGetLimit            = 100
 	batchWriteLimit          = 25
 	priceChangeIndexName     = "priceChangePercent-index"
+	priceChangeUsdIndexName  = "priceChangeUsd-index"
 	priceChangeIndexPKValue  = "CURRENT"
 	syncMetadataKey          = "__sync__"
 	syncMetadataLabel        = "CK price sync metadata"
@@ -116,12 +117,32 @@ func (s *DynamoDBStore) GetPriceChangesByPercent(ctx context.Context, ascending 
 	return priceChangesByPercentFromListings(scanned, ascending, limit), nil
 }
 
+func (s *DynamoDBStore) GetPriceChangesByUsd(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
+	if limit <= 0 {
+		limit = PriceChangeRankingLimit
+	}
+
+	listings, err := s.queryPriceChangesByUsd(ctx, ascending, limit)
+	if err == nil {
+		return listings, nil
+	}
+	if !isMissingPriceChangeIndex(err) {
+		return nil, err
+	}
+
+	scanned, scanErr := s.scanPriceChangeListingsByUsd(ctx)
+	if scanErr != nil {
+		return nil, scanErr
+	}
+	return priceChangesByUsdFromListings(scanned, ascending, limit), nil
+}
+
 func (s *DynamoDBStore) GetTopBottomPriceChanges(ctx context.Context) (*TopBottomPriceChanges, error) {
-	top, err := s.GetPriceChangesByPercent(ctx, false, PriceChangeRankingLimit)
+	top, err := s.GetPriceChangesByUsd(ctx, false, PriceChangeRankingLimit)
 	if err != nil {
 		return nil, err
 	}
-	bottom, err := s.GetPriceChangesByPercent(ctx, true, PriceChangeRankingLimit)
+	bottom, err := s.GetPriceChangesByUsd(ctx, true, PriceChangeRankingLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +170,36 @@ func (s *DynamoDBStore) queryPriceChangesByPercent(ctx context.Context, ascendin
 	return priceChangeListingsFromItems(output.Items)
 }
 
+func (s *DynamoDBStore) queryPriceChangesByUsd(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
+	output, err := s.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(s.tableName),
+		IndexName:              aws.String(priceChangeUsdIndexName),
+		KeyConditionExpression: aws.String("priceChangeIndexPK = :pk"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pk": &types.AttributeValueMemberS{Value: priceChangeIndexPKValue},
+		},
+		ScanIndexForward: aws.Bool(ascending),
+		Limit:            aws.Int32(int32(limit)),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return priceChangeListingsFromItemsByUsd(output.Items)
+}
+
 func (s *DynamoDBStore) scanPriceChangeListings(ctx context.Context) ([]PriceChangeListing, error) {
+	return s.scanPriceChangeListingsWithFilter(ctx, priceChangeListingFromRecord)
+}
+
+func (s *DynamoDBStore) scanPriceChangeListingsByUsd(ctx context.Context) ([]PriceChangeListing, error) {
+	return s.scanPriceChangeListingsWithFilter(ctx, priceChangeListingFromRecordByUsd)
+}
+
+func (s *DynamoDBStore) scanPriceChangeListingsWithFilter(
+	ctx context.Context,
+	fromRecord func(dynamoRecord) (PriceChangeListing, bool),
+) ([]PriceChangeListing, error) {
 	listings := make([]PriceChangeListing, 0)
 	var exclusiveStartKey map[string]types.AttributeValue
 
@@ -162,7 +212,7 @@ func (s *DynamoDBStore) scanPriceChangeListings(ctx context.Context) ([]PriceCha
 			return nil, err
 		}
 
-		batch, err := priceChangeListingsFromItems(output.Items)
+		batch, err := priceChangeListingsFromItemsWithFilter(output.Items, fromRecord)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +290,7 @@ func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, synced
 		UpdatedAt:          listing.UpdatedAt,
 		SyncedAt:           syncedAt,
 	}
-	if listing.PriceChangePercent != nil {
+	if listing.PriceChangeUsd != nil || listing.PriceChangePercent != nil {
 		indexPK := priceChangeIndexPKValue
 		record.PriceChangeIndexPK = &indexPK
 	}
@@ -279,14 +329,39 @@ func priceChangeListingFromRecord(record dynamoRecord) (PriceChangeListing, bool
 	}, true
 }
 
+func priceChangeListingFromRecordByUsd(record dynamoRecord) (PriceChangeListing, bool) {
+	if record.NameKey == syncMetadataKey || record.PriceChangeUsd == nil {
+		return PriceChangeListing{}, false
+	}
+	listing, ok := listingFromRecord(record)
+	if !ok {
+		return PriceChangeListing{}, false
+	}
+	return PriceChangeListing{
+		NameKey: record.NameKey,
+		Listing: listing,
+	}, true
+}
+
 func priceChangeListingsFromItems(items []map[string]types.AttributeValue) ([]PriceChangeListing, error) {
+	return priceChangeListingsFromItemsWithFilter(items, priceChangeListingFromRecord)
+}
+
+func priceChangeListingsFromItemsByUsd(items []map[string]types.AttributeValue) ([]PriceChangeListing, error) {
+	return priceChangeListingsFromItemsWithFilter(items, priceChangeListingFromRecordByUsd)
+}
+
+func priceChangeListingsFromItemsWithFilter(
+	items []map[string]types.AttributeValue,
+	fromRecord func(dynamoRecord) (PriceChangeListing, bool),
+) ([]PriceChangeListing, error) {
 	listings := make([]PriceChangeListing, 0, len(items))
 	for _, item := range items {
 		var record dynamoRecord
 		if err := attributevalue.UnmarshalMap(item, &record); err != nil {
 			return nil, err
 		}
-		if listing, ok := priceChangeListingFromRecord(record); ok {
+		if listing, ok := fromRecord(record); ok {
 			listings = append(listings, listing)
 		}
 	}

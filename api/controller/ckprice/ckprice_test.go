@@ -29,6 +29,10 @@ func (m *mockStore) GetPriceChangesByPercent(_ context.Context, _ bool, _ int) (
 	return nil, nil
 }
 
+func (m *mockStore) GetPriceChangesByUsd(_ context.Context, _ bool, _ int) ([]ckprices.PriceChangeListing, error) {
+	return nil, nil
+}
+
 func (m *mockStore) GetTopBottomPriceChanges(_ context.Context) (*ckprices.TopBottomPriceChanges, error) {
 	return &ckprices.TopBottomPriceChanges{}, nil
 }

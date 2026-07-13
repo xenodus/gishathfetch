@@ -127,7 +127,7 @@ func TestTopBottomPriceChanges(t *testing.T) {
 		Listing: cardkingdom.Listing{CardName: "No Change"},
 	})
 
-	rankings := topBottomPriceChanges(listings, PriceChangeRankingLimit)
+	rankings := topBottomPriceChangesByPercent(listings, PriceChangeRankingLimit)
 
 	require.Len(t, rankings.Top, PriceChangeRankingLimit)
 	require.Equal(t, 25, *rankings.Top[0].PriceChangePercent)
@@ -136,6 +136,74 @@ func TestTopBottomPriceChanges(t *testing.T) {
 	require.Len(t, rankings.Bottom, PriceChangeRankingLimit)
 	require.Equal(t, -25, *rankings.Bottom[0].PriceChangePercent)
 	require.Equal(t, -6, *rankings.Bottom[19].PriceChangePercent)
+}
+
+func TestPriceChangesByUsdFromListings(t *testing.T) {
+	usd := func(value float64) *float64 {
+		return &value
+	}
+	listing := func(nameKey string, change float64) PriceChangeListing {
+		return PriceChangeListing{
+			NameKey: nameKey,
+			Listing: cardkingdom.Listing{
+				CardName:       nameKey,
+				PriceChangeUsd: usd(change),
+			},
+		}
+	}
+
+	listings := []PriceChangeListing{
+		listing("a", 30),
+		listing("b", 10),
+		listing("c", -30),
+		listing("d", -10),
+	}
+
+	bottom := priceChangesByUsdFromListings(listings, true, 2)
+	require.Len(t, bottom, 2)
+	require.InDelta(t, -30, *bottom[0].PriceChangeUsd, 0.001)
+	require.InDelta(t, -10, *bottom[1].PriceChangeUsd, 0.001)
+
+	top := priceChangesByUsdFromListings(listings, false, 2)
+	require.Len(t, top, 2)
+	require.InDelta(t, 30, *top[0].PriceChangeUsd, 0.001)
+	require.InDelta(t, 10, *top[1].PriceChangeUsd, 0.001)
+}
+
+func TestTopBottomPriceChangesByUsd(t *testing.T) {
+	usd := func(value float64) *float64 {
+		return &value
+	}
+	percent := func(value int) *int {
+		return &value
+	}
+	listing := func(nameKey string, changeUsd float64, changePercent int) PriceChangeListing {
+		return PriceChangeListing{
+			NameKey: nameKey,
+			Listing: cardkingdom.Listing{
+				CardName:           nameKey,
+				PriceChangeUsd:     usd(changeUsd),
+				PriceChangePercent: percent(changePercent),
+			},
+		}
+	}
+
+	// USD ranking should prefer the larger absolute dollar move even when percent is lower.
+	listings := []PriceChangeListing{
+		listing("small-base-big-percent", 0.50, 50),
+		listing("big-base-small-percent", 10.00, 10),
+		listing("small-drop", -0.25, -25),
+		listing("big-drop", -8.00, -8),
+	}
+
+	rankings := topBottomPriceChangesByUsd(listings, 1)
+	require.Len(t, rankings.Top, 1)
+	require.Equal(t, "big-base-small-percent", rankings.Top[0].NameKey)
+	require.InDelta(t, 10.00, *rankings.Top[0].PriceChangeUsd, 0.001)
+
+	require.Len(t, rankings.Bottom, 1)
+	require.Equal(t, "big-drop", rankings.Bottom[0].NameKey)
+	require.InDelta(t, -8.00, *rankings.Bottom[0].PriceChangeUsd, 0.001)
 }
 
 func TestPriceChangeListingFromRecord(t *testing.T) {
@@ -154,6 +222,25 @@ func TestPriceChangeListingFromRecord(t *testing.T) {
 	require.False(t, ok)
 
 	_, ok = priceChangeListingFromRecord(dynamoRecord{NameKey: "new card", CardName: "New Card"})
+	require.False(t, ok)
+}
+
+func TestPriceChangeListingFromRecordByUsd(t *testing.T) {
+	change := 0.15
+	listing, ok := priceChangeListingFromRecordByUsd(dynamoRecord{
+		NameKey:        "lightning bolt",
+		CardName:       "Lightning Bolt",
+		PriceUsd:       1.49,
+		PriceChangeUsd: &change,
+	})
+	require.True(t, ok)
+	require.Equal(t, "lightning bolt", listing.NameKey)
+	require.InDelta(t, 0.15, *listing.PriceChangeUsd, 0.001)
+
+	_, ok = priceChangeListingFromRecordByUsd(dynamoRecord{NameKey: syncMetadataKey})
+	require.False(t, ok)
+
+	_, ok = priceChangeListingFromRecordByUsd(dynamoRecord{NameKey: "new card", CardName: "New Card"})
 	require.False(t, ok)
 }
 
