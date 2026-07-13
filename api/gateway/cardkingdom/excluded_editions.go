@@ -13,8 +13,5 @@ func excludedCKPriceEdition(edition string) bool {
 	}
 
 	lower := strings.ToLower(edition)
-	if lower == "world championships" {
-		return true
-	}
-	return strings.HasPrefix(lower, "world championship decks")
+	return strings.Contains(lower, "world championship")
 }
