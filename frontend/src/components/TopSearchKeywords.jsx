@@ -357,7 +357,7 @@ export default function TopSearchKeywords({
               disabled={isLoadingPriceChanges}
               onClick={() => handlePriceChangeSelect("drops")}
             >
-              Top $ Drops (24 Hrs)
+              Top $ drops (24 Hrs)
             </button>
           </div>
 
