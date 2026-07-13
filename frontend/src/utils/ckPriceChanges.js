@@ -1,18 +1,19 @@
-export function formatPriceChangePercent(percent) {
+export function formatPriceChangePercent(percent, { absolute = false } = {}) {
   if (typeof percent !== "number" || !Number.isFinite(percent)) {
     return null;
   }
 
   const rounded = Math.round(percent * 10) / 10;
-  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+  const value = absolute ? Math.abs(rounded) : rounded;
+  return Number.isInteger(value) ? `${value}%` : `${value.toFixed(1)}%`;
 }
 
-export function parseCKPriceIncreases(payload, limit = 20) {
-  if (!Array.isArray(payload?.top)) {
+function parseCKPriceChangeListings(listings, limit = 20) {
+  if (!Array.isArray(listings)) {
     return [];
   }
 
-  return payload.top
+  return listings
     .map((item) => ({
       cardName: typeof item?.cardName === "string" ? item.cardName.trim() : "",
       priceChangePercent:
@@ -22,4 +23,12 @@ export function parseCKPriceIncreases(payload, limit = 20) {
     }))
     .filter((item) => item.cardName.length > 0)
     .slice(0, limit);
+}
+
+export function parseCKPriceIncreases(payload, limit = 20) {
+  return parseCKPriceChangeListings(payload?.top, limit);
+}
+
+export function parseCKPriceDrops(payload, limit = 20) {
+  return parseCKPriceChangeListings(payload?.bottom, limit);
 }

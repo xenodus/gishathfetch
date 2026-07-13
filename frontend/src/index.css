@@ -627,7 +627,8 @@ ins.adsbygoogle.adsbygoogle-noablate {
   color: var(--bs-secondary-color);
 }
 
-.popular-search-pill--riser {
+.popular-search-pill--riser,
+.popular-search-pill--drop {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
@@ -643,12 +644,20 @@ ins.adsbygoogle.adsbygoogle-noablate {
   line-height: 1;
 }
 
+.popular-search-pill-change--drop {
+  color: var(--bs-danger);
+}
+
 .popular-search-pill-name {
   min-width: 0;
 }
 
 .popular-search-pill.is-active .popular-search-pill-change {
   color: color-mix(in srgb, var(--bs-success) 72%, var(--bs-white));
+}
+
+.popular-search-pill.is-active .popular-search-pill-change--drop {
+  color: color-mix(in srgb, var(--bs-danger) 72%, var(--bs-white));
 }
 
 .popular-search-pill.is-active {
