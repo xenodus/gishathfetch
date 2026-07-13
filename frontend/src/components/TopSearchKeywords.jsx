@@ -114,7 +114,7 @@ function TrendingSectionToggle({ isExpanded, collapsible, panelId, onToggle }) {
 function CKPriceIncreasesButtonLabel() {
   return (
     <>
-      Highest ${" "}
+      Top ${" "}
       <ArrowUp
         size={12}
         aria-hidden="true"
