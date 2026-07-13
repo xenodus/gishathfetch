@@ -22,33 +22,20 @@ const (
 var fetchPricelistBody = func(ctx context.Context) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, pricelistTimeout)
 	defer cancel()
+	return fetchPricelistBodyFromURL(ctx, pricelistURL)
+}
 
-	requestURL, err := url.Parse(pricelistURL)
-	if err != nil {
-		return nil, err
-	}
-	if err := gateway.WaitForDomainRequestSlot(ctx, requestURL); err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pricelistURL, nil)
-	if err != nil {
-		return nil, err
-	}
+func fetchPricelistBodyFromURL(ctx context.Context, requestURL string) ([]byte, error) {
 	storeBase, err := url.Parse(listingBaseURL)
 	if err != nil {
 		return nil, err
 	}
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{
+
+	resp, err := gateway.DoOutboundGET(ctx, requestURL, gateway.OutboundRequestOptions{
 		Style:          gateway.OutboundStyleJSON,
 		StoreBase:      storeBase,
 		SkipWebBotAuth: true,
-	}); err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{Timeout: pricelistTimeout}
-	resp, err := client.Do(req)
+	}, pricelistTimeout)
 	if err != nil {
 		return nil, err
 	}

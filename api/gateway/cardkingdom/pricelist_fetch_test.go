@@ -2,6 +2,7 @@ package cardkingdom
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -77,6 +78,35 @@ func TestMergeCheapestListings_PrefersCheaperFaceNameListing(t *testing.T) {
 	require.InDelta(t, 69.99, listings["jennifer walters // the sensational she-hulk"].PriceUsd, 0.001)
 	_, hasBackFace := listings["the sensational she-hulk"]
 	require.False(t, hasBackFace)
+}
+
+func TestFetchPricelistBodyFromURL_RejectsCloudflareChallenge(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<html>Just a moment... cloudflare</html>"))
+	}))
+	defer server.Close()
+
+	_, err := fetchPricelistBodyFromURL(context.Background(), server.URL)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cloudflare challenge")
+}
+
+func TestFetchPricelistBodyFromURL_ReportsOutboundFailure(t *testing.T) {
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+	t.Setenv("DYNAMIC_PROXY", "")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	_, err := fetchPricelistBodyFromURL(context.Background(), server.URL)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "outbound request failed")
+	require.Contains(t, err.Error(), "status 403")
 }
 
 func TestConsiderCheapestListing_FoilDoubleFacedDoesNotPolluteFaceAlias(t *testing.T) {
