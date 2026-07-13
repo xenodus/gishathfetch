@@ -296,9 +296,10 @@ export default function TopSearchKeywords({
             />
             <button
               type="button"
-              className={`btn btn-sm trending-price-increases-btn${
+              className={`btn btn-sm popular-search-period-btn${
                 showPriceIncreases ? " is-active" : ""
               }`}
+              aria-pressed={showPriceIncreases}
               aria-expanded={showPriceIncreases}
               aria-controls={contentPanelId}
               aria-label="Top risers in 24 hours"
