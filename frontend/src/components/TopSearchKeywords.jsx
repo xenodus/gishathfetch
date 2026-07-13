@@ -50,24 +50,28 @@ function hasAnyKeywords(keywordsByPeriod) {
   );
 }
 
-function PeriodToggle({ period, onPeriodChange, disabled }) {
+function PeriodToggle({ period, onPeriodChange, disabled, showPriceIncreases }) {
   return (
     <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
       <legend className="visually-hidden">Trending search time range</legend>
-      {PERIOD_OPTIONS.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          className={`btn btn-sm popular-search-period-btn${
-            period === option.id ? " is-active" : ""
-          }`}
-          disabled={disabled}
-          aria-pressed={period === option.id}
-          onClick={() => onPeriodChange(option.id)}
-        >
-          {option.label}
-        </button>
-      ))}
+      {PERIOD_OPTIONS.map((option) => {
+        const isActive = !showPriceIncreases && period === option.id;
+
+        return (
+          <button
+            key={option.id}
+            type="button"
+            className={`btn btn-sm popular-search-period-btn${
+              isActive ? " is-active" : ""
+            }`}
+            disabled={disabled}
+            aria-pressed={isActive}
+            onClick={() => onPeriodChange(option.id)}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </fieldset>
   );
 }
@@ -232,6 +236,10 @@ export default function TopSearchKeywords({
   }, [collapseOnSearch]);
 
   const handlePeriodChange = (nextPeriod) => {
+    if (!showPriceIncreases && nextPeriod === period) {
+      return;
+    }
+
     setPeriod(nextPeriod);
     setShowAllKeywords(false);
     setShowPriceIncreases(false);
@@ -262,11 +270,14 @@ export default function TopSearchKeywords({
     }
   };
 
-  const handlePriceIncreasesToggle = async () => {
-    const nextVisible = !showPriceIncreases;
-    setShowPriceIncreases(nextVisible);
+  const handlePriceIncreasesSelect = async () => {
+    if (showPriceIncreases) {
+      return;
+    }
 
-    if (nextVisible && !hasLoadedPriceIncreases && !isLoadingPriceIncreases) {
+    setShowPriceIncreases(true);
+
+    if (!hasLoadedPriceIncreases && !isLoadingPriceIncreases) {
       await loadPriceIncreases();
     }
   };
@@ -293,17 +304,18 @@ export default function TopSearchKeywords({
               period={period}
               onPeriodChange={handlePeriodChange}
               disabled={isLoading}
+              showPriceIncreases={showPriceIncreases}
             />
             <button
               type="button"
-              className={`btn btn-sm trending-price-increases-btn${
+              className={`btn btn-sm popular-search-period-btn${
                 showPriceIncreases ? " is-active" : ""
               }`}
-              aria-expanded={showPriceIncreases}
+              aria-pressed={showPriceIncreases}
               aria-controls={contentPanelId}
               aria-label="Top risers in 24 hours"
               disabled={isLoadingPriceIncreases}
-              onClick={handlePriceIncreasesToggle}
+              onClick={handlePriceIncreasesSelect}
             >
               Top risers (24h)
             </button>
