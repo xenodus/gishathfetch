@@ -2,12 +2,14 @@ import { useEffect, useId, useState } from "react";
 import { ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
+  CK_PRICE_CHANGES_DISPLAY_LIMIT,
   DESKTOP_MIN_WIDTH_MEDIA_QUERY,
   TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT,
   TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT,
 } from "../constants";
+import useCKPriceIncreases from "../hooks/useCKPriceIncreases";
 import useMediaQuery from "../hooks/useMediaQuery";
-import { buildPopularSearchUrl } from "../utils/searchUrl";
+import { buildPopularSearchUrl, buildSearchQueryUrl } from "../utils/searchUrl";
 
 const LOADING_SKELETON_KEYS = [
   "top-search-keyword-skeleton-a",
@@ -51,7 +53,7 @@ function hasAnyKeywords(keywordsByPeriod) {
 function PeriodToggle({ period, onPeriodChange, disabled }) {
   return (
     <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
-      <legend className="visually-hidden">Popular search time range</legend>
+      <legend className="visually-hidden">Trending search time range</legend>
       {PERIOD_OPTIONS.map((option) => (
         <button
           key={option.id}
@@ -70,8 +72,8 @@ function PeriodToggle({ period, onPeriodChange, disabled }) {
   );
 }
 
-function PopularSearchesToggle({ isExpanded, collapsible, panelId, onToggle }) {
-  const label = isExpanded ? "Popular searches" : "Show popular searches";
+function TrendingSectionToggle({ isExpanded, collapsible, panelId, onToggle }) {
+  const label = isExpanded ? "Trending" : "Show trending";
 
   if (!collapsible) {
     return (
@@ -109,6 +111,85 @@ function PopularSearchesToggle({ isExpanded, collapsible, panelId, onToggle }) {
   );
 }
 
+function CKPriceIncreasesPanel({
+  isVisible,
+  isLoading,
+  error,
+  priceIncreases,
+  searchQuery,
+  panelId,
+}) {
+  if (!isVisible) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="trending-price-increases" id={panelId}>
+        <p className="trending-price-increases-heading small text-muted mb-2">
+          Top CK price increases
+        </p>
+        <div className="popular-searches-pills">
+          {LOADING_SKELETON_KEYS.slice(0, CK_PRICE_CHANGES_DISPLAY_LIMIT).map(
+            (key) => (
+              <span
+                key={key}
+                className="placeholder rounded-pill popular-search-pill-skeleton"
+              />
+            ),
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="trending-price-increases" id={panelId}>
+        <p className="popular-searches-empty small text-muted mb-0">{error}</p>
+      </div>
+    );
+  }
+
+  if (priceIncreases.length === 0) {
+    return (
+      <div className="trending-price-increases" id={panelId}>
+        <p className="popular-searches-empty small text-muted mb-0">
+          No CK price increases available.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="trending-price-increases" id={panelId}>
+      <p className="trending-price-increases-heading small text-muted mb-2">
+        Top CK price increases
+      </p>
+      <ol className="trending-price-increases-list mb-0">
+        {priceIncreases.map((item, index) => {
+          const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
+
+          return (
+            <li key={`${item.cardName}-${index}`}>
+              <a
+                href={buildSearchQueryUrl(BASE_URL, item.cardName)}
+                className={`trending-price-increase-link${
+                  isActive ? " is-active" : ""
+                }`}
+                aria-label={`Search for ${item.cardName}`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item.cardName}
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 function getDisplayLimit(isDesktop, showAllKeywords) {
   if (isDesktop) {
     return TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT;
@@ -119,7 +200,7 @@ function getDisplayLimit(isDesktop, showAllKeywords) {
     : TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT;
 }
 
-function isMatchingPopularSearch(keyword, searchQuery) {
+function isMatchingTrendingSearch(keyword, searchQuery) {
   const normalizedKeyword = String(keyword ?? "")
     .trim()
     .toLowerCase();
@@ -147,6 +228,14 @@ export default function TopSearchKeywords({
     () => !collapsible || defaultExpanded,
   );
   const [showAllKeywords, setShowAllKeywords] = useState(false);
+  const [showPriceIncreases, setShowPriceIncreases] = useState(false);
+  const {
+    priceIncreases,
+    isLoading: isLoadingPriceIncreases,
+    error: priceIncreasesError,
+    hasLoaded: hasLoadedPriceIncreases,
+    loadPriceIncreases,
+  } = useCKPriceIncreases();
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop, showAllKeywords);
   const panelId = useId();
@@ -184,12 +273,21 @@ export default function TopSearchKeywords({
     setIsExpanded((expanded) => !expanded);
   };
 
-  const handlePopularSearchClick = (keyword) => {
+  const handleTrendingSearchClick = (keyword) => {
     if (window.gtag) {
       window.gtag("event", "popular_search_click", {
         search_term: keyword,
         popular_search_period: period,
       });
+    }
+  };
+
+  const handlePriceIncreasesToggle = async () => {
+    const nextVisible = !showPriceIncreases;
+    setShowPriceIncreases(nextVisible);
+
+    if (nextVisible && !hasLoadedPriceIncreases && !isLoadingPriceIncreases) {
+      await loadPriceIncreases();
     }
   };
 
@@ -199,7 +297,7 @@ export default function TopSearchKeywords({
         showContent ? " is-expanded" : " is-collapsed"
       }`}
     >
-      <PopularSearchesToggle
+      <TrendingSectionToggle
         isExpanded={isExpanded}
         collapsible={collapsible}
         panelId={panelId}
@@ -214,6 +312,20 @@ export default function TopSearchKeywords({
               onPeriodChange={handlePeriodChange}
               disabled={isLoading}
             />
+            <button
+              type="button"
+              className={`btn btn-sm trending-price-increases-btn${
+                showPriceIncreases ? " is-active" : ""
+              }`}
+              aria-expanded={showPriceIncreases}
+              aria-controls={`${panelId}-price-increases`}
+              disabled={isLoadingPriceIncreases}
+              onClick={handlePriceIncreasesToggle}
+            >
+              {showPriceIncreases
+                ? "Hide CK price increases"
+                : "Show CK price increases"}
+            </button>
           </div>
 
           {isLoading ? (
@@ -229,7 +341,7 @@ export default function TopSearchKeywords({
             <>
               <div className="popular-searches-pills">
                 {keywords.map((keyword) => {
-                  const isActive = isMatchingPopularSearch(
+                  const isActive = isMatchingTrendingSearch(
                     keyword,
                     searchQuery,
                   );
@@ -243,7 +355,7 @@ export default function TopSearchKeywords({
                       }`}
                       aria-label={`Search for ${keyword}`}
                       aria-current={isActive ? "page" : undefined}
-                      onClick={() => handlePopularSearchClick(keyword)}
+                      onClick={() => handleTrendingSearchClick(keyword)}
                     >
                       {keyword}
                     </a>
@@ -263,9 +375,18 @@ export default function TopSearchKeywords({
             </>
           ) : (
             <p className="popular-searches-empty small text-muted mb-0">
-              No popular searches in the last {selectedPeriodLabel}.
+              No trending searches in the last {selectedPeriodLabel}.
             </p>
           )}
+
+          <CKPriceIncreasesPanel
+            isVisible={showPriceIncreases}
+            isLoading={isLoadingPriceIncreases}
+            error={priceIncreasesError}
+            priceIncreases={priceIncreases}
+            searchQuery={searchQuery}
+            panelId={`${panelId}-price-increases`}
+          />
         </div>
       )}
     </div>
