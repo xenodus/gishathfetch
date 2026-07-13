@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { ArrowUp, ChevronDown, TrendingUp } from "react-feather";
+import { ArrowDown, ArrowUp, ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
   CK_PRICE_CHANGES_DISPLAY_LIMIT,
@@ -7,7 +7,7 @@ import {
   TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT,
   TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT,
 } from "../constants";
-import useCKPriceIncreases from "../hooks/useCKPriceIncreases";
+import useCKPriceChanges from "../hooks/useCKPriceChanges";
 import useMediaQuery from "../hooks/useMediaQuery";
 import { formatPriceChangePercent } from "../utils/ckPriceChanges";
 import { buildPopularSearchUrl, buildSearchQueryUrl } from "../utils/searchUrl";
@@ -51,17 +51,12 @@ function hasAnyKeywords(keywordsByPeriod) {
   );
 }
 
-function PeriodToggle({
-  period,
-  onPeriodChange,
-  disabled,
-  showPriceIncreases,
-}) {
+function PeriodToggle({ period, onPeriodChange, disabled, priceChangeView }) {
   return (
     <fieldset className="popular-search-period-toggle border-0 p-0 m-0">
       <legend className="visually-hidden">Trending search time range</legend>
       {PERIOD_OPTIONS.map((option) => {
-        const isActive = !showPriceIncreases && period === option.id;
+        const isActive = !priceChangeView && period === option.id;
 
         return (
           <button
@@ -121,12 +116,22 @@ function TrendingSectionToggle({ isExpanded, collapsible, panelId, onToggle }) {
   );
 }
 
-function CKPriceIncreasesContent({
+function CKPriceChangeContent({
+  variant,
   isLoading,
   error,
-  priceIncreases,
+  items,
   searchQuery,
+  emptyMessage,
 }) {
+  const isRiser = variant === "riser";
+  const ChangeIcon = isRiser ? ArrowUp : ArrowDown;
+  const pillModifier = isRiser
+    ? "popular-search-pill--riser"
+    : "popular-search-pill--drop";
+  const changeModifier = isRiser ? "" : " popular-search-pill-change--drop";
+  const directionWord = isRiser ? "up" : "down";
+
   if (isLoading) {
     return (
       <div className="popular-searches-pills">
@@ -148,28 +153,30 @@ function CKPriceIncreasesContent({
     );
   }
 
-  if (priceIncreases.length === 0) {
+  if (items.length === 0) {
     return (
       <p className="popular-searches-empty small text-muted mb-0">
-        No CK price increases available.
+        {emptyMessage}
       </p>
     );
   }
 
   return (
     <div className="popular-searches-pills">
-      {priceIncreases.map((item) => {
+      {items.map((item) => {
         const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
-        const changeLabel = formatPriceChangePercent(item.priceChangePercent);
+        const changeLabel = formatPriceChangePercent(item.priceChangePercent, {
+          absolute: !isRiser,
+        });
         const ariaLabel = changeLabel
-          ? `Search for ${item.cardName}, up ${changeLabel}`
+          ? `Search for ${item.cardName}, ${directionWord} ${changeLabel}`
           : `Search for ${item.cardName}`;
 
         return (
           <a
             key={item.cardName}
             href={buildSearchQueryUrl(BASE_URL, item.cardName)}
-            className={`btn btn-sm popular-search-pill popular-search-pill--riser text-decoration-none${
+            className={`btn btn-sm popular-search-pill ${pillModifier} text-decoration-none${
               isActive ? " is-active" : ""
             }`}
             aria-label={ariaLabel}
@@ -177,8 +184,11 @@ function CKPriceIncreasesContent({
           >
             <span className="popular-search-pill-name">{item.cardName}</span>
             {changeLabel ? (
-              <span className="popular-search-pill-change" aria-hidden="true">
-                <ArrowUp size={11} strokeWidth={2.5} />
+              <span
+                className={`popular-search-pill-change${changeModifier}`}
+                aria-hidden="true"
+              >
+                <ChangeIcon size={11} strokeWidth={2.5} />
                 <span>{changeLabel}</span>
               </span>
             ) : null}
@@ -227,14 +237,15 @@ export default function TopSearchKeywords({
     () => !collapsible || defaultExpanded,
   );
   const [showAllKeywords, setShowAllKeywords] = useState(false);
-  const [showPriceIncreases, setShowPriceIncreases] = useState(false);
+  const [priceChangeView, setPriceChangeView] = useState(null);
   const {
     priceIncreases,
-    isLoading: isLoadingPriceIncreases,
-    error: priceIncreasesError,
-    hasLoaded: hasLoadedPriceIncreases,
-    loadPriceIncreases,
-  } = useCKPriceIncreases();
+    priceDrops,
+    isLoading: isLoadingPriceChanges,
+    error: priceChangesError,
+    hasLoaded: hasLoadedPriceChanges,
+    loadPriceChanges,
+  } = useCKPriceChanges();
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
   const displayLimit = getDisplayLimit(isDesktop, showAllKeywords);
   const panelId = useId();
@@ -252,13 +263,13 @@ export default function TopSearchKeywords({
   }, [collapseOnSearch]);
 
   const handlePeriodChange = (nextPeriod) => {
-    if (!showPriceIncreases && nextPeriod === period) {
+    if (!priceChangeView && nextPeriod === period) {
       return;
     }
 
     setPeriod(nextPeriod);
     setShowAllKeywords(false);
-    setShowPriceIncreases(false);
+    setPriceChangeView(null);
   };
 
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
@@ -286,15 +297,15 @@ export default function TopSearchKeywords({
     }
   };
 
-  const handlePriceIncreasesSelect = async () => {
-    if (showPriceIncreases) {
+  const handlePriceChangeSelect = async (view) => {
+    if (priceChangeView === view) {
       return;
     }
 
-    setShowPriceIncreases(true);
+    setPriceChangeView(view);
 
-    if (!hasLoadedPriceIncreases && !isLoadingPriceIncreases) {
-      await loadPriceIncreases();
+    if (!hasLoadedPriceChanges && !isLoadingPriceChanges) {
+      await loadPriceChanges();
     }
   };
 
@@ -320,30 +331,54 @@ export default function TopSearchKeywords({
               period={period}
               onPeriodChange={handlePeriodChange}
               disabled={isLoading}
-              showPriceIncreases={showPriceIncreases}
+              priceChangeView={priceChangeView}
             />
             <button
               type="button"
               className={`btn btn-sm popular-search-period-btn${
-                showPriceIncreases ? " is-active" : ""
+                priceChangeView === "risers" ? " is-active" : ""
               }`}
-              aria-pressed={showPriceIncreases}
+              aria-pressed={priceChangeView === "risers"}
               aria-controls={contentPanelId}
               aria-label="Top dollar risers in 24 hours"
-              disabled={isLoadingPriceIncreases}
-              onClick={handlePriceIncreasesSelect}
+              disabled={isLoadingPriceChanges}
+              onClick={() => handlePriceChangeSelect("risers")}
             >
               Top $ risers (24h)
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm popular-search-period-btn${
+                priceChangeView === "drops" ? " is-active" : ""
+              }`}
+              aria-pressed={priceChangeView === "drops"}
+              aria-controls={contentPanelId}
+              aria-label="Top dollar drops in 24 hours"
+              disabled={isLoadingPriceChanges}
+              onClick={() => handlePriceChangeSelect("drops")}
+            >
+              Top $ drops (24 Hrs)
             </button>
           </div>
 
           <div id={contentPanelId}>
-            {showPriceIncreases ? (
-              <CKPriceIncreasesContent
-                isLoading={isLoadingPriceIncreases}
-                error={priceIncreasesError}
-                priceIncreases={priceIncreases}
+            {priceChangeView === "risers" ? (
+              <CKPriceChangeContent
+                variant="riser"
+                isLoading={isLoadingPriceChanges}
+                error={priceChangesError}
+                items={priceIncreases}
                 searchQuery={searchQuery}
+                emptyMessage="No CK price increases available."
+              />
+            ) : priceChangeView === "drops" ? (
+              <CKPriceChangeContent
+                variant="drop"
+                isLoading={isLoadingPriceChanges}
+                error={priceChangesError}
+                items={priceDrops}
+                searchQuery={searchQuery}
+                emptyMessage="No CK price drops available."
               />
             ) : isLoading ? (
               <div className="popular-searches-pills">
