@@ -33,8 +33,8 @@ func (m *mockStore) GetTopBottomPriceChanges(_ context.Context) (*ckprices.TopBo
 	return &ckprices.TopBottomPriceChanges{}, nil
 }
 
-func (m *mockStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {
-	return "", nil
+func (m *mockStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, *ckprices.TopBottomPriceChanges, error) {
+	return "", &ckprices.TopBottomPriceChanges{}, nil
 }
 
 func TestGetLatestPrice_UsesVerifiedName(t *testing.T) {

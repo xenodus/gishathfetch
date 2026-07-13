@@ -26,6 +26,7 @@ var (
 func runCKPriceRefresh(ctx context.Context) (err error) {
 	log.Printf("ck price refresh: started")
 	var refreshedCount int
+	var changes *ckprices.TopBottomPriceChanges
 	var topCount int
 	var bottomCount int
 	var generatedAt string
@@ -44,7 +45,7 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 		return err
 	}
 
-	refreshedCount, err = refreshCKPricesFunc(ctx, store)
+	refreshedCount, changes, err = refreshCKPricesFunc(ctx, store)
 	if err != nil {
 		log.Printf("ck price refresh: failed: %v", err)
 		return err
@@ -52,10 +53,8 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 
 	log.Printf("ck price refresh: finished refreshed=%d", refreshedCount)
 
-	changes, err := store.GetTopBottomPriceChanges(ctx)
-	if err != nil {
-		log.Printf("ck price refresh: failed reading price changes: %v", err)
-		return err
+	if changes == nil {
+		changes = &ckprices.TopBottomPriceChanges{}
 	}
 
 	writer, err := newCKPriceReportWriterFunc(ctx)

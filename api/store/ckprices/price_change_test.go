@@ -108,6 +108,49 @@ func TestTopBottomPriceChanges(t *testing.T) {
 	require.Equal(t, -6, *rankings.Bottom[19].PriceChangePercent)
 }
 
+func TestTopBottomPriceChanges_ExcludesZeroAndOppositeSign(t *testing.T) {
+	percent := func(value int) *int {
+		return &value
+	}
+	listing := func(nameKey string, change int) PriceChangeListing {
+		return PriceChangeListing{
+			NameKey: nameKey,
+			Listing: cardkingdom.Listing{
+				CardName:           nameKey,
+				PriceChangePercent: percent(change),
+			},
+		}
+	}
+
+	rankings := topBottomPriceChanges([]PriceChangeListing{
+		listing("rise", 10),
+		listing("flat", 0),
+		listing("fall", -10),
+	}, PriceChangeRankingLimit)
+
+	require.Len(t, rankings.Top, 1)
+	require.Equal(t, 10, *rankings.Top[0].PriceChangePercent)
+	require.Len(t, rankings.Bottom, 1)
+	require.Equal(t, -10, *rankings.Bottom[0].PriceChangePercent)
+}
+
+func TestRankingsFromListings_UsesCurrentBatchOnly(t *testing.T) {
+	change := 25
+	listings := map[string]cardkingdom.Listing{
+		"lightning bolt": {
+			CardName:           "Lightning Bolt",
+			PriceChangePercent: &change,
+		},
+	}
+
+	rankings := rankingsFromListings(listings, "2026-07-13T12:00:00Z", PriceChangeRankingLimit)
+
+	require.Len(t, rankings.Top, 1)
+	require.Equal(t, "lightning bolt", rankings.Top[0].NameKey)
+	require.Equal(t, "2026-07-13T12:00:00Z", rankings.Top[0].SyncedAt)
+	require.Empty(t, rankings.Bottom)
+}
+
 func TestPriceChangeListingFromRecord(t *testing.T) {
 	change := 15
 	listing, ok := priceChangeListingFromRecord(dynamoRecord{

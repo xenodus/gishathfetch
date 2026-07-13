@@ -33,15 +33,13 @@ func TestRunCKPriceRefresh_SendsSuccessDiscordAlert(t *testing.T) {
 
 	writer := &mockCKPriceReportWriter{}
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
-		return &mockCKRefreshStore{
-			changes: &ckprices.TopBottomPriceChanges{
-				Top:    []ckprices.PriceChangeListing{{NameKey: "bolt"}},
-				Bottom: []ckprices.PriceChangeListing{{NameKey: "counterspell"}},
-			},
-		}, nil
+		return &mockCKRefreshStore{}, nil
 	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 42, nil
+	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, *ckprices.TopBottomPriceChanges, error) {
+		return 42, &ckprices.TopBottomPriceChanges{
+			Top:    []ckprices.PriceChangeListing{{NameKey: "bolt"}},
+			Bottom: []ckprices.PriceChangeListing{{NameKey: "counterspell"}},
+		}, nil
 	}
 	newCKPriceReportWriterFunc = func(_ context.Context) (ckpricereport.Writer, error) {
 		return writer, nil
@@ -81,8 +79,8 @@ func TestRunCKPriceRefresh_SendsFailureDiscordAlert(t *testing.T) {
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
 		return &mockCKRefreshStore{}, nil
 	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 0, refreshErr
+	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, *ckprices.TopBottomPriceChanges, error) {
+		return 0, nil, refreshErr
 	}
 
 	if err := runCKPriceRefresh(context.Background()); err == nil {
@@ -114,8 +112,11 @@ func (m *mockCKRefreshStore) GetTopBottomPriceChanges(_ context.Context) (*ckpri
 	return &ckprices.TopBottomPriceChanges{}, nil
 }
 
-func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {
-	return "", nil
+func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, *ckprices.TopBottomPriceChanges, error) {
+	if m.changes != nil {
+		return "", m.changes, nil
+	}
+	return "", &ckprices.TopBottomPriceChanges{}, nil
 }
 
 type mockCKPriceReportWriter struct {
@@ -147,8 +148,8 @@ func TestHandle_RoutesCKPriceRefreshRun(t *testing.T) {
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
 		return &mockCKRefreshStore{}, nil
 	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 1, nil
+	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, *ckprices.TopBottomPriceChanges, error) {
+		return 1, &ckprices.TopBottomPriceChanges{}, nil
 	}
 	newCKPriceReportWriterFunc = func(_ context.Context) (ckpricereport.Writer, error) {
 		return writer, nil

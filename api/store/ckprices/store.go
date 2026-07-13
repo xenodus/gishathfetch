@@ -28,5 +28,5 @@ type Store interface {
 	// ascending=true is equivalent to SQL ORDER BY priceChangePercent ASC LIMIT n.
 	GetPriceChangesByPercent(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error)
 	GetTopBottomPriceChanges(ctx context.Context) (*TopBottomPriceChanges, error)
-	PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (syncedAt string, err error)
+	PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (syncedAt string, changes *TopBottomPriceChanges, err error)
 }

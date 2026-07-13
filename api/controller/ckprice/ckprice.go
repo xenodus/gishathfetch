@@ -77,24 +77,24 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 }
 
 // RefreshPrices downloads Card Kingdom retail prices from MTGJSON and upserts the DynamoDB index.
-func RefreshPrices(ctx context.Context, store ckprices.Store) (int, error) {
+func RefreshPrices(ctx context.Context, store ckprices.Store) (int, *ckprices.TopBottomPriceChanges, error) {
 	log.Printf("ck price refresh: fetching mtgjson prices")
 	fetchStarted := time.Now()
 
 	listings, err := fetchCheapestFunc(ctx)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 
 	log.Printf("ck price refresh: fetched mtgjson prices listings=%d duration=%s", len(listings), time.Since(fetchStarted).Round(time.Millisecond))
 
 	log.Printf("ck price refresh: writing dynamodb listings=%d", len(listings))
 	writeStarted := time.Now()
-	syncedAt, err := store.PutAll(ctx, listings)
+	syncedAt, changes, err := store.PutAll(ctx, listings)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	log.Printf("ck price refresh: wrote dynamodb listings=%d syncedAt=%s duration=%s", len(listings), syncedAt, time.Since(writeStarted).Round(time.Millisecond))
 
-	return len(listings), nil
+	return len(listings), changes, nil
 }

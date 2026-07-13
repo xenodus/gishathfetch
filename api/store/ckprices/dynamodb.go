@@ -176,7 +176,7 @@ func (s *DynamoDBStore) scanPriceChangeListings(ctx context.Context) ([]PriceCha
 	return listings, nil
 }
 
-func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (string, error) {
+func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (string, *TopBottomPriceChanges, error) {
 	nameKeys := make([]string, 0, len(listings))
 	for nameKey := range listings {
 		nameKeys = append(nameKeys, nameKey)
@@ -184,17 +184,18 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 
 	existing, err := s.batchGetExisting(ctx, nameKeys)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	listings = listingsWithPriceChange(existing, listings)
 
 	syncedAt := time.Now().UTC().Format(time.RFC3339)
+	rankings := rankingsFromListings(listings, syncedAt, PriceChangeRankingLimit)
 	writeRequests := make([]types.WriteRequest, 0, len(listings)+1)
 	for nameKey, listing := range listings {
 		record := dynamoRecordFromListing(nameKey, listing, syncedAt)
 		item, err := attributevalue.MarshalMap(record)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		writeRequests = append(writeRequests, types.WriteRequest{
 			PutRequest: &types.PutRequest{Item: item},
@@ -208,7 +209,7 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 		ListingCount: len(listings),
 	})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	writeRequests = append(writeRequests, types.WriteRequest{
 		PutRequest: &types.PutRequest{Item: metadataItem},
@@ -218,11 +219,11 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 		end := min(start+batchWriteLimit, len(writeRequests))
 		batch := writeRequests[start:end]
 		if err := s.writeBatch(ctx, batch); err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 
-	return syncedAt, nil
+	return syncedAt, &rankings, nil
 }
 
 func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, syncedAt string) dynamoRecord {
