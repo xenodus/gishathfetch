@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   formatPriceChangeUsd,
+  hasNonZeroUsdPriceChanges,
   parseCKPriceDrops,
   parseCKPriceIncreases,
 } from "./ckPriceChanges.js";
@@ -68,4 +69,39 @@ test("parseCKPriceDrops returns an empty list for invalid payloads", () => {
   assert.deepEqual(parseCKPriceDrops(null), []);
   assert.deepEqual(parseCKPriceDrops({}), []);
   assert.deepEqual(parseCKPriceDrops({ bottom: "invalid" }), []);
+});
+
+test("hasNonZeroUsdPriceChanges is false when all changes are zero, missing, or absent", () => {
+  assert.equal(hasNonZeroUsdPriceChanges([], []), false);
+  assert.equal(
+    hasNonZeroUsdPriceChanges(
+      [{ cardName: "Bolt", priceChangeUsd: 0 }],
+      [{ cardName: "Ring", priceChangeUsd: 0 }],
+    ),
+    false,
+  );
+  assert.equal(
+    hasNonZeroUsdPriceChanges(
+      [{ cardName: "Bolt", priceChangeUsd: null }],
+      [{ cardName: "Ring", priceChangeUsd: null }],
+    ),
+    false,
+  );
+});
+
+test("hasNonZeroUsdPriceChanges is true when any listing has a non-zero USD change", () => {
+  assert.equal(
+    hasNonZeroUsdPriceChanges(
+      [{ cardName: "Bolt", priceChangeUsd: 0.5 }],
+      [{ cardName: "Ring", priceChangeUsd: 0 }],
+    ),
+    true,
+  );
+  assert.equal(
+    hasNonZeroUsdPriceChanges(
+      [{ cardName: "Bolt", priceChangeUsd: 0 }],
+      [{ cardName: "Ring", priceChangeUsd: -0.25 }],
+    ),
+    true,
+  );
 });

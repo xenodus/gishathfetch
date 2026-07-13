@@ -40,3 +40,12 @@ export function parseCKPriceIncreases(payload, limit = 20) {
 export function parseCKPriceDrops(payload, limit = 20) {
   return parseCKPriceChangeListings(payload?.bottom, limit);
 }
+
+export function hasNonZeroUsdPriceChanges(increases, drops) {
+  return [...increases, ...drops].some(
+    (item) =>
+      typeof item?.priceChangeUsd === "number" &&
+      Number.isFinite(item.priceChangeUsd) &&
+      item.priceChangeUsd !== 0,
+  );
+}
