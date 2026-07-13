@@ -141,7 +141,12 @@ func TestListingsWithPriceChange(t *testing.T) {
 
 	require.NotNil(t, enriched["lightning bolt"].PriceChangePercent)
 	require.Equal(t, 10, *enriched["lightning bolt"].PriceChangePercent)
+	require.NotNil(t, enriched["lightning bolt"].PreviousPriceUsd)
+	require.Equal(t, 1.00, *enriched["lightning bolt"].PreviousPriceUsd)
 	require.NotNil(t, enriched["counterspell"].PriceChangePercent)
 	require.Equal(t, -10, *enriched["counterspell"].PriceChangePercent)
+	require.NotNil(t, enriched["counterspell"].PreviousPriceUsd)
+	require.Equal(t, 2.00, *enriched["counterspell"].PreviousPriceUsd)
 	require.Nil(t, enriched["new card"].PriceChangePercent)
+	require.Nil(t, enriched["new card"].PreviousPriceUsd)
 }

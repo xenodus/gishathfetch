@@ -14,10 +14,12 @@ import (
 func TestDynamoRecordFromListing(t *testing.T) {
 	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
 	priceChangePercent := 12
+	previousPriceUsd := 1.33
 	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
 		CardName:           "Lightning Bolt",
 		Edition:            "Fourth Edition",
 		PriceUsd:           1.49,
+		PreviousPriceUsd:   &previousPriceUsd,
 		PriceChangePercent: &priceChangePercent,
 		URL:                "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
 		IsFoil:             false,
@@ -27,6 +29,8 @@ func TestDynamoRecordFromListing(t *testing.T) {
 	require.Equal(t, "lightning bolt", record.NameKey)
 	require.Equal(t, "2026-06-28T00:00:00Z", record.UpdatedAt)
 	require.Equal(t, syncedAt, record.SyncedAt)
+	require.NotNil(t, record.PreviousPriceUsd)
+	require.Equal(t, 1.33, *record.PreviousPriceUsd)
 	require.NotNil(t, record.PriceChangePercent)
 	require.Equal(t, 12, *record.PriceChangePercent)
 	require.NotNil(t, record.PriceChangeIndexPK)
@@ -67,8 +71,10 @@ func TestDynamoRecordMarshalIncludesSyncedAt(t *testing.T) {
 func TestDynamoRecordMarshalIncludesPriceChangePercent(t *testing.T) {
 	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
 	priceChangePercent := -8
+	previousPriceUsd := 1.62
 	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
 		UpdatedAt:          "2026-06-28T00:00:00Z",
+		PreviousPriceUsd:   &previousPriceUsd,
 		PriceChangePercent: &priceChangePercent,
 	}, syncedAt)
 	item, err := attributevalue.MarshalMap(record)
@@ -77,6 +83,10 @@ func TestDynamoRecordMarshalIncludesPriceChangePercent(t *testing.T) {
 	av, ok := item["priceChangePercent"].(*types.AttributeValueMemberN)
 	require.True(t, ok)
 	require.Equal(t, "-8", av.Value)
+	require.Contains(t, item, "previousPriceUsd")
+	previousAV, ok := item["previousPriceUsd"].(*types.AttributeValueMemberN)
+	require.True(t, ok)
+	require.Equal(t, "1.62", previousAV.Value)
 }
 
 func TestSyncMetadataRecordMarshal(t *testing.T) {

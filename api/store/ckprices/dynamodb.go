@@ -27,11 +27,12 @@ const (
 )
 
 type dynamoRecord struct {
-	NameKey            string  `dynamodbav:"nameKey"`
-	CardName           string  `dynamodbav:"cardName"`
-	Edition            string  `dynamodbav:"edition"`
-	PriceUsd           float64 `dynamodbav:"priceUsd"`
-	PriceChangePercent *int    `dynamodbav:"priceChangePercent,omitempty"`
+	NameKey            string   `dynamodbav:"nameKey"`
+	CardName           string   `dynamodbav:"cardName"`
+	Edition            string   `dynamodbav:"edition"`
+	PriceUsd           float64  `dynamodbav:"priceUsd"`
+	PreviousPriceUsd   *float64 `dynamodbav:"previousPriceUsd,omitempty"`
+	PriceChangePercent *int     `dynamodbav:"priceChangePercent,omitempty"`
 	PriceChangeIndexPK *string `dynamodbav:"priceChangeIndexPK,omitempty"`
 	URL                string  `dynamodbav:"url"`
 	IsFoil             bool    `dynamodbav:"isFoil"`
@@ -230,6 +231,7 @@ func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, synced
 		CardName:           listing.CardName,
 		Edition:            listing.Edition,
 		PriceUsd:           listing.PriceUsd,
+		PreviousPriceUsd:   listing.PreviousPriceUsd,
 		PriceChangePercent: listing.PriceChangePercent,
 		URL:                listing.URL,
 		IsFoil:             listing.IsFoil,
@@ -251,6 +253,7 @@ func listingFromRecord(record dynamoRecord) (cardkingdom.Listing, bool) {
 		CardName:           record.CardName,
 		Edition:            record.Edition,
 		PriceUsd:           record.PriceUsd,
+		PreviousPriceUsd:   record.PreviousPriceUsd,
 		PriceChangePercent: record.PriceChangePercent,
 		URL:                record.URL,
 		IsFoil:             record.IsFoil,

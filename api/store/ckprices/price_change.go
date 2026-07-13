@@ -24,7 +24,9 @@ func listingsWithPriceChange(
 	enriched := make(map[string]cardkingdom.Listing, len(listings))
 	for nameKey, listing := range listings {
 		if previous, ok := existing[nameKey]; ok {
-			listing.PriceChangePercent = computePriceChangePercent(previous.PriceUsd, listing.PriceUsd)
+			previousPriceUsd := previous.PriceUsd
+			listing.PreviousPriceUsd = &previousPriceUsd
+			listing.PriceChangePercent = computePriceChangePercent(previousPriceUsd, listing.PriceUsd)
 		}
 		enriched[nameKey] = listing
 	}
