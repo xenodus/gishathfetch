@@ -315,7 +315,7 @@ export default function TopSearchKeywords({
               }`}
               aria-expanded={showPriceIncreases}
               aria-controls={contentPanelId}
-              aria-label="Highest dollar increase in 24 hours"
+              aria-label="Top dollar increase in 24 hours"
               disabled={isLoadingPriceIncreases}
               onClick={handlePriceIncreasesToggle}
             >
