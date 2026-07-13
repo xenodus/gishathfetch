@@ -1,16 +1,5 @@
 package cardkingdom
 
-import "encoding/json"
-
-// Product is a single listing from the Card Kingdom pricelist API.
-type Product struct {
-	Name        string      `json:"name"`
-	Edition     string      `json:"edition"`
-	PriceRetail json.Number `json:"price_retail"`
-	URL         string      `json:"url"`
-	IsFoil      string      `json:"is_foil"`
-}
-
 // Listing is the cheapest Card Kingdom retail offer for a card name.
 type Listing struct {
 	CardName           string   `json:"cardName"`

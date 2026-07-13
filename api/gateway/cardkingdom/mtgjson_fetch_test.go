@@ -384,3 +384,22 @@ func writeBzip2(w http.ResponseWriter, raw []byte) (int, error) {
 	}
 	return w.Write(out.Bytes())
 }
+
+func TestConsiderCheapestListing_FoilDoubleFacedDoesNotPolluteFaceAlias(t *testing.T) {
+	updatedAt := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	listings := make(map[string]Listing)
+	considerCheapestListing(listings, Listing{
+		CardName:  "Jennifer Walters // The Sensational She-Hulk",
+		Edition:   "Marvel Super Heroes",
+		PriceUsd:  69.99,
+		URL:       "https://mtgjson.com/links/d8187fd1eef32412",
+		IsFoil:    true,
+		UpdatedAt: updatedAt,
+	})
+
+	require.InDelta(t, 69.99, listings["jennifer walters // the sensational she-hulk"].PriceUsd, 0.001)
+	_, hasFrontFace := listings["jennifer walters"]
+	require.False(t, hasFrontFace)
+	_, hasBackFace := listings["the sensational she-hulk"]
+	require.False(t, hasBackFace)
+}
