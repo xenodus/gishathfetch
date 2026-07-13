@@ -125,74 +125,60 @@ function CKPriceIncreasesButtonLabel() {
   );
 }
 
-function CKPriceIncreasesPanel({
-  isVisible,
+function CKPriceIncreasesContent({
   isLoading,
   error,
   priceIncreases,
   searchQuery,
-  panelId,
 }) {
-  if (!isVisible) {
-    return null;
-  }
-
   if (isLoading) {
     return (
-      <div className="trending-price-increases" id={panelId}>
-        <div className="popular-searches-pills">
-          {LOADING_SKELETON_KEYS.slice(0, CK_PRICE_CHANGES_DISPLAY_LIMIT).map(
-            (key) => (
-              <span
-                key={key}
-                className="placeholder rounded-pill popular-search-pill-skeleton"
-              />
-            ),
-          )}
-        </div>
+      <div className="popular-searches-pills">
+        {LOADING_SKELETON_KEYS.slice(0, CK_PRICE_CHANGES_DISPLAY_LIMIT).map(
+          (key) => (
+            <span
+              key={key}
+              className="placeholder rounded-pill popular-search-pill-skeleton"
+            />
+          ),
+        )}
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="trending-price-increases" id={panelId}>
-        <p className="popular-searches-empty small text-muted mb-0">{error}</p>
-      </div>
+      <p className="popular-searches-empty small text-muted mb-0">{error}</p>
     );
   }
 
   if (priceIncreases.length === 0) {
     return (
-      <div className="trending-price-increases" id={panelId}>
-        <p className="popular-searches-empty small text-muted mb-0">
-          No CK price increases available.
-        </p>
-      </div>
+      <p className="popular-searches-empty small text-muted mb-0">
+        No CK price increases available.
+      </p>
     );
   }
 
   return (
-    <div className="trending-price-increases" id={panelId}>
-      <div className="popular-searches-pills">
-        {priceIncreases.map((item) => {
-          const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
+    <div className="popular-searches-pills">
+      {priceIncreases.map((item) => {
+        const isActive = isMatchingTrendingSearch(item.cardName, searchQuery);
 
-          return (
-            <a
-              key={item.cardName}
-              href={buildSearchQueryUrl(BASE_URL, item.cardName)}
-              className={`btn btn-sm popular-search-pill text-decoration-none${
-                isActive ? " is-active" : ""
-              }`}
-              aria-label={`Search for ${item.cardName}`}
-              aria-current={isActive ? "page" : undefined}
-            >
-              {item.cardName}
-            </a>
-          );
-        })}
-      </div>
+        return (
+          <a
+            key={item.cardName}
+            href={buildSearchQueryUrl(BASE_URL, item.cardName)}
+            className={`btn btn-sm popular-search-pill text-decoration-none${
+              isActive ? " is-active" : ""
+            }`}
+            aria-label={`Search for ${item.cardName}`}
+            aria-current={isActive ? "page" : undefined}
+          >
+            {item.cardName}
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -262,6 +248,7 @@ export default function TopSearchKeywords({
   const handlePeriodChange = (nextPeriod) => {
     setPeriod(nextPeriod);
     setShowAllKeywords(false);
+    setShowPriceIncreases(false);
   };
 
   if (!isLoading && !hasAnyKeywords(keywordsByPeriod)) {
@@ -298,6 +285,8 @@ export default function TopSearchKeywords({
     }
   };
 
+  const contentPanelId = `${panelId}-content`;
+
   return (
     <div
       className={`${SECTION_CLASS_NAME}${
@@ -317,7 +306,7 @@ export default function TopSearchKeywords({
             <PeriodToggle
               period={period}
               onPeriodChange={handlePeriodChange}
-              disabled={isLoading}
+              disabled={isLoading || showPriceIncreases}
             />
             <button
               type="button"
@@ -325,7 +314,7 @@ export default function TopSearchKeywords({
                 showPriceIncreases ? " is-active" : ""
               }`}
               aria-expanded={showPriceIncreases}
-              aria-controls={`${panelId}-price-increases`}
+              aria-controls={contentPanelId}
               aria-label="Highest dollar increase in 24 hours"
               disabled={isLoadingPriceIncreases}
               onClick={handlePriceIncreasesToggle}
@@ -334,65 +323,65 @@ export default function TopSearchKeywords({
             </button>
           </div>
 
-          {isLoading ? (
-            <div className="popular-searches-pills">
-              {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
-                <span
-                  key={key}
-                  className="placeholder rounded-pill popular-search-pill-skeleton"
-                />
-              ))}
-            </div>
-          ) : keywords.length > 0 ? (
-            <>
+          <div id={contentPanelId}>
+            {showPriceIncreases ? (
+              <CKPriceIncreasesContent
+                isLoading={isLoadingPriceIncreases}
+                error={priceIncreasesError}
+                priceIncreases={priceIncreases}
+                searchQuery={searchQuery}
+              />
+            ) : isLoading ? (
               <div className="popular-searches-pills">
-                {keywords.map((keyword) => {
-                  const isActive = isMatchingTrendingSearch(
-                    keyword,
-                    searchQuery,
-                  );
-
-                  return (
-                    <a
-                      key={keyword}
-                      href={buildPopularSearchUrl(BASE_URL, keyword, period)}
-                      className={`btn btn-sm popular-search-pill text-decoration-none${
-                        isActive ? " is-active" : ""
-                      }`}
-                      aria-label={`Search for ${keyword}`}
-                      aria-current={isActive ? "page" : undefined}
-                      onClick={() => handleTrendingSearchClick(keyword)}
-                    >
-                      {keyword}
-                    </a>
-                  );
-                })}
+                {LOADING_SKELETON_KEYS.slice(0, displayLimit).map((key) => (
+                  <span
+                    key={key}
+                    className="placeholder rounded-pill popular-search-pill-skeleton"
+                  />
+                ))}
               </div>
-              {hasMoreKeywords && (
-                <button
-                  type="button"
-                  className="popular-searches-show-more"
-                  aria-expanded={showAllKeywords}
-                  onClick={() => setShowAllKeywords((expanded) => !expanded)}
-                >
-                  {showAllKeywords ? "Show less" : "Show more"}
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="popular-searches-empty small text-muted mb-0">
-              No trending searches in the last {selectedPeriodLabel}.
-            </p>
-          )}
+            ) : keywords.length > 0 ? (
+              <>
+                <div className="popular-searches-pills">
+                  {keywords.map((keyword) => {
+                    const isActive = isMatchingTrendingSearch(
+                      keyword,
+                      searchQuery,
+                    );
 
-          <CKPriceIncreasesPanel
-            isVisible={showPriceIncreases}
-            isLoading={isLoadingPriceIncreases}
-            error={priceIncreasesError}
-            priceIncreases={priceIncreases}
-            searchQuery={searchQuery}
-            panelId={`${panelId}-price-increases`}
-          />
+                    return (
+                      <a
+                        key={keyword}
+                        href={buildPopularSearchUrl(BASE_URL, keyword, period)}
+                        className={`btn btn-sm popular-search-pill text-decoration-none${
+                          isActive ? " is-active" : ""
+                        }`}
+                        aria-label={`Search for ${keyword}`}
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => handleTrendingSearchClick(keyword)}
+                      >
+                        {keyword}
+                      </a>
+                    );
+                  })}
+                </div>
+                {hasMoreKeywords && (
+                  <button
+                    type="button"
+                    className="popular-searches-show-more"
+                    aria-expanded={showAllKeywords}
+                    onClick={() => setShowAllKeywords((expanded) => !expanded)}
+                  >
+                    {showAllKeywords ? "Show less" : "Show more"}
+                  </button>
+                )}
+              </>
+            ) : (
+              <p className="popular-searches-empty small text-muted mb-0">
+                No trending searches in the last {selectedPeriodLabel}.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

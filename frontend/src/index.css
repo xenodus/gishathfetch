@@ -701,9 +701,3 @@ ins.adsbygoogle.adsbygoogle-noablate {
   border-color: var(--bs-primary);
   color: var(--bs-primary);
 }
-
-.trending-price-increases {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--bs-border-color-translucent);
-}
