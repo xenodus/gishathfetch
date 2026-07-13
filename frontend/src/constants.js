@@ -178,7 +178,11 @@ export const BASE_URL = "https://gishathfetch.com/";
 export const TOP_SEARCH_KEYWORDS_URL =
   "/analytics/top-search-keywords/latest.json";
 
+// Same-origin on production (served from gishathfetch.com via CloudFront).
+export const CK_PRICE_CHANGES_URL = "/analytics/ck-price-changes/latest.json";
+
 export const TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT = 20;
+export const CK_PRICE_CHANGES_DISPLAY_LIMIT = 20;
 export const TOP_SEARCH_KEYWORDS_MOBILE_DISPLAY_LIMIT = 10;
 export const DESKTOP_MIN_WIDTH_MEDIA_QUERY = "(min-width: 768px)";
 
