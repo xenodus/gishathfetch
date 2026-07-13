@@ -107,8 +107,9 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
-	t.Run("when scrap leads and decklist is empty, still tries remaining decklist attempts", func(t *testing.T) {
-		sequence := make([]string, 0, 4)
+
+	t.Run("when scrap leads and decklist is empty, skips remaining decklist attempts", func(t *testing.T) {
+		sequence := make([]string, 0, 5)
 		cards, err := runFallbackAttempts(
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 				sequence = append(sequence, "scrap-dedicated")
@@ -123,17 +124,25 @@ func TestRunFallbackAttempts(t *testing.T) {
 				return []gateway.Card{}, nil
 			}},
 			fallbackAttempt{strategy: "decklist-direct", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
-				sequence = append(sequence, "decklist-direct")
-				return []gateway.Card{{Name: "decklist-direct"}}, nil
+				t.Fatal("decklist-direct should be skipped after empty decklist-dedicated")
+				return nil, nil
+			}},
+			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
+				sequence = append(sequence, "scrap-dynamic")
+				return []gateway.Card{{Name: "scrap-dynamic"}}, nil
+			}},
+			fallbackAttempt{strategy: "decklist-dynamic", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
+				t.Fatal("decklist-dynamic should be skipped after empty decklist-dedicated")
+				return nil, nil
 			}},
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
-		if len(cards) != 1 || cards[0].Name != "decklist-direct" {
-			t.Fatalf("expected decklist-direct card, got %+v", cards)
+		if len(cards) != 1 || cards[0].Name != "scrap-dynamic" {
+			t.Fatalf("expected scrap-dynamic card, got %+v", cards)
 		}
-		expected := []string{"scrap-dedicated", "scrap-direct", "decklist-dedicated", "decklist-direct"}
+		expected := []string{"scrap-dedicated", "scrap-direct", "decklist-dedicated", "scrap-dynamic"}
 		if len(sequence) != len(expected) {
 			t.Fatalf("expected %v, got %v", expected, sequence)
 		}

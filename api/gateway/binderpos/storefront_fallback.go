@@ -37,10 +37,9 @@ func strategyFamilyFromName(name string) strategyFamily {
 // cards is treated as inconclusive and the next strategy is tried; only the
 // final attempt may return an empty result.
 //
-// When decklist leads and the first decklist attempt returns no cards without
-// error, remaining decklist attempts are skipped and scrap strategies run next.
-// Each attempt's error is annotated with its position and strategy name so the
-// final error reflects the last attempt tried.
+// When any decklist attempt returns no cards without error, remaining decklist
+// attempts are skipped. Each attempt's error is annotated with its position and
+// strategy name so the final error reflects the last attempt tried.
 func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 	var (
 		cards           []gateway.Card
@@ -48,7 +47,6 @@ func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 		executedAttempt int
 	)
 
-	decklistLeads := len(attempts) > 0 && attempts[0].family == strategyFamilyDecklist
 	abandonDecklist := false
 
 	for idx, attempt := range attempts {
@@ -64,8 +62,7 @@ func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 			return cards, nil
 		}
 
-		if decklistLeads && !abandonDecklist &&
-			attempt.family == strategyFamilyDecklist && err == nil && len(cards) == 0 {
+		if attempt.family == strategyFamilyDecklist && err == nil && len(cards) == 0 {
 			abandonDecklist = true
 			continue
 		}
