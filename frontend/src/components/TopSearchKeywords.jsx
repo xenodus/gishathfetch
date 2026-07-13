@@ -301,11 +301,11 @@ export default function TopSearchKeywords({
               }`}
               aria-expanded={showPriceIncreases}
               aria-controls={contentPanelId}
-              aria-label="Top dollar increase in 24 hours"
+              aria-label="Top risers in 24 hours"
               disabled={isLoadingPriceIncreases}
               onClick={handlePriceIncreasesToggle}
             >
-              <CKPriceIncreasesButtonLabel />
+              Top risers (24h)
             </button>
           </div>
 
