@@ -344,7 +344,7 @@ func TestSearchShops_IncludesStoreErrors(t *testing.T) {
 
 func TestBuildStoreErrors_IncludesHTTPStatusCode(t *testing.T) {
 	storeErrors := buildStoreErrors(map[string]error{
-		"Arcane Sanctum": fmt.Errorf(
+		"Hideout": fmt.Errorf(
 			"attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)",
 		),
 		"Cards Central": fmt.Errorf("unexpected status for Cards Central: 429 Too Many Requests"),
@@ -359,12 +359,12 @@ func TestBuildStoreErrors_IncludesHTTPStatusCode(t *testing.T) {
 		byStore[storeError.Store] = storeError
 	}
 
-	arcane := byStore["Arcane Sanctum"]
-	if arcane.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("expected status 503 for Arcane Sanctum, got %d", arcane.StatusCode)
+	hideout := byStore["Hideout"]
+	if hideout.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected status 503 for Hideout, got %d", hideout.StatusCode)
 	}
-	if !strings.Contains(arcane.Error, "503 Service Unavailable") {
-		t.Fatalf("expected enriched error message, got %q", arcane.Error)
+	if !strings.Contains(hideout.Error, "503 Service Unavailable") {
+		t.Fatalf("expected enriched error message, got %q", hideout.Error)
 	}
 
 	cardsCentral := byStore["Cards Central"]
@@ -577,15 +577,15 @@ func TestFormatShopSearchSummary(t *testing.T) {
 func TestFormatDiscordErrorSummary(t *testing.T) {
 	got := formatDiscordErrorSummary("Uro, Titan of Nature's Wrath", []string{
 		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 3 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
-		"Error encountered searching [Arcane Sanctum] for [Uro, Titan of Nature's Wrath]: attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
+		"Error encountered searching [Hideout] for [Uro, Titan of Nature's Wrath]: attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
 		"Recovered from panic in shop [ShopPanic]: panic value",
 	})
 
 	if !strings.Contains(got, "Encountered 3 error(s) while searching [Uro, Titan of Nature's Wrath]:") {
 		t.Fatalf("expected summary header, got: %s", got)
 	}
-	if !strings.Contains(got, "- [Arcane Sanctum] attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)") {
-		t.Fatalf("expected Arcane Sanctum concise line, got: %s", got)
+	if !strings.Contains(got, "- [Hideout] attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)") {
+		t.Fatalf("expected Hideout concise line, got: %s", got)
 	}
 	if !strings.Contains(got, "- [Tefuda] attempt 3 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)") {
 		t.Fatalf("expected Tefuda concise line, got: %s", got)

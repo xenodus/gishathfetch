@@ -43,8 +43,6 @@ func (i impl) scrapWithCollectorFactory(
 		return scrapVariant3(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	case 4:
 		return scrapVariant4(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
-	case 5:
-		return scrapVariant5(ctx, storeName, baseUrl, searchUrl, searchStr, collectorFactory)
 	}
 	return []gateway.Card{}, fmt.Errorf("invalid scrap variant: %d", scrapVariant)
 }
@@ -112,59 +110,6 @@ func buildSafeSearchURL(baseUrl, searchUrlTemplate, searchStr string) string {
 	}
 
 	return base.String()
-}
-
-// arcane sanctum
-func scrapVariant5(ctx context.Context, storeName, baseUrl, searchUrl, searchStr string, collectorFactory func(context.Context) (*colly.Collector, error)) ([]gateway.Card, error) {
-	searchURL := buildSafeSearchURL(baseUrl, searchUrl, searchStr+" mtg")
-	var cards []gateway.Card
-
-	c, err := collectorFactory(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	c.OnHTML("body", func(e *colly.HTMLElement) {
-		e.ForEach("div.product-grid-container ul.product-grid li", func(_ int, el *colly.HTMLElement) {
-			name := el.ChildText("div.collection-product-info > h3.collection-product-title a")
-			link := el.ChildAttr("div.collection-product-info > h3.collection-product-title a", "href")
-			img := el.ChildAttr("div.collection-product-img img", "src")
-			priceStr := el.ChildText("div.collection-product-info > span.collection-product-price")
-
-			if priceStr != "" {
-				price, err := util.ParsePrice(priceStr)
-				if err != nil {
-					log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)
-					return
-				}
-
-				// url
-				u := strings.TrimSpace(baseUrl + link)
-				cleanPageURL, err := url.Parse(u)
-				if err != nil {
-					log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
-					return
-				}
-				cleanPageURL.RawQuery = url.Values{
-					"utm_source": []string{config.UtmSource},
-				}.Encode()
-
-				if price > 0 {
-					cards = append(cards, gateway.Card{
-						Name:      strings.TrimSpace(name),
-						Url:       strings.TrimSpace(cleanPageURL.String()),
-						InStock:   true,
-						Price:     price,
-						Source:    storeName,
-						Img:       img,
-						ExtraInfo: []string{el.ChildText("div.collection-variant-display")},
-					})
-				}
-			}
-		})
-	})
-
-	return cards, gateway.VisitWithProxyInfo(c, searchURL)
 }
 
 type pagination struct {
