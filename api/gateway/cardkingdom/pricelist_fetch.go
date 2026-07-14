@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -189,14 +188,7 @@ func ckPricelistURL() string {
 }
 
 func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
-	storeBase, err := url.Parse("https://www.cardkingdom.com/")
-	if err != nil {
-		return nil, fmt.Errorf("%s: store base url: %w", ckPricelistErrorPrefix, err)
-	}
-
 	resp, err := gateway.DoOutboundGET(ctx, downloadURL, gateway.OutboundRequestOptions{
-		Style:          gateway.OutboundStyleJSON,
-		StoreBase:      storeBase,
 		Accept:         "application/json",
 		SkipWebBotAuth: true,
 	}, ckPricelistHTTPTimeout)

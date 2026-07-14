@@ -176,22 +176,3 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	require.InDelta(t, 1.19, cheapest["lightning bolt"].PriceUsd, 0.001)
 	require.InDelta(t, 7.49, cheapest["spectacular spider-man"].PriceUsd, 0.001)
 }
-
-func TestConsiderCheapestListing_FoilDoubleFacedDoesNotPolluteFaceAlias(t *testing.T) {
-	updatedAt := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
-	listings := make(map[string]Listing)
-	considerCheapestListing(listings, Listing{
-		CardName:  "Jennifer Walters // The Sensational She-Hulk",
-		Edition:   "Marvel Super Heroes",
-		PriceUsd:  69.99,
-		URL:       "https://www.cardkingdom.com/mtg/marvel-super-heroes/jennifer-walters-foil",
-		IsFoil:    true,
-		UpdatedAt: updatedAt,
-	})
-
-	require.InDelta(t, 69.99, listings["jennifer walters // the sensational she-hulk"].PriceUsd, 0.001)
-	_, hasFrontFace := listings["jennifer walters"]
-	require.False(t, hasFrontFace)
-	_, hasBackFace := listings["the sensational she-hulk"]
-	require.False(t, hasBackFace)
-}

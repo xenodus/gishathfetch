@@ -80,6 +80,17 @@ func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	require.Equal(t, "dedicated-1", attempts[0].strategy)
 }
 
+func TestOutboundProxyDescription(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(2*time.Second, false)
+	require.GreaterOrEqual(t, len(attempts), 2)
+
+	require.Equal(t, "proxy_mode=direct proxy=none", outboundProxyDescription(attempts[0]))
+	require.Equal(t, "proxy_mode=dedicated proxy=DEDICATED_PROXY_1", outboundProxyDescription(attempts[1]))
+}
+
 func TestDoOutboundGET_DirectForbiddenWithoutProxy(t *testing.T) {
 	clearProxyEnv(t)
 
