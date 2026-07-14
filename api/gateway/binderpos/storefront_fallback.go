@@ -15,8 +15,10 @@ type fallbackAttempt struct {
 // result that returns cards.
 //
 // When any attempt returns no cards without error, that empty result is final
-// and no further strategies run. Each attempt's error is annotated with its
-// position and strategy name so the final error reflects the last attempt tried.
+// and no further strategies run. HTTP 5xx errors are final as well: later
+// strategies are not tried because the upstream is failing, not blocking the
+// current transport. Each attempt's error is annotated with its position and
+// strategy name so the final error reflects the last attempt tried.
 func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 	var (
 		cards           []gateway.Card
@@ -35,6 +37,10 @@ func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 
 		if err == nil && len(cards) == 0 {
 			return cards, nil
+		}
+
+		if gateway.IsHTTPServerError(err) {
+			return cards, err
 		}
 	}
 

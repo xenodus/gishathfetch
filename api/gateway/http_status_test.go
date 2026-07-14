@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -29,6 +30,28 @@ func TestExtractHTTPStatusCode(t *testing.T) {
 		if got := ExtractHTTPStatusCode(msg); got != want {
 			t.Fatalf("ExtractHTTPStatusCode(%q) = %d, want %d", msg, got, want)
 		}
+	}
+}
+
+func TestIsHTTPServerError(t *testing.T) {
+	tests := map[string]bool{
+		"503 Service Unavailable":                                                      true,
+		"attempt 1 (scrap-dedicated): 503 Service Unavailable (proxy_mode=direct)":     true,
+		"attempt 2 (scrap-direct): Service Unavailable (proxy_mode=direct proxy=none)": true,
+		"403 Forbidden":           false,
+		"unexpected status 429":   false,
+		"connection reset by peer": false,
+	}
+
+	for msg, want := range tests {
+		if got := IsHTTPServerError(errors.New(msg)); got != want {
+			t.Fatalf("IsHTTPServerError(%q) = %v, want %v", msg, got, want)
+		}
+	}
+
+	wrapped := fmt.Errorf("attempt 1 (scrap-dedicated): %w", errors.New("503 Service Unavailable"))
+	if !IsHTTPServerError(wrapped) {
+		t.Fatalf("IsHTTPServerError() should detect wrapped 5xx errors")
 	}
 }
 
