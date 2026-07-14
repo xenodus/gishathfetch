@@ -8,7 +8,7 @@ import (
 const ckPricelistErrorPrefixPublic = "ck price pricelist"
 
 // FetchCheapestByName downloads Card Kingdom's public pricelist and indexes the
-// cheapest in-stock retail listing per card name.
+// cheapest listed retail price per card name.
 func FetchCheapestByName(ctx context.Context) (map[string]Listing, error) {
 	listings, err := fetchCheapestFromCKPricelist(ctx)
 	if err != nil {

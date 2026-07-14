@@ -113,25 +113,26 @@ const sampleCKPricelist = `{
   ]
 }`
 
-func TestCheapestInStockUSD_UsesLowestStockedCondition(t *testing.T) {
-	price, ok := cheapestInStockUSD(ckConditionValues{
+func TestCheapestListedUSD_UsesLowestListedCondition(t *testing.T) {
+	price, ok := cheapestListedUSD(ckConditionValues{
 		NmPrice: 1.49,
 		NmQty:   0,
 		ExPrice: 1.19,
 		ExQty:   2,
 		VgPrice: 0.99,
 		VgQty:   1,
-	}, 1.49, 3)
+	}, 1.49)
 	require.True(t, ok)
 	require.InDelta(t, 0.99, price, 0.001)
 }
 
-func TestCheapestInStockUSD_SkipsOutOfStock(t *testing.T) {
-	_, ok := cheapestInStockUSD(ckConditionValues{
+func TestCheapestListedUSD_IncludesOutOfStock(t *testing.T) {
+	price, ok := cheapestListedUSD(ckConditionValues{
 		NmPrice: 7.49,
 		NmQty:   0,
-	}, 7.49, 0)
-	require.False(t, ok)
+	}, 7.49)
+	require.True(t, ok)
+	require.InDelta(t, 7.49, price, 0.001)
 }
 
 func TestCheapestListingsFromPricelist(t *testing.T) {
@@ -150,8 +151,8 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
 
 	spider := cheapest["spectacular spider-man"]
-	require.InDelta(t, 99.99, spider.PriceUsd, 0.001)
-	require.Equal(t, "Spotlight Series Non-Foil", spider.Edition)
+	require.InDelta(t, 7.49, spider.PriceUsd, 0.001)
+	require.Equal(t, "0014 - Borderless", spider.Edition)
 
 	tony := cheapest["tony stark // the invincible iron man"]
 	require.InDelta(t, 7.49, tony.PriceUsd, 0.001)
@@ -173,7 +174,7 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	cheapest, err := fetchCheapestFromCKPricelist(context.Background())
 	require.NoError(t, err)
 	require.InDelta(t, 1.19, cheapest["lightning bolt"].PriceUsd, 0.001)
-	require.InDelta(t, 99.99, cheapest["spectacular spider-man"].PriceUsd, 0.001)
+	require.InDelta(t, 7.49, cheapest["spectacular spider-man"].PriceUsd, 0.001)
 }
 
 func TestConsiderCheapestListing_FoilDoubleFacedDoesNotPolluteFaceAlias(t *testing.T) {

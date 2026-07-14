@@ -251,7 +251,7 @@ func listingFromPricelistItem(item ckPricelistItem, baseURL string, updatedAt st
 		return Listing{}, false
 	}
 
-	priceUsd, ok := cheapestInStockUSD(item.ConditionValues, float64(item.PriceRetail), int(item.QtyRetail))
+	priceUsd, ok := cheapestListedUSD(item.ConditionValues, float64(item.PriceRetail))
 	if !ok {
 		return Listing{}, false
 	}
@@ -271,24 +271,21 @@ func listingFromPricelistItem(item ckPricelistItem, baseURL string, updatedAt st
 	}, true
 }
 
-func cheapestInStockUSD(values ckConditionValues, priceRetail float64, qtyRetail int) (float64, bool) {
+func cheapestListedUSD(values ckConditionValues, priceRetail float64) (float64, bool) {
 	best := 0.0
 	found := false
 
-	for _, option := range []struct {
-		price float64
-		qty   int
-	}{
-		{float64(values.NmPrice), int(values.NmQty)},
-		{float64(values.ExPrice), int(values.ExQty)},
-		{float64(values.VgPrice), int(values.VgQty)},
-		{float64(values.GPrice), int(values.GQty)},
+	for _, price := range []float64{
+		float64(values.NmPrice),
+		float64(values.ExPrice),
+		float64(values.VgPrice),
+		float64(values.GPrice),
 	} {
-		if option.qty <= 0 || option.price <= 0 {
+		if price <= 0 {
 			continue
 		}
-		if !found || option.price < best {
-			best = option.price
+		if !found || price < best {
+			best = price
 			found = true
 		}
 	}
@@ -296,7 +293,7 @@ func cheapestInStockUSD(values ckConditionValues, priceRetail float64, qtyRetail
 	if found {
 		return best, true
 	}
-	if qtyRetail > 0 && priceRetail > 0 {
+	if priceRetail > 0 {
 		return priceRetail, true
 	}
 	return 0, false

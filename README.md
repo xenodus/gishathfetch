@@ -82,7 +82,7 @@ flowchart TB
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
 | Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
-| CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest in-stock CK retail price per verified card name |
+| CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
 | Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for all Lambdas (different handlers via event shape) |
 
 ### Analytics keywords export flow
@@ -145,8 +145,8 @@ Example report shape:
 
 CK prices come from Card Kingdom's public pricelist API
 (`https://api.cardkingdom.com/api/v2/pricelist`). The refresh Lambda downloads
-the singles pricelist, picks the cheapest **in-stock** retail listing per card
-name (using per-condition quantities), and batch-writes the index. Search
+the singles pricelist, picks the cheapest listed retail price per card name
+(using NM/EX/VG/G condition prices), and batch-writes the index. Search
 verifies the query against Scryfall before looking up DynamoDB and omits stale
 entries older than 48 hours.
 
@@ -163,7 +163,7 @@ sequenceDiagram
 
     EB->>R: daily ck-price-refresh-run
     R->>CK: download api/v2/pricelist
-    R->>D: PutAll cheapest in-stock CK retail by name
+    R->>D: PutAll cheapest CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
     U->>S: GET /?s=Lightning+Bolt
