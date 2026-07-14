@@ -126,6 +126,22 @@ func topBottomPriceChangesByUsd(listings []PriceChangeListing, limit int) TopBot
 	}
 }
 
+// filterPriceChangesByUsdSign keeps listings whose USD change matches the requested
+// direction: increases=true keeps price rises (> 0), increases=false keeps price
+// drops (< 0). Listings with a missing or zero change are always excluded.
+func filterPriceChangesByUsdSign(listings []PriceChangeListing, increases bool) []PriceChangeListing {
+	filtered := make([]PriceChangeListing, 0, len(listings))
+	for _, listing := range listings {
+		if listing.PriceChangeUsd == nil || *listing.PriceChangeUsd == 0 {
+			continue
+		}
+		if (*listing.PriceChangeUsd > 0) == increases {
+			filtered = append(filtered, listing)
+		}
+	}
+	return filtered
+}
+
 func priceChangesByPercentFromListings(listings []PriceChangeListing, ascending bool, limit int) []PriceChangeListing {
 	rankings := topBottomPriceChangesByPercent(listings, limit)
 	if ascending {

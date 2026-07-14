@@ -15,7 +15,7 @@ export function formatPriceChangeUsd(usd) {
   return `-$${amount}`;
 }
 
-function parseCKPriceChangeListings(listings, limit = 20) {
+function parseCKPriceChangeListings(listings, matchesDirection, limit = 20) {
   if (!Array.isArray(listings)) {
     return [];
   }
@@ -29,16 +29,29 @@ function parseCKPriceChangeListings(listings, limit = 20) {
           ? item.priceChangeUsd
           : null,
     }))
-    .filter((item) => item.cardName.length > 0)
+    .filter(
+      (item) =>
+        item.cardName.length > 0 &&
+        item.priceChangeUsd !== null &&
+        matchesDirection(item.priceChangeUsd),
+    )
     .slice(0, limit);
 }
 
 export function parseCKPriceIncreases(payload, limit = 20) {
-  return parseCKPriceChangeListings(payload?.top, limit);
+  return parseCKPriceChangeListings(
+    payload?.top,
+    (priceChangeUsd) => priceChangeUsd > 0,
+    limit,
+  );
 }
 
 export function parseCKPriceDrops(payload, limit = 20) {
-  return parseCKPriceChangeListings(payload?.bottom, limit);
+  return parseCKPriceChangeListings(
+    payload?.bottom,
+    (priceChangeUsd) => priceChangeUsd < 0,
+    limit,
+  );
 }
 
 export function hasNonZeroUsdPriceChanges(increases, drops) {
