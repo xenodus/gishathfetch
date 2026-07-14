@@ -62,13 +62,6 @@ func Test_Scrap(t *testing.T) {
 			searchUrl:    "/search?q=%s",
 			searchStr:    "Abrade",
 		},
-		"variant 5": {
-			scrapVariant: 5,
-			storeName:    "Arcane Sanctum",
-			baseUrl:      "https://arcanesanctumtcg.com",
-			searchUrl:    "/search?q=%s",
-			searchStr:    "signet",
-		},
 		"invalid variant": {
 			scrapVariant: 999,
 			expErr:       errors.New("invalid scrap variant: 999"),

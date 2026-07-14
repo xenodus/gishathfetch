@@ -6,9 +6,6 @@ import (
 	"mtg-price-checker-sg/gateway"
 )
 
-// ArcaneSanctumStoreName is the LGS name for Arcane Sanctum; referenced by store-specific gateway packages.
-const ArcaneSanctumStoreName = "Arcane Sanctum"
-
 // storefrontStrategy is a single ordered search attempt: a human-readable name
 // used for error annotation plus the function that performs the lookup.
 type storefrontStrategy struct {

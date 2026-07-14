@@ -98,8 +98,6 @@ func scrapeStructureSelectors(scrapVariant int) (primary, fallback string) {
 		return "div.productCard__card", "div.productChip__grid"
 	case 4:
 		return "div.product-item.product-item--vertical", "a.product-item__title"
-	case 5:
-		return "div.product-grid-container ul.product-grid", "div.product-grid-container"
 	default:
 		return "body", ""
 	}

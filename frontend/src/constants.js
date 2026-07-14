@@ -5,7 +5,6 @@ export const PAGE_TITLE =
 export const LGS_OPTIONS = [
   "5 Mana",
   "Agora Hobby",
-  // "Arcane Sanctum",
   "Card Affinity",
   "Cards & Collections",
   "Cards Central",
@@ -50,14 +49,6 @@ export const LGS_MAP = [
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778050505021!2d103.85967687451628!3d1.3084089617085968!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19c9f7d7f74d%3A0xeaa1a66df7d4bcd6!2sAgora%20Hobby!5e0!3m2!1sen!2ssg!4v1702820213937!5m2!1sen!2ssg",
     website: "https://agorahobby.com/",
   },
-  // {
-  //   id: "arcane-sanctum-map",
-  //   name: "Arcane Sanctum",
-  //   address: "809 French Rd, #02-36 Kitchener Complex, Singapore 200809",
-  //   iframe:
-  //     "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778059032544!2d103.8596768749415!3d1.3084035986791807!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da197e8c761a49%3A0x8c56b7150064528b!2sArcane%20Sanctum!5e0!3m2!1sen!2ssg!4v1768317836907!5m2!1sen!2ssg",
-  //   website: "https://arcanesanctumtcg.com/",
-  // },
   {
     id: "cards-central-map",
     name: "Cards Central",
