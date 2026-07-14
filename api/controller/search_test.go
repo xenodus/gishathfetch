@@ -9,7 +9,6 @@ import (
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardscitadel"
-	"mtg-price-checker-sg/gateway/gameshaven"
 	"mtg-price-checker-sg/gateway/hideout"
 	"strings"
 	"sync"
