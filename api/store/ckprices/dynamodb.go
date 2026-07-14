@@ -146,9 +146,12 @@ func (s *DynamoDBStore) GetTopBottomPriceChanges(ctx context.Context) (*TopBotto
 	if err != nil {
 		return nil, err
 	}
+	// Top must only contain price increases and Bottom only price drops. When
+	// fewer than PriceChangeRankingLimit listings moved in a direction, the raw
+	// rankings would otherwise spill over into the opposite sign.
 	return &TopBottomPriceChanges{
-		Top:    top,
-		Bottom: bottom,
+		Top:    filterPriceChangesByUsdSign(top, true),
+		Bottom: filterPriceChangesByUsdSign(bottom, false),
 	}, nil
 }
 

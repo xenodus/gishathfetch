@@ -17,25 +17,25 @@ test("formatPriceChangeUsd formats signed dollar amounts", () => {
   assert.equal(formatPriceChangeUsd(Number.NaN), null);
 });
 
-test("parseCKPriceIncreases returns top card names with USD changes when present", () => {
+test("parseCKPriceIncreases returns top card names with positive USD changes only", () => {
   const payload = {
     top: [
       { cardName: "Lightning Bolt", priceChangeUsd: 0.5 },
       { cardName: " Counterspell ", priceChangeUsd: 0.1 },
       { cardName: "", priceChangeUsd: 0.05 },
       { cardName: "Sol Ring", priceChangePercent: 5 },
+      { cardName: "Brainstorm", priceChangeUsd: 0 },
+      { cardName: "Dark Ritual", priceChangeUsd: -0.25 },
     ],
   };
 
   const increases = parseCKPriceIncreases(payload);
 
-  assert.equal(increases.length, 3);
+  assert.equal(increases.length, 2);
   assert.equal(increases[0].cardName, "Lightning Bolt");
   assert.equal(increases[0].priceChangeUsd, 0.5);
   assert.equal(increases[1].cardName, "Counterspell");
   assert.equal(increases[1].priceChangeUsd, 0.1);
-  assert.equal(increases[2].cardName, "Sol Ring");
-  assert.equal(increases[2].priceChangeUsd, null);
 });
 
 test("parseCKPriceIncreases returns an empty list for invalid payloads", () => {
@@ -44,25 +44,25 @@ test("parseCKPriceIncreases returns an empty list for invalid payloads", () => {
   assert.deepEqual(parseCKPriceIncreases({ top: "invalid" }), []);
 });
 
-test("parseCKPriceDrops returns bottom card names with USD changes when present", () => {
+test("parseCKPriceDrops returns bottom card names with negative USD changes only", () => {
   const payload = {
     bottom: [
       { cardName: "Counterspell", priceChangeUsd: -1.5 },
       { cardName: " Sol Ring ", priceChangeUsd: -0.1 },
       { cardName: "", priceChangeUsd: -0.05 },
       { cardName: "Lightning Bolt", priceChangePercent: -5 },
+      { cardName: "Brainstorm", priceChangeUsd: 0 },
+      { cardName: "Dark Ritual", priceChangeUsd: 0.75 },
     ],
   };
 
   const drops = parseCKPriceDrops(payload);
 
-  assert.equal(drops.length, 3);
+  assert.equal(drops.length, 2);
   assert.equal(drops[0].cardName, "Counterspell");
   assert.equal(drops[0].priceChangeUsd, -1.5);
   assert.equal(drops[1].cardName, "Sol Ring");
   assert.equal(drops[1].priceChangeUsd, -0.1);
-  assert.equal(drops[2].cardName, "Lightning Bolt");
-  assert.equal(drops[2].priceChangeUsd, null);
 });
 
 test("parseCKPriceDrops returns an empty list for invalid payloads", () => {

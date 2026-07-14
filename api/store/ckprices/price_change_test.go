@@ -206,6 +206,26 @@ func TestTopBottomPriceChangesByUsd(t *testing.T) {
 	require.InDelta(t, -8.00, *rankings.Bottom[0].PriceChangeUsd, 0.001)
 }
 
+func TestFilterPriceChangesByUsdSign(t *testing.T) {
+	usd := func(value float64) *float64 {
+		return &value
+	}
+	listings := []PriceChangeListing{
+		{NameKey: "riser", Listing: cardkingdom.Listing{PriceChangeUsd: usd(2.50)}},
+		{NameKey: "drop", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-1.25)}},
+		{NameKey: "flat", Listing: cardkingdom.Listing{PriceChangeUsd: usd(0)}},
+		{NameKey: "missing", Listing: cardkingdom.Listing{}},
+	}
+
+	increases := filterPriceChangesByUsdSign(listings, true)
+	require.Len(t, increases, 1)
+	require.Equal(t, "riser", increases[0].NameKey)
+
+	drops := filterPriceChangesByUsdSign(listings, false)
+	require.Len(t, drops, 1)
+	require.Equal(t, "drop", drops[0].NameKey)
+}
+
 func TestPriceChangeListingFromRecord(t *testing.T) {
 	change := 15
 	listing, ok := priceChangeListingFromRecord(dynamoRecord{
