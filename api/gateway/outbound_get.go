@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 type outboundAttempt struct {
 	strategy string
+	proxyURL string
 	client   *http.Client
 }
 
@@ -50,15 +52,24 @@ func DoOutboundRoundTrip(
 			return nil, err
 		}
 
+		proxyDesc := outboundProxyDescription(attempt)
+		log.Printf("outbound request: trying %s url=%s", proxyDesc, outboundRequestURL(req))
+
 		resp, err := attempt.client.Do(req)
 		if err != nil {
-			failures = append(failures, fmt.Sprintf("%s: %v", attempt.strategy, err))
+			failure := fmt.Sprintf("%s: %v", attempt.strategy, err)
+			log.Printf("outbound request: failed %s: %v", proxyDesc, err)
+			failures = append(failures, failure)
 			continue
 		}
 		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
-			failures = append(failures, outboundStatusFailure(attempt.strategy, resp))
+			failure := outboundStatusFailure(attempt.strategy, resp)
+			log.Printf("outbound request: failed %s: status %d", proxyDesc, resp.StatusCode)
+			failures = append(failures, failure)
 			continue
 		}
+
+		log.Printf("outbound request: succeeded %s status=%d url=%s", proxyDesc, resp.StatusCode, outboundRequestURL(req))
 		return resp, nil
 	}
 	if len(failures) == 0 {
@@ -86,12 +97,17 @@ func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool) []outbound
 		}
 		attempts = append(attempts, outboundAttempt{
 			strategy: fmt.Sprintf("dedicated-%d", idx+1),
+			proxyURL: proxyURL,
 			client:   client,
 		})
 	}
 
 	if client, ok := dynamicProxyHTTPClient(timeout); ok {
-		attempts = append(attempts, outboundAttempt{strategy: "dynamic", client: client})
+		attempts = append(attempts, outboundAttempt{
+			strategy: "dynamic",
+			proxyURL: DynamicProxyURL(),
+			client:   client,
+		})
 	}
 
 	return attempts
@@ -130,6 +146,30 @@ func outboundStatusFailure(strategy string, resp *http.Response) string {
 		trimmed = trimmed[:120] + "..."
 	}
 	return msg + " (" + trimmed + ")"
+}
+
+func outboundProxyDescription(attempt outboundAttempt) string {
+	return formatProxyContext(outboundProxyMode(attempt.strategy), attempt.proxyURL)
+}
+
+func outboundProxyMode(strategy string) string {
+	switch {
+	case strategy == "direct":
+		return "direct"
+	case strategy == "dynamic":
+		return "dynamic"
+	case strings.HasPrefix(strategy, "dedicated-"):
+		return "dedicated"
+	default:
+		return strategy
+	}
+}
+
+func outboundRequestURL(req *http.Request) string {
+	if req == nil || req.URL == nil {
+		return ""
+	}
+	return req.URL.Redacted()
 }
 
 // NewOutboundHTTPClient returns an HTTP client that routes through a random dedicated
