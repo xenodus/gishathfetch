@@ -46,7 +46,7 @@ flowchart TB
     subgraph external["External services"]
         LGS[LGS store websites]
         Proxies[Proxy tiers direct / dedicated / dynamic]
-        MTGJSON[MTGJSON AllPricesToday + AllPrintings]
+        CKAPI[Card Kingdom pricelist API]
         Scryfall[Scryfall API]
         GA4[Google Analytics GA4]
     end
@@ -61,7 +61,7 @@ flowchart TB
     SearchLambda -->|optional CK lookup| DDB
     SearchLambda -->|verify card name| Scryfall
     EB -->|action: ck-price-refresh-run| RefreshLambda
-    RefreshLambda -->|download bz2 archives| MTGJSON
+    RefreshLambda -->|download pricelist| CKAPI
     RefreshLambda -->|batch write cheapest CK retail| DDB
     RefreshLambda -->|write latest.json| S3
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
@@ -79,10 +79,10 @@ flowchart TB
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Search API | API Gateway → `api.gishathfetch.com` | Routes `GET /?s=...&lgs=...` to the search Lambda |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional CK price lookup from DynamoDB |
-| CK refresh Lambda | `mtg-price-ck-refresh` | Daily MTGJSON download, DynamoDB index rebuild, and CK price change export to S3 |
+| CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
 | Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
-| CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
+| CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest in-stock CK retail price per verified card name |
 | Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for all Lambdas (different handlers via event shape) |
 
 ### Analytics keywords export flow
@@ -143,18 +143,18 @@ Example report shape:
 
 ### CK price refresh flow
 
-CK prices come from [MTGJSON](https://mtgjson.com/) (official Card Kingdom partner
-data), not the Card Kingdom API. The refresh Lambda streams
-`AllPricesToday.json.bz2` and `AllPrintings.json.bz2`, picks the cheapest CK
-retail listing per card name, and batch-writes the index. Search verifies the
-query against Scryfall before looking up DynamoDB and omits stale entries older
-than 48 hours.
+CK prices come from Card Kingdom's public pricelist API
+(`https://api.cardkingdom.com/api/v2/pricelist`). The refresh Lambda downloads
+the singles pricelist, picks the cheapest **in-stock** retail listing per card
+name (using per-condition quantities), and batch-writes the index. Search
+verifies the query against Scryfall before looking up DynamoDB and omits stale
+entries older than 48 hours.
 
 ```mermaid
 sequenceDiagram
     participant EB as EventBridge
     participant R as mtg-price-ck-refresh
-    participant M as MTGJSON
+    participant CK as Card Kingdom API
     participant D as DynamoDB
     participant S3 as S3 gishathfetch.com
     participant S as mtg-price-scrapper
@@ -162,8 +162,8 @@ sequenceDiagram
     participant U as User
 
     EB->>R: daily ck-price-refresh-run
-    R->>M: download AllPricesToday + AllPrintings
-    R->>D: PutAll cheapest CK retail by name
+    R->>CK: download api/v2/pricelist
+    R->>D: PutAll cheapest in-stock CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
     U->>S: GET /?s=Lightning+Bolt

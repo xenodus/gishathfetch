@@ -73,7 +73,7 @@ func TestRunCKPriceRefresh_SendsFailureDiscordAlert(t *testing.T) {
 		sendJobDiscordAlert = originalAlertFunc
 	}()
 
-	refreshErr := errors.New("mtgjson download failed")
+	refreshErr := errors.New("card kingdom pricelist download failed")
 	var gotAlert string
 	sendJobDiscordAlert = func(message string) {
 		gotAlert = message
@@ -89,7 +89,7 @@ func TestRunCKPriceRefresh_SendsFailureDiscordAlert(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	want := "CK price refresh failed: mtgjson download failed"
+	want := "CK price refresh failed: card kingdom pricelist download failed"
 	if gotAlert != want {
 		t.Fatalf("discord alert = %q, want %q", gotAlert, want)
 	}

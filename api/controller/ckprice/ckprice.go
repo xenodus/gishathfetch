@@ -60,7 +60,7 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 		return false
 	}
 
-	// Prefer DynamoDB sync time over MTGJSON's calendar price date.
+	// Prefer DynamoDB sync time over the pricelist snapshot date.
 	freshnessSource := listing.SyncedAt
 	if freshnessSource == "" {
 		freshnessSource = listing.UpdatedAt
@@ -76,9 +76,9 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 	return !now.After(freshnessTime.Add(config.CKPriceMaxAge))
 }
 
-// RefreshPrices downloads Card Kingdom retail prices from MTGJSON and upserts the DynamoDB index.
+// RefreshPrices downloads Card Kingdom retail prices from the CK pricelist API and upserts the DynamoDB index.
 func RefreshPrices(ctx context.Context, store ckprices.Store) (int, error) {
-	log.Printf("ck price refresh: fetching mtgjson prices")
+	log.Printf("ck price refresh: fetching card kingdom pricelist")
 	fetchStarted := time.Now()
 
 	listings, err := fetchCheapestFunc(ctx)
@@ -86,7 +86,7 @@ func RefreshPrices(ctx context.Context, store ckprices.Store) (int, error) {
 		return 0, err
 	}
 
-	log.Printf("ck price refresh: fetched mtgjson prices listings=%d duration=%s", len(listings), time.Since(fetchStarted).Round(time.Millisecond))
+	log.Printf("ck price refresh: fetched card kingdom pricelist listings=%d duration=%s", len(listings), time.Since(fetchStarted).Round(time.Millisecond))
 
 	log.Printf("ck price refresh: writing dynamodb listings=%d", len(listings))
 	writeStarted := time.Now()

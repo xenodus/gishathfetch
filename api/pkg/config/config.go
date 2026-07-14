@@ -51,10 +51,8 @@ const (
 	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
 	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
 	CKPriceMaxAge = 48 * time.Hour
-	// MTGJSONAllPricesTodayURLEnv overrides the MTGJSON AllPricesToday download URL.
-	MTGJSONAllPricesTodayURLEnv = "MTGJSON_ALL_PRICES_TODAY_URL"
-	// MTGJSONAllPrintingsURLEnv overrides the MTGJSON AllPrintings download URL.
-	MTGJSONAllPrintingsURLEnv = "MTGJSON_ALL_PRINTINGS_URL"
+	// CKPricelistURLEnv overrides the Card Kingdom singles pricelist download URL.
+	CKPricelistURLEnv = "CK_PRICELIST_URL"
 	// GA4PropertyIDEnv is the numeric GA4 property ID used by the Data API.
 	GA4PropertyIDEnv = "GA4_PROPERTY_ID"
 	// GA4CredentialsJSONEnv holds a Google service account JSON key with Analytics read access.
