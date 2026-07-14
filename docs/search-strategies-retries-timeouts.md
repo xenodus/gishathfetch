@@ -52,7 +52,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 |------|--------|--------|--------|
 | **scrap-dedicated** proxy selection (colly) | Request-scoped lease when BinderPOS stores are searched; otherwise random dedicated | `fetchCardsConcurrently` + `selectOutboundProxy` in `api/gateway/collector.go` | When a search includes BinderPOS stores, the controller holds one dedicated-proxy lease and pins it on the search context. All `scrap-dedicated` attempts reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
 | Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
-| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty attempt without error is **final** and no further strategies run. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single request. |
+| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty attempt without error is **final** and no further strategies run. HTTP **5xx** errors are also **final** (no later strategy). Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single request. |
 
 ---
 

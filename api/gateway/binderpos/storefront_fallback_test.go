@@ -27,7 +27,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
-	t.Run("falls back to the next attempt only after an error", func(t *testing.T) {
+	t.Run("falls back to the next attempt only after a non-5xx error", func(t *testing.T) {
 		cards, err := runFallbackAttempts(
 			fallbackAttempt{strategy: "scrap-dedicated", fn: func() ([]gateway.Card, error) {
 				return nil, errors.New("scrap dedicated failed")
@@ -41,6 +41,29 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 		if len(cards) != 1 || cards[0].Name != "scrap-direct" {
 			t.Fatalf("expected fallback card, got %+v", cards)
+		}
+	})
+
+	t.Run("does not fall back after a 5xx error", func(t *testing.T) {
+		sequence := make([]string, 0, 2)
+		_, err := runFallbackAttempts(
+			fallbackAttempt{strategy: "scrap-dedicated", fn: func() ([]gateway.Card, error) {
+				sequence = append(sequence, "scrap-dedicated")
+				return nil, errors.New("503 Service Unavailable")
+			}},
+			fallbackAttempt{strategy: "scrap-direct", fn: func() ([]gateway.Card, error) {
+				t.Fatal("scrap-direct should not run after a 5xx error")
+				return nil, nil
+			}},
+		)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !gateway.IsHTTPServerError(err) {
+			t.Fatalf("expected 5xx error, got %v", err)
+		}
+		if len(sequence) != 1 || sequence[0] != "scrap-dedicated" {
+			t.Fatalf("expected only scrap-dedicated, got %v", sequence)
 		}
 	})
 

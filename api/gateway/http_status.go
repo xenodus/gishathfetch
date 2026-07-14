@@ -34,6 +34,24 @@ func ErrorMessageHasHTTPStatus(msg string) bool {
 	return ExtractHTTPStatusCode(msg) > 0
 }
 
+// IsHTTPServerError reports whether err (or any error in its chain) represents an
+// HTTP 5xx response. Bare status phrases such as "Service Unavailable" are
+// recognized when they map to a 5xx code.
+func IsHTTPServerError(err error) bool {
+	for err != nil {
+		msg := err.Error()
+		code := ExtractHTTPStatusCode(msg)
+		if code == 0 {
+			code = ExtractHTTPStatusCode(EnsureHTTPStatusInErrorMessage(msg))
+		}
+		if code >= http.StatusInternalServerError && code < 600 {
+			return true
+		}
+		err = errors.Unwrap(err)
+	}
+	return false
+}
+
 // ExtractHTTPStatusCode returns the first HTTP status code found in msg, or 0.
 func ExtractHTTPStatusCode(msg string) int {
 	for _, pattern := range httpStatusPatterns {
