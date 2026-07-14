@@ -237,10 +237,6 @@ before being returned.
    and Japanese-language listings are excluded. A minimum response time (~1s) is
    enforced for a consistent UX.
 
-### Concurrency gates
-
-- At most **12** BinderPOS stores search concurrently (`binderposMaxConcurrent`).
-
 ### Two kinds of stores
 
 **Non-BinderPOS stores** (e.g. Agora, Cards Central, Cards & Collections,

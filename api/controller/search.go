@@ -58,8 +58,6 @@ type StoreError struct {
 	StatusCode int    `json:"statusCode,omitempty"`
 }
 
-const binderposMaxConcurrent = 12
-
 var sendDiscordAlert = alert.SendDiscordAlert
 
 type shopSpec struct {
@@ -136,7 +134,6 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
 	var wg sync.WaitGroup
 	aggregator := newFetchResultAggregator(len(shops))
-	binderposGate := make(chan struct{}, binderposMaxConcurrent)
 
 	searchCtx := ctx
 	if searchIncludesBinderposStore(shops) {
@@ -150,7 +147,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 
 	for shopName, lgs := range shops {
 		wg.Go(func() {
-			searchShop(searchCtx, searchString, shopName, lgs, binderposGate, aggregator)
+			searchShop(searchCtx, searchString, shopName, lgs, aggregator)
 		})
 	}
 
@@ -237,7 +234,6 @@ func searchShop(
 	searchString string,
 	shopName string,
 	lgs gateway.LGS,
-	binderposGate chan struct{},
 	aggregator *fetchResultAggregator,
 ) {
 	defer recoverShopPanic(shopName, aggregator)
@@ -248,11 +244,6 @@ func searchShop(
 
 	shopCtx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
 	defer cancel()
-
-	if isBinderposStore(shopName) {
-		binderposGate <- struct{}{}
-		defer func() { <-binderposGate }()
-	}
 
 	cards, err := lgs.Search(shopCtx, searchString)
 	if err != nil {

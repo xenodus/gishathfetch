@@ -14,7 +14,6 @@ This document records **where** the app configures search behavior, **timeouts**
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
-| BinderPOS store concurrency | 12 | `binderposMaxConcurrent` in `api/controller/search.go` | Semaphore limits how many binderpos-backed shops run at once. Non-binderpos stores are not limited by this gate. |
 | BinderPOS dedicated proxy per search request | 1 lease | `fetchCardsConcurrently` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When the search includes any BinderPOS store and dedicated proxies are configured, the controller acquires **one** dedicated-proxy lease for the whole request. All BinderPOS `scrap-dedicated` attempts share that URL via context; the lease is released when the search finishes. |
 
 ---
