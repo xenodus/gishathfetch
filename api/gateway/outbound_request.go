@@ -24,6 +24,9 @@ type OutboundRequestOptions struct {
 	Accept string
 	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
 	SkipDirect bool
+	// OnlyProxyURL restricts DoOutboundGET to a single proxy transport when set.
+	// Direct, dedicated, and dynamic fallbacks are skipped.
+	OnlyProxyURL string
 	// SkipWebBotAuth uses a browser User-Agent and omits Web Bot Auth signing.
 	SkipWebBotAuth bool
 	// ShopifySGDCurrency sets cart_currency/localization cookies for Shopify storefronts.

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 )
 
@@ -187,11 +188,19 @@ func ckPricelistURL() string {
 	return defaultCKPricelistURL
 }
 
-func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
-	resp, err := gateway.DoOutboundGET(ctx, downloadURL, gateway.OutboundRequestOptions{
+func ckPricelistOutboundOptions() gateway.OutboundRequestOptions {
+	opts := gateway.OutboundRequestOptions{
 		Accept:         "application/json",
 		SkipWebBotAuth: true,
-	}, ckPricelistHTTPTimeout)
+	}
+	if proxyURL, ok := util.GetCKPricelistProxyURL(); ok {
+		opts.OnlyProxyURL = proxyURL
+	}
+	return opts
+}
+
+func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
+	resp, err := gateway.DoOutboundGET(ctx, downloadURL, ckPricelistOutboundOptions(), ckPricelistHTTPTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("%s: download: %w", ckPricelistErrorPrefix, err)
 	}

@@ -43,7 +43,7 @@ func DoOutboundRoundTrip(
 	buildReq func() (*http.Request, error),
 ) (*http.Response, error) {
 	var failures []string
-	for _, attempt := range buildOutboundGETAttempts(timeout, opts.SkipDirect) {
+	for _, attempt := range buildOutboundGETAttempts(timeout, opts.SkipDirect, opts.OnlyProxyURL) {
 		req, err := buildReq()
 		if err != nil {
 			return nil, err
@@ -78,7 +78,19 @@ func DoOutboundRoundTrip(
 	return nil, fmt.Errorf("outbound request failed: %s", strings.Join(failures, "; "))
 }
 
-func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool) []outboundAttempt {
+func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyURL string) []outboundAttempt {
+	if onlyProxyURL != "" {
+		client, err := newProxyHTTPClient(onlyProxyURL, timeout)
+		if err != nil {
+			return nil
+		}
+		return []outboundAttempt{{
+			strategy: "ck-pricelist-proxy",
+			proxyURL: onlyProxyURL,
+			client:   client,
+		}}
+	}
+
 	var attempts []outboundAttempt
 	if !skipDirect {
 		attempts = append(attempts, outboundAttempt{
@@ -160,6 +172,8 @@ func outboundProxyMode(strategy string) string {
 		return "dynamic"
 	case strings.HasPrefix(strategy, "dedicated-"):
 		return "dedicated"
+	case strategy == "ck-pricelist-proxy":
+		return "ck-pricelist"
 	default:
 		return strategy
 	}
