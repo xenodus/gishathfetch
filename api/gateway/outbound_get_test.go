@@ -64,7 +64,7 @@ func TestBuildOutboundGETAttempts_TriesEachDedicatedProxy(t *testing.T) {
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, false)
+	attempts := buildOutboundGETAttempts(2*time.Second, false, "")
 	require.GreaterOrEqual(t, len(attempts), 3)
 	require.Equal(t, "direct", attempts[0].strategy)
 	require.Equal(t, "dedicated-1", attempts[1].strategy)
@@ -75,16 +75,49 @@ func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, true)
+	attempts := buildOutboundGETAttempts(2*time.Second, true, "")
 	require.Len(t, attempts, 1)
 	require.Equal(t, "dedicated-1", attempts[0].strategy)
+}
+
+func TestBuildOutboundGETAttempts_OnlyProxyURL(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(2*time.Second, false, "http://user:pass@res.proxy:8080")
+	require.Len(t, attempts, 1)
+	require.Equal(t, "ck-pricelist-proxy", attempts[0].strategy)
+	require.Equal(t, "http://user:pass@res.proxy:8080", attempts[0].proxyURL)
+}
+
+func TestDoOutboundGET_OnlyProxyURLSkipsDirect(t *testing.T) {
+	clearProxyEnv(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{
+			Accept:         "application/json",
+			SkipWebBotAuth: true,
+			OnlyProxyURL:   "http://user:pass@127.0.0.1:9",
+		},
+		50*time.Millisecond,
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ck-pricelist-proxy:")
+	require.NotContains(t, err.Error(), "direct:")
 }
 
 func TestOutboundProxyDescription(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, false)
+	attempts := buildOutboundGETAttempts(2*time.Second, false, "")
 	require.GreaterOrEqual(t, len(attempts), 2)
 
 	require.Equal(t, "proxy_mode=direct proxy=none", outboundProxyDescription(attempts[0]))

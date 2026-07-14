@@ -53,6 +53,10 @@ const (
 	CKPriceMaxAge = 48 * time.Hour
 	// CKPricelistURLEnv overrides the Card Kingdom singles pricelist download URL.
 	CKPricelistURLEnv = "CK_PRICELIST_URL"
+	// CKPricelistProxyEnv is an optional residential/ISP proxy used only for the
+	// Card Kingdom pricelist API download. Format matches DEDICATED_PROXY_*:
+	// host|port|username|password (full proxy URLs are also accepted).
+	CKPricelistProxyEnv = "CK_PRICELIST_PROXY"
 	// MTGJSONAllPricesTodayURLEnv overrides the MTGJSON AllPricesToday download URL.
 	MTGJSONAllPricesTodayURLEnv = "MTGJSON_ALL_PRICES_TODAY_URL"
 	// MTGJSONAllPrintingsURLEnv overrides the MTGJSON AllPrintings download URL.

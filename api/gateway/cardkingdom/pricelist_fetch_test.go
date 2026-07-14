@@ -162,6 +162,22 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 	require.InDelta(t, 7.49, cheapest["the invincible iron man"].PriceUsd, 0.001)
 }
 
+func TestCKPricelistOutboundOptions_UsesConfiguredProxy(t *testing.T) {
+	t.Setenv("CK_PRICELIST_PROXY", "res.proxy|8080|user|pass")
+
+	opts := ckPricelistOutboundOptions()
+	require.Equal(t, "http://user:pass@res.proxy:8080", opts.OnlyProxyURL)
+	require.Equal(t, "application/json", opts.Accept)
+	require.True(t, opts.SkipWebBotAuth)
+}
+
+func TestCKPricelistOutboundOptions_NoProxyWhenUnset(t *testing.T) {
+	t.Setenv("CK_PRICELIST_PROXY", "")
+
+	opts := ckPricelistOutboundOptions()
+	require.Empty(t, opts.OnlyProxyURL)
+}
+
 func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
