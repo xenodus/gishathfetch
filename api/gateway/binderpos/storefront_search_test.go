@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestSelectStorefrontStrategiesScrapFirstThenDecklist(t *testing.T) {
+func TestStorefrontStrategyOrder(t *testing.T) {
 	scrap := [3]storefrontStrategy{
 		{name: "scrap-dedicated"},
 		{name: "scrap-direct"},
@@ -16,17 +16,21 @@ func TestSelectStorefrontStrategiesScrapFirstThenDecklist(t *testing.T) {
 		{name: "decklist-dynamic"},
 	}
 
-	got := make([]string, 0, 6)
-	for _, strategy := range append(scrap[:], decklist[:]...) {
-		got = append(got, strategy.name)
+	got := []string{
+		scrap[0].name,
+		scrap[1].name,
+		decklist[0].name,
+		decklist[1].name,
+		scrap[2].name,
+		decklist[2].name,
 	}
 
 	want := []string{
 		"scrap-dedicated",
 		"scrap-direct",
-		"scrap-dynamic",
 		"decklist-dedicated",
 		"decklist-direct",
+		"scrap-dynamic",
 		"decklist-dynamic",
 	}
 	if len(got) != len(want) {

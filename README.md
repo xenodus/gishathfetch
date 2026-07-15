@@ -254,26 +254,25 @@ gateway that reads listings by scraping each store's own Shopify storefront.
 
 ### BinderPOS scrape and decklist fallback chain
 
-Each BinderPOS store tries up to three scrape strategies first, escalating
-across proxy tiers (**dedicated → direct → dynamic**). When scrape attempts fail
-with errors (for example storefront **429** rate limits), the shared BinderPOS
-decklist portal is tried as a fallback with the same proxy tiers:
+Each BinderPOS store tries scrape and decklist strategies across dedicated and
+direct proxy tiers first. When those fail with errors (for example storefront
+**429** rate limits), dynamic proxy is reserved for the final two attempts:
 
-`scrap-dedicated` → `scrap-direct` → `scrap-dynamic` → `decklist-dedicated` → `decklist-direct` → `decklist-dynamic`
+`scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic`
 
 ```mermaid
 flowchart TD
     A[BinderPOS store search] --> B[scrap-dedicated]
     B -- error --> C[scrap-direct]
-    C -- error --> D[scrap-dynamic]
-    D -- error --> F[decklist-dedicated]
+    C -- error --> F[decklist-dedicated]
     F -- error --> G[decklist-direct]
-    G -- error --> H[decklist-dynamic]
+    G -- error --> D[scrap-dynamic]
+    D -- error --> H[decklist-dynamic]
     B -- cards or empty success --> E[Return result]
     C -- cards or empty success --> E
-    D -- cards or empty success --> E
     F -- cards or empty decklist --> E
     G -- cards or empty decklist --> E
+    D -- cards or empty success --> E
     H -- cards, empty, or error --> E
 ```
 

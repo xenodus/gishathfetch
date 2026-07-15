@@ -36,7 +36,8 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 	}
 
-	strategies := []storefrontStrategy{scrap[0], scrap[1], scrap[2]}
+	strategies := []storefrontStrategy{scrap[0], scrap[1]}
+	var decklistDynamic storefrontStrategy
 	if strings.TrimSpace(shopifyDomain) != "" {
 		decklist := [3]storefrontStrategy{
 			{
@@ -58,7 +59,12 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 				},
 			},
 		}
-		strategies = append(strategies, decklist[0], decklist[1], decklist[2])
+		strategies = append(strategies, decklist[0], decklist[1])
+		decklistDynamic = decklist[2]
+	}
+	strategies = append(strategies, scrap[2])
+	if strings.TrimSpace(shopifyDomain) != "" {
+		strategies = append(strategies, decklistDynamic)
 	}
 
 	return runStorefrontStrategies(ctx, strategies...)

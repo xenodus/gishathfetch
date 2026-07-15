@@ -26,8 +26,8 @@ const (
 	// AgoraSearchAttemptTimeout is the per-attempt cap for Agora Hobby only.
 	AgoraSearchAttemptTimeout = 10 * time.Second
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
-	// dynamic-proxy fallback attempts, which BinderPOS now reserves for the
-	// final fallback after dedicated and direct/no-proxy attempts.
+	// dynamic-proxy fallback attempts, which BinderPOS reserves for the final
+	// two attempts after dedicated and direct/no-proxy scrap and decklist tries.
 	DynamicProxyEnv = "DYNAMIC_PROXY"
 	// UseDynamicProxyEnv toggles whether DYNAMIC_PROXY may be used for fallback
 	// attempts. When false, dynamic proxy is skipped even if configured.
