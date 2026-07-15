@@ -24,6 +24,7 @@ type HTMLProbe struct {
 	ShopifySGDCurrency     bool
 	PreferResidentialProxy bool
 	SkipDirect             bool
+	SkipWebBotAuth         bool
 }
 
 // RequireHTMLStructure verifies the probe URL returns HTTP 200 and contains the
@@ -44,8 +45,9 @@ func RequireHTMLStructure(t *testing.T, ctx context.Context, probe HTMLProbe) {
 		Style:                  gateway.OutboundStyleHTML,
 		PageURL:                pageURL,
 		ShopifySGDCurrency:     probe.ShopifySGDCurrency,
-		PreferResidentialProxy: probe.PreferResidentialProxy,
-		SkipDirect:             probe.SkipDirect,
+		PreferResidentialProxy:   probe.PreferResidentialProxy,
+		SkipDirect:               probe.SkipDirect,
+		SkipWebBotAuth:           probe.SkipWebBotAuth,
 	}, 20*time.Second)
 	require.NoError(t, err)
 	defer resp.Body.Close()

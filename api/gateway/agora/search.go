@@ -51,10 +51,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
-		Style:   gateway.OutboundStyleHTML,
-		PageURL: apiURL,
-	}, config.AgoraSearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), agoraOutboundOpts(apiURL), config.AgoraSearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
@@ -78,6 +75,21 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	})
 
 	return cards, nil
+}
+
+func agoraOutboundOpts(pageURL *url.URL) gateway.OutboundRequestOptions {
+	opts := gateway.OutboundRequestOptions{
+		Style:                  gateway.OutboundStyleHTML,
+		PageURL:                pageURL,
+		SkipWebBotAuth:         true,
+		SkipDirect:             true,
+		PreferResidentialProxy: true,
+	}
+	// Non-production hosts (httptest unit tests) must use the direct transport.
+	if pageURL == nil || pageURL.Host != "agorahobby.com" {
+		opts.SkipDirect = false
+	}
+	return opts
 }
 
 func parseStoreItem(se *goquery.Selection, storeName string, apiURL *url.URL, searchStr string) (gateway.Card, bool) {

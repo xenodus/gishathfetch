@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"mtg-price-checker-sg/gateway/gatewaytest"
+	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/require"
@@ -42,6 +44,8 @@ func Test_ParseStoreItemKeepsInStock(t *testing.T) {
 }
 
 func Test_Search(t *testing.T) {
+	skipLiveAgoraSearchUnlessResidential(t)
+
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
 	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
@@ -53,6 +57,8 @@ func Test_Search(t *testing.T) {
 }
 
 func Test_Search_FiltersMTGCategory(t *testing.T) {
+	skipLiveAgoraSearchUnlessResidential(t)
+
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Bulbasaur")
 	require.NoError(t, err)
@@ -67,4 +73,12 @@ func Test_Search_FiltersMTGCategory(t *testing.T) {
 		require.NotContains(t, lower, "holofoil",
 			"Pokemon condition labels should not appear when category=mtg is set")
 	}
+}
+
+func skipLiveAgoraSearchUnlessResidential(t *testing.T) {
+	t.Helper()
+	if _, ok := util.GetResidentialProxyURL(); ok {
+		return
+	}
+	t.Skipf("set %s to run live Agora search checks (datacenter proxies are blocked by Cloudflare)", config.ResidentialProxyEnv)
 }
