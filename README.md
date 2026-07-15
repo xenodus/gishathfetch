@@ -244,9 +244,12 @@ before being returned.
 ### Two kinds of stores
 
 **Non-BinderPOS stores** (e.g. Agora, Cards Central, Cards & Collections,
-Dueller's Point, 5 Mana, Mox & Lotus, TCG Marketplace) each implement a single
-bespoke `Search` — a custom JSON API call or one HTML scrape — with no
-multi-strategy fallback. On failure the store simply contributes nothing.
+Dueller's Point, Mox & Lotus, TCG Marketplace) each implement a single bespoke
+`Search` — a custom JSON API call or one HTML scrape — with no multi-strategy
+fallback. On failure the store simply contributes nothing.
+
+**5 Mana** is Shopify (Dawn, not BinderPOS). It tries Storefront GraphQL first,
+then falls back to a `main-search` HTML section scrape when GraphQL fails.
 
 **BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one

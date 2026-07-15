@@ -2,12 +2,14 @@ package fivemana
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/url"
+	"strings"
+
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
-	"net/url"
-	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -15,6 +17,10 @@ import (
 const StoreName = "5 Mana"
 const StoreBaseURL = "https://5-mana.sg"
 const StoreSearchPath = "/search"
+
+// storefrontSearchSectionID is Dawn's main search results section. Requesting it
+// alone returns the product grid without the full theme chrome.
+const storefrontSearchSectionID = "main-search"
 
 type Store struct {
 	Name       string
@@ -31,27 +37,40 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	cards, err := s.searchGraphQL(ctx, searchStr)
+	if err == nil {
+		return cards, nil
+	}
+
+	log.Printf("%s: graphql search failed, falling back to HTML: %v", s.Name, err)
+
+	htmlCards, htmlErr := s.searchHTML(ctx, searchStr)
+	if htmlErr != nil {
+		return nil, fmt.Errorf("graphql: %w; html: %v", err, htmlErr)
+	}
+	return htmlCards, nil
+}
+
+func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
 
-	// Build the request URL from constant components only;
-	// user input is placed exclusively into query parameters via url.Values.
+	storeBase, err := s.storeBaseURL()
+	if err != nil {
+		return cards, err
+	}
+
 	apiURL := &url.URL{
-		Scheme: "https",
-		Host:   "5-mana.sg",
+		Scheme: storeBase.Scheme,
+		Host:   storeBase.Host,
 		Path:   StoreSearchPath,
 		RawQuery: url.Values{
 			"q":                     {searchStr},
 			"filter.v.availability": {"1"},
+			"section_id":            {storefrontSearchSectionID},
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
-		Style:                  gateway.OutboundStyleHTML,
-		PageURL:                apiURL,
-		ShopifySGDCurrency:     true,
-		SkipDirect:             true,
-		PreferResidentialProxy: true,
-	}, config.SearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), fiveManaOutboundOpts(storeBase, apiURL, gateway.OutboundStyleHTML), config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
@@ -67,7 +86,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 
-	doc.Find("ul.product-grid li").Each(func(i int, se *goquery.Selection) {
+	doc.Find("ul.product-grid li").Each(func(_ int, se *goquery.Selection) {
 		card, ok := parseProductCard(se, s.Name)
 		if ok {
 			cards = append(cards, card)
@@ -77,6 +96,27 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	return cards, nil
 }
 
+func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.OutboundRequestStyle) gateway.OutboundRequestOptions {
+	opts := gateway.OutboundRequestOptions{
+		Style:                  style,
+		PageURL:                pageURL,
+		StoreBase:              storeBase,
+		ShopifySGDCurrency:     true,
+		SkipDirect:             true,
+		PreferResidentialProxy: true,
+	}
+	// Non-production hosts (httptest unit tests) must use the direct transport.
+	if storeBase == nil || storeBase.Host != "5-mana.sg" {
+		opts.SkipDirect = false
+		opts.PreferResidentialProxy = false
+	}
+	return opts
+}
+
+func (s Store) storeBaseURL() (*url.URL, error) {
+	return url.Parse(s.BaseUrl)
+}
+
 func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bool) {
 	// Shopify's availability filter can still surface sold-out listings; the theme
 	// marks them with price--sold-out and a "Sold out" badge.
@@ -84,34 +124,49 @@ func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bo
 		return gateway.Card{}, false
 	}
 
-	c := gateway.Card{
-		Source: storeName,
-	}
-
-	// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
 	heading := se.Find("h3.card__heading.h5 a")
-	c.Name = strings.TrimSpace(strings.Replace(heading.Text(), "[Foil]", "", -1))
-	c.IsFoil = strings.Contains(strings.ToLower(heading.Text()), "[foil]")
-
-	c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
-	c.Img = se.Find("div.card__media img").AttrOr("src", "")
-	c.InStock = true
-
-	price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
-	if err != nil {
-		c.InStock = false
-	}
-	c.Price = price
-
-	cleanPageURL, err := url.Parse(c.Url)
-	if err != nil {
-		log.Printf("error parsing url for %s with value [%s]: %v", storeName, c.Url, err)
+	rawName := strings.TrimSpace(heading.Text())
+	name, isFoil := parseNameAndFoil(rawName)
+	if name == "" {
 		return gateway.Card{}, false
 	}
-	cleanPageURL.RawQuery = url.Values{
-		"utm_source": []string{config.UtmSource},
-	}.Encode()
-	c.Url = cleanPageURL.String()
 
-	return c, c.Name != "" && c.InStock
+	price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
+	if err != nil || price <= 0 {
+		return gateway.Card{}, false
+	}
+
+	cardURL, err := productURLWithUTM(StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", ""))
+	if err != nil {
+		log.Printf("error parsing url for %s with value [%s]: %v", storeName, heading.AttrOr("href", ""), err)
+		return gateway.Card{}, false
+	}
+
+	return gateway.Card{
+		Name:      name,
+		Url:       cardURL,
+		Img:       se.Find("div.card__media img").AttrOr("src", ""),
+		InStock:   true,
+		IsFoil:    isFoil,
+		Price:     price,
+		Source:    storeName,
+		ExtraInfo: extraInfoFromTitle(rawName),
+	}, true
+}
+
+func productURLWithUTM(raw string) (string, error) {
+	cleanPageURL, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return "", err
+	}
+	if cleanPageURL.Host == "" {
+		cleanPageURL, err = url.Parse(StoreBaseURL + cleanPageURL.Path)
+		if err != nil {
+			return "", err
+		}
+	}
+	q := cleanPageURL.Query()
+	q.Set("utm_source", config.UtmSource)
+	cleanPageURL.RawQuery = q.Encode()
+	return cleanPageURL.String(), nil
 }
