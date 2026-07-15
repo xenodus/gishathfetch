@@ -41,6 +41,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	if err == nil {
 		return cards, nil
 	}
+	if gateway.IsHTTPServerError(err) {
+		return nil, err
+	}
 
 	log.Printf("%s: graphql search failed, falling back to HTML: %v", s.Name, err)
 
@@ -102,13 +105,14 @@ func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.Ou
 		PageURL:                pageURL,
 		StoreBase:              storeBase,
 		ShopifySGDCurrency:     true,
-		SkipDirect:             true,
-		PreferResidentialProxy: true,
+		SkipDirect: true,
+		// PreferResidentialProxy disabled temporarily to evaluate dedicated-proxy
+		// stability on Storefront GraphQL.
+		PreferResidentialProxy: false,
 	}
 	// Non-production hosts (httptest unit tests) must use the direct transport.
 	if storeBase == nil || storeBase.Host != "5-mana.sg" {
 		opts.SkipDirect = false
-		opts.PreferResidentialProxy = false
 	}
 	return opts
 }

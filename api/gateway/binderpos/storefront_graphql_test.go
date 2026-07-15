@@ -116,11 +116,11 @@ func TestRunFallbackAttemptsGraphQLErrorFallsBackToScrap(t *testing.T) {
 	cards, err := runFallbackAttempts(
 		fallbackAttempt{strategy: "graphql-dedicated", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
 			sequence = append(sequence, "graphql-dedicated")
-			return nil, errTest("graphql boom")
+			return nil, errTest("403 Forbidden")
 		}},
 		fallbackAttempt{strategy: "graphql-direct", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
 			sequence = append(sequence, "graphql-direct")
-			return nil, errTest("graphql boom 2")
+			return nil, errTest("403 Forbidden")
 		}},
 		fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 			sequence = append(sequence, "scrap-dedicated")
@@ -131,6 +131,23 @@ func TestRunFallbackAttemptsGraphQLErrorFallsBackToScrap(t *testing.T) {
 	require.Len(t, cards, 1)
 	require.Equal(t, "from-scrap", cards[0].Name)
 	require.Equal(t, []string{"graphql-dedicated", "graphql-direct", "scrap-dedicated"}, sequence)
+}
+
+func TestRunFallbackAttemptsGraphQL5xxIsFinal(t *testing.T) {
+	sequence := []string{}
+	cards, err := runFallbackAttempts(
+		fallbackAttempt{strategy: "graphql-dedicated", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
+			sequence = append(sequence, "graphql-dedicated")
+			return nil, errTest("503 Service Unavailable")
+		}},
+		fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
+			t.Fatal("scrap should not run after graphql 5xx")
+			return nil, nil
+		}},
+	)
+	require.Error(t, err)
+	require.Empty(t, cards)
+	require.Equal(t, []string{"graphql-dedicated"}, sequence)
 }
 
 type errTest string

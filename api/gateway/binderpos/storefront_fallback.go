@@ -41,8 +41,9 @@ func strategyFamilyFromName(name string) strategyFamily {
 // When any scrap or GraphQL attempt returns no cards without error, that empty
 // result is final and no further strategies run. When any decklist attempt
 // returns no cards without error, remaining decklist attempts are skipped.
-// HTTP 5xx errors on scrape attempts are final so a failing storefront is not
-// followed by the shared portal. GraphQL 5xx/errors fall through to HTML scrap.
+// HTTP 5xx errors on scrape and GraphQL attempts are final so a failing
+// storefront is not followed by the shared portal or HTML scrap. Other GraphQL
+// errors fall through to HTML scrap.
 // Each attempt's error is annotated with its position and strategy name so the
 // final error reflects the last attempt tried.
 func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
@@ -76,7 +77,7 @@ func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 			continue
 		}
 
-		if attempt.family == strategyFamilyScrap && gateway.IsHTTPServerError(err) {
+		if (attempt.family == strategyFamilyScrap || attempt.family == strategyFamilyGraphQL) && gateway.IsHTTPServerError(err) {
 			return cards, err
 		}
 	}
