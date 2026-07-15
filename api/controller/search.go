@@ -7,7 +7,6 @@ import (
 	"log"
 	"maps"
 	"mtg-price-checker-sg/gateway"
-	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
@@ -26,6 +25,7 @@ import (
 	"mtg-price-checker-sg/gateway/mtgasia"
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
 	"sort"
@@ -156,10 +156,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	}
 	close(jobs)
 
-	workerCount := len(shops)
-	if workerCount > maxConcurrentStoreSearches {
-		workerCount = maxConcurrentStoreSearches
-	}
+	workerCount := min(len(shops), maxConcurrentStoreSearches)
 
 	for range workerCount {
 		wg.Go(func() {
