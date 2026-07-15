@@ -273,9 +273,9 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool, requestDedicat
 }
 
 // selectOutboundProxy picks the proxy mode and URL for a single outbound attempt.
-// When requestDedicatedProxyURL is set the search holds one dedicated lease for
-// the whole request; otherwise a per-collector lease or random dedicated proxy
-// is chosen when configured, then dynamic proxy, then direct.
+// When requestDedicatedProxyURL is set the store search holds one dedicated lease;
+// otherwise a per-collector lease or random dedicated proxy is chosen when
+// configured, then dynamic proxy, then direct.
 func selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL string) (mode string, proxyURL string) {
 	if !config.UseProxy {
 		return "direct", ""

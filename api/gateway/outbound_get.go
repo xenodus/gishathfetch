@@ -148,8 +148,8 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, skipDi
 		})
 	}
 
-	// Match colly's selectOutboundProxy policy: one dedicated proxy per search.
-	// When the controller pins a request-scoped lease, reuse that URL instead of
+	// Match colly's selectOutboundProxy policy: one dedicated proxy per store search.
+	// When searchShop pins a request-scoped lease, reuse that URL instead of
 	// picking a new random slot for each outbound store.
 	if proxyURL, ok := dedicatedProxyURLForOutbound(ctx); ok {
 		client, err := newProxyHTTPClient(proxyURL, timeout)

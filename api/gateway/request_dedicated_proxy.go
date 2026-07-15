@@ -7,9 +7,9 @@ import (
 
 type requestDedicatedProxyKey struct{}
 
-// WithRequestDedicatedProxy pins one dedicated proxy URL for all outbound attempts
-// that read the search context. The caller must hold the lease separately and
-// release it when the search request finishes.
+// WithRequestDedicatedProxy pins one dedicated proxy URL on ctx for a single store
+// search. The caller must hold the lease separately and release it when the store
+// search finishes.
 func WithRequestDedicatedProxy(ctx context.Context, proxyURL string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
