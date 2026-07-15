@@ -12,6 +12,7 @@ import (
 	"mtg-price-checker-sg/gateway/hideout"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -547,6 +548,65 @@ func TestFetchCardsConcurrently_SkipsCanceledForDiscord(t *testing.T) {
 	case <-alertSent:
 		t.Fatal("did not expect discord alert for canceled search")
 	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
+	const shopCount = 10
+	started := make(chan struct{}, shopCount)
+	release := make(chan struct{})
+	var inFlight atomic.Int32
+	var maxInFlight atomic.Int32
+
+	shops := make(map[string]gateway.LGS, shopCount)
+	for i := range shopCount {
+		shops[fmt.Sprintf("Shop%d", i)] = &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				cur := inFlight.Add(1)
+				for {
+					prev := maxInFlight.Load()
+					if cur <= prev || maxInFlight.CompareAndSwap(prev, cur) {
+						break
+					}
+				}
+				started <- struct{}{}
+				<-release
+				inFlight.Add(-1)
+				return nil, nil
+			},
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+		if len(siteErrors) != 0 {
+			t.Errorf("unexpected site errors: %v", siteErrors)
+		}
+	}()
+
+	for i := range 6 {
+		select {
+		case <-started:
+		case <-done:
+			t.Fatal("fetch finished before 6 shops started")
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for shop %d to start; max in flight was %d", i, maxInFlight.Load())
+		}
+	}
+
+	time.Sleep(50 * time.Millisecond)
+	if got := maxInFlight.Load(); got > maxConcurrentStoreSearches {
+		t.Fatalf("expected at most %d concurrent searches, got %d", maxConcurrentStoreSearches, got)
+	}
+
+	close(release)
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for fetch to complete")
 	}
 }
 

@@ -129,6 +129,13 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	return inStockCards, buildStoreErrors(siteErrors), nil
 }
 
+const maxConcurrentStoreSearches = 6
+
+type shopSearchJob struct {
+	name string
+	lgs  gateway.LGS
+}
+
 func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
 	var wg sync.WaitGroup
 	aggregator := newFetchResultAggregator(len(shops))
@@ -143,9 +150,22 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 
 	start := time.Now()
 
+	jobs := make(chan shopSearchJob, len(shops))
 	for shopName, lgs := range shops {
+		jobs <- shopSearchJob{name: shopName, lgs: lgs}
+	}
+	close(jobs)
+
+	workerCount := len(shops)
+	if workerCount > maxConcurrentStoreSearches {
+		workerCount = maxConcurrentStoreSearches
+	}
+
+	for range workerCount {
 		wg.Go(func() {
-			searchShop(searchCtx, searchString, shopName, lgs, aggregator)
+			for job := range jobs {
+				searchShop(searchCtx, searchString, job.name, job.lgs, aggregator)
+			}
 		})
 	}
 
