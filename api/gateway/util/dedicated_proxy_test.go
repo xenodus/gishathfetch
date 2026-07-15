@@ -98,6 +98,13 @@ func TestGetCKPricelistProxyURL(t *testing.T) {
 	require.Equal(t, "http://user:pass@res.proxy:8080", got)
 }
 
+func TestGetResidentialProxyURL(t *testing.T) {
+	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+	got, ok := GetResidentialProxyURL()
+	require.True(t, ok)
+	require.Equal(t, "http://user:pass@res.proxy:8080", got)
+}
+
 func TestBuildProxyURL(t *testing.T) {
 	t.Run("builds url from pipe separated proxy config", func(t *testing.T) {
 		got, ok := BuildProxyURL("dc.com|10000|user-spsykhacft-country-sg|F+password")

@@ -56,7 +56,7 @@ func DoOutboundRoundTrip(
 	buildReq func() (*http.Request, error),
 ) (*http.Response, error) {
 	var failures []string
-	for _, attempt := range buildOutboundGETAttempts(ctx, timeout, opts.SkipDirect, opts.OnlyProxyURL) {
+	for _, attempt := range buildOutboundGETAttempts(ctx, timeout, opts) {
 		resp, failure, ok, err := doOutboundAttempt(ctx, attempt, opts, buildReq)
 		if err != nil {
 			return nil, err
@@ -127,25 +127,38 @@ func doOutboundAttempt(
 	return nil, lastFailure, false, nil
 }
 
-func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, skipDirect bool, onlyProxyURL string) []outboundAttempt {
-	if onlyProxyURL != "" {
-		client, err := newProxyHTTPClient(onlyProxyURL, timeout)
+func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts OutboundRequestOptions) []outboundAttempt {
+	if opts.OnlyProxyURL != "" {
+		client, err := newProxyHTTPClient(opts.OnlyProxyURL, timeout)
 		if err != nil {
 			return nil
 		}
 		return []outboundAttempt{{
 			strategy: "ck-pricelist-proxy",
-			proxyURL: onlyProxyURL,
+			proxyURL: opts.OnlyProxyURL,
 			client:   client,
 		}}
 	}
 
 	var attempts []outboundAttempt
-	if !skipDirect {
+	if !opts.SkipDirect {
 		attempts = append(attempts, outboundAttempt{
 			strategy: "direct",
 			client:   &http.Client{Timeout: timeout},
 		})
+	}
+
+	if opts.PreferResidentialProxy {
+		if proxyURL, ok := util.GetResidentialProxyURL(); ok {
+			client, err := newProxyHTTPClient(proxyURL, timeout)
+			if err == nil {
+				attempts = append(attempts, outboundAttempt{
+					strategy: "residential-1",
+					proxyURL: proxyURL,
+					client:   client,
+				})
+			}
+		}
 	}
 
 	// Match colly's selectOutboundProxy policy: one dedicated proxy per store search.
@@ -314,6 +327,8 @@ func outboundProxyMode(strategy string) string {
 		return "direct"
 	case strategy == "dynamic":
 		return "dynamic"
+	case strings.HasPrefix(strategy, "residential-"):
+		return "residential"
 	case strings.HasPrefix(strategy, "dedicated-"):
 		return "dedicated"
 	case strategy == "ck-pricelist-proxy":
