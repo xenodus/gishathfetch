@@ -771,7 +771,7 @@ func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
 
 func TestFormatShopSearchSummary(t *testing.T) {
 	got := formatShopSearchSummary("Orthion, Hero of Lavabrink", 8*time.Second+240*time.Millisecond, []shopSearchDuration{
-		{name: "Dueller's Point", duration: 8*time.Second + 240*time.Millisecond},
+		{name: "5 Mana", duration: 8*time.Second + 240*time.Millisecond},
 		{name: "Fyendal Hobby", duration: 222 * time.Millisecond},
 		{name: "Cards & Collections", duration: 341 * time.Millisecond},
 	})
@@ -779,8 +779,8 @@ func TestFormatShopSearchSummary(t *testing.T) {
 	if !strings.Contains(got, "Checked 3 shops for [Orthion, Hero of Lavabrink] in 8.24s:") {
 		t.Fatalf("expected summary header, got: %s", got)
 	}
-	if !strings.Contains(got, "[Dueller's Point] 8.24s") {
-		t.Fatalf("expected Dueller's Point duration, got: %s", got)
+	if !strings.Contains(got, "[5 Mana] 8.24s") {
+		t.Fatalf("expected 5 Mana duration, got: %s", got)
 	}
 	if !strings.Contains(got, "[Cards & Collections] 341ms") {
 		t.Fatalf("expected Cards & Collections duration, got: %s", got)
@@ -788,7 +788,7 @@ func TestFormatShopSearchSummary(t *testing.T) {
 	if !strings.Contains(got, "[Fyendal Hobby] 222ms") {
 		t.Fatalf("expected Fyendal Hobby duration, got: %s", got)
 	}
-	if strings.Index(got, "[Dueller's Point]") > strings.Index(got, "[Cards & Collections]") {
+	if strings.Index(got, "[5 Mana]") > strings.Index(got, "[Cards & Collections]") {
 		t.Fatalf("expected shops to be sorted alphabetically, got: %s", got)
 	}
 }
