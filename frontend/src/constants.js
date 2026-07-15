@@ -4,7 +4,6 @@ export const PAGE_TITLE =
 
 export const LGS_OPTIONS = [
   "5 Mana",
-  "Agora Hobby",
   "Card Affinity",
   "Cards & Collections",
   "Cards Central",

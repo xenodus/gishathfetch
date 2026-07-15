@@ -104,11 +104,8 @@ func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.Ou
 		Style:                  style,
 		PageURL:                pageURL,
 		StoreBase:              storeBase,
-		ShopifySGDCurrency:     true,
-		SkipDirect: true,
-		// PreferResidentialProxy disabled temporarily to evaluate dedicated-proxy
-		// stability on Storefront GraphQL.
-		PreferResidentialProxy: false,
+		ShopifySGDCurrency: true,
+		SkipDirect:         true,
 	}
 	// Non-production hosts (httptest unit tests) must use the direct transport.
 	if storeBase == nil || storeBase.Host != "5-mana.sg" {
