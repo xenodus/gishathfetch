@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -42,6 +41,10 @@ func DoOutboundRoundTrip(
 	timeout time.Duration,
 	buildReq func() (*http.Request, error),
 ) (*http.Response, error) {
+	if ShouldUseBrowserTLSEmulation(opts) {
+		ctx = ContextWithBrowserProfile(ctx, PickBrowserProfile())
+	}
+
 	var failures []string
 	for _, attempt := range buildOutboundGETAttempts(ctx, timeout, opts) {
 		resp, failure, ok, err := doOutboundAttempt(ctx, attempt, opts, buildReq)
@@ -101,8 +104,10 @@ func isOutboundClientError(statusCode int) bool {
 }
 
 func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts OutboundRequestOptions) []outboundAttempt {
+	profile := ResolveBrowserProfileForOutbound(ctx, opts)
+
 	if opts.OnlyProxyURL != "" {
-		client, err := newProxyHTTPClient(opts.OnlyProxyURL, timeout)
+		client, err := newOutboundHTTPClient(opts.OnlyProxyURL, timeout, profile)
 		if err != nil {
 			return nil
 		}
@@ -115,15 +120,19 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 
 	var attempts []outboundAttempt
 	if !opts.SkipDirect {
+		client, err := newOutboundHTTPClient("", timeout, profile)
+		if err != nil {
+			return attempts
+		}
 		attempts = append(attempts, outboundAttempt{
 			strategy: "direct",
-			client:   &http.Client{Timeout: timeout},
+			client:   client,
 		})
 	}
 
 	if opts.PreferResidentialProxy {
 		if proxyURL, ok := util.GetResidentialProxyURL(); ok {
-			client, err := newProxyHTTPClient(proxyURL, timeout)
+			client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
 			if err == nil {
 				attempts = append(attempts, outboundAttempt{
 					strategy: "residential-1",
@@ -138,7 +147,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 	// When searchShop pins a request-scoped lease, reuse that URL instead of
 	// picking a new random slot for each outbound store.
 	if proxyURL, ok := dedicatedProxyURLForOutbound(ctx); ok {
-		client, err := newProxyHTTPClient(proxyURL, timeout)
+		client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
 		if err == nil {
 			attempts = append(attempts, outboundAttempt{
 				strategy: dedicatedProxyStrategyName(proxyURL),
@@ -148,7 +157,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		}
 	}
 
-	if client, ok := dynamicProxyHTTPClient(timeout); ok {
+	if client, ok := dynamicProxyHTTPClient(timeout, profile); ok {
 		attempts = append(attempts, outboundAttempt{
 			strategy: "dynamic",
 			proxyURL: DynamicProxyURL(),
@@ -175,13 +184,13 @@ func dedicatedProxyStrategyName(proxyURL string) string {
 	return "dedicated"
 }
 
-func dynamicProxyHTTPClient(timeout time.Duration) (*http.Client, bool) {
+func dynamicProxyHTTPClient(timeout time.Duration, profile BrowserEmulationProfile) (*http.Client, bool) {
 	proxyURL := DynamicProxyURL()
 	if proxyURL == "" {
 		return nil, false
 	}
 
-	client, err := newProxyHTTPClient(proxyURL, timeout)
+	client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
 	if err != nil {
 		return nil, false
 	}
@@ -243,22 +252,17 @@ func outboundRequestURL(req *http.Request) string {
 // optimized colly collectors used by non-BinderPOS scrapers.
 func NewOutboundHTTPClient(timeout time.Duration) (*http.Client, error) {
 	_, proxyURL := selectOutboundProxy("", "")
-	if proxyURL == "" {
-		return &http.Client{Timeout: timeout}, nil
+	profile := BrowserEmulationProfile{}
+	if ShouldUseBrowserTLSEmulationForScraping() {
+		profile = PickBrowserProfile()
 	}
-	return newProxyHTTPClient(proxyURL, timeout)
+	return newOutboundHTTPClient(proxyURL, timeout, profile)
 }
 
 func newProxyHTTPClient(proxyURL string, timeout time.Duration) (*http.Client, error) {
-	parsedProxyURL, err := url.Parse(proxyURL)
-	if err != nil {
-		return nil, err
+	profile := BrowserEmulationProfile{}
+	if ShouldUseBrowserTLSEmulationForScraping() {
+		profile = PickBrowserProfile()
 	}
-
-	return &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(parsedProxyURL),
-		},
-	}, nil
+	return newOutboundHTTPClient(proxyURL, timeout, profile)
 }

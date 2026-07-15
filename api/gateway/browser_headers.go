@@ -32,6 +32,34 @@ func ApplyBrowserLikeHTMLHeaders(h *http.Header, pageURL *url.URL) {
 	h.Set("Upgrade-Insecure-Requests", "1")
 }
 
+// ApplyBrowserProfileHeaders adds family-specific headers that Cloudflare and other
+// bot checks expect alongside a matching TLS fingerprint.
+func ApplyBrowserProfileHeaders(h *http.Header, profile BrowserEmulationProfile) {
+	if h == nil || !profile.Enabled {
+		return
+	}
+
+	switch profile.Family {
+	case BrowserFamilyChrome, BrowserFamilyEdge:
+		h.Set("sec-ch-ua", `"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"`)
+		h.Set("sec-ch-ua-mobile", "?0")
+		if profile.Platform != "" {
+			h.Set("sec-ch-ua-platform", profile.Platform)
+		}
+		h.Set("sec-fetch-dest", "document")
+		h.Set("sec-fetch-mode", "navigate")
+		h.Set("sec-fetch-site", "none")
+		h.Set("sec-fetch-user", "?1")
+	case BrowserFamilyFirefox:
+		h.Set("sec-fetch-dest", "document")
+		h.Set("sec-fetch-mode", "navigate")
+		h.Set("sec-fetch-site", "none")
+		h.Set("sec-fetch-user", "?1")
+	case BrowserFamilySafari:
+		// Safari does not send Client Hints on navigation requests.
+	}
+}
+
 // ApplyBrowserLikeJSONFetchHeaders sets headers typical of in-page JSON/XHR requests to a store domain.
 // storeBase is the public shop URL (e.g. https://example.com); it may be nil to omit Referer only.
 func ApplyBrowserLikeJSONFetchHeaders(h *http.Header, storeBase *url.URL) {

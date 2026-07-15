@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"sync/atomic"
 
 	"mtg-price-checker-sg/gateway"
@@ -67,20 +66,21 @@ func searchByStorefrontAPIDynamic(ctx context.Context, scrapVariant int, storeNa
 }
 
 func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
-	client := &http.Client{Timeout: binderposAttemptTimeout}
+	profile := gateway.PickBrowserProfile()
+	if !gateway.ShouldUseBrowserTLSEmulationForScraping() {
+		profile = gateway.BrowserEmulationProfile{}
+	}
+	client, err := gateway.NewBinderposHTTPClient("", profile)
+	if err != nil {
+		return nil, fmt.Errorf("binderpos direct client: %w", err)
+	}
 	return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
 func newHTTPClientWithProxyURL(proxyURL string) (*http.Client, error) {
-	parsedProxyURL, err := url.Parse(proxyURL)
-	if err != nil {
-		return nil, err
+	profile := gateway.PickBrowserProfile()
+	if !gateway.ShouldUseBrowserTLSEmulationForScraping() {
+		profile = gateway.BrowserEmulationProfile{}
 	}
-
-	return &http.Client{
-		Timeout: binderposAttemptTimeout,
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(parsedProxyURL),
-		},
-	}, nil
+	return gateway.NewBinderposHTTPClient(proxyURL, profile)
 }

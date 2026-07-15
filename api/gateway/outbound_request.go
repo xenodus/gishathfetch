@@ -66,8 +66,20 @@ func PrepareOutboundRequest(ctx context.Context, req *http.Request, opts Outboun
 		ApplyShopifySGDCurrencyCookie(&req.Header)
 	}
 
+	profile := ResolveBrowserProfileForOutbound(ctx, opts)
 	if opts.SkipWebBotAuth {
-		req.Header.Set("User-Agent", RandomBrowserUserAgent())
+		if profile.Enabled {
+			req.Header.Set("User-Agent", profile.UserAgent)
+			ApplyBrowserProfileHeaders(&req.Header, profile)
+		} else {
+			req.Header.Set("User-Agent", RandomBrowserUserAgent())
+		}
+		return nil
+	}
+
+	if profile.Enabled {
+		req.Header.Set("User-Agent", profile.UserAgent)
+		ApplyBrowserProfileHeaders(&req.Header, profile)
 		return nil
 	}
 
