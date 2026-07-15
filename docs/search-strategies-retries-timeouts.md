@@ -14,7 +14,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
-| Dedicated proxy per store search | 1 lease | `searchShop` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When dedicated proxies are configured, each store search acquires **one** dedicated-proxy lease for its own goroutine. Up to six concurrent store searches (see `maxConcurrentStoreSearches`) each take a distinct slot from the shared pool (up to seven). Additional stores in the same search wait for a slot to be released before starting. |
+| Dedicated proxy per store search | 1 lease | `searchShop` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When dedicated proxies are configured, each store search acquires **one** dedicated-proxy lease for its own goroutine. Up to six concurrent store searches (see `maxConcurrentStoreSearches`) share the worker pool, but at most **three** proxy-backed searches may hold a dedicated lease at once (`DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go`). Additional proxy-backed stores wait for a slot before leasing. |
 
 ---
 
@@ -29,10 +29,11 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Notes |
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
-| Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final two fallback attempts (`scrap-dynamic` and `decklist-dynamic`) after dedicated and direct/no-proxy scrap and decklist tries. |
+| Dedicated proxy search concurrency | 3 in-flight | `DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go` | Caps how many store searches may hold a dedicated-proxy lease at once so datacenter egress does not burst every configured slot. |
+| Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final two fallback attempts (`scrap-dynamic` and `decklist-dynamic`) after dedicated and direct/no-proxy scrap and decklist tries. Disabled by default via `USE_DYNAMIC_PROXY`. |
 | Dynamic proxy concurrency | 3 in-flight | `dynamicProxyMaxConcurrent` in `api/gateway/dynamic_proxy_gate.go` | Caps concurrent requests through `DYNAMIC_PROXY` across all stores and strategies so the final BinderPOS fallbacks do not burst the proxy endpoint and trigger 429. |
 | Residential proxy | **`RESIDENTIAL_PROXY_1`** | Optional residential proxy for stores that rate-limit datacenter IPs (currently 5 Mana). Uses the same `host\|port\|username\|password` format. |
-| Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `false`, dynamic proxy fallback is disabled even if `DYNAMIC_PROXY` is set. Defaults to enabled when unset or invalid. |
+| Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `true`, dynamic proxy fallback is enabled if `DYNAMIC_PROXY` is set. Defaults to **disabled** when unset or invalid. |
 
 ---
 

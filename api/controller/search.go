@@ -254,6 +254,13 @@ func searchShop(
 
 	if config.UseProxy {
 		if proxyURLs := util.GetDedicatedProxyURLs(); len(proxyURLs) > 0 {
+			releaseSearchSlot, slotErr := gateway.AcquireDedicatedProxySearchSlot(shopCtx)
+			if slotErr != nil {
+				recordShopSearchError(searchString, shopName, slotErr, aggregator)
+				return
+			}
+			defer releaseSearchSlot()
+
 			if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(shopCtx, proxyURLs); err == nil {
 				defer release()
 				shopCtx = gateway.WithRequestDedicatedProxy(shopCtx, proxyURL)

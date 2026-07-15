@@ -31,6 +31,7 @@ const (
 	DynamicProxyEnv = "DYNAMIC_PROXY"
 	// UseDynamicProxyEnv toggles whether DYNAMIC_PROXY may be used for fallback
 	// attempts. When false, dynamic proxy is skipped even if configured.
+	// Defaults to disabled when unset or invalid.
 	UseDynamicProxyEnv = "USE_DYNAMIC_PROXY"
 	// WebBotAuthEnabledEnv toggles RFC 9421 Web Bot Auth signing on outbound gateway requests.
 	WebBotAuthEnabledEnv = "WEB_BOT_AUTH_ENABLED"
@@ -104,12 +105,12 @@ const UseLeasedDedicatedProxy = false
 func UseDynamicProxy() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
 	if rawValue == "" {
-		return true
+		return false
 	}
 
 	enabled, err := strconv.ParseBool(rawValue)
 	if err != nil {
-		return true
+		return false
 	}
 
 	return enabled
