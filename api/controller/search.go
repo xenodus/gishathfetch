@@ -7,7 +7,6 @@ import (
 	"log"
 	"maps"
 	"mtg-price-checker-sg/gateway"
-	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardsandcollection"
@@ -26,6 +25,7 @@ import (
 	"mtg-price-checker-sg/gateway/mtgasia"
 	"mtg-price-checker-sg/gateway/onemtg"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
 	"sort"
@@ -129,6 +129,13 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	return inStockCards, buildStoreErrors(siteErrors), nil
 }
 
+const maxConcurrentStoreSearches = 6
+
+type shopSearchJob struct {
+	name string
+	lgs  gateway.LGS
+}
+
 func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
 	var wg sync.WaitGroup
 	aggregator := newFetchResultAggregator(len(shops))
@@ -143,9 +150,19 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 
 	start := time.Now()
 
+	jobs := make(chan shopSearchJob, len(shops))
 	for shopName, lgs := range shops {
+		jobs <- shopSearchJob{name: shopName, lgs: lgs}
+	}
+	close(jobs)
+
+	workerCount := min(len(shops), maxConcurrentStoreSearches)
+
+	for range workerCount {
 		wg.Go(func() {
-			searchShop(searchCtx, searchString, shopName, lgs, aggregator)
+			for job := range jobs {
+				searchShop(searchCtx, searchString, job.name, job.lgs, aggregator)
+			}
 		})
 	}
 
