@@ -2,33 +2,44 @@ package fivemana
 
 import (
 	"context"
-	"strings"
+	"encoding/json"
 	"testing"
 
 	"mtg-price-checker-sg/gateway/gatewaytest"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ParseProductCardSkipsSoldOut(t *testing.T) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(soldOutProductHTML))
-	require.NoError(t, err)
+func Test_ParseSuggestProductSkipsUnavailable(t *testing.T) {
+	var payload suggestResponse
+	require.NoError(t, json.Unmarshal([]byte(unavailableSuggestJSON), &payload))
 
-	card, ok := parseProductCard(doc.Find("ul.product-grid li").First(), StoreName)
-	require.False(t, ok, "sold-out listing should be skipped")
+	card, ok := parseSuggestProduct(payload.Resources.Results.Products[0], StoreName)
+	require.False(t, ok, "unavailable listing should be skipped")
 	require.Empty(t, card.Name)
 }
 
-func Test_ParseProductCardKeepsInStock(t *testing.T) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(inStockProductHTML))
-	require.NoError(t, err)
+func Test_ParseSuggestProductKeepsInStock(t *testing.T) {
+	var payload suggestResponse
+	require.NoError(t, json.Unmarshal([]byte(inStockSuggestJSON), &payload))
 
-	card, ok := parseProductCard(doc.Find("ul.product-grid li").First(), StoreName)
+	card, ok := parseSuggestProduct(payload.Resources.Results.Products[0], StoreName)
 	require.True(t, ok)
 	require.Equal(t, "Abrade [Foundations]", card.Name)
+	require.False(t, card.IsFoil)
 	require.True(t, card.InStock)
 	require.Equal(t, 0.40, card.Price)
+	require.Contains(t, card.Url, StoreBaseURL+"/products/abrade-foundations")
+}
+
+func Test_ParseSuggestProductDetectsFoil(t *testing.T) {
+	var payload suggestResponse
+	require.NoError(t, json.Unmarshal([]byte(foilSuggestJSON), &payload))
+
+	card, ok := parseSuggestProduct(payload.Resources.Results.Products[0], StoreName)
+	require.True(t, ok)
+	require.Equal(t, "Rhystic Study", card.Name)
+	require.True(t, card.IsFoil)
 }
 
 func Test_Search(t *testing.T) {

@@ -2,19 +2,19 @@ package fivemana
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"mtg-price-checker-sg/gateway"
-	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 	"net/url"
+	"strconv"
 	"strings"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
 const StoreName = "5 Mana"
 const StoreBaseURL = "https://5-mana.sg"
-const StoreSearchPath = "/search"
+const StoreSearchPath = "/search/suggest.json"
+const suggestProductLimit = "20"
 
 type Store struct {
 	Name       string
@@ -30,25 +30,49 @@ func NewLGS() gateway.LGS {
 	}
 }
 
+type suggestResponse struct {
+	Resources struct {
+		Results struct {
+			Products []suggestProduct `json:"products"`
+		} `json:"results"`
+	} `json:"resources"`
+}
+
+type suggestProduct struct {
+	Available bool     `json:"available"`
+	Title     string   `json:"title"`
+	Price     string   `json:"price"`
+	Image     string   `json:"image"`
+	URL       string   `json:"url"`
+	Tags      []string `json:"tags"`
+}
+
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	var cards []gateway.Card
 
-	// Build the request URL from constant components only;
-	// user input is placed exclusively into query parameters via url.Values.
+	storeBase, err := url.Parse(s.BaseUrl)
+	if err != nil {
+		return cards, err
+	}
+
 	apiURL := &url.URL{
 		Scheme: "https",
 		Host:   "5-mana.sg",
 		Path:   StoreSearchPath,
 		RawQuery: url.Values{
-			"q":                     {searchStr},
-			"filter.v.availability": {"1"},
+			"q":                  {searchStr},
+			"resources[type]":    {"product"},
+			"resources[limit]": {suggestProductLimit},
 		}.Encode(),
 	}
 
 	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
-		Style:              gateway.OutboundStyleHTML,
-		PageURL:            apiURL,
+		Style:              gateway.OutboundStyleJSON,
+		PageURL:            storeBase,
 		ShopifySGDCurrency: true,
+		// Shopify storefronts behind Cloudflare respond better to browser-like
+		// requests than signed bot traffic on the suggest API path.
+		SkipWebBotAuth: true,
 	}, config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err
@@ -60,56 +84,72 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
-	if err != nil {
+	var payload suggestResponse
+	if err := json.Unmarshal(body, &payload); err != nil {
 		return cards, err
 	}
 
-	doc.Find("ul.product-grid li").Each(func(i int, se *goquery.Selection) {
-		card, ok := parseProductCard(se, s.Name)
+	for _, product := range payload.Resources.Results.Products {
+		card, ok := parseSuggestProduct(product, s.Name)
 		if ok {
 			cards = append(cards, card)
 		}
-	})
+	}
 
 	return cards, nil
 }
 
-func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bool) {
-	// Shopify's availability filter can still surface sold-out listings; the theme
-	// marks them with price--sold-out and a "Sold out" badge.
-	if se.Find("div.price.price--sold-out").Length() > 0 {
+func parseSuggestProduct(product suggestProduct, storeName string) (gateway.Card, bool) {
+	if !product.Available {
 		return gateway.Card{}, false
 	}
 
-	c := gateway.Card{
-		Source: storeName,
+	title := strings.TrimSpace(product.Title)
+	if title == "" {
+		return gateway.Card{}, false
 	}
 
-	// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
-	heading := se.Find("h3.card__heading.h5 a")
-	c.Name = strings.TrimSpace(strings.Replace(heading.Text(), "[Foil]", "", -1))
-	c.IsFoil = strings.Contains(strings.ToLower(heading.Text()), "[foil]")
-
-	c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
-	c.Img = se.Find("div.card__media img").AttrOr("src", "")
-	c.InStock = true
-
-	price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
-	if err != nil {
-		c.InStock = false
+	price, err := strconv.ParseFloat(strings.TrimSpace(product.Price), 64)
+	if err != nil || price <= 0 {
+		return gateway.Card{}, false
 	}
-	c.Price = price
 
-	cleanPageURL, err := url.Parse(c.Url)
+	productURL := strings.TrimSpace(product.URL)
+	if productURL == "" {
+		return gateway.Card{}, false
+	}
+	if strings.HasPrefix(productURL, "/") {
+		productURL = StoreBaseURL + productURL
+	}
+
+	cleanPageURL, err := url.Parse(productURL)
 	if err != nil {
-		log.Printf("error parsing url for %s with value [%s]: %v", storeName, c.Url, err)
+		log.Printf("error parsing url for %s with value [%s]: %v", storeName, productURL, err)
 		return gateway.Card{}, false
 	}
 	cleanPageURL.RawQuery = url.Values{
 		"utm_source": []string{config.UtmSource},
 	}.Encode()
-	c.Url = cleanPageURL.String()
 
-	return c, c.Name != "" && c.InStock
+	return gateway.Card{
+		Name:      strings.TrimSpace(strings.Replace(title, "[Foil]", "", -1)),
+		Url:       cleanPageURL.String(),
+		Img:       strings.TrimSpace(product.Image),
+		InStock:   true,
+		IsFoil:    isFoilProduct(title, product.Tags),
+		Price:     price,
+		Source:    storeName,
+	}, true
+}
+
+func isFoilProduct(title string, tags []string) bool {
+	if strings.Contains(strings.ToLower(title), "[foil]") {
+		return true
+	}
+	for _, tag := range tags {
+		if strings.EqualFold(strings.TrimSpace(tag), "foil") {
+			return true
+		}
+	}
+	return false
 }

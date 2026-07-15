@@ -28,22 +28,36 @@ func RequireAgoraSearchStructure(t *testing.T, ctx context.Context, baseURL, sea
 	})
 }
 
-// RequireFiveManaSearchStructure verifies the 5 Mana Shopify search page markup.
+// RequireFiveManaSearchStructure verifies the 5 Mana Shopify suggest API shape.
 func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, searchPath, query string) {
 	t.Helper()
 	host := strings.TrimPrefix(strings.TrimPrefix(baseURL, "https://"), "http://")
 	probeURL := BuildURL("https", host, searchPath, url.Values{
-		"q":                     {query},
-		"filter.v.availability": {"1"},
+		"q":                  {query},
+		"resources[type]":    {"product"},
+		"resources[limit]": {"20"},
 	})
-	pageURL, err := url.Parse(probeURL)
-	require.NoError(t, err)
-	RequireHTMLStructure(t, ctx, HTMLProbe{
-		URL:                probeURL,
-		PrimarySelector:    "ul.product-grid li",
-		FallbackSelector:   "ul.product-grid",
-		PageURL:            pageURL,
-		ShopifySGDCurrency: true,
+	RequireJSONStructure(t, ctx, JSONProbe{
+		URL: probeURL,
+		Headers: map[string]string{
+			"Accept": "application/json",
+		},
+		Validate: func(body []byte) error {
+			var payload struct {
+				Resources struct {
+					Results struct {
+						Products []json.RawMessage `json:"products"`
+					} `json:"results"`
+				} `json:"resources"`
+			}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				return ValidateErrorf("decode suggest response: %w", err)
+			}
+			if payload.Resources.Results.Products == nil {
+				return ValidateErrorf("missing resources.results.products array")
+			}
+			return nil
+		},
 	})
 }
 

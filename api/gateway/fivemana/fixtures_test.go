@@ -1,56 +1,51 @@
 package fivemana
 
-const soldOutProductHTML = `
-<ul class="grid product-grid">
-<li class="grid__item">
-<div class="card-wrapper product-card-wrapper">
-  <div class="card card--standard card--media">
-    <div class="card__inner">
-      <div class="card__media">
-        <img src="//5-mana.sg/cdn/shop/files/ten-rings.png" alt="The Ten Rings [Marvel Super Heroes]">
-      </div>
-      <div class="card__content">
-        <div class="card__badge bottom left"><span class="badge badge--bottom-left">Sold out</span></div>
-      </div>
-    </div>
-    <div class="card__content">
-      <h3 class="card__heading h5">
-        <a href="/products/the-ten-rings-marvel-super-heroes">The Ten Rings [Marvel Super Heroes]</a>
-      </h3>
-      <div class="price price--sold-out">
-        <div class="price__sale">
-          <span class="price-item price-item--sale price-item--last">$9.90 SGD</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-</li>
-</ul>
-`
+const unavailableSuggestJSON = `{
+  "resources": {
+    "results": {
+      "products": [
+        {
+          "available": false,
+          "title": "The Ten Rings [Marvel Super Heroes]",
+          "price": "9.90",
+          "image": "https://cdn.shopify.com/example.png",
+          "url": "/products/the-ten-rings-marvel-super-heroes"
+        }
+      ]
+    }
+  }
+}`
 
-const inStockProductHTML = `
-<ul class="grid product-grid">
-<li class="grid__item">
-<div class="card-wrapper product-card-wrapper">
-  <div class="card card--standard card--media">
-    <div class="card__inner">
-      <div class="card__media">
-        <img src="//5-mana.sg/cdn/shop/files/abrade.png" alt="Abrade [Foundations]">
-      </div>
-    </div>
-    <div class="card__content">
-      <h3 class="card__heading h5">
-        <a href="/products/abrade-foundations">Abrade [Foundations]</a>
-      </h3>
-      <div class="price">
-        <div class="price__sale">
-          <span class="price-item price-item--sale price-item--last">$0.40 SGD</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-</li>
-</ul>
-`
+const inStockSuggestJSON = `{
+  "resources": {
+    "results": {
+      "products": [
+        {
+          "available": true,
+          "title": "Abrade [Foundations]",
+          "price": "0.40",
+          "image": "https://cdn.shopify.com/abrade.png",
+          "url": "/products/abrade-foundations",
+          "tags": ["Foundations", "Foundations Non-Foil", "Red", "Uncommon"]
+        }
+      ]
+    }
+  }
+}`
+
+const foilSuggestJSON = `{
+  "resources": {
+    "results": {
+      "products": [
+        {
+          "available": true,
+          "title": "Rhystic Study [Foil]",
+          "price": "120.00",
+          "image": "https://cdn.shopify.com/foil.png",
+          "url": "/products/rhystic-study-foil",
+          "tags": ["Foil"]
+        }
+      ]
+    }
+  }
+}`
