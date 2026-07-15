@@ -110,11 +110,21 @@ func TestCleanName(t *testing.T) {
 			expectedName:      "Name",
 			expectedExtraInfo: nil,
 		},
+		"Empty bracket extra info": {
+			name:              "Kratos, God of War",
+			quality:           "",
+			expectedName:      "Kratos, God of War",
+			expectedExtraInfo: nil,
+		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			gotName, gotExtra := cleanName(tt.name, tt.quality, nil)
+			var initialExtra []string
+			if name == "Empty bracket extra info" {
+				initialExtra = []string{"[]"}
+			}
+			gotName, gotExtra := cleanName(tt.name, tt.quality, initialExtra)
 			if gotName != tt.expectedName {
 				t.Errorf("cleanName() gotName = %v, want %v", gotName, tt.expectedName)
 			}

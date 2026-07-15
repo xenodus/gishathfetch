@@ -13,7 +13,7 @@ export const normalizeExtraInfo = (extraInfo) => {
     ? extraInfo.join(" ")
     : String(extraInfo);
   const trimmed = normalizeText(text);
-  if (!trimmed) {
+  if (!trimmed || /^\[\s*\]$/.test(trimmed) || /^\(\s*\)$/.test(trimmed)) {
     return "";
   }
 

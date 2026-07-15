@@ -5,6 +5,7 @@ import {
   Trash2,
 } from "react-feather";
 import { formatSavedAt } from "../hooks/useCart";
+import { normalizeExtraInfo } from "../utils/cardIdentity";
 
 const Card = ({
   card,
@@ -19,6 +20,7 @@ const Card = ({
   hasFavourites = false,
   baseUrl,
 }) => {
+  const extraInfo = normalizeExtraInfo(card.extraInfo);
   const qualityFoil = [];
   if (card.quality) qualityFoil.push(`≪ ${card.quality} ≫`);
   if (card.isFoil)
@@ -47,8 +49,8 @@ const Card = ({
       </div>
       <div className="text-center">
         <div className="fs-6 lh-sm fw-bold mb-1">{card.name}</div>
-        {card.extraInfo && (
-          <div className="fs-6 lh-sm fw-bold mb-1">{card.extraInfo}</div>
+        {extraInfo && (
+          <div className="fs-6 lh-sm fw-bold mb-1">{extraInfo}</div>
         )}
         {qualityFoil.length > 0 && (
           <div className="d-flex flex-wrap justify-content-center gap-1 fs-6 lh-sm fw-bold mb-1">
