@@ -252,30 +252,44 @@ multi-strategy fallback. On failure the store simply contributes nothing.
 Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one
 gateway that reads listings by scraping each store's own Shopify storefront.
 
-### BinderPOS scrape fallback chain
+### BinderPOS scrape and decklist fallback chain
 
-Each BinderPOS store tries up to three scrape strategies in order, escalating
-across proxy tiers (**dedicated → direct → dynamic**), with the dynamic proxy
-reserved for last:
+Each BinderPOS store tries up to three scrape strategies first, escalating
+across proxy tiers (**dedicated → direct → dynamic**). When scrape attempts fail
+with errors (for example storefront **429** rate limits), the shared BinderPOS
+decklist portal is tried as a fallback with the same proxy tiers:
 
-`scrap-dedicated` → `scrap-direct` → `scrap-dynamic`
+`scrap-dedicated` → `scrap-direct` → `scrap-dynamic` → `decklist-dedicated` → `decklist-direct` → `decklist-dynamic`
 
 ```mermaid
 flowchart TD
     A[BinderPOS store search] --> B[scrap-dedicated]
     B -- error --> C[scrap-direct]
     C -- error --> D[scrap-dynamic]
+    D -- error --> F[decklist-dedicated]
+    F -- error --> G[decklist-direct]
+    G -- error --> H[decklist-dynamic]
     B -- cards or empty success --> E[Return result]
     C -- cards or empty success --> E
-    D -- cards, empty, or error --> E
+    D -- cards or empty success --> E
+    F -- cards or empty decklist --> E
+    G -- cards or empty decklist --> E
+    H -- cards, empty, or error --> E
 ```
 
 ### Fallback rules
 
 - The chain advances to the next attempt **on error only**. An empty but
-  error-free result counts as success and stops the chain (no further fallback).
+  error-free **scrape** result counts as success and stops the chain (decklist is
+  not tried when the storefront reports no matches). An empty decklist response
+  skips the remaining decklist attempts.
+- HTTP **5xx** errors on scrape attempts are final; decklist is not tried when
+  the storefront itself is failing.
 - Each attempt is bounded by a 5s timeout (`binderposAttemptTimeout`). The first
   attempt starts immediately; later attempts honor per-domain request pacing.
+- Decklist calls to `portal.binderpos.com` retry transient 429/5xx responses
+  with jittered backoff (honoring `Retry-After`) and share a small concurrency
+  gate across stores.
 
 ## 🗂️ Repository layout
 
