@@ -495,6 +495,27 @@ func isJapanese(s string) bool {
 	return strings.Contains(strings.ToLower(s), "japanese")
 }
 
+func extraInfoInnerText(info string) string {
+	info = strings.TrimSpace(info)
+	if len(info) >= 2 {
+		switch info[0] {
+		case '[':
+			if info[len(info)-1] == ']' {
+				return strings.TrimSpace(info[1 : len(info)-1])
+			}
+		case '(':
+			if info[len(info)-1] == ')' {
+				return strings.TrimSpace(info[1 : len(info)-1])
+			}
+		}
+	}
+	return info
+}
+
+func isNonemptyExtraInfo(info string) bool {
+	return extraInfoInnerText(info) != ""
+}
+
 func cleanName(name, quality string, extraInfo []string) (string, []string) {
 	cleanCardName := name
 
@@ -526,6 +547,10 @@ func cleanName(name, quality string, extraInfo []string) (string, []string) {
 	var extraInfoWithBrackets []string
 	if len(extraInfo) > 0 {
 		for _, info := range extraInfo {
+			info = strings.TrimSpace(info)
+			if !isNonemptyExtraInfo(info) {
+				continue
+			}
 			if !strings.HasPrefix(info, "[") && !strings.HasPrefix(info, "(") {
 				extraInfoWithBrackets = append(extraInfoWithBrackets, "["+info+"]")
 			} else {

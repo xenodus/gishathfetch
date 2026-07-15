@@ -21,6 +21,9 @@ assert.equal(
   "[Marvel Super Heroes Commander]",
 );
 assert.equal(normalizeExtraInfo([]), "");
+assert.equal(normalizeExtraInfo("[]"), "");
+assert.equal(normalizeExtraInfo("()"), "");
+assert.equal(normalizeExtraInfo("[ ]"), "");
 assert.equal(normalizeExtraInfo(undefined), "");
 assert.equal(normalizeExtraInfo("[Set B] [Set A]"), "[Set A] [Set B]");
 

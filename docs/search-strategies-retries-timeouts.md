@@ -62,8 +62,8 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When a search holds a request-scoped dedicated lease, colly and `DoOutboundGET` reuse that URL. |
-| `net/http` scrapers / APIs | Direct → dedicated proxies → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Reuses the request-scoped dedicated lease when set; otherwise each transport is tried once per search. Timeouts, connection errors, 403, and 429 advance to the next transport. |
+| Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When a search holds a request-scoped dedicated lease, colly and `DoOutboundGET` reuse that URL. When no lease is pinned and `DEDICATED_PROXY_*` is configured, each outbound store falls back to one random dedicated proxy. |
+| `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Reuses the request-scoped dedicated lease when set. Each transport is tried once per store (one dedicated slot, not every configured proxy). 429 responses retry with backoff on the same transport before failing over; 403 and connection errors advance immediately. |
 | Cards Central API | Direct only | `http.Client` in `api/gateway/cardscentral/search.go` | Always uses a direct client; does not route through dedicated or dynamic proxies. |
 
 ---
