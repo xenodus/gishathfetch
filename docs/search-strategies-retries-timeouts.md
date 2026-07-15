@@ -14,7 +14,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
-| BinderPOS dedicated proxy per search request | 1 lease | `fetchCardsConcurrently` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When the search includes any BinderPOS store and dedicated proxies are configured, the controller acquires **one** dedicated-proxy lease for the whole request. All BinderPOS `scrap-dedicated` attempts share that URL via context; the lease is released when the search finishes. |
+| Dedicated proxy per search request | 1 lease | `fetchCardsConcurrently` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When dedicated proxies are configured, the controller acquires **one** dedicated-proxy lease for the whole search. All stores in that search share the pinned URL. Concurrent searches take distinct slots from the shared pool (up to seven); an eighth concurrent search waits until a slot is released. |
 
 ---
 
@@ -50,7 +50,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| **scrap-dedicated** proxy selection (colly) | Request-scoped lease when BinderPOS stores are searched; otherwise random dedicated | `fetchCardsConcurrently` + `selectOutboundProxy` in `api/gateway/collector.go` | When a search includes BinderPOS stores, the controller holds one dedicated-proxy lease and pins it on the search context. All `scrap-dedicated` attempts reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
+| **scrap-dedicated** proxy selection (colly) | Request-scoped lease when dedicated proxies are configured; otherwise random dedicated | `fetchCardsConcurrently` + `selectOutboundProxy` in `api/gateway/collector.go` | When dedicated proxies are configured, the controller holds one dedicated-proxy lease per search and pins it on the search context. All `scrap-dedicated` attempts for stores in that search reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
 | Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
 | Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` across stores in one search. |
 | Decklist transient retries | Up to 3 sends | `binderposDecklistMaxAttempts` in `api/gateway/binderpos/storefront.go`; `doDecklistRequestWithRetry` in `storefront_decklist_retry.go` | Retries 429/5xx and network errors with equal-jitter backoff (300ms base, 2.5s cap) and honors `Retry-After`. |
@@ -62,8 +62,8 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When `DEDICATED_PROXY_*` is configured, each search picks one dedicated proxy uniformly at random. |
-| `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Each transport is tried once per search (one dedicated slot, not every configured proxy). 429 responses retry with backoff on the same transport before failing over; 403 and connection errors advance immediately. |
+| Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When a search holds a request-scoped dedicated lease, colly and `DoOutboundGET` reuse that URL. When no lease is pinned and `DEDICATED_PROXY_*` is configured, each outbound store falls back to one random dedicated proxy. |
+| `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Reuses the request-scoped dedicated lease when set. Each transport is tried once per store (one dedicated slot, not every configured proxy). 429 responses retry with backoff on the same transport before failing over; 403 and connection errors advance immediately. |
 | Cards Central API | Direct only | `http.Client` in `api/gateway/cardscentral/search.go` | Always uses a direct client; does not route through dedicated or dynamic proxies. |
 
 ---
