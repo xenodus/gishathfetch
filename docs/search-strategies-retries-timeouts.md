@@ -63,7 +63,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When `DEDICATED_PROXY_*` is configured, each search picks one dedicated proxy uniformly at random. |
-| `net/http` scrapers / APIs | Direct → dedicated proxies → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Each transport is tried once per search; timeouts, connection errors, 403, and 429 advance to the next transport. |
+| `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Each transport is tried once per search (one dedicated slot, not every configured proxy). 429 responses retry with backoff on the same transport before failing over; 403 and connection errors advance immediately. |
 | Cards Central API | Direct only | `http.Client` in `api/gateway/cardscentral/search.go` | Always uses a direct client; does not route through dedicated or dynamic proxies. |
 
 ---

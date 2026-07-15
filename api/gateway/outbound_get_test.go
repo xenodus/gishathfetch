@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -59,16 +61,16 @@ func TestDoOutboundGET_DirectSuccess(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 }
 
-func TestBuildOutboundGETAttempts_TriesEachDedicatedProxy(t *testing.T) {
+func TestBuildOutboundGETAttempts_TriesOneRandomDedicatedProxy(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
 
 	attempts := buildOutboundGETAttempts(2*time.Second, false, "")
-	require.GreaterOrEqual(t, len(attempts), 3)
+	require.GreaterOrEqual(t, len(attempts), 2)
 	require.Equal(t, "direct", attempts[0].strategy)
-	require.Equal(t, "dedicated-1", attempts[1].strategy)
-	require.Equal(t, "dedicated-2", attempts[2].strategy)
+	require.True(t, strings.HasPrefix(attempts[1].strategy, "dedicated-"))
+	require.Len(t, attempts, 2)
 }
 
 func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
@@ -77,7 +79,7 @@ func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 
 	attempts := buildOutboundGETAttempts(2*time.Second, true, "")
 	require.Len(t, attempts, 1)
-	require.Equal(t, "dedicated-1", attempts[0].strategy)
+	require.True(t, strings.HasPrefix(attempts[0].strategy, "dedicated-"))
 }
 
 func TestBuildOutboundGETAttempts_OnlyProxyURL(t *testing.T) {
@@ -121,7 +123,7 @@ func TestOutboundProxyDescription(t *testing.T) {
 	require.GreaterOrEqual(t, len(attempts), 2)
 
 	require.Equal(t, "proxy_mode=direct proxy=none", outboundProxyDescription(attempts[0]))
-	require.Equal(t, "proxy_mode=dedicated proxy=DEDICATED_PROXY_1", outboundProxyDescription(attempts[1]))
+	require.Contains(t, outboundProxyDescription(attempts[1]), "proxy_mode=dedicated proxy=DEDICATED_PROXY_")
 }
 
 func TestDoOutboundGET_DirectForbiddenWithoutProxy(t *testing.T) {
@@ -161,6 +163,53 @@ func TestDoOutboundGET_ContinuesAfterDirectTimeout(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "direct:")
 	require.Contains(t, err.Error(), "dedicated-1:")
+}
+
+func TestDoOutboundGET_Retries429BeforeFailingOver(t *testing.T) {
+	clearProxyEnv(t)
+
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			w.Header().Set("Retry-After", "0")
+			http.Error(w, "rate limited", http.StatusTooManyRequests)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	resp, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		2*time.Second,
+	)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.GreaterOrEqual(t, int(calls.Load()), 2)
+	require.NoError(t, resp.Body.Close())
+}
+
+func TestDoOutboundGET_FailsOverAfter429RetriesExhausted(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "127.0.0.1|9|u|p")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		2*time.Second,
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "direct: status 429")
+	require.Contains(t, err.Error(), "dedicated-1:")
+	require.NotContains(t, err.Error(), "dedicated-2:")
 }
 
 func TestDoOutboundRoundTrip_RebuildsPOSTBodyPerAttempt(t *testing.T) {
