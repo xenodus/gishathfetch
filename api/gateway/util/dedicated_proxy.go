@@ -75,6 +75,12 @@ func GetCKPricelistProxyURL() (string, bool) {
 	return BuildProxyURL(os.Getenv("CK_PRICELIST_PROXY"))
 }
 
+// GetResidentialProxyURL returns the optional residential proxy URL from
+// RESIDENTIAL_PROXY_1 when configured.
+func GetResidentialProxyURL() (string, bool) {
+	return BuildProxyURL(os.Getenv("RESIDENTIAL_PROXY_1"))
+}
+
 func GetDedicatedProxyURLs() []string {
 	proxies := GetDedicatedProxy()
 	proxyURLs := make([]string, 0, len(proxies))

@@ -30,6 +30,7 @@ This document records **where** the app configures search behavior, **timeouts**
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
 | Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final fallback after dedicated and direct/no-proxy attempts. |
+| Residential proxy | **`RESIDENTIAL_PROXY_1`** | Optional residential proxy for stores that rate-limit datacenter IPs (currently 5 Mana). Uses the same `host\|port\|username\|password` format. |
 | Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `false`, dynamic proxy fallback is disabled even if `DYNAMIC_PROXY` is set. Defaults to enabled when unset or invalid. |
 
 ---
@@ -63,7 +64,8 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When a store search holds a request-scoped dedicated lease, colly and `DoOutboundGET` reuse that URL. When no lease is pinned and `DEDICATED_PROXY_*` is configured, each outbound store falls back to one random dedicated proxy. |
-| `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, and TCG Marketplace. Reuses the per-store dedicated lease when set. Each transport is tried once per store (one dedicated slot, not every configured proxy). 429 responses retry with backoff on the same transport before failing over; 403 and connection errors advance immediately. |
+| `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Agora, Dueller's Point, Mox & Lotus, Cards & Collections, and TCG Marketplace. Reuses the per-store dedicated lease when set. Each transport is tried once per store (one dedicated slot, not every configured proxy). Client errors (4xx) and connection errors advance immediately to the next transport. |
+| 5 Mana Shopify search | Residential → dedicated → dynamic | `api/gateway/fivemana/search.go` | Skips direct requests. Tries `RESIDENTIAL_PROXY_1` first, then one dedicated proxy, then dynamic fallback. Client errors (4xx) fail over immediately. |
 | Cards Central API | Direct only | `http.Client` in `api/gateway/cardscentral/search.go` | Always uses a direct client; does not route through dedicated or dynamic proxies. |
 
 ---

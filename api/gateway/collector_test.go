@@ -222,6 +222,13 @@ func TestResolveProxyLabel(t *testing.T) {
 		}
 	})
 
+	t.Run("matches residential env key by URL", func(t *testing.T) {
+		t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+		if got := resolveProxyLabel("residential", "http://user:pass@res.proxy:8080"); got != "RESIDENTIAL_PROXY_1" {
+			t.Fatalf("expected RESIDENTIAL_PROXY_1, got %q", got)
+		}
+	})
+
 	t.Run("falls back to mode label when unmapped", func(t *testing.T) {
 		if got := resolveProxyLabel("dedicated", "http://unknown:4444"); got != "dedicated-configured" {
 			t.Fatalf("expected dedicated-configured fallback, got %q", got)

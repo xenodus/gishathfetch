@@ -46,10 +46,11 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
-		Style:              gateway.OutboundStyleHTML,
-		PageURL:            apiURL,
-		ShopifySGDCurrency: true,
-		SkipDirect:         true,
+		Style:                  gateway.OutboundStyleHTML,
+		PageURL:                apiURL,
+		ShopifySGDCurrency:     true,
+		SkipDirect:             true,
+		PreferResidentialProxy: true,
 	}, config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err

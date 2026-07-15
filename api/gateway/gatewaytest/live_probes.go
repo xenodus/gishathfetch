@@ -44,6 +44,8 @@ func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, 
 		FallbackSelector:   "ul.product-grid",
 		PageURL:            pageURL,
 		ShopifySGDCurrency: true,
+		PreferResidentialProxy: true,
+		SkipDirect:             true,
 	})
 }
 
