@@ -8,6 +8,7 @@ import (
 
 const StoreName = "Hideout"
 const StoreBaseURL = "https://hideoutcg.com"
+const StoreStorefrontAccessToken = "986e6f452e7b632be7a14cba965f64a8"
 const StoreShopifyDomain = "220022-20.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
 
@@ -28,5 +29,5 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Search(ctx, 3, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr)
+	return s.BinderposGwy.Search(ctx, 3, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr, StoreStorefrontAccessToken)
 }

@@ -9,6 +9,7 @@ import (
 
 const StoreName = "Grey Ogre Games"
 const StoreBaseURL = "https://www.greyogregames.com"
+const StoreStorefrontAccessToken = "80c454d63abad6ad0ebb6b3aaf649fcd"
 const StoreShopifyDomain = "grey-ogre-games-singapore.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
 
@@ -29,5 +30,5 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Search(ctx, 3, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr)
+	return s.BinderposGwy.Search(ctx, 3, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr, StoreStorefrontAccessToken)
 }
