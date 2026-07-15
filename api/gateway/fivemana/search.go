@@ -9,16 +9,20 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 	"net/url"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 const StoreName = "5 Mana"
 const StoreBaseURL = "https://5-mana.sg"
+const StoreSearchPath = "/search"
 const StoreSuggestPath = "/search/suggest.json"
 const suggestProductLimit = "10"
 
 type Store struct {
 	Name        string
 	BaseUrl     string
+	SearchPath  string
 	SuggestPath string
 }
 
@@ -44,11 +48,20 @@ func NewLGS() gateway.LGS {
 	return Store{
 		Name:        StoreName,
 		BaseUrl:     StoreBaseURL,
+		SearchPath:  StoreSearchPath,
 		SuggestPath: StoreSuggestPath,
 	}
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	cards, err := searchBySuggestJSON(ctx, s.Name, searchStr)
+	if err == nil && len(cards) > 0 {
+		return cards, nil
+	}
+	return searchByHTML(ctx, s.Name, searchStr)
+}
+
+func searchBySuggestJSON(ctx context.Context, storeName, searchStr string) ([]gateway.Card, error) {
 	storeBase, err := url.Parse(StoreBaseURL)
 	if err != nil {
 		return nil, err
@@ -60,9 +73,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		Path:   StoreSuggestPath,
 		RawQuery: url.Values{
 			"q": {searchStr},
-			"resources[type]":                              {"product"},
-			"resources[limit]":                             {suggestProductLimit},
-			"resources[options][unavailable_products]":     {"hide"},
+			"resources[type]":                          {"product"},
+			"resources[limit]":                         {suggestProductLimit},
+			"resources[options][unavailable_products]": {"hide"},
 		}.Encode(),
 	}
 
@@ -87,7 +100,51 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return nil, err
 	}
 
-	return mapSuggestProductsToCards(parsed.Resources.Results.Products, s.Name), nil
+	return mapSuggestProductsToCards(parsed.Resources.Results.Products, storeName), nil
+}
+
+func searchByHTML(ctx context.Context, storeName, searchStr string) ([]gateway.Card, error) {
+	var cards []gateway.Card
+
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   "5-mana.sg",
+		Path:   StoreSearchPath,
+		RawQuery: url.Values{
+			"q":                     {searchStr},
+			"filter.v.availability": {"1"},
+		}.Encode(),
+	}
+
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
+		Style:              gateway.OutboundStyleHTML,
+		PageURL:            apiURL,
+		ShopifySGDCurrency: true,
+		SkipDirect:         true,
+	}, config.SearchAttemptTimeout)
+	if err != nil {
+		return cards, err
+	}
+	defer resp.Body.Close()
+
+	body, err := gateway.ReadResponseBody(resp)
+	if err != nil {
+		return cards, err
+	}
+
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
+	if err != nil {
+		return cards, err
+	}
+
+	doc.Find("ul.product-grid li").Each(func(i int, se *goquery.Selection) {
+		card, ok := parseProductCard(se, storeName)
+		if ok {
+			cards = append(cards, card)
+		}
+	})
+
+	return cards, nil
 }
 
 func mapSuggestProductsToCards(products []suggestProduct, storeName string) []gateway.Card {
@@ -132,6 +189,45 @@ func mapSuggestProductToCard(product suggestProduct, storeName string) (gateway.
 	}
 
 	return c, c.Name != ""
+}
+
+func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bool) {
+	// Shopify's availability filter can still surface sold-out listings; the theme
+	// marks them with price--sold-out and a "Sold out" badge.
+	if se.Find("div.price.price--sold-out").Length() > 0 {
+		return gateway.Card{}, false
+	}
+
+	c := gateway.Card{
+		Source: storeName,
+	}
+
+	// name e.g. Rhystic Study (Anime Borderless) [Wilds of Eldraine: Enchanting Tales] [Foil]
+	heading := se.Find("h3.card__heading.h5 a")
+	c.Name = strings.TrimSpace(strings.Replace(heading.Text(), "[Foil]", "", -1))
+	c.IsFoil = strings.Contains(strings.ToLower(heading.Text()), "[foil]")
+
+	c.Url = StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", "")
+	c.Img = se.Find("div.card__media img").AttrOr("src", "")
+	c.InStock = true
+
+	price, err := util.ParsePrice(se.Find("span.price-item.price-item--sale.price-item--last").Text())
+	if err != nil {
+		c.InStock = false
+	}
+	c.Price = price
+
+	cleanPageURL, err := url.Parse(c.Url)
+	if err != nil {
+		log.Printf("error parsing url for %s with value [%s]: %v", storeName, c.Url, err)
+		return gateway.Card{}, false
+	}
+	cleanPageURL.RawQuery = url.Values{
+		"utm_source": []string{config.UtmSource},
+	}.Encode()
+	c.Url = cleanPageURL.String()
+
+	return c, c.Name != "" && c.InStock
 }
 
 func buildSuggestProductURL(product suggestProduct) (string, bool) {
