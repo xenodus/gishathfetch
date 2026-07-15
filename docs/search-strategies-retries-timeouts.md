@@ -29,7 +29,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Notes |
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
-| Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final fallback after dedicated and direct/no-proxy attempts. |
+| Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final two fallback attempts (`scrap-dynamic` and `decklist-dynamic`) after dedicated and direct/no-proxy scrap and decklist tries. |
 | Residential proxy | **`RESIDENTIAL_PROXY_1`** | Optional residential proxy for stores that rate-limit datacenter IPs (currently 5 Mana). Uses the same `host\|port\|username\|password` format. |
 | Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `false`, dynamic proxy fallback is disabled even if `DYNAMIC_PROXY` is set. Defaults to enabled when unset or invalid. |
 
@@ -47,7 +47,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| All BinderPOS stores | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** → **decklist-dedicated** → **decklist-direct** → **decklist-dynamic** (six `runWithAttemptTimeout` steps when a Shopify domain is configured) | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. |
+| All BinderPOS stores | **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** → **scrap-dynamic** → **decklist-dynamic** (six `runWithAttemptTimeout` steps when a Shopify domain is configured) | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. Dynamic proxy is reserved for the final two attempts. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
