@@ -7,7 +7,9 @@ import (
 )
 
 type Gateway interface {
-	Search(ctx context.Context, scrapVariant int, storeName, baseUrl, shopifyDomain, searchUrl, searchStr string) ([]gateway.Card, error)
+	// Search runs the BinderPOS strategy chain. storefrontAccessToken enables
+	// Storefront GraphQL (dedicated then direct) before HTML scrap when non-empty.
+	Search(ctx context.Context, scrapVariant int, storeName, baseUrl, shopifyDomain, searchUrl, searchStr, storefrontAccessToken string) ([]gateway.Card, error)
 	Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error)
 }
 

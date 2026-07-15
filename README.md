@@ -253,25 +253,33 @@ then falls back to a `main-search` HTML section scrape when GraphQL fails.
 
 **BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one
-gateway that reads listings by scraping each store's own Shopify storefront.
+gateway. Stores with a configured Storefront access token try **GraphQL first**
+(dedicated → direct), then fall back to HTML scrape and BinderPOS decklist
+strategies.
 
-### BinderPOS scrape and decklist fallback chain
+### BinderPOS GraphQL, scrape, and decklist fallback chain
 
-Each BinderPOS store tries scrape and decklist strategies across dedicated and
-direct proxy tiers first. When those fail with errors (for example storefront
-**429** rate limits), dynamic proxy is reserved for the final two attempts:
+When a store has a Storefront access token:
 
-`scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic`
+`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic`
+
+Without a token, the chain starts at `scrap-dedicated` (same as before). Dynamic
+proxy remains reserved for the final scrap/decklist attempts; GraphQL uses
+dedicated then direct only.
 
 ```mermaid
 flowchart TD
-    A[BinderPOS store search] --> B[scrap-dedicated]
+    A[BinderPOS store search] --> G1[graphql-dedicated]
+    G1 -- error --> G2[graphql-direct]
+    G2 -- error --> B[scrap-dedicated]
     B -- error --> C[scrap-direct]
     C -- error --> F[decklist-dedicated]
     F -- error --> G[decklist-direct]
     G -- error --> D[scrap-dynamic]
     D -- error --> H[decklist-dynamic]
-    B -- cards or empty success --> E[Return result]
+    G1 -- cards or empty success --> E[Return result]
+    G2 -- cards or empty success --> E
+    B -- cards or empty success --> E
     C -- cards or empty success --> E
     F -- cards or empty decklist --> E
     G -- cards or empty decklist --> E
@@ -282,11 +290,10 @@ flowchart TD
 ### Fallback rules
 
 - The chain advances to the next attempt **on error only**. An empty but
-  error-free **scrape** result counts as success and stops the chain (decklist is
-  not tried when the storefront reports no matches). An empty decklist response
-  skips the remaining decklist attempts.
+  error-free **GraphQL** or **scrape** result counts as success and stops the
+  chain. An empty decklist response skips the remaining decklist attempts.
 - HTTP **5xx** errors on scrape attempts are final; decklist is not tried when
-  the storefront itself is failing.
+  the storefront itself is failing. GraphQL failures fall through to HTML scrap.
 - Each attempt is bounded by a 5s timeout (`binderposAttemptTimeout`). The first
   attempt starts immediately; later attempts honor per-domain request pacing.
 - Decklist calls to `portal.binderpos.com` retry transient 429/5xx responses
