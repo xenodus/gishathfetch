@@ -133,7 +133,7 @@ func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
 		switch {
 		case strings.Contains(r.URL.Path, "graphql"):
 			sawGraphQL = true
-			w.WriteHeader(http.StatusBadGateway)
+			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"errors":[{"message":"boom"}]}`))
 		case strings.Contains(r.URL.Path, "search"):
 			sawHTML = true
@@ -157,6 +157,34 @@ func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
 	require.True(t, sawHTML)
 	require.Len(t, cards, 1)
 	require.Equal(t, "Abrade [Foundations]", cards[0].Name)
+}
+
+func Test_SearchDoesNotFallbackToHTMLWhenGraphQL5xx(t *testing.T) {
+	var sawGraphQL, sawHTML bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "graphql"):
+			sawGraphQL = true
+			w.WriteHeader(http.StatusBadGateway)
+			_, _ = w.Write([]byte(`{"errors":[{"message":"boom"}]}`))
+		case strings.Contains(r.URL.Path, "search"):
+			sawHTML = true
+			http.NotFound(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	store := Store{
+		Name:       StoreName,
+		BaseUrl:    server.URL,
+		SearchPath: StoreSearchPath,
+	}
+	_, err := store.Search(context.Background(), "Abrade")
+	require.Error(t, err)
+	require.True(t, sawGraphQL)
+	require.False(t, sawHTML)
 }
 
 func Test_SearchUsesGraphQLWhenHealthy(t *testing.T) {
