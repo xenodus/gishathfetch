@@ -20,10 +20,6 @@ func (i impl) Scrap(ctx context.Context, scrapVariant int, storeName, baseUrl, s
 	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newBinderposCollector)
 }
 
-func (i impl) scrapDynamic(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
-	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDynamicNoRetryCollector)
-}
-
 func (i impl) scrapDirect(ctx context.Context, scrapVariant int, storeName, baseUrl, searchUrl, searchStr string) ([]gateway.Card, error) {
 	return i.scrapWithCollectorFactory(ctx, scrapVariant, storeName, baseUrl, searchUrl, searchStr, newDirectNoRetryCollector)
 }

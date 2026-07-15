@@ -72,6 +72,18 @@ func doOutboundAttempt(
 ) (*http.Response, string, bool, error) {
 	proxyDesc := outboundProxyDescription(attempt)
 
+	var releaseDynamicProxy func()
+	if attempt.strategy == "dynamic" {
+		release, err := AcquireDynamicProxySlot(ctx)
+		if err != nil {
+			return nil, "", false, err
+		}
+		releaseDynamicProxy = release
+	}
+	if releaseDynamicProxy != nil {
+		defer releaseDynamicProxy()
+	}
+
 	req, err := buildReq()
 	if err != nil {
 		return nil, "", false, err

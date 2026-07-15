@@ -57,6 +57,12 @@ func searchByStorefrontAPIDynamic(ctx context.Context, scrapVariant int, storeNa
 		return nil, fmt.Errorf("no dynamic proxy configured for binderpos storefront api")
 	}
 
+	releaseDynamicProxy, err := gateway.AcquireDynamicProxySlot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer releaseDynamicProxy()
+
 	client, err := newHTTPClientWithProxyURL(proxyURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid dynamic proxy configured for binderpos storefront api: %w", err)

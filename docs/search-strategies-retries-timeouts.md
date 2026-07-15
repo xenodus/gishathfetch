@@ -30,6 +30,7 @@ This document records **where** the app configures search behavior, **timeouts**
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
 | Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final two fallback attempts (`scrap-dynamic` and `decklist-dynamic`) after dedicated and direct/no-proxy scrap and decklist tries. |
+| Dynamic proxy concurrency | 3 in-flight | `dynamicProxyMaxConcurrent` in `api/gateway/dynamic_proxy_gate.go` | Caps concurrent requests through `DYNAMIC_PROXY` across all stores and strategies so the final BinderPOS fallbacks do not burst the proxy endpoint and trigger 429. |
 | Residential proxy | **`RESIDENTIAL_PROXY_1`** | Optional residential proxy for stores that rate-limit datacenter IPs (currently 5 Mana). Uses the same `host\|port\|username\|password` format. |
 | Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `false`, dynamic proxy fallback is disabled even if `DYNAMIC_PROXY` is set. Defaults to enabled when unset or invalid. |
 
@@ -56,6 +57,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 | Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` across stores in one search. |
 | Decklist transient retries | Up to 3 sends | `binderposDecklistMaxAttempts` in `api/gateway/binderpos/storefront.go`; `doDecklistRequestWithRetry` in `storefront_decklist_retry.go` | Retries 429/5xx and network errors with equal-jitter backoff (300ms base, 2.5s cap) and honors `Retry-After`. |
 | “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **scrape** attempt without error is **final** and decklist is not tried. An empty **decklist** attempt skips remaining decklist strategies. HTTP **5xx** on scrape is **final**. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
+| scrap-dynamic 429 retries | Up to 3 sends | `scrapDynamicMaxAttempts` in `api/gateway/binderpos/scrap_dynamic.go` | Retries 429 responses with equal-jitter backoff (reuses decklist backoff constants) and a fresh collector so the rotating proxy egresses from a new IP. Honors the per-attempt timeout budget. |
 
 ---
 

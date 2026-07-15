@@ -71,6 +71,19 @@ func ExtractHTTPStatusCode(msg string) int {
 	return 0
 }
 
+// IsHTTPTooManyRequests reports whether err (or any error in its chain) represents
+// an HTTP 429 Too Many Requests response.
+func IsHTTPTooManyRequests(err error) bool {
+	for err != nil {
+		code := ExtractHTTPStatusCode(err.Error())
+		if code == http.StatusTooManyRequests {
+			return true
+		}
+		err = errors.Unwrap(err)
+	}
+	return false
+}
+
 // EnrichErrorWithHTTPStatus prefixes err with code and status text when statusCode
 // is known and the message does not already include a status code.
 func EnrichErrorWithHTTPStatus(err error, statusCode int) error {
