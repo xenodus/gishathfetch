@@ -23,8 +23,6 @@ const (
 	// SearchAttemptTimeout bounds a single search strategy attempt (BinderPOS step
 	// or default colly scrape).
 	SearchAttemptTimeout = 5 * time.Second
-	// AgoraSearchAttemptTimeout is the per-attempt cap for Agora Hobby only.
-	AgoraSearchAttemptTimeout = 10 * time.Second
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
 	// dynamic-proxy fallback attempts, which BinderPOS reserves for the final
 	// two attempts after dedicated and direct/no-proxy scrap and decklist tries.

@@ -11,26 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// RequireAgoraSearchStructure verifies the Agora MTG search page markup.
-func RequireAgoraSearchStructure(t *testing.T, ctx context.Context, baseURL, searchPath, category, query string) {
-	t.Helper()
-	probeURL := BuildURL("https", strings.TrimPrefix(strings.TrimPrefix(baseURL, "https://"), "http://"), searchPath, url.Values{
-		"category":    {category},
-		"searchfield": {query},
-	})
-	pageURL, err := url.Parse(probeURL)
-	require.NoError(t, err)
-	RequireHTMLStructure(t, ctx, HTMLProbe{
-		URL:                    probeURL,
-		PrimarySelector:        "div#store_listingcontainer",
-		FallbackSelector:       "div.store-item",
-		PageURL:                pageURL,
-		SkipDirect:             true,
-		PreferResidentialProxy: true,
-		SkipWebBotAuth:         true,
-	})
-}
-
 // RequireFiveManaSearchStructure verifies the 5 Mana Shopify search page markup.
 func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, searchPath, query string) {
 	t.Helper()
@@ -46,10 +26,9 @@ func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, 
 		URL:                    probeURL,
 		PrimarySelector:        "ul.product-grid li",
 		FallbackSelector:       "ul.product-grid",
-		PageURL:                pageURL,
-		ShopifySGDCurrency:     true,
-		PreferResidentialProxy: true,
-		SkipDirect:             true,
+		PageURL:            pageURL,
+		ShopifySGDCurrency: true,
+		SkipDirect:         true,
 	})
 }
 

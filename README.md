@@ -243,7 +243,7 @@ before being returned.
 
 ### Two kinds of stores
 
-**Non-BinderPOS stores** (e.g. Agora, Cards Central, Cards & Collections,
+**Non-BinderPOS stores** (e.g. Cards Central, Cards & Collections,
 Dueller's Point, Mox & Lotus, TCG Marketplace) each implement a single bespoke
 `Search` — a custom JSON API call or one HTML scrape — with no multi-strategy
 fallback. On failure the store simply contributes nothing.
