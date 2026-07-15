@@ -221,33 +221,28 @@ func TestDoOutboundGET_ContinuesAfterDirectTimeout(t *testing.T) {
 	require.Contains(t, err.Error(), "dedicated-1:")
 }
 
-func TestDoOutboundGET_Retries429BeforeFailingOver(t *testing.T) {
+func TestDoOutboundGET_429FailsOverWithoutRetry(t *testing.T) {
 	clearProxyEnv(t)
 
 	var calls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if calls.Add(1) == 1 {
-			w.Header().Set("Retry-After", "0")
-			http.Error(w, "rate limited", http.StatusTooManyRequests)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
+		calls.Add(1)
+		http.Error(w, "rate limited", http.StatusTooManyRequests)
 	}))
 	defer server.Close()
 
-	resp, err := DoOutboundGET(
+	_, err := DoOutboundGET(
 		context.Background(),
 		server.URL,
 		OutboundRequestOptions{SkipWebBotAuth: true},
 		2*time.Second,
 	)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-	require.GreaterOrEqual(t, int(calls.Load()), 2)
-	require.NoError(t, resp.Body.Close())
+	require.Error(t, err)
+	require.Equal(t, int32(1), calls.Load())
+	require.Contains(t, err.Error(), "direct: status 429")
 }
 
-func TestDoOutboundGET_FailsOverAfter429RetriesExhausted(t *testing.T) {
+func TestDoOutboundGET_FailsOverOn429ToNextTransport(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "127.0.0.1|9|u|p")
 
@@ -266,6 +261,27 @@ func TestDoOutboundGET_FailsOverAfter429RetriesExhausted(t *testing.T) {
 	require.Contains(t, err.Error(), "direct: status 429")
 	require.Contains(t, err.Error(), "dedicated-1:")
 	require.NotContains(t, err.Error(), "dedicated-2:")
+}
+
+func TestDoOutboundGET_FailsOverOn4xxWithoutRetry(t *testing.T) {
+	clearProxyEnv(t)
+
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		2*time.Second,
+	)
+	require.Error(t, err)
+	require.Equal(t, int32(1), calls.Load())
+	require.Contains(t, err.Error(), "direct: status 404")
 }
 
 func TestDoOutboundRoundTrip_RebuildsPOSTBodyPerAttempt(t *testing.T) {
