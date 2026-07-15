@@ -21,10 +21,13 @@ func RequireAgoraSearchStructure(t *testing.T, ctx context.Context, baseURL, sea
 	pageURL, err := url.Parse(probeURL)
 	require.NoError(t, err)
 	RequireHTMLStructure(t, ctx, HTMLProbe{
-		URL:              probeURL,
-		PrimarySelector:  "div#store_listingcontainer",
-		FallbackSelector: "div.store-item",
-		PageURL:          pageURL,
+		URL:                    probeURL,
+		PrimarySelector:        "div#store_listingcontainer",
+		FallbackSelector:       "div.store-item",
+		PageURL:                pageURL,
+		SkipDirect:             true,
+		PreferResidentialProxy: true,
+		SkipWebBotAuth:         true,
 	})
 }
 
