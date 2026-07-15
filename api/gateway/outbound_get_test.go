@@ -64,18 +64,31 @@ func TestBuildOutboundGETAttempts_TriesEachDedicatedProxy(t *testing.T) {
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, false, "")
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, false, "")
 	require.GreaterOrEqual(t, len(attempts), 3)
 	require.Equal(t, "direct", attempts[0].strategy)
 	require.Equal(t, "dedicated-1", attempts[1].strategy)
 	require.Equal(t, "dedicated-2", attempts[2].strategy)
 }
 
+func TestBuildOutboundGETAttempts_UsesRequestDedicatedProxy(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
+
+	ctx := WithRequestDedicatedProxy(context.Background(), "http://user:pass@1.2.3.4:8080")
+	attempts := buildOutboundGETAttempts(ctx, 2*time.Second, false, "")
+	require.Len(t, attempts, 2)
+	require.Equal(t, "direct", attempts[0].strategy)
+	require.Equal(t, "dedicated-1", attempts[1].strategy)
+	require.Equal(t, "http://user:pass@1.2.3.4:8080", attempts[1].proxyURL)
+}
+
 func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, true, "")
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, true, "")
 	require.Len(t, attempts, 1)
 	require.Equal(t, "dedicated-1", attempts[0].strategy)
 }
@@ -84,7 +97,7 @@ func TestBuildOutboundGETAttempts_OnlyProxyURL(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, false, "http://user:pass@res.proxy:8080")
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, false, "http://user:pass@res.proxy:8080")
 	require.Len(t, attempts, 1)
 	require.Equal(t, "ck-pricelist-proxy", attempts[0].strategy)
 	require.Equal(t, "http://user:pass@res.proxy:8080", attempts[0].proxyURL)
@@ -117,7 +130,7 @@ func TestOutboundProxyDescription(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
-	attempts := buildOutboundGETAttempts(2*time.Second, false, "")
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, false, "")
 	require.GreaterOrEqual(t, len(attempts), 2)
 
 	require.Equal(t, "proxy_mode=direct proxy=none", outboundProxyDescription(attempts[0]))

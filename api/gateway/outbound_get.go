@@ -43,7 +43,7 @@ func DoOutboundRoundTrip(
 	buildReq func() (*http.Request, error),
 ) (*http.Response, error) {
 	var failures []string
-	for _, attempt := range buildOutboundGETAttempts(timeout, opts.SkipDirect, opts.OnlyProxyURL) {
+	for _, attempt := range buildOutboundGETAttempts(ctx, timeout, opts.SkipDirect, opts.OnlyProxyURL) {
 		req, err := buildReq()
 		if err != nil {
 			return nil, err
@@ -78,7 +78,7 @@ func DoOutboundRoundTrip(
 	return nil, fmt.Errorf("outbound request failed: %s", strings.Join(failures, "; "))
 }
 
-func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyURL string) []outboundAttempt {
+func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, skipDirect bool, onlyProxyURL string) []outboundAttempt {
 	if onlyProxyURL != "" {
 		client, err := newProxyHTTPClient(onlyProxyURL, timeout)
 		if err != nil {
@@ -99,19 +99,30 @@ func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyU
 		})
 	}
 
-	for idx, proxyURL := range util.GetDedicatedProxyURLs() {
-		if proxyURL == "" {
-			continue
+	if pinnedProxyURL, ok := RequestDedicatedProxyURL(ctx); ok {
+		client, err := newProxyHTTPClient(pinnedProxyURL, timeout)
+		if err == nil {
+			attempts = append(attempts, outboundAttempt{
+				strategy: dedicatedProxyStrategyName(pinnedProxyURL),
+				proxyURL: pinnedProxyURL,
+				client:   client,
+			})
 		}
-		client, err := newProxyHTTPClient(proxyURL, timeout)
-		if err != nil {
-			continue
+	} else {
+		for idx, proxyURL := range util.GetDedicatedProxyURLs() {
+			if proxyURL == "" {
+				continue
+			}
+			client, err := newProxyHTTPClient(proxyURL, timeout)
+			if err != nil {
+				continue
+			}
+			attempts = append(attempts, outboundAttempt{
+				strategy: fmt.Sprintf("dedicated-%d", idx+1),
+				proxyURL: proxyURL,
+				client:   client,
+			})
 		}
-		attempts = append(attempts, outboundAttempt{
-			strategy: fmt.Sprintf("dedicated-%d", idx+1),
-			proxyURL: proxyURL,
-			client:   client,
-		})
 	}
 
 	if client, ok := dynamicProxyHTTPClient(timeout); ok {
@@ -123,6 +134,15 @@ func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyU
 	}
 
 	return attempts
+}
+
+func dedicatedProxyStrategyName(proxyURL string) string {
+	for idx, configuredURL := range util.GetDedicatedProxyURLs() {
+		if configuredURL == proxyURL {
+			return fmt.Sprintf("dedicated-%d", idx+1)
+		}
+	}
+	return "dedicated"
 }
 
 func dynamicProxyHTTPClient(timeout time.Duration) (*http.Client, bool) {

@@ -31,7 +31,9 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 	}
 
 	var proxyURL string
-	if config.UseLeasedDedicatedProxy {
+	if pinned, ok := gateway.RequestDedicatedProxyURL(ctx); ok {
+		proxyURL = pinned
+	} else if config.UseLeasedDedicatedProxy {
 		leasedURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs)
 		if err != nil {
 			return nil, fmt.Errorf("dedicated proxy lease for binderpos storefront api: %w", err)

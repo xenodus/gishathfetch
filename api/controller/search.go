@@ -141,10 +141,12 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	aggregator := newFetchResultAggregator(len(shops))
 
 	searchCtx := ctx
-	if searchIncludesBinderposStore(shops) {
-		if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, util.GetDedicatedProxyURLs()); err == nil {
-			defer release()
-			searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
+	if config.UseProxy {
+		if proxyURLs := util.GetDedicatedProxyURLs(); len(proxyURLs) > 0 {
+			if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs); err == nil {
+				defer release()
+				searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
+			}
 		}
 	}
 
@@ -482,15 +484,6 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 func isBinderposStore(shopName string) bool {
 	_, ok := binderposStoreNames[shopName]
 	return ok
-}
-
-func searchIncludesBinderposStore(shops map[string]gateway.LGS) bool {
-	for shopName := range shops {
-		if isBinderposStore(shopName) {
-			return true
-		}
-	}
-	return false
 }
 
 func isArtCard(s string) bool {

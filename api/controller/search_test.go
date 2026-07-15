@@ -391,6 +391,49 @@ func TestIsBinderposStore(t *testing.T) {
 	}
 }
 
+func TestFetchCardsConcurrently_PinsDedicatedProxyForAllStores(t *testing.T) {
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	var mu sync.Mutex
+	pinned := make([]string, 0, 2)
+	recordPinned := func(ctx context.Context) {
+		if proxyURL, ok := gateway.RequestDedicatedProxyURL(ctx); ok {
+			mu.Lock()
+			pinned = append(pinned, proxyURL)
+			mu.Unlock()
+		}
+	}
+
+	shops := map[string]gateway.LGS{
+		"ShopA": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				recordPinned(ctx)
+				return nil, nil
+			},
+		},
+		"ShopB": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				recordPinned(ctx)
+				return nil, nil
+			},
+		},
+	}
+
+	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	if len(siteErrors) != 0 {
+		t.Fatalf("unexpected site errors: %v", siteErrors)
+	}
+	if len(pinned) != 2 {
+		t.Fatalf("expected 2 pinned proxy URLs, got %d (%v)", len(pinned), pinned)
+	}
+	if pinned[0] == "" || pinned[0] != pinned[1] {
+		t.Fatalf("expected both shops to share one dedicated proxy, got %v", pinned)
+	}
+}
+
 func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"ErrorShopA": &MockLGS{
