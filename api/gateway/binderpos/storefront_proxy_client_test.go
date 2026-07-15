@@ -65,6 +65,7 @@ func TestNewHTTPClientWithProxyURL(t *testing.T) {
 	})
 
 	t.Run("builds client with configured proxy and timeout", func(t *testing.T) {
+		t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
 		client, err := newHTTPClientWithProxyURL("http://user:pass@10.0.0.1:8080")
 		if err != nil {
 			t.Fatalf("expected valid proxy URL, got error %v", err)

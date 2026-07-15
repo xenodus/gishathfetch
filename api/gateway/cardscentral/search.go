@@ -62,17 +62,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		RawQuery: url.Values{"q": {searchStr}}.Encode(),
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL.String(), nil)
-	if err != nil {
-		return cards, err
-	}
-	req.Header.Set("Accept", "application/json")
-	if err := gateway.PrepareOutboundRequest(ctx, req, gateway.OutboundRequestOptions{}); err != nil {
-		return cards, err
-	}
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := gateway.DoOutboundGET(
+		ctx,
+		apiURL.String(),
+		gateway.OutboundRequestOptions{Style: gateway.OutboundStyleJSON},
+		15*time.Second,
+	)
 	if err != nil {
 		return cards, err
 	}

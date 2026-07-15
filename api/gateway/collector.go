@@ -15,22 +15,13 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-var browserUserAgents = []string{
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 14.4; rv:137.0) Gecko/20100101 Firefox/137.0",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15",
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/135.0.3179.98 Chrome/135.0.0.0 Safari/537.36",
-}
-
-func RandomBrowserUserAgent() string {
-	if len(browserUserAgents) == 0 {
-		return "Mozilla/5.0"
+var browserUserAgents = func() []string {
+	agents := make([]string, 0, len(browserEmulationProfiles))
+	for _, profile := range browserEmulationProfiles {
+		agents = append(agents, profile.UserAgent)
 	}
-	return browserUserAgents[rand.IntN(len(browserUserAgents))]
-}
+	return agents
+}()
 
 var dedicatedProxyLeases = newDedicatedProxyLeasePool()
 
@@ -208,7 +199,16 @@ func ConfigureRequestOptimizationsNoRetry(c *colly.Collector) {
 }
 
 func forceCollectorDirectProxy(c *colly.Collector) {
-	c.SetProxyFunc(nil)
+	profile := PickBrowserProfile()
+	if !ShouldUseBrowserTLSEmulationForScraping() {
+		profile = BrowserEmulationProfile{}
+	}
+	client, err := newOutboundHTTPClient("", config.SearchAttemptTimeout, profile)
+	if err == nil {
+		c.SetClient(client)
+	} else {
+		c.SetProxyFunc(nil)
+	}
 	c.OnRequest(func(r *colly.Request) {
 		if r == nil || r.Ctx == nil {
 			return
@@ -219,8 +219,17 @@ func forceCollectorDirectProxy(c *colly.Collector) {
 }
 
 func forceCollectorProxy(c *colly.Collector, mode, proxyURL string) error {
-	if err := c.SetProxy(proxyURL); err != nil {
-		return err
+	profile := PickBrowserProfile()
+	if !ShouldUseBrowserTLSEmulationForScraping() {
+		profile = BrowserEmulationProfile{}
+	}
+	client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+	if err != nil {
+		if setErr := c.SetProxy(proxyURL); setErr != nil {
+			return setErr
+		}
+	} else {
+		c.SetClient(client)
 	}
 	c.OnRequest(func(r *colly.Request) {
 		if r == nil || r.Ctx == nil {
@@ -238,9 +247,31 @@ func configureRequestOptimizations(c *colly.Collector, ctx context.Context, enfo
 
 	requestDedicatedProxyURL, _ := RequestDedicatedProxyURL(ctx)
 	leasedDedicatedProxyURL, releaseDedicatedProxy := leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease, requestDedicatedProxyURL)
-	registerRequestHandler(c, leasedDedicatedProxyURL, requestDedicatedProxyURL)
+	profile := ResolveBrowserProfileForScraping(ctx)
+	ctx = ContextWithBrowserProfile(ctx, profile)
+	applyCollectorHTTPClient(c, leasedDedicatedProxyURL, requestDedicatedProxyURL, profile)
+	registerRequestHandler(c, leasedDedicatedProxyURL, requestDedicatedProxyURL, profile)
 	registerScrapedHandler(c, releaseDedicatedProxy)
 	registerNoRetryErrorHandler(c, releaseDedicatedProxy)
+}
+
+func applyCollectorHTTPClient(
+	c *colly.Collector,
+	leasedDedicatedProxyURL, requestDedicatedProxyURL string,
+	profile BrowserEmulationProfile,
+) {
+	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL)
+	client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+	if err != nil {
+		log.Printf("browser TLS client setup failed for colly (%s): %v", mode, err)
+		if proxyURL != "" {
+			if setErr := c.SetProxy(proxyURL); setErr != nil {
+				log.Printf("invalid proxy configured for colly (%s): %v", mode, setErr)
+			}
+		}
+		return
+	}
+	c.SetClient(client)
 }
 
 // Base collector defaults used by all optimized collectors.
@@ -312,8 +343,12 @@ func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL, requestDedic
 }
 
 // Colly callback registration helpers.
-func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL, requestDedicatedProxyURL string) {
-	initialProxyMode, initialProxyURL := applyInitialProxy(c, leasedDedicatedProxyURL, requestDedicatedProxyURL)
+func registerRequestHandler(
+	c *colly.Collector,
+	leasedDedicatedProxyURL, requestDedicatedProxyURL string,
+	profile BrowserEmulationProfile,
+) {
+	initialProxyMode, initialProxyURL := selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL)
 	c.OnRequest(func(r *colly.Request) {
 		if r == nil || r.URL == nil {
 			return
@@ -327,9 +362,14 @@ func registerRequestHandler(c *colly.Collector, leasedDedicatedProxyURL, request
 			ApplyBrowserLikeHTMLHeaders(r.Headers, r.URL)
 			// Keep gzip only. Go's default client does not transparently decode brotli ("br").
 			r.Headers.Set("Accept-Encoding", "gzip")
-			r.Headers.Set("User-Agent", OutboundUserAgent())
-			if err := SignWebBotAuthCollyRequest(r); err != nil {
-				log.Printf("Web Bot Auth signing failed for %s: %v", r.URL, err)
+			if profile.Enabled {
+				r.Headers.Set("User-Agent", profile.UserAgent)
+				ApplyBrowserProfileHeaders(r.Headers, profile)
+			} else {
+				r.Headers.Set("User-Agent", OutboundUserAgent())
+				if err := SignWebBotAuthCollyRequest(r); err != nil {
+					log.Printf("Web Bot Auth signing failed for %s: %v", r.URL, err)
+				}
 			}
 		}
 		seedProxyContextIfMissing(r.Ctx, initialProxyMode, initialProxyURL)

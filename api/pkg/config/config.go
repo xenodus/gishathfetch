@@ -60,6 +60,9 @@ const (
 	// ResidentialProxyEnv is an optional residential proxy used by stores that
 	// rate-limit datacenter IPs. Format matches DEDICATED_PROXY_*.
 	ResidentialProxyEnv = "RESIDENTIAL_PROXY_1"
+	// BrowserTLSEmulationEnabledEnv toggles browser TLS fingerprinting and
+	// matched User-Agent emulation for outbound scrapers. Defaults to enabled.
+	BrowserTLSEmulationEnabledEnv = "BROWSER_TLS_EMULATION_ENABLED"
 	// MTGJSONAllPricesTodayURLEnv overrides the MTGJSON AllPricesToday download URL.
 	MTGJSONAllPricesTodayURLEnv = "MTGJSON_ALL_PRICES_TODAY_URL"
 	// MTGJSONAllPrintingsURLEnv overrides the MTGJSON AllPrintings download URL.
@@ -100,6 +103,22 @@ const UseLeasedDedicatedProxy = false
 
 func UseDynamicProxy() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
+	if rawValue == "" {
+		return true
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return true
+	}
+
+	return enabled
+}
+
+// BrowserTLSEmulationEnabled reports whether outbound scrapers should use
+// browser-matched TLS fingerprints instead of Go's default client hello.
+func BrowserTLSEmulationEnabled() bool {
+	rawValue := strings.TrimSpace(os.Getenv(BrowserTLSEmulationEnabledEnv))
 	if rawValue == "" {
 		return true
 	}

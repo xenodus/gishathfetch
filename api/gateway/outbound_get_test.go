@@ -28,6 +28,7 @@ func TestNewOutboundHTTPClient(t *testing.T) {
 	clearProxyEnv(t)
 
 	t.Run("returns direct client when no proxy is configured", func(t *testing.T) {
+		t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
 		client, err := NewOutboundHTTPClient(2 * time.Second)
 		require.NoError(t, err)
 		require.NotNil(t, client)
@@ -35,6 +36,7 @@ func TestNewOutboundHTTPClient(t *testing.T) {
 	})
 
 	t.Run("returns dedicated proxy client when configured", func(t *testing.T) {
+		t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
 		t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 		client, err := NewOutboundHTTPClient(2 * time.Second)
 		require.NoError(t, err)
