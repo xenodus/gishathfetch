@@ -405,14 +405,14 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
-	for i := 1; i <= 6; i++ {
+	for i := 1; i <= 3; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), fmt.Sprintf("10.0.0.%d|8080|user|pass", i))
 	}
 
-	started := make(chan struct{}, 6)
+	started := make(chan struct{}, gateway.DedicatedProxySearchMaxConcurrent)
 	release := make(chan struct{})
 	var mu sync.Mutex
-	pinned := make(map[string]string, 6)
+	pinned := make(map[string]string, gateway.DedicatedProxySearchMaxConcurrent)
 
 	makeShop := func(name string) gateway.LGS {
 		return &MockLGS{
@@ -435,9 +435,6 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 		"Shop1": makeShop("Shop1"),
 		"Shop2": makeShop("Shop2"),
 		"Shop3": makeShop("Shop3"),
-		"Shop4": makeShop("Shop4"),
-		"Shop5": makeShop("Shop5"),
-		"Shop6": makeShop("Shop6"),
 	}
 
 	done := make(chan struct{})
@@ -449,7 +446,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 		}
 	}()
 
-	for range 6 {
+	for range gateway.DedicatedProxySearchMaxConcurrent {
 		select {
 		case <-started:
 		case <-time.After(2 * time.Second):
@@ -461,10 +458,10 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 
 	mu.Lock()
 	defer mu.Unlock()
-	if len(pinned) != 6 {
-		t.Fatalf("expected 6 pinned proxies, got %d (%v)", len(pinned), pinned)
+	if len(pinned) != gateway.DedicatedProxySearchMaxConcurrent {
+		t.Fatalf("expected %d pinned proxies, got %d (%v)", gateway.DedicatedProxySearchMaxConcurrent, len(pinned), pinned)
 	}
-	seen := make(map[string]struct{}, 6)
+	seen := make(map[string]struct{}, gateway.DedicatedProxySearchMaxConcurrent)
 	for shop, proxyURL := range pinned {
 		if proxyURL == "" {
 			t.Fatalf("shop %s pinned empty proxy", shop)
@@ -710,6 +707,10 @@ func TestFetchCardsConcurrently_SkipsCanceledForDiscord(t *testing.T) {
 }
 
 func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+
 	const shopCount = 10
 	started := make(chan struct{}, shopCount)
 	release := make(chan struct{})

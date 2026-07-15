@@ -55,6 +55,27 @@ func TestIsHTTPServerError(t *testing.T) {
 	}
 }
 
+func TestIsHTTPTooManyRequests(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "429 label", err: errors.New("429 Too Many Requests"), want: true},
+		{name: "unexpected status", err: errors.New("unexpected status 429"), want: true},
+		{name: "wrapped attempt", err: errors.New("attempt 4 (scrap-dynamic): 429 Too Many Requests (proxy_mode=dynamic)"), want: true},
+		{name: "403", err: errors.New("403 Forbidden"), want: false},
+		{name: "503", err: errors.New("503 Service Unavailable"), want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsHTTPTooManyRequests(tc.err); got != tc.want {
+				t.Fatalf("IsHTTPTooManyRequests(%q) = %v, want %v", tc.err, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestEnrichErrorWithHTTPStatus(t *testing.T) {
 	err := EnrichErrorWithHTTPStatus(errors.New(http.StatusText(http.StatusForbidden)), http.StatusForbidden)
 	if got := err.Error(); got != "403 Forbidden" {

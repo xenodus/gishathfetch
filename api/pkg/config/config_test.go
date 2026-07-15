@@ -5,10 +5,10 @@ import (
 )
 
 func TestUseDynamicProxy(t *testing.T) {
-	t.Run("defaults to enabled when unset", func(t *testing.T) {
+	t.Run("defaults to disabled when unset", func(t *testing.T) {
 		t.Setenv(UseDynamicProxyEnv, "")
-		if !UseDynamicProxy() {
-			t.Fatalf("expected dynamic proxy to be enabled by default")
+		if UseDynamicProxy() {
+			t.Fatalf("expected dynamic proxy to be disabled by default")
 		}
 	})
 
@@ -26,10 +26,10 @@ func TestUseDynamicProxy(t *testing.T) {
 		}
 	})
 
-	t.Run("defaults to enabled for invalid value", func(t *testing.T) {
+	t.Run("defaults to disabled for invalid value", func(t *testing.T) {
 		t.Setenv(UseDynamicProxyEnv, "not-a-bool")
-		if !UseDynamicProxy() {
-			t.Fatalf("expected invalid toggle to default to enabled")
+		if UseDynamicProxy() {
+			t.Fatalf("expected invalid toggle to default to disabled")
 		}
 	})
 }
