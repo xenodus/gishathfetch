@@ -49,6 +49,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		Style:              gateway.OutboundStyleHTML,
 		PageURL:            apiURL,
 		ShopifySGDCurrency: true,
+		SkipDirect:         true,
 	}, config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err
