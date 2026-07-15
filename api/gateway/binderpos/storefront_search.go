@@ -2,6 +2,7 @@ package binderpos
 
 import (
 	"context"
+	"strings"
 
 	"mtg-price-checker-sg/gateway"
 )
@@ -13,8 +14,8 @@ type storefrontStrategy struct {
 	run  func(ctx context.Context) ([]gateway.Card, error)
 }
 
-func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, searchURL, searchStr string) ([]gateway.Card, error) {
-	strategies := []storefrontStrategy{
+func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr string) ([]gateway.Card, error) {
+	scrap := [3]storefrontStrategy{
 		{
 			name: "scrap-dedicated",
 			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
@@ -35,6 +36,31 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		},
 	}
 
+	strategies := []storefrontStrategy{scrap[0], scrap[1], scrap[2]}
+	if strings.TrimSpace(shopifyDomain) != "" {
+		decklist := [3]storefrontStrategy{
+			{
+				name: "decklist-dedicated",
+				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
+					return searchByStorefrontAPI(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+				},
+			},
+			{
+				name: "decklist-direct",
+				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
+					return searchByStorefrontAPIDirect(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+				},
+			},
+			{
+				name: "decklist-dynamic",
+				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
+					return searchByStorefrontAPIDynamic(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
+				},
+			},
+		}
+		strategies = append(strategies, decklist[0], decklist[1], decklist[2])
+	}
+
 	return runStorefrontStrategies(ctx, strategies...)
 }
 
@@ -48,6 +74,7 @@ func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrate
 		applyRequestPacing := idx != 0
 		attempts[idx] = fallbackAttempt{
 			strategy: strategy.name,
+			family:   strategyFamilyFromName(strategy.name),
 			fn: func() ([]gateway.Card, error) {
 				return runWithAttemptTimeout(ctx, applyRequestPacing, strategy.run)
 			},

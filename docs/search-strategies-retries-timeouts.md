@@ -40,19 +40,21 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 ---
 
-## Backend: BinderPOS (storefront scraper fallbacks)
+## Backend: BinderPOS (storefront scraper and decklist fallbacks)
 
 `api/gateway/binderpos/storefront_fallback.go` and `api/gateway/binderpos/storefront_search.go` define a **sequential multi-strategy** flow (not the same as colly “retry n times on failure” for one URL).
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| All BinderPOS stores | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** (three `runWithAttemptTimeout` steps) | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. |
+| All BinderPOS stores | **scrap-dedicated** → **scrap-direct** → **scrap-dynamic** → **decklist-dedicated** → **decklist-direct** → **decklist-dynamic** (six `runWithAttemptTimeout` steps when a Shopify domain is configured) | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | **scrap-dedicated** proxy selection (colly) | Request-scoped lease when BinderPOS stores are searched; otherwise random dedicated | `fetchCardsConcurrently` + `selectOutboundProxy` in `api/gateway/collector.go` | When a search includes BinderPOS stores, the controller holds one dedicated-proxy lease and pins it on the search context. All `scrap-dedicated` attempts reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
 | Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
-| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty attempt without error is **final** and no further strategies run. HTTP **5xx** errors are also **final** (no later strategy). Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single request. |
+| Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` across stores in one search. |
+| Decklist transient retries | Up to 3 sends | `binderposDecklistMaxAttempts` in `api/gateway/binderpos/storefront.go`; `doDecklistRequestWithRetry` in `storefront_decklist_retry.go` | Retries 429/5xx and network errors with equal-jitter backoff (300ms base, 2.5s cap) and honors `Retry-After`. |
+| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **scrape** attempt without error is **final** and decklist is not tried. An empty **decklist** attempt skips remaining decklist strategies. HTTP **5xx** on scrape is **final**. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
 
 ---
 
@@ -81,4 +83,4 @@ Constants live in `frontend/src/hooks/useSearch.js` (and related).
 
 1. When adding or changing **timeouts, intervals, concurrency, or strategy order**, update the relevant table and cite the file (paths above are stable).
 2. Prefer a single **named constant** in code (e.g. `config.PerSiteTimeout`) and reference that name here.
-3. Distinguish **per-request colly policy** (no retry) from **BinderPOS multi-strategy fallback** (up to three different strategies, one try each).
+3. Distinguish **per-request colly policy** (no retry) from **BinderPOS multi-strategy fallback** (up to six different strategies when decklist is configured, one try each per strategy step).

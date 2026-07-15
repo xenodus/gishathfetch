@@ -4,19 +4,31 @@ import (
 	"testing"
 )
 
-func TestSearchUsesScrapStrategiesOnly(t *testing.T) {
-	strategies := []storefrontStrategy{
+func TestSelectStorefrontStrategiesScrapFirstThenDecklist(t *testing.T) {
+	scrap := [3]storefrontStrategy{
 		{name: "scrap-dedicated"},
 		{name: "scrap-direct"},
 		{name: "scrap-dynamic"},
 	}
-
-	got := make([]string, len(strategies))
-	for i := range strategies {
-		got[i] = strategies[i].name
+	decklist := [3]storefrontStrategy{
+		{name: "decklist-dedicated"},
+		{name: "decklist-direct"},
+		{name: "decklist-dynamic"},
 	}
 
-	want := []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}
+	got := make([]string, 0, 6)
+	for _, strategy := range append(scrap[:], decklist[:]...) {
+		got = append(got, strategy.name)
+	}
+
+	want := []string{
+		"scrap-dedicated",
+		"scrap-direct",
+		"scrap-dynamic",
+		"decklist-dedicated",
+		"decklist-direct",
+		"decklist-dynamic",
+	}
 	if len(got) != len(want) {
 		t.Fatalf("expected %d strategies, got %d", len(want), len(got))
 	}
