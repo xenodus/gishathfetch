@@ -140,14 +140,6 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	var wg sync.WaitGroup
 	aggregator := newFetchResultAggregator(len(shops))
 
-	searchCtx := ctx
-	if searchIncludesBinderposStore(shops) {
-		if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, util.GetDedicatedProxyURLs()); err == nil {
-			defer release()
-			searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
-		}
-	}
-
 	start := time.Now()
 
 	jobs := make(chan shopSearchJob, len(shops))
@@ -161,7 +153,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	for range workerCount {
 		wg.Go(func() {
 			for job := range jobs {
-				searchShop(searchCtx, searchString, job.name, job.lgs, aggregator)
+				searchShop(ctx, searchString, job.name, job.lgs, aggregator)
 			}
 		})
 	}
@@ -259,6 +251,15 @@ func searchShop(
 
 	shopCtx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
 	defer cancel()
+
+	if config.UseProxy {
+		if proxyURLs := util.GetDedicatedProxyURLs(); len(proxyURLs) > 0 {
+			if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(shopCtx, proxyURLs); err == nil {
+				defer release()
+				shopCtx = gateway.WithRequestDedicatedProxy(shopCtx, proxyURL)
+			}
+		}
+	}
 
 	cards, err := lgs.Search(shopCtx, searchString)
 	if err != nil {
@@ -482,15 +483,6 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 func isBinderposStore(shopName string) bool {
 	_, ok := binderposStoreNames[shopName]
 	return ok
-}
-
-func searchIncludesBinderposStore(shops map[string]gateway.LGS) bool {
-	for shopName := range shops {
-		if isBinderposStore(shopName) {
-			return true
-		}
-	}
-	return false
 }
 
 func isArtCard(s string) bool {

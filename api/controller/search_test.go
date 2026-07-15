@@ -401,6 +401,154 @@ func TestIsBinderposStore(t *testing.T) {
 	}
 }
 
+func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *testing.T) {
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+	for i := 1; i <= 6; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), fmt.Sprintf("10.0.0.%d|8080|user|pass", i))
+	}
+
+	started := make(chan struct{}, 6)
+	release := make(chan struct{})
+	var mu sync.Mutex
+	pinned := make(map[string]string, 6)
+
+	makeShop := func(name string) gateway.LGS {
+		return &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				proxyURL, ok := gateway.RequestDedicatedProxyURL(ctx)
+				if !ok || proxyURL == "" {
+					t.Errorf("shop %s: expected pinned dedicated proxy", name)
+				}
+				mu.Lock()
+				pinned[name] = proxyURL
+				mu.Unlock()
+				started <- struct{}{}
+				<-release
+				return nil, nil
+			},
+		}
+	}
+
+	shops := map[string]gateway.LGS{
+		"Shop1": makeShop("Shop1"),
+		"Shop2": makeShop("Shop2"),
+		"Shop3": makeShop("Shop3"),
+		"Shop4": makeShop("Shop4"),
+		"Shop5": makeShop("Shop5"),
+		"Shop6": makeShop("Shop6"),
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+		if len(siteErrors) != 0 {
+			t.Errorf("unexpected site errors: %v", siteErrors)
+		}
+	}()
+
+	for range 6 {
+		select {
+		case <-started:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for stores to start")
+		}
+	}
+	close(release)
+	<-done
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(pinned) != 6 {
+		t.Fatalf("expected 6 pinned proxies, got %d (%v)", len(pinned), pinned)
+	}
+	seen := make(map[string]struct{}, 6)
+	for shop, proxyURL := range pinned {
+		if proxyURL == "" {
+			t.Fatalf("shop %s pinned empty proxy", shop)
+		}
+		if _, dup := seen[proxyURL]; dup {
+			t.Fatalf("expected distinct proxies for concurrent stores, got %v", pinned)
+		}
+		seen[proxyURL] = struct{}{}
+	}
+}
+
+func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t *testing.T) {
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_3", "9.10.11.12|8080|user|pass")
+
+	started := make(chan struct{}, 3)
+	release := make(chan struct{})
+	var mu sync.Mutex
+	pinnedBySearch := make(map[string]string, 3)
+
+	shops := map[string]gateway.LGS{
+		"ShopA": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				if proxyURL, ok := gateway.RequestDedicatedProxyURL(ctx); ok {
+					mu.Lock()
+					pinnedBySearch[searchStr] = proxyURL
+					mu.Unlock()
+				}
+				started <- struct{}{}
+				<-release
+				return nil, nil
+			},
+		},
+	}
+
+	done := make(chan struct{}, 3)
+	for _, searchStr := range []string{"Search1", "Search2", "Search3"} {
+		go func(searchStr string) {
+			defer func() { done <- struct{}{} }()
+			_, siteErrors := fetchCardsConcurrently(context.Background(), searchStr, shops)
+			if len(siteErrors) != 0 {
+				t.Errorf("search %q: unexpected site errors: %v", searchStr, siteErrors)
+			}
+		}(searchStr)
+	}
+
+	for range 3 {
+		select {
+		case <-started:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for searches to start")
+		}
+	}
+	close(release)
+
+	for range 3 {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for searches to finish")
+		}
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(pinnedBySearch) != 3 {
+		t.Fatalf("expected 3 pinned proxy URLs, got %d (%v)", len(pinnedBySearch), pinnedBySearch)
+	}
+	seen := make(map[string]struct{}, 3)
+	for searchStr, proxyURL := range pinnedBySearch {
+		if proxyURL == "" {
+			t.Fatalf("search %q pinned empty proxy URL", searchStr)
+		}
+		if _, dup := seen[proxyURL]; dup {
+			t.Fatalf("expected each concurrent search to pin a different dedicated proxy, got %v", pinnedBySearch)
+		}
+		seen[proxyURL] = struct{}{}
+	}
+}
+
 func TestFetchCardsConcurrently_CollatesDiscordErrors(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"ErrorShopA": &MockLGS{

@@ -56,7 +56,7 @@ func DoOutboundRoundTrip(
 	buildReq func() (*http.Request, error),
 ) (*http.Response, error) {
 	var failures []string
-	for _, attempt := range buildOutboundGETAttempts(timeout, opts.SkipDirect, opts.OnlyProxyURL) {
+	for _, attempt := range buildOutboundGETAttempts(ctx, timeout, opts.SkipDirect, opts.OnlyProxyURL) {
 		resp, failure, ok, err := doOutboundAttempt(ctx, attempt, opts, buildReq)
 		if err != nil {
 			return nil, err
@@ -127,7 +127,7 @@ func doOutboundAttempt(
 	return nil, lastFailure, false, nil
 }
 
-func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyURL string) []outboundAttempt {
+func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, skipDirect bool, onlyProxyURL string) []outboundAttempt {
 	if onlyProxyURL != "" {
 		client, err := newProxyHTTPClient(onlyProxyURL, timeout)
 		if err != nil {
@@ -148,10 +148,10 @@ func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyU
 		})
 	}
 
-	// Match colly's selectOutboundProxy policy: one randomly chosen dedicated
-	// proxy per search, not every configured slot. Cycling all dedicated proxies
-	// on 429/403 bursts the upstream and triggers proxy-side local_rate_limited.
-	if proxyURL, ok := RandomDedicatedProxyURL(); ok {
+	// Match colly's selectOutboundProxy policy: one dedicated proxy per store search.
+	// When searchShop pins a request-scoped lease, reuse that URL instead of
+	// picking a new random slot for each outbound store.
+	if proxyURL, ok := dedicatedProxyURLForOutbound(ctx); ok {
 		client, err := newProxyHTTPClient(proxyURL, timeout)
 		if err == nil {
 			attempts = append(attempts, outboundAttempt{
@@ -171,6 +171,13 @@ func buildOutboundGETAttempts(timeout time.Duration, skipDirect bool, onlyProxyU
 	}
 
 	return attempts
+}
+
+func dedicatedProxyURLForOutbound(ctx context.Context) (string, bool) {
+	if pinned, ok := RequestDedicatedProxyURL(ctx); ok {
+		return pinned, true
+	}
+	return RandomDedicatedProxyURL()
 }
 
 func dedicatedProxyStrategyName(proxyURL string) string {
