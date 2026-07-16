@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/gateway/agora"
 	"mtg-price-checker-sg/gateway/cardaffinity"
-	"mtg-price-checker-sg/gateway/cardscentral"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/hideout"
 	"strings"
@@ -18,13 +18,13 @@ import (
 )
 
 func TestInitAndMapShops_FiltersByRequestedLGS(t *testing.T) {
-	shops := initAndMapShops([]string{cardscentral.StoreName, hideout.StoreName})
+	shops := initAndMapShops([]string{agora.StoreName, hideout.StoreName})
 
 	if len(shops) != 2 {
 		t.Fatalf("expected 2 shops after filtering, got %d", len(shops))
 	}
-	if _, ok := shops[cardscentral.StoreName]; !ok {
-		t.Fatalf("expected %q to be included", cardscentral.StoreName)
+	if _, ok := shops[agora.StoreName]; !ok {
+		t.Fatalf("expected %q to be included", agora.StoreName)
 	}
 	if _, ok := shops[hideout.StoreName]; !ok {
 		t.Fatalf("expected %q to be included", hideout.StoreName)
@@ -388,7 +388,7 @@ func TestIsBinderposStore(t *testing.T) {
 	tests := map[string]bool{
 		cardscitadel.StoreName: true,
 		hideout.StoreName:      true,
-		cardscentral.StoreName: false,
+		agora.StoreName:        false,
 		"Unknown Shop":         false,
 	}
 
@@ -771,7 +771,7 @@ func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
 
 func TestFormatShopSearchSummary(t *testing.T) {
 	got := formatShopSearchSummary("Orthion, Hero of Lavabrink", 8*time.Second+240*time.Millisecond, []shopSearchDuration{
-		{name: "5 Mana", duration: 8*time.Second + 240*time.Millisecond},
+		{name: "Agora Hobby", duration: 8*time.Second + 240*time.Millisecond},
 		{name: "Fyendal Hobby", duration: 222 * time.Millisecond},
 		{name: "Cards & Collections", duration: 341 * time.Millisecond},
 	})
@@ -779,8 +779,8 @@ func TestFormatShopSearchSummary(t *testing.T) {
 	if !strings.Contains(got, "Checked 3 shops for [Orthion, Hero of Lavabrink] in 8.24s:") {
 		t.Fatalf("expected summary header, got: %s", got)
 	}
-	if !strings.Contains(got, "[5 Mana] 8.24s") {
-		t.Fatalf("expected 5 Mana duration, got: %s", got)
+	if !strings.Contains(got, "[Agora Hobby] 8.24s") {
+		t.Fatalf("expected Agora Hobby duration, got: %s", got)
 	}
 	if !strings.Contains(got, "[Cards & Collections] 341ms") {
 		t.Fatalf("expected Cards & Collections duration, got: %s", got)
@@ -788,7 +788,7 @@ func TestFormatShopSearchSummary(t *testing.T) {
 	if !strings.Contains(got, "[Fyendal Hobby] 222ms") {
 		t.Fatalf("expected Fyendal Hobby duration, got: %s", got)
 	}
-	if strings.Index(got, "[5 Mana]") > strings.Index(got, "[Cards & Collections]") {
+	if strings.Index(got, "[Agora Hobby]") > strings.Index(got, "[Cards & Collections]") {
 		t.Fatalf("expected shops to be sorted alphabetically, got: %s", got)
 	}
 }
