@@ -64,9 +64,7 @@ func topBottomPriceChangesByPercent(listings []PriceChangeListing, limit int) To
 		}
 		return strings.Compare(a.NameKey, b.NameKey)
 	})
-	if len(top) > limit {
-		top = top[:limit]
-	}
+	top = dedupePriceChangeListings(top, limit)
 
 	bottom := append([]PriceChangeListing(nil), changed...)
 	slices.SortFunc(bottom, func(a, b PriceChangeListing) int {
@@ -75,9 +73,7 @@ func topBottomPriceChangesByPercent(listings []PriceChangeListing, limit int) To
 		}
 		return strings.Compare(a.NameKey, b.NameKey)
 	})
-	if len(bottom) > limit {
-		bottom = bottom[:limit]
-	}
+	bottom = dedupePriceChangeListings(bottom, limit)
 
 	return TopBottomPriceChanges{
 		Top:    top,
@@ -105,9 +101,7 @@ func topBottomPriceChangesByUsd(listings []PriceChangeListing, limit int) TopBot
 		}
 		return strings.Compare(a.NameKey, b.NameKey)
 	})
-	if len(top) > limit {
-		top = top[:limit]
-	}
+	top = dedupePriceChangeListings(top, limit)
 
 	bottom := append([]PriceChangeListing(nil), changed...)
 	slices.SortFunc(bottom, func(a, b PriceChangeListing) int {
@@ -116,14 +110,58 @@ func topBottomPriceChangesByUsd(listings []PriceChangeListing, limit int) TopBot
 		}
 		return strings.Compare(a.NameKey, b.NameKey)
 	})
-	if len(bottom) > limit {
-		bottom = bottom[:limit]
-	}
+	bottom = dedupePriceChangeListings(bottom, limit)
 
 	return TopBottomPriceChanges{
 		Top:    top,
 		Bottom: bottom,
 	}
+}
+
+func priceChangeListingDedupeKey(listing PriceChangeListing) string {
+	if url := strings.TrimSpace(listing.URL); url != "" {
+		return "url:" + url
+	}
+
+	cardName := cardkingdom.NormalizeNameKey(listing.CardName)
+	edition := strings.ToLower(strings.TrimSpace(listing.Edition))
+	if cardName != "" {
+		foil := "nonfoil"
+		if listing.IsFoil {
+			foil = "foil"
+		}
+		return "listing:" + cardName + "|" + edition + "|" + foil
+	}
+
+	if listing.NameKey != "" {
+		return "nameKey:" + listing.NameKey
+	}
+
+	return ""
+}
+
+func dedupePriceChangeListings(listings []PriceChangeListing, limit int) []PriceChangeListing {
+	if limit <= 0 {
+		limit = PriceChangeRankingLimit
+	}
+
+	seen := make(map[string]struct{}, len(listings))
+	deduped := make([]PriceChangeListing, 0, limit)
+	for _, listing := range listings {
+		key := priceChangeListingDedupeKey(listing)
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		deduped = append(deduped, listing)
+		if len(deduped) >= limit {
+			break
+		}
+	}
+	return deduped
 }
 
 // filterPriceChangesByUsdSign keeps listings whose USD change matches the requested

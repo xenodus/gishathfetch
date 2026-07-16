@@ -15,12 +15,53 @@ export function formatPriceChangeUsd(usd) {
   return `-$${amount}`;
 }
 
+function listingDedupeKey(item) {
+  const url = typeof item?.url === "string" ? item.url.trim() : "";
+  if (url) {
+    return url;
+  }
+
+  const cardName =
+    typeof item?.cardName === "string"
+      ? item.cardName.trim().toLowerCase()
+      : "";
+  const edition =
+    typeof item?.edition === "string" ? item.edition.trim().toLowerCase() : "";
+  if (cardName) {
+    return `${cardName}|${edition}|${item?.isFoil ? "foil" : "nonfoil"}`;
+  }
+
+  const nameKey =
+    typeof item?.nameKey === "string" ? item.nameKey.trim().toLowerCase() : "";
+  return nameKey || null;
+}
+
+function dedupePriceChangeListings(listings, limit) {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const item of listings) {
+    const dedupeKey = listingDedupeKey(item);
+    if (!dedupeKey || seen.has(dedupeKey)) {
+      continue;
+    }
+
+    seen.add(dedupeKey);
+    deduped.push(item);
+    if (deduped.length >= limit) {
+      break;
+    }
+  }
+
+  return deduped;
+}
+
 function parseCKPriceChangeListings(listings, matchesDirection, limit = 20) {
   if (!Array.isArray(listings)) {
     return [];
   }
 
-  return listings
+  const parsed = listings
     .map((item, index) => {
       const cardName =
         typeof item?.cardName === "string" ? item.cardName.trim() : "";
@@ -35,6 +76,7 @@ function parseCKPriceChangeListings(listings, matchesDirection, limit = 20) {
           Number.isFinite(item.priceChangeUsd)
             ? item.priceChangeUsd
             : null,
+        source: item,
       };
     })
     .filter(
@@ -42,8 +84,15 @@ function parseCKPriceChangeListings(listings, matchesDirection, limit = 20) {
         item.cardName.length > 0 &&
         item.priceChangeUsd !== null &&
         matchesDirection(item.priceChangeUsd),
-    )
-    .slice(0, limit);
+    );
+
+  return dedupePriceChangeListings(parsed, limit).map(
+    ({ id, cardName, priceChangeUsd }) => ({
+      id,
+      cardName,
+      priceChangeUsd,
+    }),
+  );
 }
 
 export function parseCKPriceIncreases(payload, limit = 20) {
