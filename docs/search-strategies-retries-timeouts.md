@@ -10,6 +10,7 @@ This document records **where** the app configures search behavior, **timeouts**
 |------|--------|--------|--------|
 | Per-store deadline | 20s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. |
 | Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step and default colly scrape request. |
+| Agora per-attempt timeout | 10s | `config.AgoraSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/agora/search.go` | Agora keeps a longer single-scrape cap. |
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
@@ -63,12 +64,13 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 ---
 
-## Backend: non-BinderPOS stores (Cards Central, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, TCG Marketplace)
+## Backend: non-BinderPOS stores (Agora, Cards Central, Dueller's Point, 5 Mana, Mox & Lotus, Cards & Collections, TCG Marketplace)
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Outbound proxy policy | Random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Same single-attempt policy as default optimized colly collectors. When a store search holds a request-scoped dedicated lease, colly and `DoOutboundGET` reuse that URL. When no lease is pinned and `DEDICATED_PROXY_*` is configured, each outbound store falls back to one random dedicated proxy. |
 | `net/http` scrapers / APIs | Direct → one random dedicated proxy → dynamic fallback | `DoOutboundGET` / `DoOutboundRoundTrip` in `api/gateway/outbound_get.go` | Used by Dueller's Point, Mox & Lotus, Cards & Collections, and TCG Marketplace. Reuses the per-store dedicated lease when set. Each transport is tried once per store (one dedicated slot, not every configured proxy). Client errors (4xx) and connection errors advance immediately to the next transport. |
+| Agora Hobby HTML search | dedicated → dynamic; browser TLS | `api/gateway/agora/search.go` | Agora sits behind Cloudflare that blocks direct/datacenter egress. Skips direct transport, uses browser TLS fingerprinting via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`, and routes through the per-store dedicated-proxy lease (then dynamic fallback). |
 | 5 Mana Shopify search | **graphql** → **html** (section scrape); dedicated → dynamic | `api/gateway/fivemana/search.go`, `graphql.go` | Primary: Storefront GraphQL `search` with public access token (variants include condition/price). Fallback: Dawn `main-search` HTML section scrape on GraphQL error (except HTTP 5xx, which is final). Both paths skip direct requests and use dedicated, then dynamic. Client errors (4xx) fail over immediately. |
 | Cards Central API | Direct only | `http.Client` in `api/gateway/cardscentral/search.go` | Always uses a direct client; does not route through dedicated or dynamic proxies. |
 
