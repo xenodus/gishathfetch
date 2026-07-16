@@ -99,6 +99,13 @@ type mockCKRefreshStore struct {
 	changes *ckprices.TopBottomPriceChanges
 }
 
+func (m *mockCKRefreshStore) GetTopBottomPriceChanges(_ context.Context) (*ckprices.TopBottomPriceChanges, error) {
+	if m.changes != nil {
+		return m.changes, nil
+	}
+	return &ckprices.TopBottomPriceChanges{}, nil
+}
+
 func (m *mockCKRefreshStore) GetByNameKey(_ context.Context, _ string) (*cardkingdom.Listing, error) {
 	return nil, nil
 }
@@ -107,24 +114,8 @@ func (m *mockCKRefreshStore) GetPriceChangesByUsd(_ context.Context, _ bool, _ i
 	return nil, nil
 }
 
-func (m *mockCKRefreshStore) GetTopBottomPriceChanges(_ context.Context) (*ckprices.TopBottomPriceChanges, error) {
-	if m.changes != nil {
-		return m.changes, nil
-	}
-	return &ckprices.TopBottomPriceChanges{}, nil
-}
-
 func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {
 	return "", nil
-}
-
-type mockCKPriceReportWriter struct {
-	written bool
-}
-
-func (m *mockCKPriceReportWriter) Write(_ context.Context, _ *ckpricereport.Report) error {
-	m.written = true
-	return nil
 }
 
 func TestHandle_RoutesCKPriceRefreshRun(t *testing.T) {

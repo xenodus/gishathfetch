@@ -44,6 +44,12 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 		return err
 	}
 
+	preChanges, err := store.GetTopBottomPriceChanges(ctx)
+	if err != nil {
+		log.Printf("ck price refresh: failed reading pre-refresh price changes: %v", err)
+		return err
+	}
+
 	refreshedCount, err = refreshCKPricesFunc(ctx, store)
 	if err != nil {
 		log.Printf("ck price refresh: failed: %v", err)
@@ -52,11 +58,13 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 
 	log.Printf("ck price refresh: finished refreshed=%d", refreshedCount)
 
-	changes, err := store.GetTopBottomPriceChanges(ctx)
+	postChanges, err := store.GetTopBottomPriceChanges(ctx)
 	if err != nil {
-		log.Printf("ck price refresh: failed reading price changes: %v", err)
+		log.Printf("ck price refresh: failed reading post-refresh price changes: %v", err)
 		return err
 	}
+
+	selectedChanges := selectPriceChanges(preChanges, postChanges)
 
 	writer, err := newCKPriceReportWriterFunc(ctx)
 	if err != nil {
@@ -64,15 +72,19 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 		return err
 	}
 
-	report := ckpricereport.NewReport(changes, ckPriceReportNowFunc())
-	if err = writer.Write(ctx, report); err != nil {
+	report := ckpricereport.NewReport(selectedChanges, ckPriceReportNowFunc())
+
+	var existingReport *ckpricereport.Report
+	var preserved bool
+	preserved, existingReport, err = writePriceChangeReport(ctx, writer, report)
+	if err != nil {
 		log.Printf("ck price refresh: failed writing price change report: %v", err)
 		return err
 	}
 
-	topCount = len(report.Top)
-	bottomCount = len(report.Bottom)
-	generatedAt = report.GeneratedAt
+	logPriceChangeExport(preChanges, postChanges, selectedChanges, preserved, existingReport, report)
+
+	topCount, bottomCount, generatedAt = exportCounts(preserved, existingReport, report)
 	log.Printf("ck price refresh: exported price changes top=%d bottom=%d generatedAt=%s", topCount, bottomCount, generatedAt)
 	return nil
 }

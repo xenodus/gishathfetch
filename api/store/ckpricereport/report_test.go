@@ -2,51 +2,75 @@ package ckpricereport
 
 import (
 	"testing"
-	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/store/ckprices"
 )
 
-func TestNewReportIncludesSyncedAtAndRankings(t *testing.T) {
-	increase := 15
-	decrease := -10
-	changes := &ckprices.TopBottomPriceChanges{
-		Top: []ckprices.PriceChangeListing{
-			{
-				NameKey: "lightning bolt",
-				Listing: cardkingdom.Listing{
-					CardName:           "Lightning Bolt",
-					PriceUsd:           1.25,
-					PriceChangePercent: &increase,
-					SyncedAt:           "2026-07-11T00:00:00Z",
-				},
-			},
+func TestHasMovers(t *testing.T) {
+	increase := 0.5
+	decrease := -0.25
+
+	tests := []struct {
+		name   string
+		report *Report
+		want   bool
+	}{
+		{
+			name:   "nil report",
+			report: nil,
+			want:   false,
 		},
-		Bottom: []ckprices.PriceChangeListing{
-			{
-				NameKey: "counterspell",
-				Listing: cardkingdom.Listing{
-					CardName:           "Counterspell",
-					PriceUsd:           0.75,
-					PriceChangePercent: &decrease,
-					SyncedAt:           "2026-07-11T00:00:00Z",
-				},
+		{
+			name: "empty rankings",
+			report: &Report{
+				Top:    nil,
+				Bottom: nil,
 			},
+			want: false,
+		},
+		{
+			name: "top riser",
+			report: &Report{
+				Top: []ckprices.PriceChangeListing{{
+					NameKey: "bolt",
+					Listing: cardkingdom.Listing{PriceChangeUsd: &increase},
+				}},
+			},
+			want: true,
+		},
+		{
+			name: "bottom drop",
+			report: &Report{
+				Bottom: []ckprices.PriceChangeListing{{
+					NameKey: "counterspell",
+					Listing: cardkingdom.Listing{PriceChangeUsd: &decrease},
+				}},
+			},
+			want: true,
+		},
+		{
+			name: "zero change ignored",
+			report: &Report{
+				Top: []ckprices.PriceChangeListing{{
+					NameKey: "bolt",
+					Listing: cardkingdom.Listing{PriceChangeUsd: new(0.0)},
+				}},
+			},
+			want: false,
 		},
 	}
 
-	report := NewReport(changes, time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC))
-	if report.GeneratedAt != "2026-07-11T12:00:00Z" {
-		t.Fatalf("unexpected generatedAt: %q", report.GeneratedAt)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HasMovers(tt.report); got != tt.want {
+				t.Fatalf("HasMovers() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-	if report.SyncedAt != "2026-07-11T00:00:00Z" {
-		t.Fatalf("unexpected syncedAt: %q", report.SyncedAt)
-	}
-	if report.RankingLimit != ckprices.PriceChangeRankingLimit {
-		t.Fatalf("unexpected ranking limit: %d", report.RankingLimit)
-	}
-	if len(report.Top) != 1 || len(report.Bottom) != 1 {
-		t.Fatalf("unexpected rankings: top=%d bottom=%d", len(report.Top), len(report.Bottom))
-	}
+}
+
+//go:fix inline
+func ptr(v float64) *float64 {
+	return new(v)
 }

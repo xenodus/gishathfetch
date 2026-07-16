@@ -38,3 +38,27 @@ func syncedAtFromChanges(changes *ckprices.TopBottomPriceChanges) string {
 	}
 	return ""
 }
+
+// HasMovers reports whether the export includes at least one non-zero USD change.
+func HasMovers(report *Report) bool {
+	if report == nil {
+		return false
+	}
+	return priceChangesHaveMovers(&ckprices.TopBottomPriceChanges{
+		Top:    report.Top,
+		Bottom: report.Bottom,
+	})
+}
+
+// priceChangesHaveMovers reports whether rankings include at least one non-zero USD change.
+func priceChangesHaveMovers(changes *ckprices.TopBottomPriceChanges) bool {
+	if changes == nil {
+		return false
+	}
+	for _, listing := range append(changes.Top, changes.Bottom...) {
+		if listing.PriceChangeUsd != nil && *listing.PriceChangeUsd != 0 {
+			return true
+		}
+	}
+	return false
+}
