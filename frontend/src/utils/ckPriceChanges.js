@@ -21,14 +21,22 @@ function parseCKPriceChangeListings(listings, matchesDirection, limit = 20) {
   }
 
   return listings
-    .map((item) => ({
-      cardName: typeof item?.cardName === "string" ? item.cardName.trim() : "",
-      priceChangeUsd:
-        typeof item?.priceChangeUsd === "number" &&
-        Number.isFinite(item.priceChangeUsd)
-          ? item.priceChangeUsd
-          : null,
-    }))
+    .map((item, index) => {
+      const cardName =
+        typeof item?.cardName === "string" ? item.cardName.trim() : "";
+      const nameKey =
+        typeof item?.nameKey === "string" ? item.nameKey.trim() : "";
+
+      return {
+        id: nameKey || (cardName ? `${cardName}-${index}` : `listing-${index}`),
+        cardName,
+        priceChangeUsd:
+          typeof item?.priceChangeUsd === "number" &&
+          Number.isFinite(item.priceChangeUsd)
+            ? item.priceChangeUsd
+            : null,
+      };
+    })
     .filter(
       (item) =>
         item.cardName.length > 0 &&

@@ -20,7 +20,11 @@ test("formatPriceChangeUsd formats signed dollar amounts", () => {
 test("parseCKPriceIncreases returns top card names with positive USD changes only", () => {
   const payload = {
     top: [
-      { cardName: "Lightning Bolt", priceChangeUsd: 0.5 },
+      {
+        nameKey: "lightning-bolt",
+        cardName: "Lightning Bolt",
+        priceChangeUsd: 0.5,
+      },
       { cardName: " Counterspell ", priceChangeUsd: 0.1 },
       { cardName: "", priceChangeUsd: 0.05 },
       { cardName: "Sol Ring", priceChangePercent: 5 },
@@ -32,10 +36,36 @@ test("parseCKPriceIncreases returns top card names with positive USD changes onl
   const increases = parseCKPriceIncreases(payload);
 
   assert.equal(increases.length, 2);
+  assert.equal(increases[0].id, "lightning-bolt");
   assert.equal(increases[0].cardName, "Lightning Bolt");
   assert.equal(increases[0].priceChangeUsd, 0.5);
+  assert.equal(increases[1].id, "Counterspell-1");
   assert.equal(increases[1].cardName, "Counterspell");
   assert.equal(increases[1].priceChangeUsd, 0.1);
+});
+
+test("parseCKPriceIncreases assigns unique ids when card names repeat", () => {
+  const payload = {
+    top: [
+      {
+        nameKey: "tony stark // the invincible iron man",
+        cardName: "Tony Stark // The Invincible Iron Man",
+        priceChangeUsd: 26,
+      },
+      {
+        nameKey: "the invincible iron man",
+        cardName: "Tony Stark // The Invincible Iron Man",
+        priceChangeUsd: 26,
+      },
+    ],
+  };
+
+  const increases = parseCKPriceIncreases(payload);
+
+  assert.equal(increases.length, 2);
+  assert.equal(increases[0].id, "tony stark // the invincible iron man");
+  assert.equal(increases[1].id, "the invincible iron man");
+  assert.notEqual(increases[0].id, increases[1].id);
 });
 
 test("parseCKPriceIncreases returns an empty list for invalid payloads", () => {
@@ -47,7 +77,11 @@ test("parseCKPriceIncreases returns an empty list for invalid payloads", () => {
 test("parseCKPriceDrops returns bottom card names with negative USD changes only", () => {
   const payload = {
     bottom: [
-      { cardName: "Counterspell", priceChangeUsd: -1.5 },
+      {
+        nameKey: "counterspell",
+        cardName: "Counterspell",
+        priceChangeUsd: -1.5,
+      },
       { cardName: " Sol Ring ", priceChangeUsd: -0.1 },
       { cardName: "", priceChangeUsd: -0.05 },
       { cardName: "Lightning Bolt", priceChangePercent: -5 },
@@ -59,8 +93,10 @@ test("parseCKPriceDrops returns bottom card names with negative USD changes only
   const drops = parseCKPriceDrops(payload);
 
   assert.equal(drops.length, 2);
+  assert.equal(drops[0].id, "counterspell");
   assert.equal(drops[0].cardName, "Counterspell");
   assert.equal(drops[0].priceChangeUsd, -1.5);
+  assert.equal(drops[1].id, "Sol Ring-1");
   assert.equal(drops[1].cardName, "Sol Ring");
   assert.equal(drops[1].priceChangeUsd, -0.1);
 });
