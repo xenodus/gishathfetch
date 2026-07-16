@@ -1,8 +1,10 @@
 package cardkingdom
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -192,4 +194,28 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	require.NoError(t, err)
 	require.InDelta(t, 1.49, cheapest["lightning bolt"].PriceUsd, 0.001)
 	require.InDelta(t, 7.49, cheapest["spectacular spider-man"].PriceUsd, 0.001)
+}
+
+func TestProgressLogReader_PassesThroughAllBytes(t *testing.T) {
+	input := bytes.Repeat([]byte("a"), 4096)
+	out, err := io.ReadAll(&progressLogReader{
+		reader:   bytes.NewReader(input),
+		interval: time.Hour,
+		label:    "test progress",
+	})
+	require.NoError(t, err)
+	require.Equal(t, input, out)
+}
+
+func TestProgressLogReader_LogsWithTotalBytes(t *testing.T) {
+	input := bytes.Repeat([]byte("b"), 1024)
+	reader := &progressLogReader{
+		reader:     bytes.NewReader(input),
+		interval:   0,
+		label:      "test progress",
+		totalBytes: int64(len(input)),
+	}
+	reader.readStarted = time.Now().Add(-time.Second)
+	reader.readBytes = int64(len(input))
+	reader.logProgress(time.Now())
 }

@@ -25,6 +25,8 @@ const (
 	// covers the full round trip including body read.
 	ckPricelistFetchTimeout = 9 * time.Minute
 	ckPricelistHTTPTimeout  = 8 * time.Minute
+	// Emit body-read progress while large pricelist downloads stream through proxy.
+	ckPricelistBodyReadLogInterval = 15 * time.Second
 )
 
 type ckPricelistPayload struct {
@@ -216,7 +218,13 @@ func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistP
 
 	log.Printf("ck price refresh: reading pricelist body")
 	readStarted := time.Now()
-	raw, err := io.ReadAll(resp.Body)
+	bodyReader := &progressLogReader{
+		reader:     resp.Body,
+		interval:   ckPricelistBodyReadLogInterval,
+		label:      "ck price refresh: reading pricelist body",
+		totalBytes: resp.ContentLength,
+	}
+	raw, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("%s: read body: %w", ckPricelistErrorPrefix, err)
 	}
@@ -235,6 +243,56 @@ func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistP
 	}
 
 	return &payload, nil
+}
+
+type progressLogReader struct {
+	reader     io.Reader
+	interval   time.Duration
+	label      string
+	totalBytes int64
+
+	readStarted time.Time
+	readBytes   int64
+	lastLogged  time.Time
+}
+
+func (r *progressLogReader) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	if n <= 0 {
+		return n, err
+	}
+
+	now := time.Now()
+	if r.readStarted.IsZero() {
+		r.readStarted = now
+		r.lastLogged = now
+	}
+	r.readBytes += int64(n)
+
+	if now.Sub(r.lastLogged) >= r.interval {
+		r.logProgress(now)
+		r.lastLogged = now
+	}
+
+	return n, err
+}
+
+func (r *progressLogReader) logProgress(now time.Time) {
+	elapsed := now.Sub(r.readStarted).Round(time.Millisecond)
+	if r.totalBytes > 0 {
+		pct := (float64(r.readBytes) * 100) / float64(r.totalBytes)
+		log.Printf(
+			"%s progress bytes=%d total=%d pct=%.1f%% elapsed=%s",
+			r.label,
+			r.readBytes,
+			r.totalBytes,
+			pct,
+			elapsed,
+		)
+		return
+	}
+
+	log.Printf("%s progress bytes=%d elapsed=%s", r.label, r.readBytes, elapsed)
 }
 
 func cheapestListingsFromPricelist(payload *ckPricelistPayload, updatedAt time.Time) map[string]Listing {
