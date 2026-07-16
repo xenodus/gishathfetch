@@ -192,8 +192,8 @@ Example report shape:
   "generatedAt": "2026-07-11T12:00:00Z",
   "syncedAt": "2026-07-11T00:00:00Z",
   "rankingLimit": 20,
-  "top": [{"nameKey": "lightning bolt", "cardName": "Lightning Bolt", "priceUsd": 1.25, "priceChangePercent": 15}],
-  "bottom": [{"nameKey": "counterspell", "cardName": "Counterspell", "priceUsd": 0.75, "priceChangePercent": -10}]
+  "top": [{"nameKey": "lightning bolt", "cardName": "Lightning Bolt", "priceUsd": 1.25, "priceChangeUsd": 0.16}],
+  "bottom": [{"nameKey": "counterspell", "cardName": "Counterspell", "priceUsd": 0.75, "priceChangeUsd": -0.08}]
 }
 ```
 
@@ -202,8 +202,7 @@ Example report shape:
 The shared `lambda-mtg` role must allow:
 
 - `s3:PutObject` on the export prefix (`arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`)
-- `dynamodb:Query` on both CK price-change GSIs:
-  - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangePercent-index`
+- `dynamodb:Query` on the CK price-change GSI:
   - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index`
 
 The daily export ranks top/bottom price changes by USD (`priceChangeUsd-index`). If that GSI is missing from the role policy, the Lambda fails after the DynamoDB refresh with `AccessDeniedException` on `dynamodb:Query`.
@@ -215,7 +214,6 @@ Example inline policy statement to add (merge with existing DynamoDB permissions
   "Effect": "Allow",
   "Action": "dynamodb:Query",
   "Resource": [
-    "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangePercent-index",
     "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index"
   ]
 }

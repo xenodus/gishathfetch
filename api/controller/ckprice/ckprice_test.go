@@ -25,10 +25,6 @@ func (m *mockStore) GetByNameKey(_ context.Context, nameKey string) (*cardkingdo
 	return m.listing, nil
 }
 
-func (m *mockStore) GetPriceChangesByPercent(_ context.Context, _ bool, _ int) ([]ckprices.PriceChangeListing, error) {
-	return nil, nil
-}
-
 func (m *mockStore) GetPriceChangesByUsd(_ context.Context, _ bool, _ int) ([]ckprices.PriceChangeListing, error) {
 	return nil, nil
 }

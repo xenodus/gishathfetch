@@ -43,15 +43,18 @@ func TestDynamoRecordFromListing(t *testing.T) {
 	require.Equal(t, priceChangeIndexPKValue, *record.PriceChangeIndexPK)
 }
 
-func TestDynamoRecordFromListing_OmitsPriceChangeIndexWithoutPercent(t *testing.T) {
+func TestDynamoRecordFromListing_OmitsPriceChangeIndexWithoutUsd(t *testing.T) {
 	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
+	priceChangePercent := 12
 	record := dynamoRecordFromListing("new card", cardkingdom.Listing{
-		CardName:  "New Card",
-		PriceUsd:  1.49,
-		UpdatedAt: "2026-06-28T00:00:00Z",
+		CardName:           "New Card",
+		PriceUsd:           1.49,
+		PriceChangePercent: &priceChangePercent,
+		UpdatedAt:          "2026-06-28T00:00:00Z",
 	}, syncedAt)
 
-	require.Nil(t, record.PriceChangePercent)
+	require.NotNil(t, record.PriceChangePercent)
+	require.Nil(t, record.PriceChangeUsd)
 	require.Nil(t, record.PriceChangeIndexPK)
 }
 

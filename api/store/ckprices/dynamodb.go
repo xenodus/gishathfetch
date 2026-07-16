@@ -29,7 +29,6 @@ const (
 	batchWriteMaxRetries        = 12
 	batchWriteInterBatchDelay   = 50 * time.Millisecond
 	dynamoDBClientMaxAttempts   = 10
-	priceChangeIndexName        = "priceChangePercent-index"
 	priceChangeUsdIndexName     = "priceChangeUsd-index"
 	priceChangeIndexPKValue     = "CURRENT"
 	syncMetadataKey             = "__sync__"
@@ -114,26 +113,6 @@ func (s *DynamoDBStore) GetByNameKey(ctx context.Context, nameKey string) (*card
 	return &listing, nil
 }
 
-func (s *DynamoDBStore) GetPriceChangesByPercent(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
-	if limit <= 0 {
-		limit = PriceChangeRankingLimit
-	}
-
-	listings, err := s.queryPriceChangesByPercent(ctx, ascending, limit)
-	if err == nil {
-		return dedupePriceChangeListings(listings, limit), nil
-	}
-	if !isMissingPriceChangeIndex(err) {
-		return nil, err
-	}
-
-	scanned, scanErr := s.scanPriceChangeListings(ctx)
-	if scanErr != nil {
-		return nil, scanErr
-	}
-	return priceChangesByPercentFromListings(scanned, ascending, limit), nil
-}
-
 func (s *DynamoDBStore) GetPriceChangesByUsd(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
 	if limit <= 0 {
 		limit = PriceChangeRankingLimit
@@ -172,24 +151,6 @@ func (s *DynamoDBStore) GetTopBottomPriceChanges(ctx context.Context) (*TopBotto
 	}, nil
 }
 
-func (s *DynamoDBStore) queryPriceChangesByPercent(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
-	output, err := s.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(s.tableName),
-		IndexName:              aws.String(priceChangeIndexName),
-		KeyConditionExpression: aws.String("priceChangeIndexPK = :pk"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":pk": &types.AttributeValueMemberS{Value: priceChangeIndexPKValue},
-		},
-		ScanIndexForward: aws.Bool(ascending),
-		Limit:            aws.Int32(int32(limit)),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return priceChangeListingsFromItems(output.Items)
-}
-
 func (s *DynamoDBStore) queryPriceChangesByUsd(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error) {
 	output, err := s.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(s.tableName),
@@ -206,10 +167,6 @@ func (s *DynamoDBStore) queryPriceChangesByUsd(ctx context.Context, ascending bo
 	}
 
 	return priceChangeListingsFromItemsByUsd(output.Items)
-}
-
-func (s *DynamoDBStore) scanPriceChangeListings(ctx context.Context) ([]PriceChangeListing, error) {
-	return s.scanPriceChangeListingsWithFilter(ctx, priceChangeListingFromRecord)
 }
 
 func (s *DynamoDBStore) scanPriceChangeListingsByUsd(ctx context.Context) ([]PriceChangeListing, error) {
@@ -315,7 +272,7 @@ func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, synced
 		UpdatedAt:          listing.UpdatedAt,
 		SyncedAt:           syncedAt,
 	}
-	if listing.PriceChangeUsd != nil || listing.PriceChangePercent != nil {
+	if listing.PriceChangeUsd != nil {
 		indexPK := priceChangeIndexPKValue
 		record.PriceChangeIndexPK = &indexPK
 	}
@@ -340,20 +297,6 @@ func listingFromRecord(record dynamoRecord) (cardkingdom.Listing, bool) {
 	}, true
 }
 
-func priceChangeListingFromRecord(record dynamoRecord) (PriceChangeListing, bool) {
-	if record.NameKey == syncMetadataKey || record.PriceChangePercent == nil {
-		return PriceChangeListing{}, false
-	}
-	listing, ok := listingFromRecord(record)
-	if !ok {
-		return PriceChangeListing{}, false
-	}
-	return PriceChangeListing{
-		NameKey: record.NameKey,
-		Listing: listing,
-	}, true
-}
-
 func priceChangeListingFromRecordByUsd(record dynamoRecord) (PriceChangeListing, bool) {
 	if record.NameKey == syncMetadataKey || record.PriceChangeUsd == nil {
 		return PriceChangeListing{}, false
@@ -366,10 +309,6 @@ func priceChangeListingFromRecordByUsd(record dynamoRecord) (PriceChangeListing,
 		NameKey: record.NameKey,
 		Listing: listing,
 	}, true
-}
-
-func priceChangeListingsFromItems(items []map[string]types.AttributeValue) ([]PriceChangeListing, error) {
-	return priceChangeListingsFromItemsWithFilter(items, priceChangeListingFromRecord)
 }
 
 func priceChangeListingsFromItemsByUsd(items []map[string]types.AttributeValue) ([]PriceChangeListing, error) {
