@@ -24,9 +24,6 @@ type TopBottomPriceChanges struct {
 // Store persists Card Kingdom cheapest-by-name listings.
 type Store interface {
 	GetByNameKey(ctx context.Context, nameKey string) (*cardkingdom.Listing, error)
-	// GetPriceChangesByPercent returns listings ordered by priceChangePercent.
-	// ascending=true is equivalent to SQL ORDER BY priceChangePercent ASC LIMIT n.
-	GetPriceChangesByPercent(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error)
 	// GetPriceChangesByUsd returns listings ordered by priceChangeUsd.
 	// ascending=true is equivalent to SQL ORDER BY priceChangeUsd ASC LIMIT n.
 	GetPriceChangesByUsd(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error)

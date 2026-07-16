@@ -44,43 +44,6 @@ func listingsWithPriceChange(
 	return enriched
 }
 
-func topBottomPriceChangesByPercent(listings []PriceChangeListing, limit int) TopBottomPriceChanges {
-	if limit <= 0 {
-		limit = PriceChangeRankingLimit
-	}
-
-	changed := make([]PriceChangeListing, 0, len(listings))
-	for _, listing := range listings {
-		if listing.PriceChangePercent == nil {
-			continue
-		}
-		changed = append(changed, listing)
-	}
-
-	top := append([]PriceChangeListing(nil), changed...)
-	slices.SortFunc(top, func(a, b PriceChangeListing) int {
-		if *a.PriceChangePercent != *b.PriceChangePercent {
-			return *b.PriceChangePercent - *a.PriceChangePercent
-		}
-		return strings.Compare(a.NameKey, b.NameKey)
-	})
-	top = dedupePriceChangeListings(top, limit)
-
-	bottom := append([]PriceChangeListing(nil), changed...)
-	slices.SortFunc(bottom, func(a, b PriceChangeListing) int {
-		if *a.PriceChangePercent != *b.PriceChangePercent {
-			return *a.PriceChangePercent - *b.PriceChangePercent
-		}
-		return strings.Compare(a.NameKey, b.NameKey)
-	})
-	bottom = dedupePriceChangeListings(bottom, limit)
-
-	return TopBottomPriceChanges{
-		Top:    top,
-		Bottom: bottom,
-	}
-}
-
 func topBottomPriceChangesByUsd(listings []PriceChangeListing, limit int) TopBottomPriceChanges {
 	if limit <= 0 {
 		limit = PriceChangeRankingLimit
@@ -178,14 +141,6 @@ func filterPriceChangesByUsdSign(listings []PriceChangeListing, increases bool) 
 		}
 	}
 	return filtered
-}
-
-func priceChangesByPercentFromListings(listings []PriceChangeListing, ascending bool, limit int) []PriceChangeListing {
-	rankings := topBottomPriceChangesByPercent(listings, limit)
-	if ascending {
-		return rankings.Bottom
-	}
-	return rankings.Top
 }
 
 func priceChangesByUsdFromListings(listings []PriceChangeListing, ascending bool, limit int) []PriceChangeListing {

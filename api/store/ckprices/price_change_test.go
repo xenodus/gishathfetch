@@ -1,7 +1,6 @@
 package ckprices
 
 import (
-	"strconv"
 	"testing"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
@@ -67,75 +66,6 @@ func TestComputePriceChangeUsd(t *testing.T) {
 	t.Run("missing previous price", func(t *testing.T) {
 		require.Nil(t, computePriceChangeUsd(0, 4.99))
 	})
-}
-
-func TestPriceChangesByPercentFromListings(t *testing.T) {
-	percent := func(value int) *int {
-		return &value
-	}
-	listing := func(nameKey string, change int) PriceChangeListing {
-		return PriceChangeListing{
-			NameKey: nameKey,
-			Listing: cardkingdom.Listing{
-				CardName:           nameKey,
-				PriceChangePercent: percent(change),
-			},
-		}
-	}
-
-	listings := []PriceChangeListing{
-		listing("a", 30),
-		listing("b", 10),
-		listing("c", -30),
-		listing("d", -10),
-	}
-
-	bottom := priceChangesByPercentFromListings(listings, true, 2)
-	require.Len(t, bottom, 2)
-	require.Equal(t, -30, *bottom[0].PriceChangePercent)
-	require.Equal(t, -10, *bottom[1].PriceChangePercent)
-
-	top := priceChangesByPercentFromListings(listings, false, 2)
-	require.Len(t, top, 2)
-	require.Equal(t, 30, *top[0].PriceChangePercent)
-	require.Equal(t, 10, *top[1].PriceChangePercent)
-}
-
-func TestTopBottomPriceChanges(t *testing.T) {
-	percent := func(value int) *int {
-		return &value
-	}
-	listing := func(nameKey string, change int) PriceChangeListing {
-		return PriceChangeListing{
-			NameKey: nameKey,
-			Listing: cardkingdom.Listing{
-				CardName:           nameKey,
-				PriceChangePercent: percent(change),
-			},
-		}
-	}
-
-	listings := make([]PriceChangeListing, 0, 51)
-	for i := 1; i <= 25; i++ {
-		listings = append(listings, listing("increase-"+strconv.Itoa(i), i))
-	}
-	for i := 1; i <= 25; i++ {
-		listings = append(listings, listing("decrease-"+strconv.Itoa(i), -i))
-	}
-	listings = append(listings, PriceChangeListing{
-		NameKey: "no-change",
-		Listing: cardkingdom.Listing{CardName: "No Change"},
-	})
-
-	rankings := topBottomPriceChangesByPercent(listings, PriceChangeRankingLimit)
-
-	require.Len(t, rankings.Top, PriceChangeRankingLimit)
-	require.Equal(t, 25, *rankings.Top[0].PriceChangePercent)
-	require.Equal(t, 6, *rankings.Top[19].PriceChangePercent)
-
-	require.Len(t, rankings.Bottom, PriceChangeRankingLimit)
-	require.Equal(t, -25, *rankings.Bottom[0].PriceChangePercent)
-	require.Equal(t, -6, *rankings.Bottom[19].PriceChangePercent)
 }
 
 func TestPriceChangesByUsdFromListings(t *testing.T) {
@@ -262,25 +192,6 @@ func TestFilterPriceChangesByUsdSign(t *testing.T) {
 	drops := filterPriceChangesByUsdSign(listings, false)
 	require.Len(t, drops, 1)
 	require.Equal(t, "drop", drops[0].NameKey)
-}
-
-func TestPriceChangeListingFromRecord(t *testing.T) {
-	change := 15
-	listing, ok := priceChangeListingFromRecord(dynamoRecord{
-		NameKey:            "lightning bolt",
-		CardName:           "Lightning Bolt",
-		PriceUsd:           1.49,
-		PriceChangePercent: &change,
-	})
-	require.True(t, ok)
-	require.Equal(t, "lightning bolt", listing.NameKey)
-	require.Equal(t, 15, *listing.PriceChangePercent)
-
-	_, ok = priceChangeListingFromRecord(dynamoRecord{NameKey: syncMetadataKey})
-	require.False(t, ok)
-
-	_, ok = priceChangeListingFromRecord(dynamoRecord{NameKey: "new card", CardName: "New Card"})
-	require.False(t, ok)
 }
 
 func TestPriceChangeListingFromRecordByUsd(t *testing.T) {
