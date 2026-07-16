@@ -46,6 +46,8 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 ## Backend: BinderPOS (storefront scraper and decklist fallbacks)
 
+For **field-level feature parity** between HTML scrape, Storefront GraphQL, Decklist API, scrap variants, and transport modes, see [`binderpos-search-feature-parity.md`](binderpos-search-feature-parity.md).
+
 `api/gateway/binderpos/storefront_fallback.go` and `api/gateway/binderpos/storefront_search.go` define a **sequential multi-strategy** flow (not the same as colly “retry n times on failure” for one URL).
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
