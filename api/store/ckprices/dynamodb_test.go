@@ -1,6 +1,8 @@
 package ckprices
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -121,4 +123,28 @@ func TestSyncMetadataRecordMarshal(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, item, "syncedAt")
 	require.Contains(t, item, "listingCount")
+}
+
+func TestIsDynamoDBThrottleError(t *testing.T) {
+	require.True(t, isDynamoDBThrottleError(&types.ThrottlingException{}))
+	require.True(t, isDynamoDBThrottleError(&types.ProvisionedThroughputExceededException{}))
+	require.False(t, isDynamoDBThrottleError(errors.New("access denied")))
+}
+
+func TestBatchWriteBackoffDuration_IncreasesAndCaps(t *testing.T) {
+	first := batchWriteBackoffDuration(1)
+	second := batchWriteBackoffDuration(2)
+	large := batchWriteBackoffDuration(20)
+
+	require.GreaterOrEqual(t, first, batchWriteBackoffMin)
+	require.GreaterOrEqual(t, second, first)
+	require.LessOrEqual(t, large, batchWriteBackoffMax+(batchWriteBackoffMax/4))
+}
+
+func TestSleepWithContext_RespectsCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := sleepWithContext(ctx, time.Second)
+	require.ErrorIs(t, err, context.Canceled)
 }

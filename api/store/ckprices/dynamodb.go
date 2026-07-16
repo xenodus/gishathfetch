@@ -2,7 +2,9 @@ package ckprices
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -11,20 +13,27 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awsretry "github.com/aws/aws-sdk-go-v2/aws/retry"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/smithy-go"
 )
 
 const (
-	batchGetLimit            = 100
-	batchWriteLimit          = 25
-	priceChangeIndexName     = "priceChangePercent-index"
-	priceChangeUsdIndexName  = "priceChangeUsd-index"
-	priceChangeIndexPKValue  = "CURRENT"
-	syncMetadataKey          = "__sync__"
-	syncMetadataLabel        = "CK price sync metadata"
+	batchGetLimit               = 100
+	batchWriteLimit             = 25
+	batchWriteBackoffMin        = 200 * time.Millisecond
+	batchWriteBackoffMax        = 30 * time.Second
+	batchWriteMaxRetries        = 12
+	batchWriteInterBatchDelay   = 50 * time.Millisecond
+	dynamoDBClientMaxAttempts   = 10
+	priceChangeIndexName        = "priceChangePercent-index"
+	priceChangeUsdIndexName     = "priceChangeUsd-index"
+	priceChangeIndexPKValue     = "CURRENT"
+	syncMetadataKey             = "__sync__"
+	syncMetadataLabel           = "CK price sync metadata"
 )
 
 type dynamoRecord struct {
@@ -60,7 +69,15 @@ func NewDynamoDBStore(ctx context.Context) (*DynamoDBStore, error) {
 		return nil, fmt.Errorf("ckprices: %s is not set", config.CKDynamoDBTableEnv)
 	}
 
-	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(config.AWSRegion))
+	cfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(config.AWSRegion),
+		awsconfig.WithRetryer(func() aws.Retryer {
+			return awsretry.AddWithMaxAttempts(
+				awsretry.NewAdaptiveMode(),
+				dynamoDBClientMaxAttempts,
+			)
+		}),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +291,11 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 		if err := s.writeBatch(ctx, batch); err != nil {
 			return "", err
 		}
+		if end < len(writeRequests) {
+			if err := sleepWithContext(ctx, batchWriteInterBatchDelay); err != nil {
+				return "", err
+			}
+		}
 	}
 
 	return syncedAt, nil
@@ -436,18 +458,84 @@ func (s *DynamoDBStore) writeBatch(ctx context.Context, batch []types.WriteReque
 		s.tableName: batch,
 	}
 
+	attempt := 0
 	for len(pending) > 0 {
 		output, err := s.client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
 			RequestItems: pending,
 		})
 		if err != nil {
-			return err
+			if !isDynamoDBThrottleError(err) || attempt >= batchWriteMaxRetries {
+				return err
+			}
+			attempt++
+			if err := sleepWithContext(ctx, batchWriteBackoffDuration(attempt)); err != nil {
+				return err
+			}
+			continue
 		}
 		if len(output.UnprocessedItems) == 0 {
 			return nil
 		}
 		pending = output.UnprocessedItems
+		attempt++
+		if attempt > batchWriteMaxRetries {
+			return fmt.Errorf("ckprices: batch write incomplete after %d retries", batchWriteMaxRetries)
+		}
+		if err := sleepWithContext(ctx, batchWriteBackoffDuration(attempt)); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+func isDynamoDBThrottleError(err error) bool {
+	var throttling *types.ThrottlingException
+	if errors.As(err, &throttling) {
+		return true
+	}
+	var provisioned *types.ProvisionedThroughputExceededException
+	if errors.As(err, &provisioned) {
+		return true
+	}
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "ThrottlingException", "ProvisionedThroughputExceededException":
+			return true
+		}
+	}
+	return false
+}
+
+func batchWriteBackoffDuration(attempt int) time.Duration {
+	if attempt <= 0 {
+		return batchWriteBackoffMin
+	}
+
+	delay := batchWriteBackoffMin
+	for i := 1; i < attempt && delay < batchWriteBackoffMax; i++ {
+		delay *= 2
+	}
+	if delay > batchWriteBackoffMax {
+		delay = batchWriteBackoffMax
+	}
+
+	jitter := time.Duration(rand.Int63n(int64(delay / 4)))
+	return delay + jitter
+}
+
+func sleepWithContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
