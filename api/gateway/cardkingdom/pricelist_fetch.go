@@ -273,26 +273,8 @@ func listingFromPricelistItem(item ckPricelistItem, baseURL string, updatedAt st
 }
 
 func cheapestListedUSD(values ckConditionValues, priceRetail float64) (float64, bool) {
-	best := 0.0
-	found := false
-
-	for _, price := range []float64{
-		float64(values.NmPrice),
-		float64(values.ExPrice),
-		float64(values.VgPrice),
-		float64(values.GPrice),
-	} {
-		if price <= 0 {
-			continue
-		}
-		if !found || price < best {
-			best = price
-			found = true
-		}
-	}
-
-	if found {
-		return best, true
+	if values.NmPrice > 0 {
+		return float64(values.NmPrice), true
 	}
 	if priceRetail > 0 {
 		return priceRetail, true
