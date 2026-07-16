@@ -113,7 +113,7 @@ const sampleCKPricelist = `{
   ]
 }`
 
-func TestCheapestListedUSD_UsesLowestListedCondition(t *testing.T) {
+func TestCheapestListedUSD_UsesNMOnly(t *testing.T) {
 	price, ok := cheapestListedUSD(ckConditionValues{
 		NmPrice: 1.49,
 		NmQty:   0,
@@ -123,7 +123,7 @@ func TestCheapestListedUSD_UsesLowestListedCondition(t *testing.T) {
 		VgQty:   1,
 	}, 1.49)
 	require.True(t, ok)
-	require.InDelta(t, 0.99, price, 0.001)
+	require.InDelta(t, 1.49, price, 0.001)
 }
 
 func TestCheapestListedUSD_IncludesOutOfStock(t *testing.T) {
@@ -145,7 +145,7 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 	listing := cheapest["lightning bolt"]
 	require.Equal(t, "Lightning Bolt", listing.CardName)
 	require.Equal(t, "4th Edition", listing.Edition)
-	require.InDelta(t, 1.19, listing.PriceUsd, 0.001)
+	require.InDelta(t, 1.49, listing.PriceUsd, 0.001)
 	require.False(t, listing.IsFoil)
 	require.Equal(t, "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt", listing.URL)
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
@@ -186,9 +186,10 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("CK_PRICELIST_URL", server.URL)
+	t.Setenv("CK_PRICELIST_PROXY", "")
 
 	cheapest, err := fetchCheapestFromCKPricelist(context.Background())
 	require.NoError(t, err)
-	require.InDelta(t, 1.19, cheapest["lightning bolt"].PriceUsd, 0.001)
+	require.InDelta(t, 1.49, cheapest["lightning bolt"].PriceUsd, 0.001)
 	require.InDelta(t, 7.49, cheapest["spectacular spider-man"].PriceUsd, 0.001)
 }
