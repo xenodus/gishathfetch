@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
@@ -66,7 +65,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		ctx,
 		apiURL.String(),
 		gateway.OutboundRequestOptions{Style: gateway.OutboundStyleJSON},
-		15*time.Second,
+		config.SearchAttemptTimeout,
 	)
 	if err != nil {
 		return cards, err

@@ -11,7 +11,6 @@ This document records **where** the app configures search behavior, **timeouts**
 | Per-store deadline | 20s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. |
 | Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step, default colly scrape request, and most `DoOutboundGET` / `DoOutboundRoundTrip` calls. |
 | Agora per-attempt timeout | 10s | `config.AgoraSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/agora/search.go` | Agora keeps a longer single-scrape cap. |
-| Cards Central per-attempt timeout | 15s | `15*time.Second` in `api/gateway/cardscentral/search.go` | Hardcoded; longer than the default because the aggregator JSON feed can be slower. |
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Max concurrent store searches | 6 | `maxConcurrentStoreSearches` in `api/controller/search.go` | Worker pool size when fanning out to selected stores. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
@@ -92,7 +91,7 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 |-------|----------|----------------------|-------------------------|---------|
 | Agora Hobby | HTML search page (`/store/search`) | 10s | **Dedicated → dynamic**; skips direct on `agorahobby.com` (browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
 | 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → dynamic**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
-| Cards Central | JSON API (`/api/lgs/search?q=…`) | 15s | Direct → dedicated → dynamic | Transport fallback only |
+| Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Mox & Lotus | JSON API GET (`/api/products?search=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
@@ -120,6 +119,6 @@ Constants live in `frontend/src/hooks/useSearch.js` (and related).
 ## How to keep this file accurate
 
 1. When adding or changing **timeouts, intervals, concurrency, or strategy order**, update the relevant table and cite the file (paths above are stable).
-2. Prefer a single **named constant** in code (e.g. `config.PerSiteTimeout`) and reference that name here. When a store hardcodes a timeout (e.g. Cards Central’s 15s), document the literal and source file.
+2. Prefer a single **named constant** in code (e.g. `config.PerSiteTimeout`, `config.SearchAttemptTimeout`) and reference that name here. When a store hardcodes a timeout, document the literal and source file.
 3. Distinguish **per-request colly policy** (no retry) from **BinderPOS multi-strategy fallback** (up to **eight** strategies when GraphQL token and decklist are configured, **six** without GraphQL; one try each per strategy step).
 4. When adding a store, update the per-store tables in the BinderPOS or non-BinderPOS section and register it in `api/controller/search.go`.
