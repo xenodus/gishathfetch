@@ -20,8 +20,11 @@ import (
 const (
 	defaultCKPricelistURL   = "https://api.cardkingdom.com/api/v2/pricelist"
 	ckPricelistErrorPrefix  = "ck price pricelist"
-	ckPricelistFetchTimeout = 3 * time.Minute
-	ckPricelistHTTPTimeout  = 2 * time.Minute
+	// The CK pricelist JSON is ~65MB (~150k products). Through CK_PRICELIST_PROXY
+	// the body can take several minutes after headers return; http.Client.Timeout
+	// covers the full round trip including body read.
+	ckPricelistFetchTimeout = 9 * time.Minute
+	ckPricelistHTTPTimeout  = 8 * time.Minute
 )
 
 type ckPricelistPayload struct {
@@ -211,10 +214,17 @@ func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistP
 		return nil, fmt.Errorf("%s: status %d: %s", ckPricelistErrorPrefix, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
+	log.Printf("ck price refresh: reading pricelist body")
+	readStarted := time.Now()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("%s: read body: %w", ckPricelistErrorPrefix, err)
 	}
+	log.Printf(
+		"ck price refresh: read pricelist body bytes=%d duration=%s",
+		len(raw),
+		time.Since(readStarted).Round(time.Millisecond),
+	)
 
 	var payload ckPricelistPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
