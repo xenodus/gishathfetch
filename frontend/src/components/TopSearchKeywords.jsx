@@ -175,7 +175,7 @@ function CKPriceChangeContent({
 
         return (
           <a
-            key={item.cardName}
+            key={item.id}
             href={buildSearchQueryUrl(BASE_URL, item.cardName)}
             className={`btn btn-sm popular-search-pill ${pillModifier} text-decoration-none${
               isActive ? " is-active" : ""
@@ -386,6 +386,7 @@ export default function TopSearchKeywords({
           <div id={contentPanelId}>
             {showPriceChangeControls && priceChangeView === "risers" ? (
               <CKPriceChangeContent
+                key="risers"
                 variant="riser"
                 isLoading={isLoadingPriceChanges}
                 error={priceChangesError}
@@ -395,6 +396,7 @@ export default function TopSearchKeywords({
               />
             ) : showPriceChangeControls && priceChangeView === "drops" ? (
               <CKPriceChangeContent
+                key="drops"
                 variant="drop"
                 isLoading={isLoadingPriceChanges}
                 error={priceChangesError}
