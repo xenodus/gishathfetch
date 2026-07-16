@@ -44,28 +44,30 @@ test("parseCKPriceIncreases returns top card names with positive USD changes onl
   assert.equal(increases[1].priceChangeUsd, 0.1);
 });
 
-test("parseCKPriceIncreases assigns unique ids when card names repeat", () => {
+test("parseCKPriceIncreases dedupes double-faced aliases that share a listing URL", () => {
   const payload = {
     top: [
       {
         nameKey: "tony stark // the invincible iron man",
         cardName: "Tony Stark // The Invincible Iron Man",
         priceChangeUsd: 26,
+        url: "https://www.cardkingdom.com/mtg/example/tony-stark",
       },
       {
         nameKey: "the invincible iron man",
         cardName: "Tony Stark // The Invincible Iron Man",
         priceChangeUsd: 26,
+        url: "https://www.cardkingdom.com/mtg/example/tony-stark",
       },
     ],
   };
 
   const increases = parseCKPriceIncreases(payload);
 
-  assert.equal(increases.length, 2);
+  assert.equal(increases.length, 1);
   assert.equal(increases[0].id, "tony stark // the invincible iron man");
-  assert.equal(increases[1].id, "the invincible iron man");
-  assert.notEqual(increases[0].id, increases[1].id);
+  assert.equal(increases[0].cardName, "Tony Stark // The Invincible Iron Man");
+  assert.equal(increases[0].priceChangeUsd, 26);
 });
 
 test("parseCKPriceIncreases returns an empty list for invalid payloads", () => {

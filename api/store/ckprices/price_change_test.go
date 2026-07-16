@@ -206,6 +206,44 @@ func TestTopBottomPriceChangesByUsd(t *testing.T) {
 	require.InDelta(t, -8.00, *rankings.Bottom[0].PriceChangeUsd, 0.001)
 }
 
+func TestDedupePriceChangeListingsByURL(t *testing.T) {
+	usd := func(value float64) *float64 {
+		return &value
+	}
+	sharedURL := "https://www.cardkingdom.com/mtg/example/tony-stark"
+	listings := []PriceChangeListing{
+		{
+			NameKey: "tony stark // the invincible iron man",
+			Listing: cardkingdom.Listing{
+				CardName:       "Tony Stark // The Invincible Iron Man",
+				PriceChangeUsd: usd(26),
+				URL:            sharedURL,
+			},
+		},
+		{
+			NameKey: "the invincible iron man",
+			Listing: cardkingdom.Listing{
+				CardName:       "Tony Stark // The Invincible Iron Man",
+				PriceChangeUsd: usd(26),
+				URL:            sharedURL,
+			},
+		},
+		{
+			NameKey: "lightning bolt",
+			Listing: cardkingdom.Listing{
+				CardName:       "Lightning Bolt",
+				PriceChangeUsd: usd(0.50),
+				URL:            "https://www.cardkingdom.com/mtg/example/lightning-bolt",
+			},
+		},
+	}
+
+	deduped := dedupePriceChangeListings(listings, 20)
+	require.Len(t, deduped, 2)
+	require.Equal(t, "tony stark // the invincible iron man", deduped[0].NameKey)
+	require.Equal(t, "lightning bolt", deduped[1].NameKey)
+}
+
 func TestFilterPriceChangesByUsdSign(t *testing.T) {
 	usd := func(value float64) *float64 {
 		return &value

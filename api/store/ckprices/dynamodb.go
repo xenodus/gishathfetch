@@ -104,7 +104,7 @@ func (s *DynamoDBStore) GetPriceChangesByPercent(ctx context.Context, ascending 
 
 	listings, err := s.queryPriceChangesByPercent(ctx, ascending, limit)
 	if err == nil {
-		return listings, nil
+		return dedupePriceChangeListings(listings, limit), nil
 	}
 	if !isMissingPriceChangeIndex(err) {
 		return nil, err
@@ -124,7 +124,7 @@ func (s *DynamoDBStore) GetPriceChangesByUsd(ctx context.Context, ascending bool
 
 	listings, err := s.queryPriceChangesByUsd(ctx, ascending, limit)
 	if err == nil {
-		return listings, nil
+		return dedupePriceChangeListings(listings, limit), nil
 	}
 	if !isMissingPriceChangeIndex(err) {
 		return nil, err
