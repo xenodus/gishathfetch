@@ -22,7 +22,7 @@ frontend-dev:
 	cd frontend && npm install && npm run dev
 
 frontend-build: generate-signature-directory
-	cd frontend && npm install && npm run build
+	cd frontend && npm install && AGORA_SEARCH_ENABLED=$${AGORA_SEARCH_ENABLED:-false} npm run build
 
 SIGNATURE_DIRECTORY_BIN=.cache/signature-directory
 

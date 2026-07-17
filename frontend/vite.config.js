@@ -7,6 +7,7 @@ const signatureDirectoryMediaType =
 
 // https://vite.dev/config/
 export default defineConfig({
+  envPrefix: ["VITE_", "AGORA_"],
   plugins: [
     react(),
     {
