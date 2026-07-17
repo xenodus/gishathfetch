@@ -1,10 +1,35 @@
 // --- App Constants ---
+
+const AGORA_STORE_NAME = "Agora Hobby";
+
+function parseBoolEnv(value, defaultValue = false) {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") {
+    return true;
+  }
+  if (normalized === "false" || normalized === "0") {
+    return false;
+  }
+
+  return defaultValue;
+}
+
+// Build-time toggle via VITE_AGORA_SEARCH_ENABLED (defaults to disabled).
+export const AGORA_SEARCH_ENABLED = parseBoolEnv(
+  import.meta.env.VITE_AGORA_SEARCH_ENABLED,
+  false,
+);
+
 export const PAGE_TITLE =
   "Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops";
 
-export const LGS_OPTIONS = [
+const ALL_LGS_OPTIONS = [
   "5 Mana",
-  "Agora Hobby",
+  AGORA_STORE_NAME,
   "Card Affinity",
   "Cards & Collections",
   "Cards Central",
@@ -22,6 +47,10 @@ export const LGS_OPTIONS = [
   "OneMtg",
   "The TCG Marketplace",
 ];
+
+export const LGS_OPTIONS = AGORA_SEARCH_ENABLED
+  ? ALL_LGS_OPTIONS
+  : ALL_LGS_OPTIONS.filter((store) => store !== AGORA_STORE_NAME);
 
 export const SITE_TAGLINE =
   "Magic: The Gathering price checker for Singapore's LGS and online shops";

@@ -4,6 +4,36 @@ import (
 	"testing"
 )
 
+func TestAgoraSearchEnabled(t *testing.T) {
+	t.Run("defaults to disabled when unset", func(t *testing.T) {
+		t.Setenv(AgoraSearchEnabledEnv, "")
+		if AgoraSearchEnabled() {
+			t.Fatalf("expected agora search to be disabled by default")
+		}
+	})
+
+	t.Run("respects explicit true", func(t *testing.T) {
+		t.Setenv(AgoraSearchEnabledEnv, "true")
+		if !AgoraSearchEnabled() {
+			t.Fatalf("expected agora search to be enabled")
+		}
+	})
+
+	t.Run("respects explicit false", func(t *testing.T) {
+		t.Setenv(AgoraSearchEnabledEnv, "false")
+		if AgoraSearchEnabled() {
+			t.Fatalf("expected agora search to be disabled")
+		}
+	})
+
+	t.Run("defaults to disabled for invalid value", func(t *testing.T) {
+		t.Setenv(AgoraSearchEnabledEnv, "not-a-bool")
+		if AgoraSearchEnabled() {
+			t.Fatalf("expected invalid toggle to default to disabled")
+		}
+	})
+}
+
 func TestUseDynamicProxy(t *testing.T) {
 	t.Run("defaults to disabled when unset", func(t *testing.T) {
 		t.Setenv(UseDynamicProxyEnv, "")

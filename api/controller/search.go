@@ -476,6 +476,9 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 
 	lgsMap := make(map[string]gateway.LGS, len(shopRegistry))
 	for _, shop := range shopRegistry {
+		if shop.name == agora.StoreName && !config.AgoraSearchEnabled() {
+			continue
+		}
 		if len(selectedLGS) > 0 {
 			if _, exists := selectedLGS[shop.name]; !exists {
 				continue

@@ -25,6 +25,9 @@ const (
 	SearchAttemptTimeout = 5 * time.Second
 	// AgoraSearchAttemptTimeout is the per-attempt cap for Agora Hobby only.
 	AgoraSearchAttemptTimeout = 10 * time.Second
+	// AgoraSearchEnabledEnv toggles Agora Hobby search in the search Lambda.
+	// Defaults to disabled when unset or invalid.
+	AgoraSearchEnabledEnv = "AGORA_SEARCH_ENABLED"
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
 	// dynamic-proxy fallback attempts, which BinderPOS reserves for the final
 	// two attempts after dedicated and direct/no-proxy scrap and decklist tries.
@@ -101,6 +104,21 @@ const (
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
 // When false, each request picks a random dedicated proxy instead of acquiring a lease.
 const UseLeasedDedicatedProxy = false
+
+// AgoraSearchEnabled reports whether Agora Hobby is included in search requests.
+func AgoraSearchEnabled() bool {
+	rawValue := strings.TrimSpace(os.Getenv(AgoraSearchEnabledEnv))
+	if rawValue == "" {
+		return false
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return false
+	}
+
+	return enabled
+}
 
 func UseDynamicProxy() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))

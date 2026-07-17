@@ -10,6 +10,7 @@ import (
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/hideout"
+	"mtg-price-checker-sg/pkg/config"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -17,7 +18,23 @@ import (
 	"time"
 )
 
+func TestInitAndMapShops_SkipsAgoraWhenDisabled(t *testing.T) {
+	t.Setenv(config.AgoraSearchEnabledEnv, "false")
+	shops := initAndMapShops([]string{agora.StoreName, hideout.StoreName})
+
+	if len(shops) != 1 {
+		t.Fatalf("expected 1 shop after filtering disabled Agora, got %d", len(shops))
+	}
+	if _, ok := shops[agora.StoreName]; ok {
+		t.Fatalf("did not expect %q when Agora search is disabled", agora.StoreName)
+	}
+	if _, ok := shops[hideout.StoreName]; !ok {
+		t.Fatalf("expected %q to be included", hideout.StoreName)
+	}
+}
+
 func TestInitAndMapShops_FiltersByRequestedLGS(t *testing.T) {
+	t.Setenv(config.AgoraSearchEnabledEnv, "true")
 	shops := initAndMapShops([]string{agora.StoreName, hideout.StoreName})
 
 	if len(shops) != 2 {
