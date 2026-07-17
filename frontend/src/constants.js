@@ -18,9 +18,9 @@ function parseBoolEnv(value, defaultValue = false) {
   return defaultValue;
 }
 
-// Build-time toggle via VITE_AGORA_SEARCH_ENABLED (defaults to disabled).
+// Build-time toggle via AGORA_SEARCH_ENABLED (defaults to disabled).
 export const AGORA_SEARCH_ENABLED = parseBoolEnv(
-  import.meta.env.VITE_AGORA_SEARCH_ENABLED,
+  import.meta.env.AGORA_SEARCH_ENABLED,
   false,
 );
 
