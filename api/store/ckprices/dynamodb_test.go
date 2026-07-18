@@ -58,6 +58,21 @@ func TestDynamoRecordFromListing_OmitsPriceChangeIndexWithoutUsd(t *testing.T) {
 	require.Nil(t, record.PriceChangeIndexPK)
 }
 
+func TestDynamoRecordMarshalIncludesInStock(t *testing.T) {
+	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
+	inStock := true
+	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{
+		UpdatedAt: "2026-06-28T00:00:00Z",
+		InStock:   &inStock,
+	}, syncedAt)
+	item, err := attributevalue.MarshalMap(record)
+	require.NoError(t, err)
+	require.Contains(t, item, "inStock")
+	av, ok := item["inStock"].(*types.AttributeValueMemberBOOL)
+	require.True(t, ok)
+	require.True(t, av.Value)
+}
+
 func TestDynamoRecordMarshalOmitsQuantity(t *testing.T) {
 	syncedAt := time.Date(2026, 6, 28, 15, 30, 0, 0, time.UTC).Format(time.RFC3339)
 	record := dynamoRecordFromListing("lightning bolt", cardkingdom.Listing{UpdatedAt: "2026-06-28T00:00:00Z"}, syncedAt)

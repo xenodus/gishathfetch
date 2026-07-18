@@ -115,6 +115,11 @@ const sampleCKPricelist = `{
   ]
 }`
 
+func TestListingIsInStock(t *testing.T) {
+	require.True(t, listingIsInStock(ckPricelistItem{QtyRetail: 1}))
+	require.False(t, listingIsInStock(ckPricelistItem{QtyRetail: 0}))
+}
+
 func TestCheapestListedUSD_UsesNMOnly(t *testing.T) {
 	price, ok := cheapestListedUSD(ckConditionValues{
 		NmPrice: 1.49,
@@ -149,16 +154,22 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 	require.Equal(t, "4th Edition", listing.Edition)
 	require.InDelta(t, 1.49, listing.PriceUsd, 0.001)
 	require.False(t, listing.IsFoil)
+	require.NotNil(t, listing.InStock)
+	require.True(t, *listing.InStock)
 	require.Equal(t, "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt", listing.URL)
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
 
 	spider := cheapest["spectacular spider-man"]
 	require.InDelta(t, 7.49, spider.PriceUsd, 0.001)
 	require.Equal(t, "0014 - Borderless", spider.Edition)
+	require.NotNil(t, spider.InStock)
+	require.False(t, *spider.InStock)
 
 	tony := cheapest["tony stark // the invincible iron man"]
 	require.InDelta(t, 7.49, tony.PriceUsd, 0.001)
 	require.False(t, tony.IsFoil)
+	require.NotNil(t, tony.InStock)
+	require.True(t, *tony.InStock)
 
 	require.InDelta(t, 7.49, cheapest["tony stark"].PriceUsd, 0.001)
 	require.InDelta(t, 7.49, cheapest["the invincible iron man"].PriceUsd, 0.001)
