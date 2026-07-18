@@ -330,14 +330,20 @@ func listingFromPricelistItem(item ckPricelistItem, baseURL string, updatedAt st
 		return Listing{}, false
 	}
 
+	inStock := listingIsInStock(item)
 	return Listing{
 		CardName:  cardName,
 		Edition:   pricelistEditionLabel(item.Edition, item.Variation),
 		PriceUsd:  priceUsd,
 		URL:       listingURL,
 		IsFoil:    bool(item.IsFoil),
+		InStock:   &inStock,
 		UpdatedAt: updatedAt,
 	}, true
+}
+
+func listingIsInStock(item ckPricelistItem) bool {
+	return int(item.QtyRetail) > 0
 }
 
 func cheapestListedUSD(values ckConditionValues, priceRetail float64) (float64, bool) {

@@ -46,6 +46,7 @@ type dynamoRecord struct {
 	PriceChangeIndexPK *string `dynamodbav:"priceChangeIndexPK,omitempty"`
 	URL                string  `dynamodbav:"url"`
 	IsFoil             bool    `dynamodbav:"isFoil"`
+	InStock            *bool   `dynamodbav:"inStock,omitempty"`
 	UpdatedAt          string  `dynamodbav:"updatedAt"`
 	SyncedAt           string  `dynamodbav:"syncedAt"`
 }
@@ -269,6 +270,7 @@ func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, synced
 		PriceChangeUsd:     listing.PriceChangeUsd,
 		URL:                listing.URL,
 		IsFoil:             listing.IsFoil,
+		InStock:            listing.InStock,
 		UpdatedAt:          listing.UpdatedAt,
 		SyncedAt:           syncedAt,
 	}
@@ -292,6 +294,7 @@ func listingFromRecord(record dynamoRecord) (cardkingdom.Listing, bool) {
 		PriceChangeUsd:     record.PriceChangeUsd,
 		URL:                record.URL,
 		IsFoil:             record.IsFoil,
+		InStock:            record.InStock,
 		UpdatedAt:          record.UpdatedAt,
 		SyncedAt:           record.SyncedAt,
 	}, true

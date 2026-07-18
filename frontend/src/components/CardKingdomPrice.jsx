@@ -24,12 +24,23 @@ const formatDataDate = (value) => {
   return `${day} ${month} ${year}`;
 };
 
+const stockStatusLabel = (inStock) => {
+  if (inStock === true) {
+    return "In stock";
+  }
+  if (inStock === false) {
+    return "Out of stock";
+  }
+  return null;
+};
+
 const CardKingdomPrice = ({ price }) => {
   if (!price) {
     return null;
   }
 
   const dataDate = formatDataDate(price.updatedAt);
+  const stockLabel = stockStatusLabel(price.inStock);
 
   return (
     <div
@@ -41,6 +52,20 @@ const CardKingdomPrice = ({ price }) => {
         <strong>{formatUsd(price.priceUsd)}</strong>
         {price.edition ? ` · ${price.edition}` : ""}
         {price.isFoil ? " · Foil" : ""}
+        {stockLabel ? (
+          <>
+            {" · "}
+            <span
+              className={
+                price.inStock
+                  ? "text-success fw-semibold"
+                  : "text-danger fw-semibold"
+              }
+            >
+              {stockLabel}
+            </span>
+          </>
+        ) : null}
         {dataDate ? ` · as of ${dataDate}` : ""}
         {" · "}
         <a
