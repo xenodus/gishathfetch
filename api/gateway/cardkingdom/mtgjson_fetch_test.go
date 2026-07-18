@@ -352,6 +352,52 @@ func TestDecodeAllPrintingsSets_MergesDoubleFacedFacesUsingCheapestSidePrice(t *
 	require.False(t, listing.IsFoil)
 }
 
+func TestDecodeAllPrintingsSets_SkipsFoilOnlyVariantPrintings(t *testing.T) {
+	const sample = `{
+  "meta": {"date": "2026-07-18"},
+  "data": {
+    "TMC": {
+      "name": "Teenage Mutant Ninja Turtles Eternal",
+      "cards": [
+        {
+          "uuid": "uuid-krang-13",
+          "name": "Krang, the All-Powerful",
+          "number": "13",
+          "finishes": ["foil", "nonfoil"],
+          "purchaseUrls": {
+            "cardKingdom": "https://mtgjson.com/links/regular",
+            "cardKingdomFoil": "https://mtgjson.com/links/regular-foil"
+          }
+        },
+        {
+          "uuid": "uuid-krang-86",
+          "name": "Krang, the All-Powerful",
+          "number": "86",
+          "finishes": ["foil"],
+          "purchaseUrls": {
+            "cardKingdomFoil": "https://mtgjson.com/links/borderless-foil"
+          }
+        }
+      ]
+    }
+  }
+}`
+
+	prices := map[string]ckUUIDPrice{
+		"uuid-krang-86": {foil: 54.99},
+	}
+	updatedAt := time.Date(2026, 7, 18, 0, 0, 0, 0, time.UTC)
+
+	cheapest, err := decodeAllPrintingsSets(
+		json.NewDecoder(strings.NewReader(sample)),
+		prices,
+		updatedAt,
+	)
+	require.NoError(t, err)
+	_, hasListing := cheapest["krang, the all-powerful"]
+	require.False(t, hasListing)
+}
+
 func TestFetchCheapestFromMTGJSON_FromTestServers(t *testing.T) {
 	pricesServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")

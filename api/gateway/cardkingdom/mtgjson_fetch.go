@@ -32,11 +32,12 @@ type ckUUIDPrice struct {
 }
 
 type mtgjsonCard struct {
-	UUID         string `json:"uuid"`
-	Name         string `json:"name"`
-	FaceName     string `json:"faceName"`
-	Number       string `json:"number"`
-	Side         string `json:"side"`
+	UUID         string   `json:"uuid"`
+	Name         string   `json:"name"`
+	FaceName     string   `json:"faceName"`
+	Number       string   `json:"number"`
+	Side         string   `json:"side"`
+	Finishes     []string `json:"finishes"`
 	PurchaseUrls struct {
 		CardKingdom     string `json:"cardKingdom"`
 		CardKingdomFoil string `json:"cardKingdomFoil"`
@@ -53,6 +54,7 @@ type printingAggregate struct {
 	cardName        string
 	cardKingdom     string
 	cardKingdomFoil string
+	offersNonfoil   bool
 	price           ckUUIDPrice
 }
 
@@ -309,6 +311,9 @@ func mergePrintingAggregate(
 	key := printingKeyFor(card)
 	aggregate := aggregates[key]
 	aggregate.cardName = preferCardName(aggregate.cardName, name)
+	if printingOffersNonfoil(card.Finishes) {
+		aggregate.offersNonfoil = true
+	}
 
 	if card.PurchaseUrls.CardKingdom != "" {
 		aggregate.cardKingdom = card.PurchaseUrls.CardKingdom
@@ -335,6 +340,15 @@ func printingKeyFor(card mtgjsonCard) printingKey {
 		return printingKey{number: number, isDFC: true}
 	}
 	return printingKey{number: number, name: strings.TrimSpace(card.Name)}
+}
+
+func printingOffersNonfoil(finishes []string) bool {
+	for _, finish := range finishes {
+		if strings.EqualFold(strings.TrimSpace(finish), "nonfoil") {
+			return true
+		}
+	}
+	return false
 }
 
 func preferCardName(current string, candidate string) string {
@@ -375,6 +389,11 @@ func applyPrintingAggregate(
 	}
 
 	if aggregate.price.foil <= 0 {
+		return
+	}
+	// Foil-only printings (borderless/showcase variants) should not become the
+	// cheapest listing for a card name when MTGJSON lacks the default printing.
+	if !aggregate.offersNonfoil {
 		return
 	}
 
