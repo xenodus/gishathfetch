@@ -57,7 +57,9 @@ const CardKingdomPrice = ({ price }) => {
             {" · "}
             <span
               className={
-                price.inStock ? "text-success fw-semibold" : "text-muted"
+                price.inStock
+                  ? "text-success fw-semibold"
+                  : "text-danger fw-semibold"
               }
             >
               {stockLabel}
