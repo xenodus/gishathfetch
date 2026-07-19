@@ -23,8 +23,8 @@ const (
 	// The CK pricelist JSON is ~65MB (~150k products). Through CK_PRICELIST_PROXY
 	// the body can take several minutes after headers return; http.Client.Timeout
 	// covers the full round trip including body read.
-	ckPricelistFetchTimeout = 13 * time.Minute
-	ckPricelistHTTPTimeout  = 12 * time.Minute
+	ckPricelistFetchTimeout = 14 * time.Minute
+	ckPricelistHTTPTimeout  = 13 * time.Minute
 	// Emit body-read progress while large pricelist downloads stream through proxy.
 	ckPricelistBodyReadLogInterval = 15 * time.Second
 )
