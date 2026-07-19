@@ -20,9 +20,9 @@ import (
 const (
 	defaultCKPricelistURL   = "https://api.cardkingdom.com/api/v2/pricelist"
 	ckPricelistErrorPrefix  = "ck price pricelist"
-	// The CK pricelist JSON is ~65MB (~150k products). Through CK_PRICELIST_PROXY
-	// the body can take several minutes after headers return; http.Client.Timeout
-	// covers the full round trip including body read.
+	// The CK pricelist JSON is ~65MB (~150k products). When the residential proxy
+	// fallback is used, the body can take several minutes after headers return;
+	// http.Client.Timeout covers the full round trip including body read.
 	ckPricelistFetchTimeout = 14 * time.Minute
 	ckPricelistHTTPTimeout  = 13 * time.Minute
 	// Emit body-read progress while large pricelist downloads stream through proxy.
@@ -194,18 +194,31 @@ func ckPricelistURL() string {
 }
 
 func ckPricelistOutboundOptions() gateway.OutboundRequestOptions {
-	opts := gateway.OutboundRequestOptions{
+	return gateway.OutboundRequestOptions{
 		Accept:         "application/json",
 		SkipWebBotAuth: true,
 	}
-	if proxyURL, ok := util.GetCKPricelistProxyURL(); ok {
-		opts.OnlyProxyURL = proxyURL
+}
+
+func ckPricelistResidentialProxyURL() (string, bool) {
+	if proxyURL, ok := util.GetResidentialProxyURL(); ok {
+		return proxyURL, true
 	}
-	return opts
+	return util.GetCKPricelistProxyURL()
 }
 
 func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
 	resp, err := gateway.DoOutboundGET(ctx, downloadURL, ckPricelistOutboundOptions(), ckPricelistHTTPTimeout)
+	if err != nil {
+		proxyURL, ok := ckPricelistResidentialProxyURL()
+		if !ok {
+			return nil, fmt.Errorf("%s: download: %w", ckPricelistErrorPrefix, err)
+		}
+		log.Printf("ck price refresh: direct pricelist download failed, retrying via residential proxy")
+		proxyOpts := ckPricelistOutboundOptions()
+		proxyOpts.OnlyProxyURL = proxyURL
+		resp, err = gateway.DoOutboundGET(ctx, downloadURL, proxyOpts, ckPricelistHTTPTimeout)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%s: download: %w", ckPricelistErrorPrefix, err)
 	}
