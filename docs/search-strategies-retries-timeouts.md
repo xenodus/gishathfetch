@@ -109,8 +109,8 @@ For Agora and 5 Mana, `SkipDirect` is cleared when the host is not the productio
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| CK pricelist HTTP timeout | 8m | `ckPricelistHTTPTimeout` in `api/gateway/cardkingdom/pricelist_fetch.go` | Bounds the full `DoOutboundGET` round trip, including streaming the ~65MB JSON body through `CK_PRICELIST_PROXY`. |
-| CK pricelist fetch timeout | 9m | `ckPricelistFetchTimeout` in `api/gateway/cardkingdom/pricelist_fetch.go` | Context deadline for download + JSON decode + cheapest-listing aggregation. |
+| CK pricelist HTTP timeout | 12m | `ckPricelistHTTPTimeout` in `api/gateway/cardkingdom/pricelist_fetch.go` | Bounds the full `DoOutboundGET` round trip, including streaming the ~65MB JSON body through `CK_PRICELIST_PROXY`. |
+| CK pricelist fetch timeout | 13m | `ckPricelistFetchTimeout` in `api/gateway/cardkingdom/pricelist_fetch.go` | Context deadline for download + JSON decode + cheapest-listing aggregation. |
 | CK pricelist body-read progress logs | every 15s | `ckPricelistBodyReadLogInterval` in `api/gateway/cardkingdom/pricelist_fetch.go` | Emits bytes read (and `%` when `Content-Length` is present) while the body streams. |
 
 ---
