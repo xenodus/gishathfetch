@@ -127,7 +127,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
-	t.Run("skips remaining decklist attempts after an empty decklist response", func(t *testing.T) {
+	t.Run("returns final empty result without trying later strategies after empty decklist", func(t *testing.T) {
 		sequence := make([]string, 0, 3)
 		cards, err := runFallbackAttempts(
 			fallbackAttempt{strategy: "decklist-dedicated", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
@@ -136,6 +136,10 @@ func TestRunFallbackAttempts(t *testing.T) {
 			}},
 			fallbackAttempt{strategy: "decklist-direct", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
 				t.Fatal("decklist-direct should not run after empty decklist-dedicated")
+				return nil, nil
+			}},
+			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
+				t.Fatal("scrap-dynamic should not run after empty decklist-dedicated")
 				return nil, nil
 			}},
 		)
