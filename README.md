@@ -143,19 +143,17 @@ Example report shape:
 
 ### CK price refresh flow
 
-CK prices prefer Card Kingdom's public pricelist API
-(`https://api.cardkingdom.com/api/v2/pricelist`) and fall back to MTGJSON when
-Cloudflare blocks the pricelist download (common from AWS Lambda). The refresh
-Lambda picks the cheapest listed retail price per card name and batch-writes the
-index. Search verifies the query against Scryfall before looking up DynamoDB and
-omits stale entries older than 48 hours.
+CK prices are downloaded from Card Kingdom's public pricelist API
+(`https://api.cardkingdom.com/api/v2/pricelist`). The refresh Lambda picks the
+cheapest listed retail price per card name and batch-writes the index. Search
+verifies the query against Scryfall before looking up DynamoDB and omits stale
+entries older than 48 hours.
 
 ```mermaid
 sequenceDiagram
     participant EB as EventBridge
     participant R as mtg-price-ck-refresh
     participant CK as Card Kingdom API
-    participant M as MTGJSON
     participant D as DynamoDB
     participant S3 as S3 gishathfetch.com
     participant S as mtg-price-scrapper
@@ -164,9 +162,6 @@ sequenceDiagram
 
     EB->>R: daily ck-price-refresh-run
     R->>CK: download api/v2/pricelist
-    alt Cloudflare blocks CK API
-        R->>M: download AllPricesToday + AllPrintings
-    end
     R->>D: PutAll cheapest CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
