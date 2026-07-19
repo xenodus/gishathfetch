@@ -127,7 +127,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
-	t.Run("returns final empty result without trying later strategies after empty decklist", func(t *testing.T) {
+	t.Run("skips remaining decklist attempts after empty decklist but continues to scrap", func(t *testing.T) {
 		sequence := make([]string, 0, 3)
 		cards, err := runFallbackAttempts(
 			fallbackAttempt{strategy: "decklist-dedicated", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
@@ -139,18 +139,24 @@ func TestRunFallbackAttempts(t *testing.T) {
 				return nil, nil
 			}},
 			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
-				t.Fatal("scrap-dynamic should not run after empty decklist-dedicated")
-				return nil, nil
+				sequence = append(sequence, "scrap-dynamic")
+				return []gateway.Card{{Name: "scrap-dynamic"}}, nil
 			}},
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
-		if len(cards) != 0 {
-			t.Fatalf("expected zero cards, got %+v", cards)
+		if len(cards) != 1 || cards[0].Name != "scrap-dynamic" {
+			t.Fatalf("expected scrap-dynamic card, got %+v", cards)
 		}
-		if len(sequence) != 1 || sequence[0] != "decklist-dedicated" {
-			t.Fatalf("expected only decklist-dedicated, got %v", sequence)
+		want := []string{"decklist-dedicated", "scrap-dynamic"}
+		if len(sequence) != len(want) {
+			t.Fatalf("expected %v, got %v", want, sequence)
+		}
+		for i := range want {
+			if sequence[i] != want[i] {
+				t.Fatalf("attempt %d: expected %q, got %q", i+1, want[i], sequence[i])
+			}
 		}
 	})
 
