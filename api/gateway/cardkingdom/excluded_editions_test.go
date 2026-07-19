@@ -15,4 +15,6 @@ func TestExcludedCKPriceEdition(t *testing.T) {
 
 	require.False(t, excludedCKPriceEdition("Fourth Edition"))
 	require.False(t, excludedCKPriceEdition(""))
+	require.True(t, excludedCKPriceEdition("Teenage Mutant Ninja Turtles Eternal-Legal Variants"))
+	require.True(t, excludedCKPriceEdition("Marvel's Spider-Man Variants"))
 }

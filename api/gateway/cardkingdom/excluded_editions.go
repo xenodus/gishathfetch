@@ -13,5 +13,11 @@ func excludedCKPriceEdition(edition string) bool {
 	}
 
 	lower := strings.ToLower(edition)
-	return strings.Contains(lower, "world championship")
+	if strings.Contains(lower, "world championship") {
+		return true
+	}
+	// CK "Variants" sets are alternate-art or special-finish SKUs. They share
+	// card names with the main set but should not represent the default cheapest
+	// price (for example borderless surge foils).
+	return strings.HasSuffix(lower, " variants")
 }

@@ -61,6 +61,19 @@ const sampleCKPricelist = `{
       }
     },
     {
+      "url": "mtg/marvel-super-heroes/spectacular-spider-man",
+      "name": "Spectacular Spider-Man",
+      "variation": "",
+      "edition": "Marvel's Spider-Man",
+      "is_foil": "false",
+      "price_retail": "0.35",
+      "qty_retail": 12,
+      "condition_values": {
+        "nm_price": "0.35",
+        "nm_qty": 12
+      }
+    },
+    {
       "url": "mtg/marvel-super-heroes-variants/spectacular-spider-man-0014-borderless",
       "name": "Spectacular Spider-Man",
       "variation": "0014 - Borderless",
@@ -160,10 +173,10 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 	require.Equal(t, updatedAt.Format(time.RFC3339), listing.UpdatedAt)
 
 	spider := cheapest["spectacular spider-man"]
-	require.InDelta(t, 7.49, spider.PriceUsd, 0.001)
-	require.Equal(t, "0014 - Borderless", spider.Edition)
+	require.InDelta(t, 0.35, spider.PriceUsd, 0.001)
+	require.Equal(t, "Marvel's Spider-Man", spider.Edition)
 	require.NotNil(t, spider.InStock)
-	require.False(t, *spider.InStock)
+	require.True(t, *spider.InStock)
 
 	tony := cheapest["tony stark // the invincible iron man"]
 	require.InDelta(t, 7.49, tony.PriceUsd, 0.001)
@@ -204,7 +217,7 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	cheapest, err := fetchCheapestFromCKPricelist(context.Background())
 	require.NoError(t, err)
 	require.InDelta(t, 1.49, cheapest["lightning bolt"].PriceUsd, 0.001)
-	require.InDelta(t, 7.49, cheapest["spectacular spider-man"].PriceUsd, 0.001)
+	require.InDelta(t, 0.35, cheapest["spectacular spider-man"].PriceUsd, 0.001)
 }
 
 func TestProgressLogReader_PassesThroughAllBytes(t *testing.T) {
