@@ -2,6 +2,7 @@ package ckprices
 
 import (
 	"testing"
+	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 
@@ -213,7 +214,16 @@ func TestPriceChangeListingFromRecordByUsd(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestIsSameUTCDay(t *testing.T) {
+	now := time.Date(2026, 7, 19, 15, 30, 0, 0, time.UTC)
+
+	require.True(t, isSameUTCDay("2026-07-19T08:00:00Z", now))
+	require.False(t, isSameUTCDay("2026-07-18T23:59:59Z", now))
+	require.False(t, isSameUTCDay("not-a-timestamp", now))
+}
+
 func TestListingsWithPriceChange(t *testing.T) {
+	now := time.Date(2026, 7, 19, 12, 0, 0, 0, time.UTC)
 	existing := map[string]dynamoRecord{
 		"lightning bolt": {PriceUsd: 1.00},
 		"counterspell":   {PriceUsd: 2.00},
@@ -223,7 +233,7 @@ func TestListingsWithPriceChange(t *testing.T) {
 		"lightning bolt": {PriceUsd: 1.10},
 		"counterspell":   {PriceUsd: 1.80},
 		"new card":       {PriceUsd: 5.00},
-	})
+	}, now)
 
 	require.NotNil(t, enriched["lightning bolt"].PriceChangePercent)
 	require.Equal(t, 10, *enriched["lightning bolt"].PriceChangePercent)
@@ -240,4 +250,33 @@ func TestListingsWithPriceChange(t *testing.T) {
 	require.Nil(t, enriched["new card"].PriceChangePercent)
 	require.Nil(t, enriched["new card"].PriceChangeUsd)
 	require.Nil(t, enriched["new card"].PreviousPriceUsd)
+}
+
+func TestListingsWithPriceChangePreservesSameDayChanges(t *testing.T) {
+	now := time.Date(2026, 7, 19, 15, 0, 0, 0, time.UTC)
+	previousPrice := 1.00
+	changeUsd := 0.10
+	changePercent := 10
+
+	existing := map[string]dynamoRecord{
+		"lightning bolt": {
+			PriceUsd:           1.10,
+			PreviousPriceUsd:   &previousPrice,
+			PriceChangeUsd:     &changeUsd,
+			PriceChangePercent: &changePercent,
+			SyncedAt:           "2026-07-19T08:00:00Z",
+		},
+	}
+
+	enriched := listingsWithPriceChange(existing, map[string]cardkingdom.Listing{
+		"lightning bolt": {PriceUsd: 1.15},
+	}, now)
+
+	require.Equal(t, 1.15, enriched["lightning bolt"].PriceUsd)
+	require.NotNil(t, enriched["lightning bolt"].PreviousPriceUsd)
+	require.Equal(t, 1.00, *enriched["lightning bolt"].PreviousPriceUsd)
+	require.NotNil(t, enriched["lightning bolt"].PriceChangeUsd)
+	require.InDelta(t, 0.10, *enriched["lightning bolt"].PriceChangeUsd, 0.001)
+	require.NotNil(t, enriched["lightning bolt"].PriceChangePercent)
+	require.Equal(t, 10, *enriched["lightning bolt"].PriceChangePercent)
 }

@@ -215,9 +215,10 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 	if err != nil {
 		return "", err
 	}
-	listings = listingsWithPriceChange(existing, listings)
+	now := time.Now().UTC()
+	listings = listingsWithPriceChange(existing, listings, now)
 
-	syncedAt := time.Now().UTC().Format(time.RFC3339)
+	syncedAt := now.Format(time.RFC3339)
 	writeRequests := make([]types.WriteRequest, 0, len(listings)+1)
 	for nameKey, listing := range listings {
 		record := dynamoRecordFromListing(nameKey, listing, syncedAt)

@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 )
@@ -27,17 +28,36 @@ func computePriceChangeUsd(previousPriceUsd, currentPriceUsd float64) *float64 {
 	return &changeUsd
 }
 
+func isSameUTCDay(syncedAt string, now time.Time) bool {
+	syncedTime, err := time.Parse(time.RFC3339, syncedAt)
+	if err != nil {
+		return false
+	}
+	syncedUTC := syncedTime.UTC()
+	nowUTC := now.UTC()
+	return syncedUTC.Year() == nowUTC.Year() &&
+		syncedUTC.Month() == nowUTC.Month() &&
+		syncedUTC.Day() == nowUTC.Day()
+}
+
 func listingsWithPriceChange(
 	existing map[string]dynamoRecord,
 	listings map[string]cardkingdom.Listing,
+	now time.Time,
 ) map[string]cardkingdom.Listing {
 	enriched := make(map[string]cardkingdom.Listing, len(listings))
 	for nameKey, listing := range listings {
 		if previous, ok := existing[nameKey]; ok {
-			previousPriceUsd := previous.PriceUsd
-			listing.PreviousPriceUsd = &previousPriceUsd
-			listing.PriceChangePercent = computePriceChangePercent(previousPriceUsd, listing.PriceUsd)
-			listing.PriceChangeUsd = computePriceChangeUsd(previousPriceUsd, listing.PriceUsd)
+			if isSameUTCDay(previous.SyncedAt, now) {
+				listing.PreviousPriceUsd = previous.PreviousPriceUsd
+				listing.PriceChangePercent = previous.PriceChangePercent
+				listing.PriceChangeUsd = previous.PriceChangeUsd
+			} else {
+				previousPriceUsd := previous.PriceUsd
+				listing.PreviousPriceUsd = &previousPriceUsd
+				listing.PriceChangePercent = computePriceChangePercent(previousPriceUsd, listing.PriceUsd)
+				listing.PriceChangeUsd = computePriceChangeUsd(previousPriceUsd, listing.PriceUsd)
+			}
 		}
 		enriched[nameKey] = listing
 	}
