@@ -207,18 +207,27 @@ func ckPricelistResidentialProxyURL() (string, bool) {
 	return util.GetCKPricelistProxyURL()
 }
 
+var downloadCKPricelistOnceFunc = downloadCKPricelistOnce
+
 func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
-	resp, err := gateway.DoOutboundGET(ctx, downloadURL, ckPricelistOutboundOptions(), ckPricelistHTTPTimeout)
-	if err != nil {
-		proxyURL, ok := ckPricelistResidentialProxyURL()
-		if !ok {
-			return nil, fmt.Errorf("%s: download: %w", ckPricelistErrorPrefix, err)
-		}
-		log.Printf("ck price refresh: direct pricelist download failed, retrying via residential proxy")
-		proxyOpts := ckPricelistOutboundOptions()
-		proxyOpts.OnlyProxyURL = proxyURL
-		resp, err = gateway.DoOutboundGET(ctx, downloadURL, proxyOpts, ckPricelistHTTPTimeout)
+	payload, err := downloadCKPricelistOnceFunc(ctx, downloadURL, ckPricelistOutboundOptions())
+	if err == nil {
+		return payload, nil
 	}
+
+	proxyURL, ok := ckPricelistResidentialProxyURL()
+	if !ok {
+		return nil, err
+	}
+
+	log.Printf("ck price refresh: direct pricelist download failed, retrying via residential proxy")
+	proxyOpts := ckPricelistOutboundOptions()
+	proxyOpts.OnlyProxyURL = proxyURL
+	return downloadCKPricelistOnceFunc(ctx, downloadURL, proxyOpts)
+}
+
+func downloadCKPricelistOnce(ctx context.Context, downloadURL string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
+	resp, err := gateway.DoOutboundGET(ctx, downloadURL, opts, ckPricelistHTTPTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("%s: download: %w", ckPricelistErrorPrefix, err)
 	}
