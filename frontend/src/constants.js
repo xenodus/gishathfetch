@@ -2,27 +2,8 @@
 
 const AGORA_STORE_NAME = "Agora Hobby";
 
-function parseBoolEnv(value, defaultValue = false) {
-  if (value === undefined || value === null || value === "") {
-    return defaultValue;
-  }
-
-  const normalized = String(value).trim().toLowerCase();
-  if (normalized === "true" || normalized === "1") {
-    return true;
-  }
-  if (normalized === "false" || normalized === "0") {
-    return false;
-  }
-
-  return defaultValue;
-}
-
-// Build-time toggle via AGORA_SEARCH_ENABLED (defaults to disabled).
-export const AGORA_SEARCH_ENABLED = parseBoolEnv(
-  import.meta.env.AGORA_SEARCH_ENABLED,
-  false,
-);
+// Toggle Agora Hobby in the store list and search UI.
+export const AGORA_SEARCH_ENABLED = true;
 
 export const PAGE_TITLE =
   "Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops";
