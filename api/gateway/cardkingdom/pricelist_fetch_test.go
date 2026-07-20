@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"mtg-price-checker-sg/gateway"
 
 	"github.com/stretchr/testify/require"
 )
@@ -221,6 +224,45 @@ func TestCKPricelistResidentialProxyURL_Unset(t *testing.T) {
 
 	_, ok := ckPricelistResidentialProxyURL()
 	require.False(t, ok)
+}
+
+func TestDownloadCKPricelistOnce_RejectsNonOKStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	_, err := downloadCKPricelistOnce(context.Background(), server.URL, ckPricelistOutboundOptions())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "status 503")
+}
+
+func TestDownloadCKPricelist_FallsBackToProxyAfterDirectFailure(t *testing.T) {
+	origDownloadOnce := downloadCKPricelistOnceFunc
+	t.Cleanup(func() {
+		downloadCKPricelistOnceFunc = origDownloadOnce
+	})
+
+	var directCalls int
+	var proxyCalls int
+	downloadCKPricelistOnceFunc = func(_ context.Context, _ string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
+		if opts.OnlyProxyURL == "" {
+			directCalls++
+			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
+		}
+		proxyCalls++
+		var payload ckPricelistPayload
+		require.NoError(t, json.Unmarshal([]byte(sampleCKPricelist), &payload))
+		return &payload, nil
+	}
+
+	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+
+	payload, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
+	require.NoError(t, err)
+	require.NotEmpty(t, payload.Data)
+	require.Equal(t, 1, directCalls)
+	require.Equal(t, 1, proxyCalls)
 }
 
 func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
