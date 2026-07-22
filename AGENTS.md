@@ -81,6 +81,18 @@ Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 - Do not commit screenshots to the repo; attach them only in the PR description
 - Use GitHub-hosted image URLs that render on GitHub (not Cursor artifact URLs)
 
+#### Generating screenshots (pre-installed tooling)
+
+A reusable full-page screenshot helper is pre-provisioned at `~/.agent-tools/screenshots/screenshot.mjs`. It drives the system-installed Google Chrome via Playwright (no bundled-browser download; the startup update script keeps its deps installed).
+
+Start the dev server first (`cd frontend && npm run dev`, port 5173), then run:
+
+```bash
+node ~/.agent-tools/screenshots/screenshot.mjs http://localhost:5173 /opt/cursor/artifacts homepage
+```
+
+This writes `homepage-desktop.png` (1440x900, full page) and `homepage-mobile.png` (iPhone 13 emulation, full page). Pass `--desktop-only` or `--mobile-only` as a 4th arg to capture just one. Point the URL at any route/query (e.g. `'http://localhost:5173/?s=Opt'`) to capture a specific state. Screenshots are dev-only artifacts — do not commit them (see the caching/GitHub-URL rules above).
+
 ### Known test behaviour
 
 - **Live gateway store tests** (`gateway/*/search_test.go`) hit real upstream store websites. They use `gatewaytest.RequireSearchOrProbe`: when search returns cards, field shape is validated; when inventory is empty, tests fall back to HTML/API **structure probes** instead of requiring in-stock results. Transient network failures or rate-limiting can still cause sporadic failures.
