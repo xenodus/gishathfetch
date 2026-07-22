@@ -8,18 +8,31 @@ import (
 	"os"
 )
 
-const SlackAlertWebhookEnv = "SLACK_ALERT_WEBHOOK"
+const (
+	SlackAlertWebhookEnv    = "SLACK_ALERT_WEBHOOK"
+	SlackJobWebhookURLEnv   = "SLACK_JOB_WEBHOOK"
+)
 
 type SlackPayload struct {
 	Text string `json:"text"`
 }
 
-// SendSlackAlert sends a message to the Slack alert webhook.
+// SendSlackAlert sends a message to the search-error Slack webhook.
 // It is fire-and-forget; errors are logged but not returned to disrupt the main flow.
 func SendSlackAlert(message string) {
-	webhookURL := os.Getenv(SlackAlertWebhookEnv)
+	sendSlackWebhook(SlackAlertWebhookEnv, message)
+}
+
+// SendJobSlackAlert sends a message to the scheduled-job Slack webhook.
+// It is fire-and-forget; errors are logged but not returned to disrupt the main flow.
+func SendJobSlackAlert(message string) {
+	sendSlackWebhook(SlackJobWebhookURLEnv, message)
+}
+
+func sendSlackWebhook(webhookURLEnv, message string) {
+	webhookURL := os.Getenv(webhookURLEnv)
 	if webhookURL == "" {
-		log.Printf("%s not set, skipping alert", SlackAlertWebhookEnv)
+		log.Printf("%s not set, skipping alert", webhookURLEnv)
 		return
 	}
 

@@ -15,6 +15,16 @@ func init() {
 }
 
 func TestSendSlackAlert(t *testing.T) {
+	testSendSlackWebhook(t, SlackAlertWebhookEnv, SendSlackAlert)
+}
+
+func TestSendJobSlackAlert(t *testing.T) {
+	testSendSlackWebhook(t, SlackJobWebhookURLEnv, SendJobSlackAlert)
+}
+
+func testSendSlackWebhook(t *testing.T, webhookURLEnv string, sendAlert func(string)) {
+	t.Helper()
+
 	t.Run("Success", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
@@ -37,13 +47,13 @@ func TestSendSlackAlert(t *testing.T) {
 		}))
 		defer server.Close()
 
-		t.Setenv(SlackAlertWebhookEnv, server.URL)
-		SendSlackAlert("Test Message")
+		t.Setenv(webhookURLEnv, server.URL)
+		sendAlert("Test Message")
 	})
 
 	t.Run("No URL Set", func(t *testing.T) {
-		t.Setenv(SlackAlertWebhookEnv, "")
-		SendSlackAlert("Should result in log but no panic")
+		t.Setenv(webhookURLEnv, "")
+		sendAlert("Should result in log but no panic")
 	})
 
 	t.Run("Server Error", func(t *testing.T) {
@@ -52,8 +62,8 @@ func TestSendSlackAlert(t *testing.T) {
 		}))
 		defer server.Close()
 
-		t.Setenv(SlackAlertWebhookEnv, server.URL)
-		SendSlackAlert("Test Message")
+		t.Setenv(webhookURLEnv, server.URL)
+		sendAlert("Test Message")
 	})
 }
 
@@ -64,4 +74,13 @@ func TestSendSlackAlert_Integration(t *testing.T) {
 	}
 
 	SendSlackAlert("Integration Test Message (Ignore this)")
+}
+
+func TestSendJobSlackAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv(SlackJobWebhookURLEnv)
+	if webhookURL == "" {
+		t.Skip("SLACK_JOB_WEBHOOK not set, skipping integration test")
+	}
+
+	SendJobSlackAlert("Integration Test Message (Ignore this)")
 }
