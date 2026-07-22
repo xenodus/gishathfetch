@@ -12,22 +12,22 @@ import (
 	"mtg-price-checker-sg/store/ckprices"
 )
 
-func TestRunCKPriceRefresh_SendsSuccessSlackAlert(t *testing.T) {
+func TestRunCKPriceRefresh_SendsSuccessAlert(t *testing.T) {
 	originalStoreFunc := newCKRefreshStoreFunc
 	originalRefreshFunc := refreshCKPricesFunc
 	originalWriterFunc := newCKPriceReportWriterFunc
 	originalNowFunc := ckPriceReportNowFunc
-	originalAlertFunc := sendJobSlackAlert
+	originalAlertFunc := sendJobAlert
 	defer func() {
 		newCKRefreshStoreFunc = originalStoreFunc
 		refreshCKPricesFunc = originalRefreshFunc
 		newCKPriceReportWriterFunc = originalWriterFunc
 		ckPriceReportNowFunc = originalNowFunc
-		sendJobSlackAlert = originalAlertFunc
+		sendJobAlert = originalAlertFunc
 	}()
 
 	var gotAlert string
-	sendJobSlackAlert = func(message string) {
+	sendJobAlert = func(message string) {
 		gotAlert = message
 	}
 
@@ -59,23 +59,23 @@ func TestRunCKPriceRefresh_SendsSuccessSlackAlert(t *testing.T) {
 
 	want := "CK price refresh finished: refreshed=42, top=1, bottom=1, generatedAt=2026-07-11T12:00:00Z"
 	if gotAlert != want {
-		t.Fatalf("slack alert = %q, want %q", gotAlert, want)
+		t.Fatalf("alert = %q, want %q", gotAlert, want)
 	}
 }
 
-func TestRunCKPriceRefresh_SendsFailureSlackAlert(t *testing.T) {
+func TestRunCKPriceRefresh_SendsFailureAlert(t *testing.T) {
 	originalRefreshFunc := refreshCKPricesFunc
 	originalStoreFunc := newCKRefreshStoreFunc
-	originalAlertFunc := sendJobSlackAlert
+	originalAlertFunc := sendJobAlert
 	defer func() {
 		refreshCKPricesFunc = originalRefreshFunc
 		newCKRefreshStoreFunc = originalStoreFunc
-		sendJobSlackAlert = originalAlertFunc
+		sendJobAlert = originalAlertFunc
 	}()
 
 	refreshErr := errors.New("card kingdom pricelist download failed")
 	var gotAlert string
-	sendJobSlackAlert = func(message string) {
+	sendJobAlert = func(message string) {
 		gotAlert = message
 	}
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
@@ -91,7 +91,7 @@ func TestRunCKPriceRefresh_SendsFailureSlackAlert(t *testing.T) {
 
 	want := "CK price refresh failed: card kingdom pricelist download failed"
 	if gotAlert != want {
-		t.Fatalf("slack alert = %q, want %q", gotAlert, want)
+		t.Fatalf("alert = %q, want %q", gotAlert, want)
 	}
 }
 
@@ -132,16 +132,16 @@ func TestHandle_RoutesCKPriceRefreshRun(t *testing.T) {
 	originalRefreshFunc := refreshCKPricesFunc
 	originalWriterFunc := newCKPriceReportWriterFunc
 	originalNowFunc := ckPriceReportNowFunc
-	originalAlertFunc := sendJobSlackAlert
+	originalAlertFunc := sendJobAlert
 	defer func() {
 		newCKRefreshStoreFunc = originalStoreFunc
 		refreshCKPricesFunc = originalRefreshFunc
 		newCKPriceReportWriterFunc = originalWriterFunc
 		ckPriceReportNowFunc = originalNowFunc
-		sendJobSlackAlert = originalAlertFunc
+		sendJobAlert = originalAlertFunc
 	}()
 
-	sendJobSlackAlert = func(string) {}
+	sendJobAlert = func(string) {}
 
 	writer := &mockCKPriceReportWriter{}
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {

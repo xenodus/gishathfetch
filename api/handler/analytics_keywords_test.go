@@ -16,15 +16,15 @@ func TestHandle_RoutesAnalyticsKeywordsExportRun(t *testing.T) {
 	originalReporterFunc := newGA4ReporterFunc
 	originalBuildFunc := buildAnalyticsKeywordsReportFunc
 	originalWriterFunc := newAnalyticsReportWriterFunc
-	originalAlertFunc := sendJobSlackAlert
+	originalAlertFunc := sendJobAlert
 	defer func() {
 		newGA4ReporterFunc = originalReporterFunc
 		buildAnalyticsKeywordsReportFunc = originalBuildFunc
 		newAnalyticsReportWriterFunc = originalWriterFunc
-		sendJobSlackAlert = originalAlertFunc
+		sendJobAlert = originalAlertFunc
 	}()
 
-	sendJobSlackAlert = func(string) {}
+	sendJobAlert = func(string) {}
 
 	writer := &mockAnalyticsWriter{}
 	newGA4ReporterFunc = func(_ context.Context) (ga4.Reporter, error) {
@@ -54,20 +54,20 @@ func TestHandle_RoutesAnalyticsKeywordsExportRun(t *testing.T) {
 	}
 }
 
-func TestRunAnalyticsKeywordsExport_SendsSuccessSlackAlert(t *testing.T) {
+func TestRunAnalyticsKeywordsExport_SendsSuccessAlert(t *testing.T) {
 	originalReporterFunc := newGA4ReporterFunc
 	originalBuildFunc := buildAnalyticsKeywordsReportFunc
 	originalWriterFunc := newAnalyticsReportWriterFunc
-	originalAlertFunc := sendJobSlackAlert
+	originalAlertFunc := sendJobAlert
 	defer func() {
 		newGA4ReporterFunc = originalReporterFunc
 		buildAnalyticsKeywordsReportFunc = originalBuildFunc
 		newAnalyticsReportWriterFunc = originalWriterFunc
-		sendJobSlackAlert = originalAlertFunc
+		sendJobAlert = originalAlertFunc
 	}()
 
 	var gotAlert string
-	sendJobSlackAlert = func(message string) {
+	sendJobAlert = func(message string) {
 		gotAlert = message
 	}
 
@@ -95,21 +95,21 @@ func TestRunAnalyticsKeywordsExport_SendsSuccessSlackAlert(t *testing.T) {
 
 	want := "Analytics keywords export finished: generatedAt=2026-07-11T12:00:00Z"
 	if gotAlert != want {
-		t.Fatalf("slack alert = %q, want %q", gotAlert, want)
+		t.Fatalf("alert = %q, want %q", gotAlert, want)
 	}
 }
 
-func TestRunAnalyticsKeywordsExport_SendsFailureSlackAlert(t *testing.T) {
+func TestRunAnalyticsKeywordsExport_SendsFailureAlert(t *testing.T) {
 	originalReporterFunc := newGA4ReporterFunc
-	originalAlertFunc := sendJobSlackAlert
+	originalAlertFunc := sendJobAlert
 	defer func() {
 		newGA4ReporterFunc = originalReporterFunc
-		sendJobSlackAlert = originalAlertFunc
+		sendJobAlert = originalAlertFunc
 	}()
 
 	reportErr := errors.New("ga4 credentials missing")
 	var gotAlert string
-	sendJobSlackAlert = func(message string) {
+	sendJobAlert = func(message string) {
 		gotAlert = message
 	}
 	newGA4ReporterFunc = func(_ context.Context) (ga4.Reporter, error) {
@@ -122,7 +122,7 @@ func TestRunAnalyticsKeywordsExport_SendsFailureSlackAlert(t *testing.T) {
 
 	want := "Analytics keywords export failed: ga4 credentials missing"
 	if gotAlert != want {
-		t.Fatalf("slack alert = %q, want %q", gotAlert, want)
+		t.Fatalf("alert = %q, want %q", gotAlert, want)
 	}
 }
 

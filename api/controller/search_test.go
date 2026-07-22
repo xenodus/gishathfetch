@@ -546,7 +546,7 @@ func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t 
 	}
 }
 
-func TestFetchCardsConcurrently_CollatesSlackErrors(t *testing.T) {
+func TestFetchCardsConcurrently_CollatesAlertErrors(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"ErrorShopA": &MockLGS{
 			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
@@ -569,8 +569,8 @@ func TestFetchCardsConcurrently_CollatesSlackErrors(t *testing.T) {
 	alertMessages := make([]string, 0, 1)
 	alertDone := make(chan struct{}, 1)
 
-	originalSendSlackAlert := sendSlackAlert
-	sendSlackAlert = func(message string) {
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
 		mu.Lock()
 		alertMessages = append(alertMessages, message)
 		mu.Unlock()
@@ -580,7 +580,7 @@ func TestFetchCardsConcurrently_CollatesSlackErrors(t *testing.T) {
 		}
 	}
 	t.Cleanup(func() {
-		sendSlackAlert = originalSendSlackAlert
+		sendAlert = originalSendAlert
 	})
 
 	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
@@ -591,7 +591,7 @@ func TestFetchCardsConcurrently_CollatesSlackErrors(t *testing.T) {
 	select {
 	case <-alertDone:
 	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for collated slack alert")
+		t.Fatal("timed out waiting for collated alert")
 	}
 
 	time.Sleep(50 * time.Millisecond)
@@ -617,7 +617,7 @@ func TestFetchCardsConcurrently_CollatesSlackErrors(t *testing.T) {
 	}
 }
 
-func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToSlack(t *testing.T) {
+func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToAlert(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"Timeout Shop": &MockLGS{
 			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
@@ -630,8 +630,8 @@ func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToSlack(t *testing.T) {
 	alertMessages := make([]string, 0, 1)
 	alertDone := make(chan struct{}, 1)
 
-	originalSendSlackAlert := sendSlackAlert
-	sendSlackAlert = func(message string) {
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
 		mu.Lock()
 		alertMessages = append(alertMessages, message)
 		mu.Unlock()
@@ -641,7 +641,7 @@ func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToSlack(t *testing.T) {
 		}
 	}
 	t.Cleanup(func() {
-		sendSlackAlert = originalSendSlackAlert
+		sendAlert = originalSendAlert
 	})
 
 	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
@@ -655,7 +655,7 @@ func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToSlack(t *testing.T) {
 	select {
 	case <-alertDone:
 	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for timeout slack alert")
+		t.Fatal("timed out waiting for timeout alert")
 	}
 
 	time.Sleep(50 * time.Millisecond)
@@ -670,7 +670,7 @@ func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToSlack(t *testing.T) {
 	}
 }
 
-func TestFetchCardsConcurrently_SkipsCanceledForSlack(t *testing.T) {
+func TestFetchCardsConcurrently_SkipsCanceledForAlert(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"Canceled Shop": &MockLGS{
 			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
@@ -680,15 +680,15 @@ func TestFetchCardsConcurrently_SkipsCanceledForSlack(t *testing.T) {
 	}
 
 	alertSent := make(chan struct{}, 1)
-	originalSendSlackAlert := sendSlackAlert
-	sendSlackAlert = func(message string) {
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
 		select {
 		case alertSent <- struct{}{}:
 		default:
 		}
 	}
 	t.Cleanup(func() {
-		sendSlackAlert = originalSendSlackAlert
+		sendAlert = originalSendAlert
 	})
 
 	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
@@ -701,7 +701,7 @@ func TestFetchCardsConcurrently_SkipsCanceledForSlack(t *testing.T) {
 
 	select {
 	case <-alertSent:
-		t.Fatal("did not expect slack alert for canceled search")
+		t.Fatal("did not expect alert for canceled search")
 	case <-time.After(200 * time.Millisecond):
 	}
 }
@@ -793,8 +793,8 @@ func TestFormatShopSearchSummary(t *testing.T) {
 	}
 }
 
-func TestFormatSlackErrorSummary(t *testing.T) {
-	got := formatSlackErrorSummary("Uro, Titan of Nature's Wrath", []string{
+func TestFormatAlertErrorSummary(t *testing.T) {
+	got := formatAlertErrorSummary("Uro, Titan of Nature's Wrath", []string{
 		"Error encountered searching [Tefuda] for [Uro, Titan of Nature's Wrath]: attempt 3 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
 		"Error encountered searching [Hideout] for [Uro, Titan of Nature's Wrath]: attempt 2 (scrap-direct): 503 Service Unavailable (proxy_mode=direct proxy=none)",
 		"Recovered from panic in shop [ShopPanic]: panic value",
