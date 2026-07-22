@@ -57,7 +57,7 @@ type StoreError struct {
 	StatusCode int    `json:"statusCode,omitempty"`
 }
 
-var sendSlackAlert = alert.SendSlackAlert
+var sendAlert = alert.SendAlert
 
 type shopSpec struct {
 	name        string
@@ -159,9 +159,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	}
 
 	wg.Wait()
-	cards, siteErrors, slackErrorMessages := aggregator.snapshot()
-	if len(slackErrorMessages) > 0 {
-		go sendSlackAlert(formatSlackErrorSummary(searchString, slackErrorMessages))
+	cards, siteErrors, alertErrorMessages := aggregator.snapshot()
+	if len(alertErrorMessages) > 0 {
+		go sendAlert(formatAlertErrorSummary(searchString, alertErrorMessages))
 	}
 	if len(siteErrors) > 0 {
 		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
@@ -179,7 +179,7 @@ type fetchResultAggregator struct {
 	mu                   sync.Mutex
 	cards                []gateway.Card
 	siteErrors           map[string]error
-	slackErrorMessages []string
+	alertErrorMessages []string
 	shopDurations        []shopSearchDuration
 }
 
@@ -187,7 +187,7 @@ func newFetchResultAggregator(shopCount int) *fetchResultAggregator {
 	return &fetchResultAggregator{
 		cards:                []gateway.Card{},
 		siteErrors:           make(map[string]error, shopCount),
-		slackErrorMessages: make([]string, 0, shopCount),
+		alertErrorMessages: make([]string, 0, shopCount),
 	}
 }
 
@@ -206,9 +206,9 @@ func (f *fetchResultAggregator) addSiteError(shopName string, err error) {
 	f.mu.Unlock()
 }
 
-func (f *fetchResultAggregator) addSlackErrorMessage(message string) {
+func (f *fetchResultAggregator) addAlertErrorMessage(message string) {
 	f.mu.Lock()
-	f.slackErrorMessages = append(f.slackErrorMessages, message)
+	f.alertErrorMessages = append(f.alertErrorMessages, message)
 	f.mu.Unlock()
 }
 
@@ -231,9 +231,9 @@ func (f *fetchResultAggregator) snapshot() ([]gateway.Card, map[string]error, []
 	cards := append([]gateway.Card(nil), f.cards...)
 	siteErrors := make(map[string]error, len(f.siteErrors))
 	maps.Copy(siteErrors, f.siteErrors)
-	slackErrorMessages := append([]string(nil), f.slackErrorMessages...)
+	alertErrorMessages := append([]string(nil), f.alertErrorMessages...)
 
-	return cards, siteErrors, slackErrorMessages
+	return cards, siteErrors, alertErrorMessages
 }
 
 func searchShop(
@@ -280,7 +280,7 @@ func recoverShopPanic(shopName string, aggregator *fetchResultAggregator) {
 		errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
 		log.Println(errMsg)
 		aggregator.addSiteError(shopName, fmt.Errorf("panic: %v", r))
-		aggregator.addSlackErrorMessage(errMsg)
+		aggregator.addAlertErrorMessage(errMsg)
 	}
 }
 
@@ -293,7 +293,7 @@ func recordShopSearchError(searchString, shopName string, err error, aggregator 
 			gateway.EnsureHTTPStatusInErrorMessage(err.Error()),
 		)
 		log.Println(errMsg)
-		aggregator.addSlackErrorMessage(errMsg)
+		aggregator.addAlertErrorMessage(errMsg)
 	}
 	aggregator.addSiteError(shopName, err)
 }
@@ -318,7 +318,7 @@ func formatShopSearchSummary(searchString string, totalDuration time.Duration, s
 	)
 }
 
-func formatSlackErrorSummary(searchString string, errorMessages []string) string {
+func formatAlertErrorSummary(searchString string, errorMessages []string) string {
 	sortedMessages := append([]string(nil), errorMessages...)
 	sort.Strings(sortedMessages)
 

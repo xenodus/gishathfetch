@@ -30,10 +30,10 @@ func runAnalyticsKeywordsExport(ctx context.Context) (err error) {
 
 	defer func() {
 		if err != nil {
-			sendJobSlackAlert(formatAnalyticsKeywordsExportFailure(err))
+			sendJobAlert(formatAnalyticsKeywordsExportFailure(err))
 			return
 		}
-		sendJobSlackAlert(formatAnalyticsKeywordsExportSuccess(generatedAt))
+		sendJobAlert(formatAnalyticsKeywordsExportSuccess(generatedAt))
 	}()
 
 	reporter, err := newGA4ReporterFunc(ctx)

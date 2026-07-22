@@ -14,15 +14,15 @@ func init() {
 	_ = godotenv.Load("../../.env")
 }
 
-func TestSendSlackAlert(t *testing.T) {
-	testSendSlackWebhook(t, SlackAlertWebhookEnv, SendSlackAlert)
+func TestSendAlert(t *testing.T) {
+	testSendWebhookAlert(t, AlertWebhookEnv, SendAlert)
 }
 
-func TestSendJobSlackAlert(t *testing.T) {
-	testSendSlackWebhook(t, SlackJobWebhookURLEnv, SendJobSlackAlert)
+func TestSendJobAlert(t *testing.T) {
+	testSendWebhookAlert(t, JobAlertWebhookEnv, SendJobAlert)
 }
 
-func testSendSlackWebhook(t *testing.T, webhookURLEnv string, sendAlert func(string)) {
+func testSendWebhookAlert(t *testing.T, webhookURLEnv string, sendAlert func(string)) {
 	t.Helper()
 
 	t.Run("Success", func(t *testing.T) {
@@ -34,7 +34,7 @@ func testSendSlackWebhook(t *testing.T, webhookURLEnv string, sendAlert func(str
 				t.Errorf("Expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
 			}
 
-			var payload SlackPayload
+			var payload WebhookPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 				t.Errorf("Failed to decode request body: %v", err)
 			}
@@ -67,20 +67,20 @@ func testSendSlackWebhook(t *testing.T, webhookURLEnv string, sendAlert func(str
 	})
 }
 
-func TestSendSlackAlert_Integration(t *testing.T) {
-	webhookURL := os.Getenv(SlackAlertWebhookEnv)
+func TestSendAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv(AlertWebhookEnv)
 	if webhookURL == "" {
 		t.Skip("SLACK_ALERT_WEBHOOK not set, skipping integration test")
 	}
 
-	SendSlackAlert("Integration Test Message (Ignore this)")
+	SendAlert("Integration Test Message (Ignore this)")
 }
 
-func TestSendJobSlackAlert_Integration(t *testing.T) {
-	webhookURL := os.Getenv(SlackJobWebhookURLEnv)
+func TestSendJobAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv(JobAlertWebhookEnv)
 	if webhookURL == "" {
 		t.Skip("SLACK_JOB_WEBHOOK not set, skipping integration test")
 	}
 
-	SendJobSlackAlert("Integration Test Message (Ignore this)")
+	SendJobAlert("Integration Test Message (Ignore this)")
 }
