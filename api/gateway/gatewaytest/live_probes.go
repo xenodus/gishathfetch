@@ -51,18 +51,28 @@ func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, 
 	})
 }
 
-// RequireDuellersPointSearchStructure verifies the Dueller's Point search table markup.
+// RequireDuellersPointSearchStructure verifies the Dueller's Point search API response shape.
 func RequireDuellersPointSearchStructure(t *testing.T, ctx context.Context, baseURL, searchPath, query string) {
 	t.Helper()
 	host := strings.TrimPrefix(strings.TrimPrefix(baseURL, "https://"), "http://")
 	probeURL := BuildURL("https", host, searchPath, url.Values{"search_text": {query}})
-	pageURL, err := url.Parse(probeURL)
-	require.NoError(t, err)
-	RequireHTMLStructure(t, ctx, HTMLProbe{
-		URL:              probeURL,
-		PrimarySelector:  "div.container table > tbody",
-		FallbackSelector: "div.container table",
-		PageURL:          pageURL,
+	RequireJSONStructure(t, ctx, JSONProbe{
+		URL: probeURL,
+		Headers: map[string]string{
+			"Accept": "application/json",
+		},
+		Validate: func(body []byte) error {
+			var payload struct {
+				Results []json.RawMessage `json:"results"`
+			}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				return err
+			}
+			if payload.Results == nil {
+				return ValidateErrorf("missing results array")
+			}
+			return nil
+		},
 	})
 }
 
