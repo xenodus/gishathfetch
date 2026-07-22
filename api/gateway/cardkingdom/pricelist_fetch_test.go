@@ -226,6 +226,15 @@ func TestCKPricelistResidentialProxyURL_Unset(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestCKPricelistFetchContextTimeout_DoublesWhenProxyConfigured(t *testing.T) {
+	t.Setenv("RESIDENTIAL_PROXY_1", "")
+	t.Setenv("CK_PRICELIST_PROXY", "")
+	require.Equal(t, ckPricelistFetchTimeout, ckPricelistFetchContextTimeout())
+
+	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+	require.Equal(t, 2*ckPricelistFetchTimeout, ckPricelistFetchContextTimeout())
+}
+
 func TestDownloadCKPricelistOnce_RejectsNonOKStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)

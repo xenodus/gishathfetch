@@ -159,8 +159,17 @@ func bytesTrimSpace(data []byte) []byte {
 	return []byte(strings.TrimSpace(string(data)))
 }
 
+func ckPricelistFetchContextTimeout() time.Duration {
+	// Direct and proxy retry each need up to ckPricelistHTTPTimeout; reserve
+	// budget for both when a residential proxy fallback is configured.
+	if _, ok := ckPricelistResidentialProxyURL(); ok {
+		return 2 * ckPricelistFetchTimeout
+	}
+	return ckPricelistFetchTimeout
+}
+
 func fetchCheapestFromCKPricelist(ctx context.Context) (map[string]Listing, error) {
-	ctx, cancel := context.WithTimeout(ctx, ckPricelistFetchTimeout)
+	ctx, cancel := context.WithTimeout(ctx, ckPricelistFetchContextTimeout())
 	defer cancel()
 
 	downloadURL := ckPricelistURL()
