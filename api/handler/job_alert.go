@@ -6,7 +6,7 @@ import (
 	"mtg-price-checker-sg/pkg/alert"
 )
 
-var sendJobDiscordAlert = alert.SendJobDiscordAlert
+var sendJobSlackAlert = alert.SendSlackAlert
 
 func formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount int, generatedAt string) string {
 	return fmt.Sprintf(

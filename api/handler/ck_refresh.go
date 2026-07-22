@@ -32,10 +32,10 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 
 	defer func() {
 		if err != nil {
-			sendJobDiscordAlert(formatCKPriceRefreshFailure(err))
+			sendJobSlackAlert(formatCKPriceRefreshFailure(err))
 			return
 		}
-		sendJobDiscordAlert(formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount, generatedAt))
+		sendJobSlackAlert(formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount, generatedAt))
 	}()
 
 	store, err := newCKRefreshStoreFunc(ctx)
