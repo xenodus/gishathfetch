@@ -14,15 +14,15 @@ func init() {
 	_ = godotenv.Load("../../.env")
 }
 
-func TestSendDiscordAlert(t *testing.T) {
-	testSendDiscordWebhook(t, DiscordWebhookURLEnv, SendDiscordAlert)
+func TestSendSlackAlert(t *testing.T) {
+	testSendSlackWebhook(t, SlackAlertWebhookEnv, SendSlackAlert)
 }
 
-func TestSendJobDiscordAlert(t *testing.T) {
-	testSendDiscordWebhook(t, JobDiscordWebhookURLEnv, SendJobDiscordAlert)
+func TestSendJobSlackAlert(t *testing.T) {
+	testSendSlackWebhook(t, SlackJobWebhookURLEnv, SendJobSlackAlert)
 }
 
-func testSendDiscordWebhook(t *testing.T, webhookURLEnv string, sendAlert func(string)) {
+func testSendSlackWebhook(t *testing.T, webhookURLEnv string, sendAlert func(string)) {
 	t.Helper()
 
 	t.Run("Success", func(t *testing.T) {
@@ -34,16 +34,16 @@ func testSendDiscordWebhook(t *testing.T, webhookURLEnv string, sendAlert func(s
 				t.Errorf("Expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
 			}
 
-			var payload DiscordPayload
+			var payload SlackPayload
 			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 				t.Errorf("Failed to decode request body: %v", err)
 			}
 
-			if payload.Content != "Test Message" {
-				t.Errorf("Expected content 'Test Message', got '%s'", payload.Content)
+			if payload.Text != "Test Message" {
+				t.Errorf("Expected text 'Test Message', got '%s'", payload.Text)
 			}
 
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusOK)
 		}))
 		defer server.Close()
 
@@ -67,20 +67,20 @@ func testSendDiscordWebhook(t *testing.T, webhookURLEnv string, sendAlert func(s
 	})
 }
 
-func TestSendDiscordAlert_Integration(t *testing.T) {
-	webhookURL := os.Getenv(DiscordWebhookURLEnv)
+func TestSendSlackAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv(SlackAlertWebhookEnv)
 	if webhookURL == "" {
-		t.Skip("DISCORD_WEBHOOK_URL not set, skipping integration test")
+		t.Skip("SLACK_ALERT_WEBHOOK not set, skipping integration test")
 	}
 
-	SendDiscordAlert("Integration Test Message (Ignore this)")
+	SendSlackAlert("Integration Test Message (Ignore this)")
 }
 
-func TestSendJobDiscordAlert_Integration(t *testing.T) {
-	webhookURL := os.Getenv(JobDiscordWebhookURLEnv)
+func TestSendJobSlackAlert_Integration(t *testing.T) {
+	webhookURL := os.Getenv(SlackJobWebhookURLEnv)
 	if webhookURL == "" {
-		t.Skip("JOB_DISCORD_WEBHOOK_URL not set, skipping integration test")
+		t.Skip("SLACK_JOB_WEBHOOK not set, skipping integration test")
 	}
 
-	SendJobDiscordAlert("Integration Test Message (Ignore this)")
+	SendJobSlackAlert("Integration Test Message (Ignore this)")
 }
