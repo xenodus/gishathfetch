@@ -10,9 +10,19 @@ const ResultFilters = ({
   onFoilOnlyChange,
   cheapestPerStore,
   onCheapestPerStoreChange,
+  availableStores,
+  selectedStores,
+  onToggleStore,
+  onSelectAllStores,
+  onSelectNoStores,
   hasActiveFilters,
   onClearFilters,
 }) => {
+  const allStoresSelected =
+    availableStores.length > 0 &&
+    selectedStores.length === availableStores.length;
+  const noStoresSelected = selectedStores.length === 0;
+
   return (
     <div className="mb-3 text-start result-filters rounded py-3 px-3">
       <div className="row g-2 align-items-end">
@@ -81,6 +91,68 @@ const ResultFilters = ({
           )}
         </div>
       </div>
+
+      {availableStores.length > 0 && (
+        <div className="mt-3 pt-3 border-top border-secondary-subtle">
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <Form.Label className="small fw-semibold mb-0">Stores</Form.Label>
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <fieldset className="store-selector-bulk-toggle border-0 p-0 m-0">
+                <legend className="visually-hidden">
+                  Select all or no stores in results
+                </legend>
+                <button
+                  type="button"
+                  className={`btn btn-sm store-selector-bulk-btn${
+                    allStoresSelected ? " is-active" : ""
+                  }`}
+                  aria-pressed={allStoresSelected}
+                  onClick={onSelectAllStores}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm store-selector-bulk-btn${
+                    noStoresSelected ? " is-active" : ""
+                  }`}
+                  aria-pressed={noStoresSelected}
+                  onClick={onSelectNoStores}
+                >
+                  None
+                </button>
+              </fieldset>
+              <span
+                className="store-selector-count text-muted small"
+                aria-live="polite"
+              >
+                {selectedStores.length} of {availableStores.length} selected
+              </span>
+            </div>
+          </div>
+
+          <fieldset className="store-selector-pills border-0 p-0 m-0">
+            <legend className="visually-hidden">Filter results by store</legend>
+            {availableStores.map((store) => {
+              const isSelected = selectedStores.includes(store);
+
+              return (
+                <button
+                  key={store}
+                  type="button"
+                  className={`btn btn-sm store-selector-pill${
+                    isSelected ? " is-selected" : ""
+                  }`}
+                  aria-pressed={isSelected}
+                  onClick={() => onToggleStore(store)}
+                >
+                  {store}
+                </button>
+              );
+            })}
+          </fieldset>
+        </div>
+      )}
     </div>
   );
 };

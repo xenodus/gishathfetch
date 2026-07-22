@@ -8,6 +8,7 @@ export default function useResultFilters(results, searchQuery) {
   const [qualityFilter, setQualityFilter] = useState("all");
   const [foilOnly, setFoilOnly] = useState(false);
   const [cheapestPerStore, setCheapestPerStore] = useState(false);
+  const [storeFilter, setStoreFilter] = useState(null);
 
   // Reset filters when the user runs a new search.
   // biome-ignore lint/correctness/useExhaustiveDependencies: searchQuery triggers filter reset on new search
@@ -16,7 +17,20 @@ export default function useResultFilters(results, searchQuery) {
     setQualityFilter("all");
     setFoilOnly(false);
     setCheapestPerStore(false);
+    setStoreFilter(null);
   }, [searchQuery]);
+
+  const availableStores = useMemo(() => {
+    const stores = new Set();
+    for (const card of results) {
+      if (card.src) {
+        stores.add(card.src);
+      }
+    }
+    return [...stores].sort();
+  }, [results]);
+
+  const selectedStores = storeFilter ?? availableStores;
 
   const availableQualities = useMemo(() => {
     const qualities = new Set();
@@ -37,6 +51,11 @@ export default function useResultFilters(results, searchQuery) {
 
     if (foilOnly) {
       filtered = filtered.filter((card) => card.isFoil);
+    }
+
+    if (storeFilter !== null) {
+      const allowedStores = new Set(storeFilter);
+      filtered = filtered.filter((card) => allowedStores.has(card.src));
     }
 
     if (cheapestPerStore) {
@@ -66,15 +85,55 @@ export default function useResultFilters(results, searchQuery) {
     });
 
     return filtered;
-  }, [results, sortBy, qualityFilter, foilOnly, cheapestPerStore, searchQuery]);
+  }, [
+    results,
+    sortBy,
+    qualityFilter,
+    foilOnly,
+    storeFilter,
+    cheapestPerStore,
+    searchQuery,
+  ]);
+
+  const isStoreFilterActive =
+    storeFilter !== null && storeFilter.length < availableStores.length;
 
   const hasActiveFilters =
-    qualityFilter !== "all" || foilOnly || cheapestPerStore;
+    qualityFilter !== "all" ||
+    foilOnly ||
+    cheapestPerStore ||
+    isStoreFilterActive;
+
+  const toggleStoreFilter = (store) => {
+    const current = storeFilter ?? availableStores;
+    const next = current.includes(store)
+      ? current.filter((name) => name !== store)
+      : [...current, store];
+
+    if (
+      next.length === availableStores.length &&
+      availableStores.every((name) => next.includes(name))
+    ) {
+      setStoreFilter(null);
+      return;
+    }
+
+    setStoreFilter(next);
+  };
+
+  const selectAllStores = () => {
+    setStoreFilter(null);
+  };
+
+  const selectNoStores = () => {
+    setStoreFilter([]);
+  };
 
   const clearFilters = () => {
     setQualityFilter("all");
     setFoilOnly(false);
     setCheapestPerStore(false);
+    setStoreFilter(null);
   };
 
   return {
@@ -88,6 +147,12 @@ export default function useResultFilters(results, searchQuery) {
     setFoilOnly,
     cheapestPerStore,
     setCheapestPerStore,
+    availableStores,
+    selectedStores,
+    toggleStoreFilter,
+    selectAllStores,
+    selectNoStores,
+    isStoreFilterActive,
     hasActiveFilters,
     clearFilters,
   };
