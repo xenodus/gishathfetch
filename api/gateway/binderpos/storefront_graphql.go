@@ -154,9 +154,11 @@ func searchByStorefrontGraphQL(
 		Path:   storefrontGraphQLPath,
 	}
 
+	query := storefrontGraphQLSearchQuery(scrapVariant, searchStr)
+
 	payload, err := json.Marshal(graphQLRequest{
 		Query:     storefrontGraphQLQuery,
-		Variables: map[string]any{"q": strings.TrimSpace(searchStr)},
+		Variables: map[string]any{"q": query},
 	})
 	if err != nil {
 		return nil, err
@@ -202,7 +204,24 @@ func searchByStorefrontGraphQL(
 		return nil, fmt.Errorf("%s graphql: missing search data", storeName)
 	}
 
-	return mapGraphQLProducts(scrapVariant, storeName, baseURL, parsed.Data.Search.Edges), nil
+	cards := mapGraphQLProducts(scrapVariant, storeName, baseURL, parsed.Data.Search.Edges)
+	if len(cards) > 0 && !gateway.CardsMatchSearch(cards, searchStr) {
+		return nil, fmt.Errorf("%s graphql: results do not match %q", storeName, strings.TrimSpace(searchStr))
+	}
+	return cards, nil
+}
+
+func storefrontGraphQLSearchQuery(scrapVariant int, searchStr string) string {
+	searchStr = strings.TrimSpace(searchStr)
+	if searchStr == "" {
+		return searchStr
+	}
+	switch scrapVariant {
+	case 4:
+		return fyendalSearchQuery(searchStr)
+	default:
+		return searchStr + " mtg"
+	}
 }
 
 func mapGraphQLProducts(scrapVariant int, storeName, baseURL string, edges []graphQLEdge) []gateway.Card {

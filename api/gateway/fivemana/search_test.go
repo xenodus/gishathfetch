@@ -159,6 +159,75 @@ func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
 	require.Equal(t, "Abrade [Foundations]", cards[0].Name)
 }
 
+func Test_SearchFallsBackToHTMLWhenGraphQLIrrelevant(t *testing.T) {
+	irrelevantPayload := graphQLResponse{
+		Data: &struct {
+			Search *struct {
+				Edges []graphQLEdge `json:"edges"`
+			} `json:"search"`
+		}{
+			Search: &struct {
+				Edges []graphQLEdge `json:"edges"`
+			}{
+				Edges: []graphQLEdge{{
+					Node: &graphQLProduct{
+						Title:            "Teferi, Time Raveler [War of the Spark]",
+						Handle:           "teferi-time-raveler-war-of-the-spark",
+						AvailableForSale: true,
+						ProductType:      storefrontMTGType,
+						FeaturedImage: &struct {
+							URL string `json:"url"`
+						}{URL: "https://cdn.shopify.com/teferi.png"},
+					},
+				}},
+			},
+		},
+	}
+	irrelevantPayload.Data.Search.Edges[0].Node.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			Title:            "Near Mint Foil",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "11.80"},
+		}},
+	}
+	body, err := json.Marshal(irrelevantPayload)
+	require.NoError(t, err)
+
+	var sawGraphQL, sawHTML bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "graphql"):
+			sawGraphQL = true
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+		case strings.Contains(r.URL.Path, "search"):
+			sawHTML = true
+			require.Equal(t, storefrontSearchSectionID, r.URL.Query().Get("section_id"))
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(inStockProductHTML))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	store := Store{
+		Name:       StoreName,
+		BaseUrl:    server.URL,
+		SearchPath: StoreSearchPath,
+	}
+	cards, err := store.Search(context.Background(), "lightning bolt")
+	require.NoError(t, err)
+	require.True(t, sawGraphQL)
+	require.True(t, sawHTML)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Abrade [Foundations]", cards[0].Name)
+}
+
 func Test_SearchDoesNotFallbackToHTMLWhenGraphQL5xx(t *testing.T) {
 	var sawGraphQL, sawHTML bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

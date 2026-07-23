@@ -94,6 +94,30 @@ func TestMapGraphQLProductSkipsNonMTG(t *testing.T) {
 	require.Empty(t, mapGraphQLProduct(2, "Hideyoshi", "https://hideyoshitcg.com", product))
 }
 
+func TestRunFallbackAttemptsGraphQLIrrelevantFallsBackToScrap(t *testing.T) {
+	sequence := []string{}
+	cards, err := runFallbackAttempts(
+		fallbackAttempt{strategy: "graphql-dedicated", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
+			sequence = append(sequence, "graphql-dedicated")
+			return nil, fmt.Errorf("Hideyoshi graphql: results do not match %q", "lightning bolt")
+		}},
+		fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
+			sequence = append(sequence, "scrap-dedicated")
+			return []gateway.Card{{Name: "Lightning Bolt [Unlimited Edition]"}}, nil
+		}},
+	)
+	require.NoError(t, err)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Lightning Bolt [Unlimited Edition]", cards[0].Name)
+	require.Equal(t, []string{"graphql-dedicated", "scrap-dedicated"}, sequence)
+}
+
+func TestStorefrontGraphQLSearchQuery(t *testing.T) {
+	require.Equal(t, "Abrade mtg", storefrontGraphQLSearchQuery(2, "Abrade"))
+	require.Equal(t, `product_type:"MTG Single Cards" AND Abrade`, storefrontGraphQLSearchQuery(4, "Abrade"))
+	require.Equal(t, "", storefrontGraphQLSearchQuery(2, "  "))
+}
+
 func TestRunFallbackAttemptsGraphQLEmptyIsFinal(t *testing.T) {
 	sequence := []string{}
 	cards, err := runFallbackAttempts(

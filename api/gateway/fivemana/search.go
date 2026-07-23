@@ -38,14 +38,17 @@ func NewLGS() gateway.LGS {
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	cards, err := s.searchGraphQL(ctx, searchStr)
-	if err == nil {
+	if err == nil && gateway.CardsMatchSearch(cards, searchStr) {
 		return cards, nil
 	}
-	if gateway.IsHTTPServerError(err) {
-		return nil, err
+	if err == nil && len(cards) > 0 {
+		log.Printf("%s: graphql results do not match %q, falling back to HTML", s.Name, searchStr)
+	} else if err != nil {
+		if gateway.IsHTTPServerError(err) {
+			return nil, err
+		}
+		log.Printf("%s: graphql search failed, falling back to HTML: %v", s.Name, err)
 	}
-
-	log.Printf("%s: graphql search failed, falling back to HTML: %v", s.Name, err)
 
 	htmlCards, htmlErr := s.searchHTML(ctx, searchStr)
 	if htmlErr != nil {
