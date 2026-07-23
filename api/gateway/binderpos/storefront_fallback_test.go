@@ -44,7 +44,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
-	t.Run("falls back to decklist after scrap 429 errors", func(t *testing.T) {
+	t.Run("falls back to scrap-dynamic after scrap 429 errors", func(t *testing.T) {
 		sequence := make([]string, 0, 3)
 		cards, err := runFallbackAttempts(
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
@@ -55,22 +55,22 @@ func TestRunFallbackAttempts(t *testing.T) {
 				sequence = append(sequence, "scrap-direct")
 				return nil, errors.New("unexpected status 429")
 			}},
-			fallbackAttempt{strategy: "decklist-dedicated", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
-				sequence = append(sequence, "decklist-dedicated")
-				return []gateway.Card{{Name: "decklist-dedicated"}}, nil
-			}},
 			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
-				t.Fatal("scrap-dynamic should not run before decklist after scrap 429 errors")
+				sequence = append(sequence, "scrap-dynamic")
+				return []gateway.Card{{Name: "scrap-dynamic"}}, nil
+			}},
+			fallbackAttempt{strategy: "decklist-dedicated", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
+				t.Fatal("decklist should not run before scrap-dynamic succeeds")
 				return nil, nil
 			}},
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
-		if len(cards) != 1 || cards[0].Name != "decklist-dedicated" {
-			t.Fatalf("expected decklist fallback card, got %+v", cards)
+		if len(cards) != 1 || cards[0].Name != "scrap-dynamic" {
+			t.Fatalf("expected scrap-dynamic fallback card, got %+v", cards)
 		}
-		want := []string{"scrap-dedicated", "scrap-direct", "decklist-dedicated"}
+		want := []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}
 		if len(sequence) != len(want) {
 			t.Fatalf("expected %v, got %v", want, sequence)
 		}

@@ -12,9 +12,9 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 		want := []string{
 			"scrap-dedicated",
 			"scrap-direct",
+			"scrap-dynamic",
 			"decklist-dedicated",
 			"decklist-direct",
-			"scrap-dynamic",
 			"decklist-dynamic",
 		}
 		require.Equal(t, want, got)
@@ -27,9 +27,9 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 			"graphql-direct",
 			"scrap-dedicated",
 			"scrap-direct",
+			"scrap-dynamic",
 			"decklist-dedicated",
 			"decklist-direct",
-			"scrap-dynamic",
 			"decklist-dynamic",
 		}
 		require.Equal(t, want, got)
