@@ -1,6 +1,7 @@
 package binderpos
 
 import (
+	"fmt"
 	"testing"
 
 	"mtg-price-checker-sg/gateway"
