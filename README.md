@@ -21,9 +21,16 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 
 Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search
 requests go through API Gateway to a container-based Lambda that scrapes LGS
-sites in parallel. Card Kingdom (CK) retail prices are maintained in DynamoDB by
+sites in parallel. When `WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
+are signed per [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/)
+(RFC 9421 HTTP Message Signatures); the public key directory is published at
+`/.well-known/http-message-signatures-directory` on the same origin during
+frontend deploy. Card Kingdom (CK) retail prices are maintained in DynamoDB by
 a separate refresh Lambda on a daily EventBridge schedule; the search Lambda
 reads that index when `CK_PRICE_LOOKUP_ENABLED` is set.
+
+For per-store timeouts, proxy tiers, and strategy order, see
+[`docs/search-strategies-retries-timeouts.md`](docs/search-strategies-retries-timeouts.md).
 
 ```mermaid
 flowchart TB
@@ -45,7 +52,7 @@ flowchart TB
 
     subgraph external["External services"]
         LGS[LGS store websites]
-        Proxies[Proxy tiers direct / dedicated / dynamic]
+        Proxies[Proxy tiers direct / dedicated / dynamic / residential]
         CKAPI[Card Kingdom pricelist API]
         Scryfall[Scryfall API]
         GA4[Google Analytics GA4]
@@ -56,12 +63,12 @@ flowchart TB
     Browser -->|gtag search events| GA4
     Browser -->|GET /?s=...&lgs=...| AGW
     AGW --> SearchLambda
-    SearchLambda --> Proxies
+    SearchLambda -->|optional Web Bot Auth signatures| Proxies
     Proxies --> LGS
     SearchLambda -->|optional CK lookup| DDB
     SearchLambda -->|verify card name| Scryfall
     EB -->|action: ck-price-refresh-run| RefreshLambda
-    RefreshLambda -->|download pricelist| CKAPI
+    RefreshLambda -->|pricelist direct or residential proxy| CKAPI
     RefreshLambda -->|batch write cheapest CK retail| DDB
     RefreshLambda -->|write latest.json| S3
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
@@ -70,6 +77,7 @@ flowchart TB
     ECR -.->|deploy| SearchLambda
     ECR -.->|deploy| RefreshLambda
     ECR -.->|deploy| AnalyticsLambda
+    Deploy[Frontend deploy] -.->|http-message-signatures-directory| S3
 ```
 
 ### Services
@@ -77,8 +85,9 @@ flowchart TB
 | Service | Name / endpoint | Role |
 |---------|-----------------|------|
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
+| Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
 | Search API | API Gateway → `api.gishathfetch.com` | Routes `GET /?s=...&lgs=...` to the search Lambda |
-| Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional CK price lookup from DynamoDB |
+| Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
 | Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
@@ -90,8 +99,8 @@ flowchart TB
 The frontend sends GA4 `search` events with a `search_term` parameter whenever a
 user starts a valid card-name search (`frontend/src/hooks/useSearch.js`). The
 analytics Lambda queries the GA4 Data API for the `search` event and `searchTerm`
-dimension, ranks the top 20 keywords for the last 24 hours, 7 days, and 30 days,
-and writes JSON to S3.
+dimension, ranks the top 20 keywords for the last 24 hours, 7 days, 30 days, 6
+months, and 1 year, and writes JSON to S3.
 
 ```mermaid
 sequenceDiagram
@@ -144,8 +153,10 @@ Example report shape:
 ### CK price refresh flow
 
 CK prices are downloaded from Card Kingdom's public pricelist API
-(`https://api.cardkingdom.com/api/v2/pricelist`). The refresh Lambda picks the
-cheapest listed retail price per card name and batch-writes the index. Search
+(`https://api.cardkingdom.com/api/v2/pricelist`). The download tries direct
+egress first, then falls back to a residential proxy when configured. The refresh
+Lambda picks the cheapest listed retail price per card name and batch-writes the
+index. Search
 verifies the query against Scryfall before looking up DynamoDB and omits stale
 entries older than 48 hours.
 
@@ -161,7 +172,7 @@ sequenceDiagram
     participant U as User
 
     EB->>R: daily ck-price-refresh-run
-    R->>CK: download api/v2/pricelist
+    R->>CK: download api/v2/pricelist direct or residential
     R->>D: PutAll cheapest CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
@@ -236,19 +247,20 @@ before being returned.
 
 ### Two kinds of stores
 
-**Non-BinderPOS stores** (e.g. Agora, Cards Central, Cards & Collections,
-Dueller's Point, Mox & Lotus, TCG Marketplace) each implement a single bespoke
-`Search` — a custom JSON API call or one HTML scrape — with no multi-strategy
-fallback. On failure the store simply contributes nothing.
+**Non-BinderPOS stores** (e.g. Agora Hobby, Cards Central, Cards & Collections,
+Dueller's Point, Mox & Lotus, The TCG Marketplace) each implement a single
+bespoke `Search` — a custom JSON API call or one HTML scrape — with no
+multi-strategy fallback chain (5 Mana is an exception; see below). On failure the
+store simply contributes nothing.
 
 **5 Mana** is Shopify (Dawn, not BinderPOS). It tries Storefront GraphQL first,
 then falls back to a `main-search` HTML section scrape when GraphQL fails.
 
 **BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
-Fyendal Hobby, Grey Ogre Games, Hideout, Mana Pro, MTG Asia, OneMTG) share one
-gateway. Stores with a configured Storefront access token try **GraphQL first**
-(dedicated → direct), then fall back to HTML scrape and BinderPOS decklist
-strategies.
+Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro, MTG Asia,
+OneMTG) share one gateway. Stores with a configured Storefront access token try
+**GraphQL first** (dedicated → direct), then fall back to HTML scrape and
+BinderPOS decklist strategies.
 
 ### BinderPOS GraphQL, scrape, and decklist fallback chain
 
@@ -289,15 +301,16 @@ flowchart TD
   the storefront itself is failing. GraphQL failures fall through to HTML scrap.
 - Each attempt is bounded by a 5s timeout (`binderposAttemptTimeout`). The first
   attempt starts immediately; later attempts honor per-domain request pacing.
-- Decklist calls to `portal.binderpos.com` retry transient 429/5xx responses
-  with jittered backoff (honoring `Retry-After`) and share a small concurrency
-  gate across stores.
+- Decklist calls to `portal.binderpos.com` are a **single HTTP attempt** per
+  strategy step (no automatic 429/5xx retries). A small concurrency gate caps
+  in-flight decklist requests across stores.
 
 ## 🗂️ Repository layout
 
 ```text
 .
 |-- api/         # Go backend (Lambda handler, scraping gateways, tests)
+|-- docs/        # Maintainer docs (search strategies, timeouts, skills)
 |-- frontend/    # React + Vite single-page app
 |-- Makefile     # Local helpers for common project tasks
 `-- Dockerfile   # Backend container build definition
