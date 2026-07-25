@@ -226,13 +226,32 @@ func TestCKPricelistResidentialProxyURL_Unset(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestCKPricelistDirectHTTPTimeout(t *testing.T) {
+	t.Setenv("RESIDENTIAL_PROXY_1", "")
+	t.Setenv("CK_PRICELIST_PROXY", "")
+	require.Equal(t, ckPricelistHTTPTimeout, ckPricelistDirectHTTPTimeout())
+
+	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+	require.Equal(t, ckPricelistDirectAttemptTimeout, ckPricelistDirectHTTPTimeout())
+}
+
+func TestCKPricelistRemainingFetchTimeout(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 11*time.Minute)
+	defer cancel()
+	require.InDelta(t, float64(11*time.Minute), float64(ckPricelistRemainingFetchTimeout(ctx)), float64(time.Second))
+
+	longCtx, longCancel := context.WithTimeout(context.Background(), ckPricelistHTTPTimeout+time.Minute)
+	defer longCancel()
+	require.Equal(t, ckPricelistHTTPTimeout, ckPricelistRemainingFetchTimeout(longCtx))
+}
+
 func TestDownloadCKPricelistOnce_RejectsNonOKStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	defer server.Close()
 
-	_, err := downloadCKPricelistOnce(context.Background(), server.URL, ckPricelistOutboundOptions())
+	_, err := downloadCKPricelistOnce(context.Background(), server.URL, ckPricelistOutboundOptions(), ckPricelistHTTPTimeout)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "status 503")
 }
@@ -245,12 +264,14 @@ func TestDownloadCKPricelist_FallsBackToProxyAfterDirectFailure(t *testing.T) {
 
 	var directCalls int
 	var proxyCalls int
-	downloadCKPricelistOnceFunc = func(_ context.Context, _ string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
+	downloadCKPricelistOnceFunc = func(_ context.Context, _ string, opts gateway.OutboundRequestOptions, httpTimeout time.Duration) (*ckPricelistPayload, error) {
 		if opts.OnlyProxyURL == "" {
 			directCalls++
+			require.Equal(t, ckPricelistDirectAttemptTimeout, httpTimeout)
 			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
 		}
 		proxyCalls++
+		require.Equal(t, ckPricelistHTTPTimeout, httpTimeout)
 		var payload ckPricelistPayload
 		require.NoError(t, json.Unmarshal([]byte(sampleCKPricelist), &payload))
 		return &payload, nil

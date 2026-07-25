@@ -25,6 +25,10 @@ const (
 	// http.Client.Timeout covers the full round trip including body read.
 	ckPricelistFetchTimeout = 14 * time.Minute
 	ckPricelistHTTPTimeout  = 13 * time.Minute
+	// When a residential proxy fallback is configured, cap the direct attempt so a
+	// slow/hung direct download does not consume the shared fetch deadline before
+	// the proxy retry can stream the ~65MB pricelist.
+	ckPricelistDirectAttemptTimeout = 3 * time.Minute
 	// Emit body-read progress while large pricelist downloads stream through proxy.
 	ckPricelistBodyReadLogInterval = 15 * time.Second
 )
@@ -207,10 +211,35 @@ func ckPricelistResidentialProxyURL() (string, bool) {
 	return util.GetCKPricelistProxyURL()
 }
 
+func ckPricelistDirectHTTPTimeout() time.Duration {
+	if _, ok := ckPricelistResidentialProxyURL(); ok {
+		return ckPricelistDirectAttemptTimeout
+	}
+	return ckPricelistHTTPTimeout
+}
+
+func ckPricelistRemainingFetchTimeout(ctx context.Context) time.Duration {
+	timeout := ckPricelistHTTPTimeout
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return timeout
+	}
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		return 0
+	}
+	return min(timeout, remaining)
+}
+
 var downloadCKPricelistOnceFunc = downloadCKPricelistOnce
 
 func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
-	payload, err := downloadCKPricelistOnceFunc(ctx, downloadURL, ckPricelistOutboundOptions())
+	payload, err := downloadCKPricelistOnceFunc(
+		ctx,
+		downloadURL,
+		ckPricelistOutboundOptions(),
+		ckPricelistDirectHTTPTimeout(),
+	)
 	if err == nil {
 		return payload, nil
 	}
@@ -220,14 +249,26 @@ func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistP
 		return nil, err
 	}
 
+	proxyTimeout := ckPricelistRemainingFetchTimeout(ctx)
+	if proxyTimeout <= 0 {
+		return nil, fmt.Errorf("%s: proxy retry skipped: fetch deadline exhausted after direct failure: %w", ckPricelistErrorPrefix, err)
+	}
+
 	log.Printf("ck price refresh: direct pricelist download failed, retrying via residential proxy")
 	proxyOpts := ckPricelistOutboundOptions()
 	proxyOpts.OnlyProxyURL = proxyURL
-	return downloadCKPricelistOnceFunc(ctx, downloadURL, proxyOpts)
+	proxyCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), proxyTimeout)
+	defer cancel()
+	return downloadCKPricelistOnceFunc(proxyCtx, downloadURL, proxyOpts, proxyTimeout)
 }
 
-func downloadCKPricelistOnce(ctx context.Context, downloadURL string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
-	resp, err := gateway.DoOutboundGET(ctx, downloadURL, opts, ckPricelistHTTPTimeout)
+func downloadCKPricelistOnce(
+	ctx context.Context,
+	downloadURL string,
+	opts gateway.OutboundRequestOptions,
+	httpTimeout time.Duration,
+) (*ckPricelistPayload, error) {
+	resp, err := gateway.DoOutboundGET(ctx, downloadURL, opts, httpTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("%s: download: %w", ckPricelistErrorPrefix, err)
 	}
