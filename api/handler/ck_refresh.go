@@ -44,15 +44,16 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 		return err
 	}
 
-	refreshedCount, err = refreshCKPricesFunc(ctx, store)
+	refreshResult, err := refreshCKPricesFunc(ctx, store)
 	if err != nil {
 		log.Printf("ck price refresh: failed: %v", err)
 		return err
 	}
+	refreshedCount = refreshResult.ListingCount
 
 	log.Printf("ck price refresh: finished refreshed=%d", refreshedCount)
 
-	changes, err := store.GetTopBottomPriceChanges(ctx)
+	changes, err := ckprices.TopBottomPriceChangesInPricelist(ctx, store, refreshResult.Listings)
 	if err != nil {
 		log.Printf("ck price refresh: failed reading price changes: %v", err)
 		return err
