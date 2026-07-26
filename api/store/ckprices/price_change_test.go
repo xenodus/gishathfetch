@@ -359,6 +359,10 @@ func (m *mockPriceChangeStore) PutAll(context.Context, map[string]cardkingdom.Li
 	return "", nil
 }
 
+func (m *mockPriceChangeStore) DeleteListingsNotInPricelist(context.Context, map[string]cardkingdom.Listing) (int, error) {
+	return 0, nil
+}
+
 func TestListingsWithPriceChangeUpdatesSameDayChangesWhenRecomputedNonZero(t *testing.T) {
 	now := time.Date(2026, 7, 19, 15, 0, 0, 0, time.UTC)
 	previousPrice := 1.00

@@ -102,6 +102,17 @@ func RefreshPrices(ctx context.Context, store ckprices.Store) (*RefreshResult, e
 	}
 	log.Printf("ck price refresh: wrote dynamodb listings=%d syncedAt=%s duration=%s", len(listings), syncedAt, time.Since(writeStarted).Round(time.Millisecond))
 
+	deleteStarted := time.Now()
+	deleted, err := store.DeleteListingsNotInPricelist(ctx, listings)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf(
+		"ck price refresh: deleted dynamodb listings not in pricelist count=%d duration=%s",
+		deleted,
+		time.Since(deleteStarted).Round(time.Millisecond),
+	)
+
 	return &RefreshResult{
 		ListingCount: len(listings),
 		Listings:     listings,

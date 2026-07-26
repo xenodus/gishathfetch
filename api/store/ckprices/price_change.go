@@ -191,7 +191,7 @@ func priceChangesByUsdFromListings(listings []PriceChangeListing, ascending bool
 // exported top/bottom lists. It must be larger than PriceChangeRankingLimit so
 // stale DynamoDB rows missing from the latest pricelist can be skipped while
 // still filling the export.
-const priceChangeRankingCandidateLimit = 200
+const priceChangeRankingCandidateLimit = 50
 
 // TopBottomPriceChangesInPricelist returns the largest increases and decreases
 // whose name keys appear in the latest Card Kingdom pricelist snapshot.

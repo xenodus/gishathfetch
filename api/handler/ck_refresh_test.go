@@ -150,6 +150,10 @@ func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.
 	return "", nil
 }
 
+func (m *mockCKRefreshStore) DeleteListingsNotInPricelist(_ context.Context, _ map[string]cardkingdom.Listing) (int, error) {
+	return 0, nil
+}
+
 type mockCKPriceReportWriter struct {
 	written bool
 }

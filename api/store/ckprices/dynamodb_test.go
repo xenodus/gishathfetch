@@ -166,3 +166,14 @@ func TestSleepWithContext_RespectsCancellation(t *testing.T) {
 	err := sleepWithContext(ctx, time.Second)
 	require.ErrorIs(t, err, context.Canceled)
 }
+
+func TestShouldDeleteCKListingNameKey(t *testing.T) {
+	pricelist := map[string]cardkingdom.Listing{
+		"lightning bolt": {CardName: "Lightning Bolt"},
+	}
+
+	require.False(t, shouldDeleteCKListingNameKey("", pricelist))
+	require.False(t, shouldDeleteCKListingNameKey(syncMetadataKey, pricelist))
+	require.False(t, shouldDeleteCKListingNameKey("lightning bolt", pricelist))
+	require.True(t, shouldDeleteCKListingNameKey("juzám djinn", pricelist))
+}
