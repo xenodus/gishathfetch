@@ -208,19 +208,38 @@ Example report shape:
 The shared `lambda-mtg` role must allow:
 
 - `s3:PutObject` on the export prefix (`arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`)
+- `dynamodb:BatchGetItem`, `dynamodb:BatchWriteItem`, `dynamodb:Scan` on the CK prices **table**:
+  - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices`
 - `dynamodb:Query` on the CK price-change GSI:
   - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index`
 
-The daily export ranks top/bottom price changes by USD (`priceChangeUsd-index`). If that GSI is missing from the role policy, the Lambda fails after the DynamoDB refresh with `AccessDeniedException` on `dynamodb:Query`.
+`BatchWriteItem` covers pricelist upserts and batch **deletes** of rows no longer in the pricelist. `Scan` is required for that cleanup pass. If `Scan` is missing, the Lambda fails after the upsert with `AccessDeniedException` on `dynamodb:Scan`. If the GSI is missing from the role policy, it fails when exporting price changes with `AccessDeniedException` on `dynamodb:Query`.
 
-Example inline policy statement to add (merge with existing DynamoDB permissions on the role):
+Example inline policy (merge with existing permissions on the role, or attach as a dedicated inline policy name):
 
 ```json
 {
-  "Effect": "Allow",
-  "Action": "dynamodb:Query",
-  "Resource": [
-    "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index"
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:Scan"
+      ],
+      "Resource": "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "dynamodb:Query",
+      "Resource": "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*"
+    }
   ]
 }
 ```
