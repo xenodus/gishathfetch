@@ -32,6 +32,7 @@ export default function App() {
     removeFromCart,
     removeFromCartByCard,
     clearCart,
+    importCart,
     isCardInCart,
   } = useCart();
 
@@ -277,6 +278,7 @@ export default function App() {
           onSearchWithFavouriteStores={handleCardSearchWithFavourites}
           hasFavourites={hasFavourites}
           onClearCart={clearCart}
+          onImportCart={importCart}
           baseUrl={BASE_URL}
         />
 

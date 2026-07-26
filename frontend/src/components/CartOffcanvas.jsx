@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Button, Form, Offcanvas } from "react-bootstrap";
+import { Button, Form, Modal, Offcanvas } from "react-bootstrap";
+import { decodeCartImport, encodeCartExport } from "../utils/cartTransfer";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
 
@@ -13,14 +14,54 @@ const CartOffcanvas = ({
   onSearchWithFavouriteStores,
   hasFavourites,
   onClearCart,
+  onImportCart,
   baseUrl,
 }) => {
   const [sortOption, setSortOption] = useState("default");
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [exportCode, setExportCode] = useState("");
+  const [importCode, setImportCode] = useState("");
+  const [importError, setImportError] = useState(null);
+  const [copyFeedback, setCopyFeedback] = useState(null);
 
   const handleClearCart = () => {
     if (window.confirm("Are you sure you want to remove all saved cards?")) {
       onClearCart();
     }
+  };
+
+  const handleOpenExport = () => {
+    setExportCode(encodeCartExport(cart));
+    setCopyFeedback(null);
+    setShowExportModal(true);
+  };
+
+  const handleCopyExport = async () => {
+    try {
+      await navigator.clipboard.writeText(exportCode);
+      setCopyFeedback("Copied to clipboard");
+    } catch {
+      setCopyFeedback("Select the code and copy manually");
+    }
+  };
+
+  const handleOpenImport = () => {
+    setImportCode("");
+    setImportError(null);
+    setShowImportModal(true);
+  };
+
+  const handleImport = () => {
+    const { items, error } = decodeCartImport(importCode);
+    if (error) {
+      setImportError(error);
+      return;
+    }
+    onImportCart(items);
+    setShowImportModal(false);
+    setImportCode("");
+    setImportError(null);
   };
 
   const displayedCart = useMemo(() => {
@@ -73,6 +114,26 @@ const CartOffcanvas = ({
           When a card is saved, a snapshot of it from that point in time is
           taken. If there is any change in its price or availability, it will
           not be updated automatically.
+        </div>
+
+        <div className="mb-4 d-flex flex-column flex-sm-row gap-2">
+          <Button
+            variant="outline-primary"
+            size="sm"
+            className="flex-fill"
+            onClick={handleOpenExport}
+            disabled={cart.length === 0}
+          >
+            Export saved list
+          </Button>
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            className="flex-fill"
+            onClick={handleOpenImport}
+          >
+            Import saved list
+          </Button>
         </div>
 
         {cart.length > 0 && (
@@ -163,6 +224,85 @@ const CartOffcanvas = ({
           <strong>No cards saved yet.</strong>
         )}
       </Offcanvas.Body>
+
+      <Modal
+        show={showExportModal}
+        onHide={() => setShowExportModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Export saved list</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="small text-muted">
+            Copy this code and paste it on another device using Import saved
+            list. It includes card snapshots stored in your browser only.
+          </p>
+          <Form.Control
+            as="textarea"
+            rows={6}
+            readOnly
+            value={exportCode}
+            className="font-monospace small"
+            onFocus={(event) => event.target.select()}
+          />
+          {copyFeedback && (
+            <div className="small text-success mt-2">{copyFeedback}</div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowExportModal(false)}>
+            Close
+          </Button>
+          <Button variant="primary" onClick={handleCopyExport}>
+            Copy code
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showImportModal}
+        onHide={() => setShowImportModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Import saved list</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="small text-muted">
+            Paste an export code from another device. Imported cards are merged
+            into your current saved list; duplicates keep the newer snapshot.
+          </p>
+          <Form.Control
+            as="textarea"
+            rows={6}
+            value={importCode}
+            onChange={(event) => {
+              setImportCode(event.target.value);
+              if (importError) {
+                setImportError(null);
+              }
+            }}
+            className="font-monospace small"
+            placeholder="Paste export code here"
+          />
+          {importError && (
+            <div className="small text-danger mt-2">{importError}</div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowImportModal(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleImport}
+            disabled={!importCode.trim()}
+          >
+            Import and append
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Offcanvas>
   );
 };
