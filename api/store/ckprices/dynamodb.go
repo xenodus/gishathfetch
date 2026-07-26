@@ -260,6 +260,81 @@ func (s *DynamoDBStore) PutAll(ctx context.Context, listings map[string]cardking
 	return syncedAt, nil
 }
 
+func (s *DynamoDBStore) DeleteListingsNotInPricelist(
+	ctx context.Context,
+	pricelist map[string]cardkingdom.Listing,
+) (int, error) {
+	if len(pricelist) == 0 {
+		return 0, nil
+	}
+
+	deleted := 0
+	deleteRequests := make([]types.WriteRequest, 0, batchWriteLimit)
+	flushDeletes := func() error {
+		if len(deleteRequests) == 0 {
+			return nil
+		}
+		if err := s.writeBatch(ctx, deleteRequests); err != nil {
+			return err
+		}
+		deleted += len(deleteRequests)
+		deleteRequests = deleteRequests[:0]
+		return nil
+	}
+
+	var exclusiveStartKey map[string]types.AttributeValue
+	for {
+		output, err := s.client.Scan(ctx, &dynamodb.ScanInput{
+			TableName:            aws.String(s.tableName),
+			ProjectionExpression: aws.String("nameKey"),
+			ExclusiveStartKey:    exclusiveStartKey,
+		})
+		if err != nil {
+			return deleted, err
+		}
+
+		for _, item := range output.Items {
+			var record dynamoRecord
+			if err := attributevalue.UnmarshalMap(item, &record); err != nil {
+				return deleted, err
+			}
+			if !shouldDeleteCKListingNameKey(record.NameKey, pricelist) {
+				continue
+			}
+			deleteRequests = append(deleteRequests, types.WriteRequest{
+				DeleteRequest: &types.DeleteRequest{
+					Key: map[string]types.AttributeValue{
+						"nameKey": &types.AttributeValueMemberS{Value: record.NameKey},
+					},
+				},
+			})
+			if len(deleteRequests) >= batchWriteLimit {
+				if err := flushDeletes(); err != nil {
+					return deleted, err
+				}
+			}
+		}
+
+		if len(output.LastEvaluatedKey) == 0 {
+			break
+		}
+		exclusiveStartKey = output.LastEvaluatedKey
+	}
+
+	if err := flushDeletes(); err != nil {
+		return deleted, err
+	}
+	return deleted, nil
+}
+
+func shouldDeleteCKListingNameKey(nameKey string, pricelist map[string]cardkingdom.Listing) bool {
+	if nameKey == "" || nameKey == syncMetadataKey {
+		return false
+	}
+	_, ok := pricelist[nameKey]
+	return !ok
+}
+
 func dynamoRecordFromListing(nameKey string, listing cardkingdom.Listing, syncedAt string) dynamoRecord {
 	record := dynamoRecord{
 		NameKey:            nameKey,

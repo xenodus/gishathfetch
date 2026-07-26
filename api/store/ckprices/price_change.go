@@ -2,6 +2,7 @@ package ckprices
 
 import (
 	"cmp"
+	"context"
 	"math"
 	"slices"
 	"strings"
@@ -184,4 +185,67 @@ func priceChangesByUsdFromListings(listings []PriceChangeListing, ascending bool
 		return rankings.Bottom
 	}
 	return rankings.Top
+}
+
+// priceChangeRankingCandidateLimit is how many GSI rows to read when building the
+// exported top/bottom lists. It must be larger than PriceChangeRankingLimit so
+// stale DynamoDB rows missing from the latest pricelist can be skipped while
+// still filling the export.
+const priceChangeRankingCandidateLimit = 50
+
+// TopBottomPriceChangesInPricelist returns the largest increases and decreases
+// whose name keys appear in the latest Card Kingdom pricelist snapshot.
+func TopBottomPriceChangesInPricelist(
+	ctx context.Context,
+	store Store,
+	pricelist map[string]cardkingdom.Listing,
+) (*TopBottomPriceChanges, error) {
+	if len(pricelist) == 0 {
+		return &TopBottomPriceChanges{}, nil
+	}
+
+	topRaw, err := store.GetPriceChangesByUsd(ctx, false, priceChangeRankingCandidateLimit)
+	if err != nil {
+		return nil, err
+	}
+	bottomRaw, err := store.GetPriceChangesByUsd(ctx, true, priceChangeRankingCandidateLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TopBottomPriceChanges{
+		Top: finalizePriceChangesInPricelist(
+			topRaw,
+			pricelist,
+			true,
+			PriceChangeRankingLimit,
+		),
+		Bottom: finalizePriceChangesInPricelist(
+			bottomRaw,
+			pricelist,
+			false,
+			PriceChangeRankingLimit,
+		),
+	}, nil
+}
+
+func finalizePriceChangesInPricelist(
+	listings []PriceChangeListing,
+	pricelist map[string]cardkingdom.Listing,
+	increases bool,
+	limit int,
+) []PriceChangeListing {
+	if limit <= 0 {
+		limit = PriceChangeRankingLimit
+	}
+
+	signed := filterPriceChangesByUsdSign(listings, increases)
+	inPricelist := make([]PriceChangeListing, 0, len(signed))
+	for _, listing := range signed {
+		if _, ok := pricelist[listing.NameKey]; !ok {
+			continue
+		}
+		inPricelist = append(inPricelist, listing)
+	}
+	return dedupePriceChangeListings(inPricelist, limit)
 }

@@ -29,4 +29,7 @@ type Store interface {
 	GetPriceChangesByUsd(ctx context.Context, ascending bool, limit int) ([]PriceChangeListing, error)
 	GetTopBottomPriceChanges(ctx context.Context) (*TopBottomPriceChanges, error)
 	PutAll(ctx context.Context, listings map[string]cardkingdom.Listing) (syncedAt string, err error)
+	// DeleteListingsNotInPricelist removes card rows whose nameKey is absent from
+	// the latest pricelist snapshot. Sync metadata is never deleted.
+	DeleteListingsNotInPricelist(ctx context.Context, pricelist map[string]cardkingdom.Listing) (deleted int, err error)
 }

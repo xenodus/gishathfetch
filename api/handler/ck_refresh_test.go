@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"mtg-price-checker-sg/controller/ckprice"
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/store/ckpricereport"
 	"mtg-price-checker-sg/store/ckprices"
@@ -32,16 +33,38 @@ func TestRunCKPriceRefresh_SendsSuccessAlert(t *testing.T) {
 	}
 
 	writer := &mockCKPriceReportWriter{}
+	pricelist := map[string]cardkingdom.Listing{
+		"bolt":         {CardName: "Lightning Bolt", PriceUsd: 1.25},
+		"counterspell": {CardName: "Counterspell", PriceUsd: 0.75},
+	}
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
 		return &mockCKRefreshStore{
-			changes: &ckprices.TopBottomPriceChanges{
-				Top:    []ckprices.PriceChangeListing{{NameKey: "bolt"}},
-				Bottom: []ckprices.PriceChangeListing{{NameKey: "counterspell"}},
+			priceChangesByUsd: map[bool][]ckprices.PriceChangeListing{
+				false: {
+					{
+						NameKey: "bolt",
+						Listing: cardkingdom.Listing{
+							CardName:       "Lightning Bolt",
+							PriceUsd:       1.25,
+							PriceChangeUsd: new(0.16),
+						},
+					},
+				},
+				true: {
+					{
+						NameKey: "counterspell",
+						Listing: cardkingdom.Listing{
+							CardName:       "Counterspell",
+							PriceUsd:       0.75,
+							PriceChangeUsd: new(-0.08),
+						},
+					},
+				},
 			},
 		}, nil
 	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 42, nil
+	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (*ckprice.RefreshResult, error) {
+		return &ckprice.RefreshResult{ListingCount: 42, Listings: pricelist}, nil
 	}
 	newCKPriceReportWriterFunc = func(_ context.Context) (ckpricereport.Writer, error) {
 		return writer, nil
@@ -81,8 +104,8 @@ func TestRunCKPriceRefresh_SendsFailureAlert(t *testing.T) {
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
 		return &mockCKRefreshStore{}, nil
 	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 0, refreshErr
+	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (*ckprice.RefreshResult, error) {
+		return nil, refreshErr
 	}
 
 	if err := runCKPriceRefresh(context.Background()); err == nil {
@@ -96,14 +119,23 @@ func TestRunCKPriceRefresh_SendsFailureAlert(t *testing.T) {
 }
 
 type mockCKRefreshStore struct {
-	changes *ckprices.TopBottomPriceChanges
+	changes           *ckprices.TopBottomPriceChanges
+	priceChangesByUsd map[bool][]ckprices.PriceChangeListing
+}
+
+//go:fix inline
+func floatPtr(value float64) *float64 {
+	return new(value)
 }
 
 func (m *mockCKRefreshStore) GetByNameKey(_ context.Context, _ string) (*cardkingdom.Listing, error) {
 	return nil, nil
 }
 
-func (m *mockCKRefreshStore) GetPriceChangesByUsd(_ context.Context, _ bool, _ int) ([]ckprices.PriceChangeListing, error) {
+func (m *mockCKRefreshStore) GetPriceChangesByUsd(_ context.Context, ascending bool, _ int) ([]ckprices.PriceChangeListing, error) {
+	if m.priceChangesByUsd != nil {
+		return m.priceChangesByUsd[ascending], nil
+	}
 	return nil, nil
 }
 
@@ -116,6 +148,10 @@ func (m *mockCKRefreshStore) GetTopBottomPriceChanges(_ context.Context) (*ckpri
 
 func (m *mockCKRefreshStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) (string, error) {
 	return "", nil
+}
+
+func (m *mockCKRefreshStore) DeleteListingsNotInPricelist(_ context.Context, _ map[string]cardkingdom.Listing) (int, error) {
+	return 0, nil
 }
 
 type mockCKPriceReportWriter struct {
@@ -147,8 +183,8 @@ func TestHandle_RoutesCKPriceRefreshRun(t *testing.T) {
 	newCKRefreshStoreFunc = func(_ context.Context) (ckprices.Store, error) {
 		return &mockCKRefreshStore{}, nil
 	}
-	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (int, error) {
-		return 1, nil
+	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (*ckprice.RefreshResult, error) {
+		return &ckprice.RefreshResult{ListingCount: 1}, nil
 	}
 	newCKPriceReportWriterFunc = func(_ context.Context) (ckpricereport.Writer, error) {
 		return writer, nil

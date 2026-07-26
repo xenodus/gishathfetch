@@ -1,6 +1,7 @@
 package ckprices
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -279,6 +280,87 @@ func TestListingsWithPriceChangePreservesSameDayNonZeroChangesWhenRecomputedToZe
 	require.InDelta(t, 0.10, *enriched["lightning bolt"].PriceChangeUsd, 0.001)
 	require.NotNil(t, enriched["lightning bolt"].PriceChangePercent)
 	require.Equal(t, 10, *enriched["lightning bolt"].PriceChangePercent)
+}
+
+func TestFinalizePriceChangesInPricelist_DropsStaleRowsAndBackfills(t *testing.T) {
+	usd := func(value float64) *float64 {
+		return &value
+	}
+	pricelist := map[string]cardkingdom.Listing{
+		"live riser": {CardName: "Live Riser"},
+		"live drop":  {CardName: "Live Drop"},
+	}
+
+	listings := []PriceChangeListing{
+		{NameKey: "orphan riser", Listing: cardkingdom.Listing{PriceChangeUsd: usd(50)}},
+		{NameKey: "live riser", Listing: cardkingdom.Listing{PriceChangeUsd: usd(5)}},
+		{NameKey: "another orphan", Listing: cardkingdom.Listing{PriceChangeUsd: usd(4)}},
+	}
+
+	increases := finalizePriceChangesInPricelist(listings, pricelist, true, 20)
+	require.Len(t, increases, 1)
+	require.Equal(t, "live riser", increases[0].NameKey)
+	require.InDelta(t, 5, *increases[0].PriceChangeUsd, 0.001)
+
+	drops := finalizePriceChangesInPricelist([]PriceChangeListing{
+		{NameKey: "orphan drop", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-50)}},
+		{NameKey: "live drop", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-2)}},
+	}, pricelist, false, 20)
+	require.Len(t, drops, 1)
+	require.Equal(t, "live drop", drops[0].NameKey)
+}
+
+func TestTopBottomPriceChangesInPricelist(t *testing.T) {
+	usd := func(value float64) *float64 {
+		return &value
+	}
+	store := &mockPriceChangeStore{
+		byAscending: map[bool][]PriceChangeListing{
+			false: {
+				{NameKey: "stale", Listing: cardkingdom.Listing{PriceChangeUsd: usd(99)}},
+				{NameKey: "bolt", Listing: cardkingdom.Listing{CardName: "Lightning Bolt", PriceChangeUsd: usd(1)}},
+			},
+			true: {
+				{NameKey: "stale", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-99)}},
+				{NameKey: "counterspell", Listing: cardkingdom.Listing{CardName: "Counterspell", PriceChangeUsd: usd(-1)}},
+			},
+		},
+	}
+	pricelist := map[string]cardkingdom.Listing{
+		"bolt":         {CardName: "Lightning Bolt"},
+		"counterspell": {CardName: "Counterspell"},
+	}
+
+	changes, err := TopBottomPriceChangesInPricelist(context.Background(), store, pricelist)
+	require.NoError(t, err)
+	require.Len(t, changes.Top, 1)
+	require.Equal(t, "bolt", changes.Top[0].NameKey)
+	require.Len(t, changes.Bottom, 1)
+	require.Equal(t, "counterspell", changes.Bottom[0].NameKey)
+}
+
+type mockPriceChangeStore struct {
+	byAscending map[bool][]PriceChangeListing
+}
+
+func (m *mockPriceChangeStore) GetByNameKey(context.Context, string) (*cardkingdom.Listing, error) {
+	return nil, nil
+}
+
+func (m *mockPriceChangeStore) GetPriceChangesByUsd(_ context.Context, ascending bool, _ int) ([]PriceChangeListing, error) {
+	return m.byAscending[ascending], nil
+}
+
+func (m *mockPriceChangeStore) GetTopBottomPriceChanges(context.Context) (*TopBottomPriceChanges, error) {
+	return &TopBottomPriceChanges{}, nil
+}
+
+func (m *mockPriceChangeStore) PutAll(context.Context, map[string]cardkingdom.Listing) (string, error) {
+	return "", nil
+}
+
+func (m *mockPriceChangeStore) DeleteListingsNotInPricelist(context.Context, map[string]cardkingdom.Listing) (int, error) {
+	return 0, nil
 }
 
 func TestListingsWithPriceChangeUpdatesSameDayChangesWhenRecomputedNonZero(t *testing.T) {

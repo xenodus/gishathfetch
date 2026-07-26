@@ -37,6 +37,10 @@ func (m *mockStore) PutAll(_ context.Context, _ map[string]cardkingdom.Listing) 
 	return "", nil
 }
 
+func (m *mockStore) DeleteListingsNotInPricelist(_ context.Context, _ map[string]cardkingdom.Listing) (int, error) {
+	return 0, nil
+}
+
 func TestGetLatestPrice_UsesVerifiedName(t *testing.T) {
 	originalVerify := verifyCardNameFunc
 	defer func() { verifyCardNameFunc = originalVerify }()
