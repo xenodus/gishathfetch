@@ -360,11 +360,11 @@ export default function TopSearchKeywords({
                   }`}
                   aria-pressed={priceChangeView === "risers"}
                   aria-controls={contentPanelId}
-                  aria-label="Top dollar risers in 24 hours"
+                  aria-label="Top risers at Card Kingdom in 24 hours"
                   disabled={isLoadingPriceChanges}
                   onClick={() => handlePriceChangeSelect("risers")}
                 >
-                  Top $ risers (24h)
+                  Top risers @ CK (24h)
                 </button>
                 <button
                   type="button"
@@ -373,11 +373,11 @@ export default function TopSearchKeywords({
                   }`}
                   aria-pressed={priceChangeView === "drops"}
                   aria-controls={contentPanelId}
-                  aria-label="Top dollar drops in 24 hours"
+                  aria-label="Top drops at Card Kingdom in 24 hours"
                   disabled={isLoadingPriceChanges}
                   onClick={() => handlePriceChangeSelect("drops")}
                 >
-                  Top $ drops (24 Hrs)
+                  Top drops @ CK (24h)
                 </button>
               </>
             ) : null}
