@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cardsExactMatch, dedupeCartItems } from "../utils/cardIdentity";
+import {
+  cardIdentityKey,
+  cardsExactMatch,
+  dedupeCartItems,
+} from "../utils/cardIdentity";
+import { mergeCartImport } from "../utils/cartTransfer";
 
 const CART_FEEDBACK_DURATION_MS = 2500;
 
@@ -169,6 +174,34 @@ export default function useCart() {
     [cart],
   );
 
+  const importCart = useCallback(
+    (items) => {
+      let importedCount = 0;
+
+      setCart((prev) => {
+        const prevKeys = new Set(prev.map((item) => cardIdentityKey(item)));
+        const merged = mergeCartImport(prev, items);
+        importedCount = merged.filter(
+          (item) => !prevKeys.has(cardIdentityKey(item)),
+        ).length;
+        try {
+          localStorage.setItem("cart", JSON.stringify(merged));
+        } catch (err) {
+          console.error("Failed to save cart to localStorage:", err);
+        }
+        return merged;
+      });
+
+      const message =
+        importedCount > 0
+          ? `Imported ${importedCount} new card${importedCount === 1 ? "" : "s"}`
+          : "Saved list updated from import";
+      showCartActionFeedback(message);
+      return importedCount;
+    },
+    [showCartActionFeedback],
+  );
+
   return {
     cart,
     showCart,
@@ -178,6 +211,7 @@ export default function useCart() {
     removeFromCart,
     removeFromCartByCard,
     clearCart,
+    importCart,
     isCardInCart,
   };
 }
