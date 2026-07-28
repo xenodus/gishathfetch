@@ -43,7 +43,8 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	secure := os.Getenv("ENV") == config.EnvProd
 	apiRes.StatusCode = http.StatusNoContent
 	applyCORSHeaders(&apiRes, origin)
-	apiRes.Headers["Set-Cookie"] = sessionCookieString(token, secure)
-	apiRes.Headers["Cache-Control"] = "no-store"
+	headers := ensureResponseHeaders(&apiRes)
+	headers["Set-Cookie"] = sessionCookieString(token, secure)
+	headers["Cache-Control"] = "no-store"
 	return apiRes, nil
 }
