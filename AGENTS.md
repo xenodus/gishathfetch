@@ -102,8 +102,7 @@ This writes `homepage-desktop.png` (1440x900, full page) and `homepage-mobile.pn
 ### Frontend API connection
 
 Production search uses same-origin paths `/api/session` and `/api/search` (see
-`frontend/src/constants.js`). CloudFront proxies `/api/*` to API Gateway; see
-[`docs/api-access-control.md`](docs/api-access-control.md). Local dev: Vite
+`frontend/src/constants.js`). CloudFront proxies `/api/*` to API Gateway. Local dev: Vite
 proxies `/api` to `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`);
 set `VITE_API_ORIGIN_VERIFY_SECRET` in `frontend/.env.local` when testing against
 an environment with `API_ORIGIN_VERIFY_SECRET` enabled.
