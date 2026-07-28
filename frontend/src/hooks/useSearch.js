@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  API_BASE_URL,
+  API_SEARCH_URL,
   BASE_URL,
   LGS_OPTIONS,
   MAX_SEARCH_LENGTH,
@@ -173,7 +173,7 @@ export default function useSearch() {
         window.gtag("event", "search", { search_term: query });
       }
 
-      const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
+      const searchUrl = `${API_SEARCH_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
 
       const progressInterval = setInterval(() => {
         setSearchProgress((prev) => {

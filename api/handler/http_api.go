@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 )
@@ -16,7 +17,10 @@ func RouteHTTPAPI(ctx context.Context, request events.APIGatewayProxyRequest) (e
 	switch normalizeAPIPath(request) {
 	case "session":
 		return Session(ctx, request)
-	default:
+	case "search":
 		return Search(ctx, request)
+	default:
+		var apiRes events.APIGatewayProxyResponse
+		return errorResponse(apiRes, origin, "not found", http.StatusNotFound)
 	}
 }
