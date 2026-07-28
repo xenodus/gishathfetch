@@ -6,7 +6,8 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-// normalizeAPIPath returns the path segment after optional stage and /api prefixes.
+// normalizeAPIPath returns the route name (e.g. search, session) after optional stage
+// and legacy /api prefixes.
 func normalizeAPIPath(request events.APIGatewayProxyRequest) string {
 	path := strings.TrimSpace(request.Path)
 	if path == "" {

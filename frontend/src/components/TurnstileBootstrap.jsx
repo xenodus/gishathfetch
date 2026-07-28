@@ -5,7 +5,7 @@ import {
 } from "../utils/turnstileSession";
 
 /**
- * Invisible Turnstile widget used to obtain tokens for GET /api/session.
+ * Invisible Turnstile widget used to obtain tokens for GET /session on the API host.
  */
 export default function TurnstileBootstrap() {
   const containerRef = useRef(null);

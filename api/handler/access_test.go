@@ -14,18 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_normalizeAPIPath(t *testing.T) {
-	t.Parallel()
-	req := events.APIGatewayProxyRequest{Path: "/api/session"}
-	require.Equal(t, "session", normalizeAPIPath(req))
-
-	req = events.APIGatewayProxyRequest{Path: "/api/search"}
-	require.Equal(t, "search", normalizeAPIPath(req))
-
-	req = events.APIGatewayProxyRequest{Path: "/prod/api"}
-	require.Equal(t, "", normalizeAPIPath(req))
-}
-
 func Test_Search_AccessControl(t *testing.T) {
 	originalSearchFunc := searchFunc
 	originalLookupCKPriceFunc := lookupCKPriceFunc

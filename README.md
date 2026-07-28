@@ -19,11 +19,12 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 
 ### System overview
 
-Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search
-uses same-origin `GET /api/search` on `gishathfetch.com`; CloudFront forwards
-`/api/*` to API Gateway (`api.gishathfetch.com` origin) and a container-based
-Lambda that scrapes LGS sites in parallel. Inbound access uses an origin-verify
-header (CloudFront → Lambda) and a short-lived session cookie. When
+Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search and
+session use **`https://api.gishathfetch.com/search`** and **`/session`** from the
+browser (cross-origin, credentialed). API Gateway invokes a container-based Lambda
+that scrapes LGS sites in parallel. Inbound access may use an origin-verify header
+(optional CloudFront or automation) or an allowlisted browser `Origin`, plus a
+short-lived session cookie (and optional Turnstile on session mint). When
 `WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
 are signed per [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/)
 (RFC 9421 HTTP Message Signatures); the public key directory is published at
@@ -64,8 +65,7 @@ flowchart TB
     Browser -->|HTTPS| CF
     CF --> S3
     Browser -->|gtag search events| GA4
-    Browser -->|GET /api/session, /api/search| CF
-    CF -->|/api/* + X-Origin-Verify| AGW
+    Browser -->|GET /session, /search| AGW
     AGW --> SearchLambda
     SearchLambda -->|optional Web Bot Auth signatures| Proxies
     Proxies --> LGS
@@ -90,7 +90,7 @@ flowchart TB
 |---------|-----------------|------|
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | CloudFront `/api/*` → API Gateway (`api.gishathfetch.com` origin) | `GET /api/search`, `GET /api/session`; origin verify + session cookie |
+| Search API | API Gateway `api.gishathfetch.com` | `GET /search`, `GET /session`; optional origin verify + session cookie (+ optional Turnstile) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |

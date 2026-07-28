@@ -101,15 +101,21 @@ This writes `homepage-desktop.png` (1440x900, full page) and `homepage-mobile.pn
 
 ### Frontend API connection
 
-Production search uses same-origin paths `/api/session` and `/api/search` (see
-`frontend/src/constants.js`). CloudFront proxies `/api/*` to API Gateway. Local dev: Vite
-proxies `/api` to `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`);
-set `VITE_API_ORIGIN_VERIFY_SECRET` in `frontend/.env.local` when testing against
-an environment with `API_ORIGIN_VERIFY_SECRET` enabled.
+Production search uses **`https://api.gishathfetch.com/search`** and **`/session`** (see
+`frontend/src/constants.js`). Set `VITE_API_BASE_URL=` (empty) in `frontend/.env.local` to use
+Vite proxies on `/search` and `/session` during local dev; otherwise the SPA calls the API host
+directly (CORS allowlist includes `http://localhost:5173`).
+
+Proxy target: `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`). Set
+`VITE_API_ORIGIN_VERIFY_SECRET` when testing against an environment with
+`API_ORIGIN_VERIFY_SECRET` enabled.
 
 When Turnstile is enabled in production, set `TURNSTILE_SECRET_KEY` on the search Lambda and
-`VITE_TURNSTILE_SITE_KEY` at frontend build time. Session minting (`GET /api/session`) expects
+`VITE_TURNSTILE_SITE_KEY` at frontend build time. Session minting (`GET /session`) expects
 the browser to send `CF-Turnstile-Response` (see `frontend/src/utils/apiSession.js`).
+
+**API Gateway (manual):** expose `GET` + `OPTIONS` for `/search` and `/session` only; remove
+legacy `/`, `/api`, and `/api/*` routes when traffic has migrated.
 
 ### Backend local mode
 

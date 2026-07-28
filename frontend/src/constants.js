@@ -171,10 +171,29 @@ export const MIN_SEARCH_LENGTH = 3;
 // rejecting bot paragraph spam.
 export const MAX_SEARCH_LENGTH = 150;
 
-export const API_SEARCH_URL = "/api/search";
+const DEFAULT_API_BASE_URL = "https://api.gishathfetch.com";
 
-/** Same-origin endpoint that mints the HttpOnly search session cookie. */
-export const API_SESSION_URL = "/api/session";
+function resolveApiBaseUrl() {
+  const raw = import.meta.env.VITE_API_BASE_URL;
+  if (raw === "") {
+    return "";
+  }
+  if (typeof raw === "string" && raw.trim() !== "") {
+    return raw.trim().replace(/\/$/, "");
+  }
+  return DEFAULT_API_BASE_URL;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
+
+function apiUrl(path) {
+  return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
+export const API_SEARCH_URL = apiUrl("/search");
+
+/** API host endpoint that mints the HttpOnly search session cookie. */
+export const API_SESSION_URL = apiUrl("/session");
 
 export const BASE_URL = "https://gishathfetch.com/";
 

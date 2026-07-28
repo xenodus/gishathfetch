@@ -101,7 +101,7 @@ const (
 	APISessionSecretEnv = "API_SESSION_SECRET"
 	// APISessionTTLEnv overrides session lifetime in seconds (default 15 minutes).
 	APISessionTTLEnv = "API_SESSION_TTL_SECONDS"
-	// TurnstileSecretKeyEnv is the Cloudflare Turnstile secret for siteverify on /api/session.
+	// TurnstileSecretKeyEnv is the Cloudflare Turnstile secret for siteverify on GET /session.
 	TurnstileSecretKeyEnv = "TURNSTILE_SECRET_KEY"
 )
 

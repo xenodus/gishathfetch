@@ -7,7 +7,7 @@ import {
 let sessionBootstrapPromise = null;
 
 /**
- * Ensures the browser holds a valid HttpOnly API session cookie (minted by GET /api/session).
+ * Ensures the browser holds a valid HttpOnly API session cookie (minted by GET /session on the API host).
  * Safe to call repeatedly; concurrent callers share one in-flight request.
  */
 export async function ensureApiSession() {
