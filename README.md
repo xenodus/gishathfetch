@@ -20,8 +20,12 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 ### System overview
 
 Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search
-requests go through API Gateway to a container-based Lambda that scrapes LGS
-sites in parallel. When `WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
+uses same-origin `GET /api/search` on `gishathfetch.com`; CloudFront forwards
+`/api/*` to API Gateway (`api.gishathfetch.com` origin) and a container-based
+Lambda that scrapes LGS sites in parallel. Inbound access uses an origin-verify
+header (CloudFront → Lambda) and a short-lived session cookie; see
+[`docs/api-access-control.md`](docs/api-access-control.md). When
+`WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
 are signed per [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/)
 (RFC 9421 HTTP Message Signatures); the public key directory is published at
 `/.well-known/http-message-signatures-directory` on the same origin during
@@ -61,7 +65,8 @@ flowchart TB
     Browser -->|HTTPS| CF
     CF --> S3
     Browser -->|gtag search events| GA4
-    Browser -->|GET /?s=...&lgs=...| AGW
+    Browser -->|GET /api/session, /api/search| CF
+    CF -->|/api/* + X-Origin-Verify| AGW
     AGW --> SearchLambda
     SearchLambda -->|optional Web Bot Auth signatures| Proxies
     Proxies --> LGS
@@ -86,7 +91,7 @@ flowchart TB
 |---------|-----------------|------|
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | API Gateway → `api.gishathfetch.com` | Routes `GET /?s=...&lgs=...` to the search Lambda |
+| Search API | CloudFront `/api/*` → API Gateway (`api.gishathfetch.com` origin) | `GET /api/search`, `GET /api/session`; origin verify + session cookie — [`docs/api-access-control.md`](docs/api-access-control.md) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |

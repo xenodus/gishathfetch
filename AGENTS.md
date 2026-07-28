@@ -101,7 +101,12 @@ This writes `homepage-desktop.png` (1440x900, full page) and `homepage-mobile.pn
 
 ### Frontend API connection
 
-The frontend SPA points to `api.gishathfetch.com` (see `frontend/src/constants.js`). The Go code allows `http://localhost:5173` in CORS origins, but the production API Gateway may not forward the `Origin` header correctly, resulting in missing `Access-Control-Allow-Origin` responses. To test the full search flow locally in a browser, add a Vite proxy configuration temporarily (revert before committing). The frontend UI itself loads and renders correctly without the API — only live search requires a working API connection.
+Production search uses same-origin paths `/api/session` and `/api/search` (see
+`frontend/src/constants.js`). CloudFront proxies `/api/*` to API Gateway; see
+[`docs/api-access-control.md`](docs/api-access-control.md). Local dev: Vite
+proxies `/api` to `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`);
+set `VITE_API_ORIGIN_VERIFY_SECRET` in `frontend/.env.local` when testing against
+an environment with `API_ORIGIN_VERIFY_SECRET` enabled.
 
 ### Backend local mode
 
