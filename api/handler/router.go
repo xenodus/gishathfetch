@@ -26,5 +26,5 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 		return events.APIGatewayProxyResponse{}, err
 	}
 
-	return Search(ctx, apiRequest)
+	return RouteHTTPAPI(ctx, apiRequest)
 }

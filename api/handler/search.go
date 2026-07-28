@@ -56,6 +56,13 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		return optionsResponse(origin)
 	}
 
+	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers); !ok {
+		return res, nil
+	}
+	if res, ok := enforceSession(apiRes, origin, request.Headers); !ok {
+		return res, nil
+	}
+
 	searchString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["s"]))
 	if err != nil {
 		searchString = ""

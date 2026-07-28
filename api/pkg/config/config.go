@@ -92,6 +92,15 @@ const (
 	SiteBaseURL = "https://gishathfetch.com/"
 	// AWSRegion is the AWS region used for DynamoDB and other managed services.
 	AWSRegion = "ap-southeast-1"
+
+	// APIOriginVerifySecretEnv is the shared secret CloudFront adds as a custom origin header.
+	APIOriginVerifySecretEnv = "API_ORIGIN_VERIFY_SECRET"
+	// APIOriginVerifyHeaderEnv overrides the origin verify header name (default X-Origin-Verify).
+	APIOriginVerifyHeaderEnv = "API_ORIGIN_VERIFY_HEADER"
+	// APISessionSecretEnv signs HttpOnly browser session cookies for search requests.
+	APISessionSecretEnv = "API_SESSION_SECRET"
+	// APISessionTTLEnv overrides session lifetime in seconds (default 15 minutes).
+	APISessionTTLEnv = "API_SESSION_TTL_SECONDS"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
@@ -166,4 +175,45 @@ func GetAllowedOrigins() []string {
 		"http://localhost:5173",
 		"http://localhost:63342", // JetBrains IDE built-in HTTP server (local dev only)
 	}
+}
+
+const (
+	defaultAPIOriginVerifyHeader = "X-Origin-Verify"
+	defaultAPISessionTTL         = 15 * time.Minute
+)
+
+// APIOriginVerifySecret returns the CloudFront origin verification secret when set.
+func APIOriginVerifySecret() string {
+	return strings.TrimSpace(os.Getenv(APIOriginVerifySecretEnv))
+}
+
+// APIOriginVerifyHeader returns the header CloudFront must send to API Gateway.
+func APIOriginVerifyHeader() string {
+	if v := strings.TrimSpace(os.Getenv(APIOriginVerifyHeaderEnv)); v != "" {
+		return v
+	}
+	return defaultAPIOriginVerifyHeader
+}
+
+// APISessionSecret returns the HMAC secret for browser session cookies when set.
+func APISessionSecret() string {
+	return strings.TrimSpace(os.Getenv(APISessionSecretEnv))
+}
+
+// APISessionTTL is how long a minted browser session remains valid.
+func APISessionTTL() time.Duration {
+	rawValue := strings.TrimSpace(os.Getenv(APISessionTTLEnv))
+	if rawValue == "" {
+		return defaultAPISessionTTL
+	}
+	seconds, err := strconv.Atoi(rawValue)
+	if err != nil || seconds <= 0 {
+		return defaultAPISessionTTL
+	}
+	return time.Duration(seconds) * time.Second
+}
+
+// APIAccessControlEnabled is true when origin verification or session enforcement is configured.
+func APIAccessControlEnabled() bool {
+	return APIOriginVerifySecret() != "" || APISessionSecret() != ""
 }

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  API_BASE_URL,
+  API_SEARCH_URL,
   BASE_URL,
   LGS_OPTIONS,
   MAX_SEARCH_LENGTH,
   MIN_SEARCH_LENGTH,
   PAGE_TITLE,
 } from "../constants";
+import { ensureApiSession } from "../utils/apiSession";
 import {
   buildSearchHistoryState,
   buildSearchUrl,
@@ -78,6 +79,12 @@ export default function useSearch() {
   useEffect(() => {
     searchResultsRef.current = searchResults;
   }, [searchResults]);
+
+  useEffect(() => {
+    ensureApiSession().catch(() => {
+      // Search will retry session bootstrap before the first API call.
+    });
+  }, []);
 
   const syncSearchHistory = useCallback((snapshot) => {
     if (window.location.hostname === "localhost") {
@@ -166,7 +173,7 @@ export default function useSearch() {
         window.gtag("event", "search", { search_term: query });
       }
 
-      const searchUrl = `${API_BASE_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
+      const searchUrl = `${API_SEARCH_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
 
       const progressInterval = setInterval(() => {
         setSearchProgress((prev) => {
@@ -177,7 +184,13 @@ export default function useSearch() {
       }, SEARCH_PROGRESS_INTERVAL_MS);
       progressIntervalRef.current = progressInterval;
 
-      fetch(searchUrl, { signal: searchAbortController.signal })
+      ensureApiSession()
+        .then(() =>
+          fetch(searchUrl, {
+            signal: searchAbortController.signal,
+            credentials: "include",
+          }),
+        )
         .then(async (res) => {
           if (!res.ok) {
             let errorBody = null;
@@ -328,66 +341,69 @@ export default function useSearch() {
     userCancelledRef.current = false;
   }, []);
 
-  const applyHistoryState = useCallback((state) => {
-    invalidateInFlightSearch();
-    restoringHistoryRef.current = true;
-    skipSuggestionsRef.current = true;
-    setShowSuggestions(false);
+  const applyHistoryState = useCallback(
+    (state) => {
+      invalidateInFlightSearch();
+      restoringHistoryRef.current = true;
+      skipSuggestionsRef.current = true;
+      setShowSuggestions(false);
 
-    if (!isSearchHistoryState(state)) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const query =
-        urlParams.has("s") && urlParams.get("s") !== ""
-          ? decodeURIComponent(urlParams.get("s"))
-          : "";
-      const urlStores = getStoresFromUrl(urlParams);
-      const stores = urlStores ?? getInitialSelectedStores(urlParams);
+      if (!isSearchHistoryState(state)) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const query =
+          urlParams.has("s") && urlParams.get("s") !== ""
+            ? decodeURIComponent(urlParams.get("s"))
+            : "";
+        const urlStores = getStoresFromUrl(urlParams);
+        const stores = urlStores ?? getInitialSelectedStores(urlParams);
 
-      setSearchQuery(query);
-      setSelectedStores(stores);
-      persistSelectedStores(stores);
-      setSearchResults([]);
-      setSearchStoreErrors([]);
-      setSearchError(null);
-      setCardKingdomPrice(null);
-      setDismissedStoreErrorsKey(null);
-      setHasSearched(false);
-      setIsSearching(false);
-      setSearchProgress("Search");
-      applyHomeSeo();
+        setSearchQuery(query);
+        setSelectedStores(stores);
+        persistSelectedStores(stores);
+        setSearchResults([]);
+        setSearchStoreErrors([]);
+        setSearchError(null);
+        setCardKingdomPrice(null);
+        setDismissedStoreErrorsKey(null);
+        setHasSearched(false);
+        setIsSearching(false);
+        setSearchProgress("Search");
+        applyHomeSeo();
 
-      if (
-        query.length >= MIN_SEARCH_LENGTH &&
-        query.length <= MAX_SEARCH_LENGTH
-      ) {
-        skipHistorySyncRef.current = true;
+        if (
+          query.length >= MIN_SEARCH_LENGTH &&
+          query.length <= MAX_SEARCH_LENGTH
+        ) {
+          skipHistorySyncRef.current = true;
+          restoringHistoryRef.current = false;
+          performSearchRef.current(query, stores);
+          return;
+        }
+
         restoringHistoryRef.current = false;
-        performSearchRef.current(query, stores);
         return;
       }
 
+      setSearchQuery(state.query || "");
+      setSelectedStores(state.stores || LGS_OPTIONS);
+      persistSelectedStores(state.stores || LGS_OPTIONS);
+      setSearchResults(state.results || []);
+      setSearchStoreErrors(state.storeErrors || []);
+      setHasSearched(!!state.hasSearched);
+      setSearchError(state.searchError || null);
+      setCardKingdomPrice(state.cardKingdomPrice ?? null);
+      setDismissedStoreErrorsKey(null);
+      setIsSearching(false);
+      setSearchProgress("Search");
+      if (state.query) {
+        applySearchSeo(state.query);
+      } else {
+        applyHomeSeo();
+      }
       restoringHistoryRef.current = false;
-      return;
-    }
-
-    setSearchQuery(state.query || "");
-    setSelectedStores(state.stores || LGS_OPTIONS);
-    persistSelectedStores(state.stores || LGS_OPTIONS);
-    setSearchResults(state.results || []);
-    setSearchStoreErrors(state.storeErrors || []);
-    setHasSearched(!!state.hasSearched);
-    setSearchError(state.searchError || null);
-    setCardKingdomPrice(state.cardKingdomPrice ?? null);
-    setDismissedStoreErrorsKey(null);
-    setIsSearching(false);
-    setSearchProgress("Search");
-    if (state.query) {
-      applySearchSeo(state.query);
-    } else {
-      applyHomeSeo();
-    }
-    restoringHistoryRef.current = false;
-  }, [invalidateInFlightSearch]);
+    },
+    [invalidateInFlightSearch],
+  );
 
   useEffect(() => {
     const onPopState = (event) => {

@@ -37,6 +37,19 @@ export default defineConfig({
         target: "https://gishathfetch.com",
         changeOrigin: true,
       },
+      "/api": {
+        target:
+          process.env.VITE_API_PROXY_TARGET || "https://api.gishathfetch.com",
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
+            const verifySecret = process.env.VITE_API_ORIGIN_VERIFY_SECRET;
+            if (verifySecret) {
+              proxyReq.setHeader("X-Origin-Verify", verifySecret);
+            }
+          });
+        },
+      },
     },
   },
 });
