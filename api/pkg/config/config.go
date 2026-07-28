@@ -101,6 +101,8 @@ const (
 	APISessionSecretEnv = "API_SESSION_SECRET"
 	// APISessionTTLEnv overrides session lifetime in seconds (default 15 minutes).
 	APISessionTTLEnv = "API_SESSION_TTL_SECONDS"
+	// TurnstileSecretKeyEnv is the Cloudflare Turnstile secret for siteverify on /api/session.
+	TurnstileSecretKeyEnv = "TURNSTILE_SECRET_KEY"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
@@ -211,6 +213,11 @@ func APISessionTTL() time.Duration {
 		return defaultAPISessionTTL
 	}
 	return time.Duration(seconds) * time.Second
+}
+
+// TurnstileSecretKey returns the Cloudflare Turnstile secret when session minting requires verification.
+func TurnstileSecretKey() string {
+	return strings.TrimSpace(os.Getenv(TurnstileSecretKeyEnv))
 }
 
 // APIAccessControlEnabled is true when origin verification or session enforcement is configured.

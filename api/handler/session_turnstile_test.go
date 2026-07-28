@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"time"
 
 	"mtg-price-checker-sg/pkg/apiauth"
 	"mtg-price-checker-sg/pkg/config"
@@ -14,18 +13,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSession_SameOriginWithoutOriginHeader(t *testing.T) {
-	original := sessionTokenFunc
-	sessionTokenFunc = func(now time.Time) (string, error) {
-		return apiauth.NewSessionToken(now)
+func TestSession_TurnstileRequiredWhenConfigured(t *testing.T) {
+	originalVerify := verifyTurnstileFunc
+	verifyTurnstileFunc = func(_ context.Context, token, _ string) error {
+		if token == "" {
+			return apiauth.ErrTurnstileTokenMissing
+		}
+		return nil
 	}
-	t.Cleanup(func() { sessionTokenFunc = original })
+	t.Cleanup(func() { verifyTurnstileFunc = originalVerify })
 
 	require.NoError(t, os.Setenv(config.APISessionSecretEnv, "test-session-secret"))
-	require.NoError(t, os.Setenv("ENV", config.EnvProd))
+	require.NoError(t, os.Setenv(config.TurnstileSecretKeyEnv, "turnstile-secret"))
 	t.Cleanup(func() {
 		_ = os.Unsetenv(config.APISessionSecretEnv)
-		_ = os.Unsetenv("ENV")
 		_ = os.Unsetenv(config.TurnstileSecretKeyEnv)
 	})
 
@@ -36,7 +37,12 @@ func TestSession_SameOriginWithoutOriginHeader(t *testing.T) {
 
 	res, err := Session(context.Background(), req)
 	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, res.StatusCode)
+
+	req.Headers = map[string]string{
+		apiauth.TurnstileResponseHeader: "valid-token",
+	}
+	res, err = Session(context.Background(), req)
+	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, res.StatusCode)
-	require.NotEmpty(t, res.Headers["Set-Cookie"])
-	require.Contains(t, res.Headers["Set-Cookie"], "gf_api_session=")
 }

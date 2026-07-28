@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"time"
@@ -13,6 +14,8 @@ import (
 )
 
 var sessionTokenFunc = apiauth.NewSessionToken
+
+var verifyTurnstileFunc = apiauth.VerifyTurnstile
 
 // Session mints an HttpOnly cookie the browser must send before search requests.
 func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -33,6 +36,16 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	if config.APISessionSecret() == "" {
 		return errorResponse(apiRes, origin, "session not configured", http.StatusServiceUnavailable)
+	}
+
+	turnstileToken := headerValue(request.Headers, apiauth.TurnstileResponseHeader)
+	remoteIP := request.RequestContext.Identity.SourceIP
+	if err := verifyTurnstileFunc(ctx, turnstileToken, remoteIP); err != nil {
+		message := "verification failed"
+		if errors.Is(err, apiauth.ErrTurnstileTokenMissing) {
+			message = "verification required"
+		}
+		return accessDeniedResponse(apiRes, origin, message), nil
 	}
 
 	token, err := sessionTokenFunc(time.Now().UTC())

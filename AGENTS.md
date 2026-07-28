@@ -107,6 +107,10 @@ proxies `/api` to `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com
 set `VITE_API_ORIGIN_VERIFY_SECRET` in `frontend/.env.local` when testing against
 an environment with `API_ORIGIN_VERIFY_SECRET` enabled.
 
+When Turnstile is enabled in production, set `TURNSTILE_SECRET_KEY` on the search Lambda and
+`VITE_TURNSTILE_SITE_KEY` at frontend build time. Session minting (`GET /api/session`) expects
+the browser to send `CF-Turnstile-Response` (see `frontend/src/utils/apiSession.js`).
+
 ### Backend local mode
 
 When `ENV` is unset (local mode), `go run ./cmd/main.go` executes a hardcoded test search for "Opt" across a subset of stores and prints the JSON result to stdout. No server is started; the process exits after printing.
