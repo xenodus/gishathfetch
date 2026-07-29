@@ -112,7 +112,7 @@ export function teardownTurnstileWidget() {
   }
   widgetId = null;
   widgetContainer = null;
-  widgetReady = createDeferred();
+  failWidgetReady(new Error("turnstile widget teardown"));
 }
 
 export async function prepareTurnstileWidget(container, options = {}) {
