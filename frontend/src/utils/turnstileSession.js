@@ -146,9 +146,11 @@ export async function prepareTurnstileWidget(container, options = {}) {
   }
 
   try {
+    // Widget mode (Invisible / Managed / …) is chosen in the Cloudflare dashboard for the
+    // sitekey. execution: "execute" defers the challenge until obtainTurnstileToken().
     const id = window.turnstile.render(container, {
       sitekey: siteKey(),
-      size: "invisible",
+      execution: "execute",
       callback: onTurnstileToken,
       "expired-callback": onTurnstileExpired,
       "error-callback": onTurnstileError,
