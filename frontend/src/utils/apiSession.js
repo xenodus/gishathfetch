@@ -7,6 +7,9 @@ import {
 /** Refresh before default API session TTL (15m) so idle tabs stay authorized. */
 export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
+/** Turnstile / network blips are common in private browsing; retry with a fresh token. */
+const SESSION_MINT_MAX_ATTEMPTS = 3;
+
 let sessionBootstrapPromise = null;
 
 /**
@@ -22,7 +25,7 @@ export async function ensureApiSession(options = {}) {
   }
 
   if (!sessionBootstrapPromise) {
-    sessionBootstrapPromise = bootstrapSession();
+    sessionBootstrapPromise = bootstrapSessionWithRetry();
   }
 
   try {
@@ -33,27 +36,62 @@ export async function ensureApiSession(options = {}) {
   }
 }
 
-async function bootstrapSession() {
-  try {
-    const headers = {};
-    const turnstileToken = await obtainTurnstileToken();
-    if (turnstileToken) {
-      headers["CF-Turnstile-Response"] = turnstileToken;
-    }
+async function bootstrapSessionWithRetry() {
+  let lastError = null;
 
-    const res = await fetch(API_SESSION_URL, {
+  for (let attempt = 1; attempt <= SESSION_MINT_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await mintApiSession();
+      return;
+    } catch (err) {
+      lastError = err;
+      // Drop any pending/used token so the next attempt runs a fresh challenge.
+      resetTurnstileChallenge();
+    }
+  }
+
+  throw lastError ?? new Error("API session failed");
+}
+
+async function mintApiSession() {
+  const headers = {};
+  const turnstileToken = await obtainTurnstileToken();
+  if (turnstileToken) {
+    headers["CF-Turnstile-Response"] = turnstileToken;
+  }
+
+  let res;
+  try {
+    res = await fetch(API_SESSION_URL, {
       method: "GET",
       credentials: "include",
       headers,
     });
-
-    if (!res.ok) {
-      throw new Error(`API session failed (${res.status})`);
-    }
   } catch (err) {
-    // Always drop a pending/used token so the next mint gets a fresh challenge.
-    resetTurnstileChallenge();
+    // Custom header triggers a CORS preflight; a misconfigured gateway surfaces as Failed to fetch.
+    if (
+      turnstileToken &&
+      (err?.name === "TypeError" ||
+        (typeof err?.message === "string" &&
+          err.message.includes("Failed to fetch")))
+    ) {
+      throw new Error(
+        "API session blocked (CORS/network). If this persists, check API Gateway Allow-Headers for CF-Turnstile-Response.",
+      );
+    }
     throw err;
+  }
+
+  // Tokens are single-use; never reuse after a mint attempt.
+  resetTurnstileChallenge();
+
+  if (!res.ok) {
+    if (res.status === 403) {
+      throw new Error(
+        "API session verification failed. Please try searching again.",
+      );
+    }
+    throw new Error(`API session failed (${res.status})`);
   }
 }
 

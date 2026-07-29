@@ -2,6 +2,7 @@ const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 const TURNSTILE_TIMEOUT_MS = 30_000;
+const TURNSTILE_WIDGET_READY_TIMEOUT_MS = 20_000;
 
 let scriptLoadPromise = null;
 let widgetId = null;
@@ -190,13 +191,32 @@ function waitForTurnstileToken() {
   return promise.finally(() => clearTimeout(timeout));
 }
 
+function waitForWidgetReady() {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("turnstile widget timeout"));
+    }, TURNSTILE_WIDGET_READY_TIMEOUT_MS);
+
+    widgetReady.promise.then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timeout);
+        reject(err);
+      },
+    );
+  });
+}
+
 export async function obtainTurnstileToken() {
   if (!isTurnstileConfigured()) {
     return "";
   }
 
-  await widgetReady.promise;
-  if (widgetId == null) {
+  await waitForWidgetReady();
+  if (widgetId == null || !window.turnstile) {
     throw new Error("turnstile widget not ready");
   }
 

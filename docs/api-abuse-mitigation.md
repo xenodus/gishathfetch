@@ -159,7 +159,13 @@ origin, credentials, and `cf-turnstile-response` / `CF-Turnstile-Response` in
 ### Verification
 
 When `TURNSTILE_SECRET_KEY` is set, Lambda POSTs to Cloudflare
-`/turnstile/v0/siteverify` (5s timeout) with the token and optional client IP.
+`/turnstile/v0/siteverify` (5s timeout) with the token. The optional
+`remoteip` field is **not** sent: API Gateway `SourceIP` can disagree with the
+address Cloudflare saw for the challenge (IPv4/IPv6 dual-stack, VPN/privacy
+egress), which has caused intermittent `invalid-input-response` failures —
+especially noticeable in cold/incognito sessions. Token validation alone is
+enough for session-mint abuse mitigation.
+
 Failures:
 
 | Condition | Response `error` | Status |
@@ -180,7 +186,9 @@ Failures:
    `/search` works with credentials).
 
 Frontend helpers: `frontend/src/utils/turnstileSession.js`,
-`frontend/src/components/TurnstileBootstrap.jsx`.
+`frontend/src/components/TurnstileBootstrap.jsx`. The SPA retries session mint
+a few times with a fresh Turnstile token (private-browsing challenge blips) and
+never reuses a token after a mint attempt (tokens are single-use).
 
 ---
 

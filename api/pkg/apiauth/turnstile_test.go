@@ -29,7 +29,7 @@ func TestVerifyTurnstile_AcceptsSuccessfulSiteverify(t *testing.T) {
 		require.NoError(t, r.ParseForm())
 		require.Equal(t, "test-secret", r.Form.Get("secret"))
 		require.Equal(t, "good-token", r.Form.Get("response"))
-		require.Equal(t, "203.0.113.1", r.Form.Get("remoteip"))
+		require.Empty(t, r.Form.Get("remoteip"), "remoteip must be omitted to avoid intermittent IP mismatch failures")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true}`))
 	}))
