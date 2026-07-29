@@ -135,13 +135,11 @@ func parseSearchResult(item searchResult) (gateway.Card, bool) {
 }
 
 func listingPrice(item searchResult) (float64, bool) {
-	priceStr := strings.TrimSpace(item.Price)
-	if item.FoilType == "foil" {
-		if foilPrice := strings.TrimSpace(item.FoilPrice); foilPrice != "" && foilPrice != "0.0" && foilPrice != "0" {
-			priceStr = foilPrice
-		}
-	}
-	price, err := util.ParsePrice(priceStr)
+	// Store selling price is always in `price`. `foil_price` is market/crawl
+	// data (often TCGPlayer foil market), not the LGS list price — using it
+	// under-reports foil listings (e.g. Birds of Paradise Foil DMR: price
+	// S$19.50 vs foil_price 6.29).
+	price, err := util.ParsePrice(strings.TrimSpace(item.Price))
 	if err != nil || price <= 0 {
 		return 0, false
 	}
