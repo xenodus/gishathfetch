@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"mtg-price-checker-sg/pkg/config"
@@ -13,15 +12,12 @@ import (
 )
 
 func TestVerifyTurnstile_SkipsWhenSecretUnset(t *testing.T) {
-	t.Parallel()
-	require.NoError(t, os.Unsetenv(config.TurnstileSecretKeyEnv))
+	t.Setenv(config.TurnstileSecretKeyEnv, "")
 	require.NoError(t, VerifyTurnstile(context.Background(), "", ""))
 }
 
 func TestVerifyTurnstile_RequiresTokenWhenSecretSet(t *testing.T) {
-	t.Parallel()
-	require.NoError(t, os.Setenv(config.TurnstileSecretKeyEnv, "test-secret"))
-	t.Cleanup(func() { _ = os.Unsetenv(config.TurnstileSecretKeyEnv) })
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-secret")
 
 	err := VerifyTurnstile(context.Background(), "", "203.0.113.1")
 	require.ErrorIs(t, err, ErrTurnstileTokenMissing)
@@ -43,8 +39,7 @@ func TestVerifyTurnstile_AcceptsSuccessfulSiteverify(t *testing.T) {
 	turnstileSiteverifyURL = server.URL
 	t.Cleanup(func() { turnstileSiteverifyURL = originalURL })
 
-	require.NoError(t, os.Setenv(config.TurnstileSecretKeyEnv, "test-secret"))
-	t.Cleanup(func() { _ = os.Unsetenv(config.TurnstileSecretKeyEnv) })
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-secret")
 
 	err := VerifyTurnstile(context.Background(), "good-token", "203.0.113.1")
 	require.NoError(t, err)
@@ -60,8 +55,7 @@ func TestVerifyTurnstile_RejectsFailedSiteverify(t *testing.T) {
 	turnstileSiteverifyURL = server.URL
 	t.Cleanup(func() { turnstileSiteverifyURL = originalURL })
 
-	require.NoError(t, os.Setenv(config.TurnstileSecretKeyEnv, "test-secret"))
-	t.Cleanup(func() { _ = os.Unsetenv(config.TurnstileSecretKeyEnv) })
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-secret")
 
 	err := VerifyTurnstile(context.Background(), "bad-token", "")
 	require.ErrorIs(t, err, ErrTurnstileVerificationFailed)
