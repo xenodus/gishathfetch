@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import {
   isTurnstileConfigured,
   prepareTurnstileWidget,
+  teardownTurnstileWidget,
 } from "../utils/turnstileSession";
 
 /**
@@ -16,7 +17,10 @@ export default function TurnstileBootstrap() {
     }
 
     let cancelled = false;
-    prepareTurnstileWidget(containerRef.current).catch(() => {
+    const abort = new AbortController();
+    prepareTurnstileWidget(containerRef.current, {
+      signal: abort.signal,
+    }).catch(() => {
       if (!cancelled) {
         // Session bootstrap will surface errors on the next search.
       }
@@ -24,6 +28,8 @@ export default function TurnstileBootstrap() {
 
     return () => {
       cancelled = true;
+      abort.abort();
+      teardownTurnstileWidget();
     };
   }, []);
 
