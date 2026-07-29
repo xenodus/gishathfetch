@@ -34,23 +34,23 @@ func Test_parseSearchResult(t *testing.T) {
 	require.Equal(t, []string{"[The List]"}, card.ExtraInfo)
 }
 
-func Test_parseSearchResult_usesFoilPrice(t *testing.T) {
+func Test_parseSearchResult_usesStorePriceNotFoilMarket(t *testing.T) {
 	card, ok := parseSearchResult(searchResult{
-		Name:               "Lightning Bolt",
-		Slug:               "lightning-bolt-foil",
-		Price:              "17.75",
-		FoilPrice:          "10.16",
-		Quantity:           4,
+		Name:               "Birds Of Paradise",
+		Slug:               "birds-of-paradise-9147fc04-5486-4791-8548-18872867a613",
+		Price:              "19.5",
+		FoilPrice:          "6.29",
+		Quantity:           1,
 		IsActive:           true,
 		FoilType:           "foil",
-		GetNameWithFoil:    "Lightning Bolt (Foil)",
-		GetVariationName:   "Magic 2010 (M10)",
-		TCGPlayerProductID: "32656-foil",
+		GetNameWithFoil:    "Birds Of Paradise (Foil)",
+		GetVariationName:   "Dominaria Remastered",
+		TCGPlayerProductID: "449630-foil",
 	})
 	require.True(t, ok)
 	require.True(t, card.IsFoil)
-	require.InDelta(t, 10.16, card.Price, 0.001)
-	require.Equal(t, "https://product-images.tcgplayer.com/fit-in/437x437/32656.jpg", card.Img)
+	require.InDelta(t, 19.5, card.Price, 0.001)
+	require.Equal(t, "https://product-images.tcgplayer.com/fit-in/437x437/449630.jpg", card.Img)
 }
 
 func Test_parseSearchResult_skipsOutOfStock(t *testing.T) {
@@ -88,6 +88,10 @@ func Test_parseSearchResponse(t *testing.T) {
 		cards = append(cards, card)
 	}
 	require.Len(t, cards, 2)
+	require.InDelta(t, 1.75, cards[0].Price, 0.001)
+	require.False(t, cards[0].IsFoil)
+	require.InDelta(t, 17.75, cards[1].Price, 0.001)
+	require.True(t, cards[1].IsFoil)
 }
 
 const searchResultsFixture = `{
