@@ -13,7 +13,8 @@ func TestAgoraOutboundOpts_ProductionHost(t *testing.T) {
 
 	opts := agoraOutboundOpts(pageURL)
 	require.True(t, opts.SkipWebBotAuth)
-	require.True(t, opts.SkipDirect)
+	require.False(t, opts.SkipDirect)
+	require.True(t, opts.PreferDedicatedFirst)
 	require.False(t, opts.PreferResidentialProxy)
 }
 
@@ -24,5 +25,6 @@ func TestAgoraOutboundOpts_NonProductionHostAllowsDirect(t *testing.T) {
 	opts := agoraOutboundOpts(pageURL)
 	require.True(t, opts.SkipWebBotAuth)
 	require.False(t, opts.SkipDirect)
+	require.True(t, opts.PreferDedicatedFirst)
 	require.False(t, opts.PreferResidentialProxy)
 }

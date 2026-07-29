@@ -24,6 +24,9 @@ type OutboundRequestOptions struct {
 	Accept string
 	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
 	SkipDirect bool
+	// PreferDedicatedFirst places dedicated proxy attempts before direct when both
+	// are enabled, producing dedicated → direct → dynamic.
+	PreferDedicatedFirst bool
 	// PreferResidentialProxy prepends RESIDENTIAL_PROXY_1 to DoOutboundGET fallback
 	// chains before dedicated and dynamic transports.
 	PreferResidentialProxy bool

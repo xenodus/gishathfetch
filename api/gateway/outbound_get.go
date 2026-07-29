@@ -130,53 +130,83 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		}}
 	}
 
-	var attempts []outboundAttempt
-	if !opts.SkipDirect {
+	appendDirect := func(dst []outboundAttempt) []outboundAttempt {
+		if opts.SkipDirect {
+			return dst
+		}
 		client, err := newOutboundHTTPClient("", timeout, profile)
 		if err != nil {
-			return attempts
+			return dst
 		}
-		attempts = append(attempts, outboundAttempt{
+		return append(dst, outboundAttempt{
 			strategy: "direct",
 			client:   client,
 		})
 	}
 
-	if opts.PreferResidentialProxy {
-		if proxyURL, ok := util.GetResidentialProxyURL(); ok {
-			client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
-			if err == nil {
-				attempts = append(attempts, outboundAttempt{
-					strategy: "residential-1",
-					proxyURL: proxyURL,
-					client:   client,
-				})
-			}
+	appendResidential := func(dst []outboundAttempt) []outboundAttempt {
+		if !opts.PreferResidentialProxy {
+			return dst
 		}
+		proxyURL, ok := util.GetResidentialProxyURL()
+		if !ok {
+			return dst
+		}
+		client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
+		if err != nil {
+			return dst
+		}
+		return append(dst, outboundAttempt{
+			strategy: "residential-1",
+			proxyURL: proxyURL,
+			client:   client,
+		})
 	}
 
 	// Match colly's selectOutboundProxy policy: one dedicated proxy per store search.
 	// When searchShop pins a request-scoped lease, reuse that URL instead of
 	// picking a new random slot for each outbound store.
-	if proxyURL, ok := dedicatedProxyURLForOutbound(ctx); ok {
-		client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
-		if err == nil {
-			attempts = append(attempts, outboundAttempt{
-				strategy: dedicatedProxyStrategyName(proxyURL),
-				proxyURL: proxyURL,
-				client:   client,
-			})
+	appendDedicated := func(dst []outboundAttempt) []outboundAttempt {
+		proxyURL, ok := dedicatedProxyURLForOutbound(ctx)
+		if !ok {
+			return dst
 		}
+		client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
+		if err != nil {
+			return dst
+		}
+		return append(dst, outboundAttempt{
+			strategy: dedicatedProxyStrategyName(proxyURL),
+			proxyURL: proxyURL,
+			client:   client,
+		})
 	}
 
-	if client, ok := dynamicProxyHTTPClient(timeout, profile); ok {
-		attempts = append(attempts, outboundAttempt{
+	appendDynamic := func(dst []outboundAttempt) []outboundAttempt {
+		client, ok := dynamicProxyHTTPClient(timeout, profile)
+		if !ok {
+			return dst
+		}
+		return append(dst, outboundAttempt{
 			strategy: "dynamic",
 			proxyURL: DynamicProxyURL(),
 			client:   client,
 		})
 	}
 
+	var attempts []outboundAttempt
+	if opts.PreferDedicatedFirst {
+		attempts = appendDedicated(attempts)
+		attempts = appendDirect(attempts)
+		attempts = appendResidential(attempts)
+		attempts = appendDynamic(attempts)
+		return attempts
+	}
+
+	attempts = appendDirect(attempts)
+	attempts = appendResidential(attempts)
+	attempts = appendDedicated(attempts)
+	attempts = appendDynamic(attempts)
 	return attempts
 }
 
