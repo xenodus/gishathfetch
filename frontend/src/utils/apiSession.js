@@ -34,21 +34,26 @@ export async function ensureApiSession(options = {}) {
 }
 
 async function bootstrapSession() {
-  const headers = {};
-  const turnstileToken = await obtainTurnstileToken();
-  if (turnstileToken) {
-    headers["CF-Turnstile-Response"] = turnstileToken;
-  }
+  try {
+    const headers = {};
+    const turnstileToken = await obtainTurnstileToken();
+    if (turnstileToken) {
+      headers["CF-Turnstile-Response"] = turnstileToken;
+    }
 
-  const res = await fetch(API_SESSION_URL, {
-    method: "GET",
-    credentials: "include",
-    headers,
-  });
+    const res = await fetch(API_SESSION_URL, {
+      method: "GET",
+      credentials: "include",
+      headers,
+    });
 
-  if (!res.ok) {
+    if (!res.ok) {
+      throw new Error(`API session failed (${res.status})`);
+    }
+  } catch (err) {
+    // Always drop a pending/used token so the next mint gets a fresh challenge.
     resetTurnstileChallenge();
-    throw new Error(`API session failed (${res.status})`);
+    throw err;
   }
 }
 
