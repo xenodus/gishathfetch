@@ -128,6 +128,11 @@ const Modals = ({
                   How can I get accurate results from every store?
                 </a>
               </li>
+              <li>
+                <a href="#faq-q8" className="link-offset-2">
+                  What is in Trending?
+                </a>
+              </li>
             </ol>
           </div>
 
@@ -266,6 +271,25 @@ const Modals = ({
                 the <strong>full card name</strong>. This is the most reliable
                 way to get consistent, accurate results across the stores you
                 have selected.
+              </p>
+            </div>
+          </div>
+          <div className="mb-4" id="faq-q8">
+            <div className="q-header">
+              <h5>8. What is in Trending?</h5>
+            </div>
+            <div className="q-answer">
+              <p>
+                <strong>Trending</strong> shows the most searched card names on
+                Gishath Fetch for the time range you pick (24 hours, 30 days, 6
+                months, or 1 year). Tap a name to run that search.
+              </p>
+              <p>
+                When available, you can also switch to{" "}
+                <strong>Top risers @ CK (24h)</strong> or{" "}
+                <strong>Top drops @ CK (24h)</strong> to see Card Kingdom cards
+                with the largest USD price increases or decreases over the last
+                24 hours.
               </p>
             </div>
           </div>
