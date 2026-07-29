@@ -215,14 +215,20 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch currently only returns the result from the first
-                page of most LGSs' websites or the first 25 results.
+                Gishath Fetch does not paginate store search results. For most
+                LGSs it only pulls the first results page, or about the first 25
+                products, then filters and sorts what it gets.
               </p>
               <p>
-                This is usually fine because the best matches appear on the
-                first page unless a card has many printings (for example, basic
-                lands). In those cases, you may need to check the LGS site
-                directly.
+                That is usually enough for a specific card search, because the
+                best matches tend to appear first. Broad queries (for example
+                basic lands or a short name with many printings) can spill onto
+                later pages on the store's own site — check the LGS directly if
+                you need every printing or condition.
+              </p>
+              <p>
+                Out-of-stock listings are also left out on purpose, so a store
+                may have a printing that does not appear here.
               </p>
             </div>
           </div>
