@@ -264,7 +264,7 @@ until configured):
    (HMAC via `API_SESSION_SECRET`, default TTL 15m); `/search` requires it.
 3. **Cloudflare Turnstile** — when `TURNSTILE_SECRET_KEY` and
    `VITE_TURNSTILE_SITE_KEY` are both set, session mint verifies an invisible
-   challenge (`cf_turnstile_response` query param).
+   challenge (`CF-Turnstile-Response` header on `GET /session`).
 
 Details, env reference, CloudFront header setup, and the browser sequence
 diagram: [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
