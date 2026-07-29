@@ -7,7 +7,12 @@ import {
   MIN_SEARCH_LENGTH,
   PAGE_TITLE,
 } from "../constants";
-import { ensureApiSession } from "../utils/apiSession";
+import {
+  API_SESSION_REFRESH_INTERVAL_MS,
+  ensureApiSession,
+  isApiSessionAccessDenied,
+  resetApiSessionCache,
+} from "../utils/apiSession";
 import {
   buildSearchHistoryState,
   buildSearchUrl,
@@ -84,6 +89,14 @@ export default function useSearch() {
     ensureApiSession().catch(() => {
       // Search will retry session bootstrap before the first API call.
     });
+
+    const refreshTimer = setInterval(() => {
+      ensureApiSession({ forceRefresh: true }).catch(() => {
+        // Next search or interval will try again.
+      });
+    }, API_SESSION_REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(refreshTimer);
   }, []);
 
   const syncSearchHistory = useCallback((snapshot) => {
@@ -184,43 +197,54 @@ export default function useSearch() {
       }, SEARCH_PROGRESS_INTERVAL_MS);
       progressIntervalRef.current = progressInterval;
 
-      ensureApiSession()
-        .then(() =>
-          fetch(searchUrl, {
-            signal: searchAbortController.signal,
-            credentials: "include",
-          }),
-        )
-        .then(async (res) => {
-          if (!res.ok) {
-            let errorBody = null;
-            try {
-              errorBody = await res.json();
-            } catch {
-              // Ignore malformed error responses.
-            }
+      const fetchSearchResult = async (sessionRetried) => {
+        await ensureApiSession({ forceRefresh: sessionRetried });
 
-            const validationMessage =
-              typeof errorBody?.error === "string" && errorBody.error
-                ? errorBody.error
-                : null;
-            const statusCode = errorBody?.statusCode || res.status;
+        const res = await fetch(searchUrl, {
+          signal: searchAbortController.signal,
+          credentials: "include",
+        });
 
-            if (validationMessage) {
-              throw new Error(
-                formatErrorWithStatusCode(validationMessage, statusCode),
-              );
-            }
+        if (!res.ok) {
+          let errorBody = null;
+          try {
+            errorBody = await res.json();
+          } catch {
+            // Ignore malformed error responses.
+          }
 
+          const validationMessage =
+            typeof errorBody?.error === "string" && errorBody.error
+              ? errorBody.error
+              : null;
+          const statusCode = errorBody?.statusCode || res.status;
+
+          if (
+            !sessionRetried &&
+            isApiSessionAccessDenied(validationMessage, statusCode)
+          ) {
+            resetApiSessionCache();
+            return fetchSearchResult(true);
+          }
+
+          if (validationMessage) {
             throw new Error(
-              formatErrorWithStatusCode(
-                res.statusText || "The server returned an error.",
-                statusCode,
-              ),
+              formatErrorWithStatusCode(validationMessage, statusCode),
             );
           }
-          return res.json();
-        })
+
+          throw new Error(
+            formatErrorWithStatusCode(
+              res.statusText || "The server returned an error.",
+              statusCode,
+            ),
+          );
+        }
+
+        return res.json();
+      };
+
+      fetchSearchResult(false)
         .then((result) => {
           if (requestId !== activeSearchRequestIdRef.current) return;
           if (result && Object.hasOwn(result, "data")) {
