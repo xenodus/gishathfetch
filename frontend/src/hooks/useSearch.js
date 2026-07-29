@@ -310,12 +310,13 @@ export default function useSearch() {
           } else if (
             typeof err.message === "string" &&
             (err.message.includes("turnstile") ||
-              err.message.includes("API session verification") ||
-              err.message.includes("API session blocked") ||
-              err.message.includes("API session failed"))
+              err.message.includes("API session verification"))
           ) {
             nextSearchError =
               "Could not verify this browser session. Please refresh the page and try again.";
+          } else if (err.message.includes("API session failed")) {
+            nextSearchError =
+              "The server is experiencing issues. Please try again later.";
           } else if (err.message.startsWith("Error (")) {
             nextSearchError = err.message;
           } else if (err.message.includes("Server error")) {

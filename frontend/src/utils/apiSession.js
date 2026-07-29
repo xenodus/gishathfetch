@@ -60,27 +60,13 @@ async function mintApiSession() {
     headers["CF-Turnstile-Response"] = turnstileToken;
   }
 
-  let res;
-  try {
-    res = await fetch(API_SESSION_URL, {
-      method: "GET",
-      credentials: "include",
-      headers,
-    });
-  } catch (err) {
-    // Custom header triggers a CORS preflight; a misconfigured gateway surfaces as Failed to fetch.
-    if (
-      turnstileToken &&
-      (err?.name === "TypeError" ||
-        (typeof err?.message === "string" &&
-          err.message.includes("Failed to fetch")))
-    ) {
-      throw new Error(
-        "API session blocked (CORS/network). If this persists, check API Gateway Allow-Headers for CF-Turnstile-Response.",
-      );
-    }
-    throw err;
-  }
+  // Network failures surface as TypeError; rethrow as-is so the UI keeps the
+  // accurate "unable to connect" copy instead of blaming session verification.
+  const res = await fetch(API_SESSION_URL, {
+    method: "GET",
+    credentials: "include",
+    headers,
+  });
 
   // Tokens are single-use; never reuse after a mint attempt.
   resetTurnstileChallenge();

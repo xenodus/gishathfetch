@@ -66,6 +66,11 @@ function loadTurnstileScript() {
     document.head.appendChild(script);
   });
 
+  // A rejected load must not be cached — prepare retries need a fresh attempt.
+  scriptLoadPromise.catch(() => {
+    scriptLoadPromise = null;
+  });
+
   return scriptLoadPromise;
 }
 

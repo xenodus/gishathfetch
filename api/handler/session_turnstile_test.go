@@ -15,7 +15,7 @@ import (
 
 func TestSession_TurnstileRequiredWhenConfigured(t *testing.T) {
 	originalVerify := verifyTurnstileFunc
-	verifyTurnstileFunc = func(_ context.Context, token, _ string) error {
+	verifyTurnstileFunc = func(_ context.Context, token string) error {
 		if token == "" {
 			return apiauth.ErrTurnstileTokenMissing
 		}

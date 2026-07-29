@@ -13,13 +13,13 @@ import (
 
 func TestVerifyTurnstile_SkipsWhenSecretUnset(t *testing.T) {
 	t.Setenv(config.TurnstileSecretKeyEnv, "")
-	require.NoError(t, VerifyTurnstile(context.Background(), "", ""))
+	require.NoError(t, VerifyTurnstile(context.Background(), ""))
 }
 
 func TestVerifyTurnstile_RequiresTokenWhenSecretSet(t *testing.T) {
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-secret")
 
-	err := VerifyTurnstile(context.Background(), "", "203.0.113.1")
+	err := VerifyTurnstile(context.Background(), "")
 	require.ErrorIs(t, err, ErrTurnstileTokenMissing)
 }
 
@@ -41,7 +41,7 @@ func TestVerifyTurnstile_AcceptsSuccessfulSiteverify(t *testing.T) {
 
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-secret")
 
-	err := VerifyTurnstile(context.Background(), "good-token", "203.0.113.1")
+	err := VerifyTurnstile(context.Background(), "good-token")
 	require.NoError(t, err)
 }
 
@@ -57,6 +57,6 @@ func TestVerifyTurnstile_RejectsFailedSiteverify(t *testing.T) {
 
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-secret")
 
-	err := VerifyTurnstile(context.Background(), "bad-token", "")
+	err := VerifyTurnstile(context.Background(), "bad-token")
 	require.ErrorIs(t, err, ErrTurnstileVerificationFailed)
 }
