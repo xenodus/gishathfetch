@@ -5,6 +5,18 @@ const signatureDirectoryPath = "/.well-known/http-message-signatures-directory";
 const signatureDirectoryMediaType =
   "application/http-message-signatures-directory+json";
 
+const apiProxyTarget =
+  process.env.VITE_API_PROXY_TARGET || "https://api.gishathfetch.com";
+
+function configureApiProxy(proxy) {
+  proxy.on("proxyReq", (proxyReq) => {
+    const verifySecret = process.env.VITE_API_ORIGIN_VERIFY_SECRET;
+    if (verifySecret) {
+      proxyReq.setHeader("X-Origin-Verify", verifySecret);
+    }
+  });
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   envPrefix: ["VITE_"],
@@ -37,18 +49,15 @@ export default defineConfig({
         target: "https://gishathfetch.com",
         changeOrigin: true,
       },
-      "/api": {
-        target:
-          process.env.VITE_API_PROXY_TARGET || "https://api.gishathfetch.com",
+      "/search": {
+        target: apiProxyTarget,
         changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on("proxyReq", (proxyReq) => {
-            const verifySecret = process.env.VITE_API_ORIGIN_VERIFY_SECRET;
-            if (verifySecret) {
-              proxyReq.setHeader("X-Origin-Verify", verifySecret);
-            }
-          });
-        },
+        configure: configureApiProxy,
+      },
+      "/session": {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        configure: configureApiProxy,
       },
     },
   },

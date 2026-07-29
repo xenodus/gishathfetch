@@ -107,7 +107,7 @@ func sessionCookieString(token string, secure bool) string {
 	maxAge := int(config.APISessionTTL().Seconds())
 	parts := []string{
 		fmt.Sprintf("%s=%s", apiauth.SessionCookieName(), token),
-		"Path=/api",
+		"Path=/",
 		fmt.Sprintf("Max-Age=%d", maxAge),
 		"HttpOnly",
 		"SameSite=Lax",

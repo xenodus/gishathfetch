@@ -3,6 +3,7 @@ package apiauth
 import (
 	"crypto/subtle"
 	"errors"
+	"slices"
 	"strings"
 
 	"mtg-price-checker-sg/pkg/config"
@@ -10,7 +11,9 @@ import (
 
 var errOriginVerifyFailed = errors.New("origin verification failed")
 
-// VerifyOriginHeader ensures the CloudFront origin secret header matches when configured.
+// VerifyOriginHeader enforces access when API_ORIGIN_VERIFY_SECRET is set.
+// Requests with a matching X-Origin-Verify header pass (e.g. CloudFront origin).
+// Browser calls to api.gishathfetch.com may omit that header and use an allowlisted Origin instead.
 func VerifyOriginHeader(headers map[string]string) error {
 	secret := config.APIOriginVerifySecret()
 	if secret == "" {
@@ -19,11 +22,19 @@ func VerifyOriginHeader(headers map[string]string) error {
 
 	headerName := strings.ToLower(config.APIOriginVerifyHeader())
 	got := strings.TrimSpace(headerValue(headers, headerName))
-	if got == "" || subtle.ConstantTimeCompare([]byte(got), []byte(secret)) != 1 {
+	if got != "" {
+		if subtle.ConstantTimeCompare([]byte(got), []byte(secret)) == 1 {
+			return nil
+		}
 		return errOriginVerifyFailed
 	}
 
-	return nil
+	origin := strings.TrimSpace(headerValue(headers, "origin"))
+	if origin != "" && slices.Contains(config.GetAllowedOrigins(), origin) {
+		return nil
+	}
+
+	return errOriginVerifyFailed
 }
 
 func headerValue(headers map[string]string, lowerName string) string {
