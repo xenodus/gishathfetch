@@ -5,10 +5,19 @@ const TURNSTILE_TIMEOUT_MS = 30_000;
 
 let scriptLoadPromise = null;
 let widgetId = null;
-let widgetReadyResolve;
-const widgetReadyPromise = new Promise((resolve) => {
-  widgetReadyResolve = resolve;
-});
+let widgetContainer = null;
+
+function createDeferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+let widgetReady = createDeferred();
 
 let cachedToken = "";
 let pendingTokenPromise = null;
@@ -59,9 +68,23 @@ function loadTurnstileScript() {
   return scriptLoadPromise;
 }
 
+function rejectPendingTokenWaiters(err) {
+  if (pendingTokenPromise) {
+    pendingTokenPromise.reject(err);
+    pendingTokenPromise = null;
+  }
+}
+
+function failWidgetReady(err) {
+  widgetReady.reject(
+    err instanceof Error ? err : new Error("turnstile widget failed"),
+  );
+  widgetReady = createDeferred();
+}
+
 export function registerTurnstileWidget(id) {
   widgetId = id;
-  widgetReadyResolve();
+  widgetReady.resolve();
 }
 
 export function onTurnstileToken(token) {
@@ -78,30 +101,64 @@ export function onTurnstileExpired() {
 
 export function onTurnstileError() {
   cachedToken = "";
-  if (pendingTokenPromise) {
-    pendingTokenPromise.reject(new Error("turnstile challenge failed"));
-    pendingTokenPromise = null;
-  }
+  rejectPendingTokenWaiters(new Error("turnstile challenge failed"));
 }
 
-export async function prepareTurnstileWidget(container) {
+export function teardownTurnstileWidget() {
+  rejectPendingTokenWaiters(new Error("turnstile widget teardown"));
+  cachedToken = "";
+  if (widgetId != null && window.turnstile?.remove) {
+    window.turnstile.remove(widgetId);
+  }
+  widgetId = null;
+  widgetContainer = null;
+  widgetReady = createDeferred();
+}
+
+export async function prepareTurnstileWidget(container, options = {}) {
+  const { signal } = options;
   if (!isTurnstileConfigured() || !container) {
     return;
   }
 
-  await loadTurnstileScript();
-  if (widgetId != null) {
+  try {
+    await loadTurnstileScript();
+  } catch (err) {
+    failWidgetReady(err);
+    throw err;
+  }
+
+  if (signal?.aborted || !container.isConnected) {
     return;
   }
 
-  const id = window.turnstile.render(container, {
-    sitekey: siteKey(),
-    size: "invisible",
-    callback: onTurnstileToken,
-    "expired-callback": onTurnstileExpired,
-    "error-callback": onTurnstileError,
-  });
-  registerTurnstileWidget(id);
+  if (widgetId != null) {
+    if (widgetContainer === container && container.isConnected) {
+      return;
+    }
+    teardownTurnstileWidget();
+  }
+
+  if (!window.turnstile) {
+    const err = new Error("turnstile script unavailable");
+    failWidgetReady(err);
+    throw err;
+  }
+
+  try {
+    const id = window.turnstile.render(container, {
+      sitekey: siteKey(),
+      size: "invisible",
+      callback: onTurnstileToken,
+      "expired-callback": onTurnstileExpired,
+      "error-callback": onTurnstileError,
+    });
+    widgetContainer = container;
+    registerTurnstileWidget(id);
+  } catch (err) {
+    failWidgetReady(err);
+    throw err;
+  }
 }
 
 function waitForTurnstileToken() {
@@ -136,7 +193,7 @@ export async function obtainTurnstileToken() {
     return "";
   }
 
-  await widgetReadyPromise;
+  await widgetReady.promise;
   if (widgetId == null) {
     throw new Error("turnstile widget not ready");
   }
@@ -151,7 +208,7 @@ export async function obtainTurnstileToken() {
 
 export function resetTurnstileChallenge() {
   cachedToken = "";
-  pendingTokenPromise = null;
+  rejectPendingTokenWaiters(new Error("turnstile challenge reset"));
   if (widgetId != null && window.turnstile) {
     window.turnstile.reset(widgetId);
   }
