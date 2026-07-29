@@ -39,8 +39,7 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 
 	turnstileToken := turnstileTokenFromRequest(request)
-	remoteIP := request.RequestContext.Identity.SourceIP
-	if err := verifyTurnstileFunc(ctx, turnstileToken, remoteIP); err != nil {
+	if err := verifyTurnstileFunc(ctx, turnstileToken); err != nil {
 		message := "verification failed"
 		if errors.Is(err, apiauth.ErrTurnstileTokenMissing) {
 			message = "verification required"

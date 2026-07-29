@@ -42,7 +42,13 @@ var (
 )
 
 // VerifyTurnstile checks the token with Cloudflare when TURNSTILE_SECRET_KEY is set.
-func VerifyTurnstile(ctx context.Context, token, remoteIP string) error {
+//
+// siteverify's optional remoteip field is intentionally not sent: API Gateway
+// SourceIP can disagree with the address Cloudflare observed for the challenge
+// (IPv4/IPv6 dual-stack and privacy/VPN egress are common in incognito), which
+// caused intermittent invalid-input-response failures. Token cryptographic
+// validation is sufficient for session mint abuse mitigation.
+func VerifyTurnstile(ctx context.Context, token string) error {
 	secret := config.TurnstileSecretKey()
 	if secret == "" {
 		return nil
@@ -56,9 +62,6 @@ func VerifyTurnstile(ctx context.Context, token, remoteIP string) error {
 	form := url.Values{}
 	form.Set("secret", secret)
 	form.Set("response", token)
-	if ip := strings.TrimSpace(remoteIP); ip != "" {
-		form.Set("remoteip", ip)
-	}
 
 	req, err := http.NewRequestWithContext(
 		ctx,

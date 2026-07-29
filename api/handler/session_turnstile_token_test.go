@@ -37,7 +37,7 @@ func TestTurnstileTokenFromRequest_QueryParam(t *testing.T) {
 
 func TestSession_TurnstileQueryParamAccepted(t *testing.T) {
 	originalVerify := verifyTurnstileFunc
-	verifyTurnstileFunc = func(_ context.Context, token, _ string) error {
+	verifyTurnstileFunc = func(_ context.Context, token string) error {
 		if token != "query-token" {
 			return apiauth.ErrTurnstileTokenMissing
 		}
