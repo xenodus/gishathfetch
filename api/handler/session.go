@@ -38,7 +38,7 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return errorResponse(apiRes, origin, "session not configured", http.StatusServiceUnavailable)
 	}
 
-	turnstileToken := headerValue(request.Headers, apiauth.TurnstileResponseHeader)
+	turnstileToken := turnstileTokenFromRequest(request)
 	remoteIP := request.RequestContext.Identity.SourceIP
 	if err := verifyTurnstileFunc(ctx, turnstileToken, remoteIP); err != nil {
 		message := "verification failed"
