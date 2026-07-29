@@ -145,15 +145,20 @@ To enable in production, do **all** of the following together (secret-only break
 3. Set `VITE_TURNSTILE_SITE_KEY` at **frontend build** time and redeploy the SPA
    (`frontend-update` / CI). The deploy workflow does not inject this today — export it in the
    environment that runs `npm run build`, or add it to `.github/workflows/deploy-on-merge.yml`.
-4. **Session mint CORS:** The SPA sends the Turnstile token as the `cf_turnstile_response`
-   query parameter on `GET /session` (not `CF-Turnstile-Response`) so the browser does not
-   need a preflight. Live API Gateway `OPTIONS /session` does not return
-   `Access-Control-Allow-Headers` for that custom header, which otherwise surfaces as a generic
-   “Unable to connect” error in the UI. Lambda still accepts the header for compatibility.
-   Optionally align API Gateway CORS with `api/handler/cors.go` if you prefer the header.
+4. **API Gateway CORS** (HTTP API → CORS) for cross-origin session mint from
+   `gishathfetch.com`. Required when the SPA sends `CF-Turnstile-Response`
+   (triggers a preflight). Minimum:
+   - **Allow origins:** `https://gishathfetch.com`, `http://localhost:5173`
+   - **Allow methods:** `GET`, `OPTIONS` (empty methods breaks preflight)
+   - **Allow headers:** `Content-Type`, `CF-Turnstile-Response` (browser sends
+     `cf-turnstile-response` in preflight; either casing in the console is fine)
+   - **Allow credentials:** yes
+   - **Max age:** `3600` is reasonable (caches preflight for one hour; use `0`
+     while iterating on CORS). Lambda also accepts `cf_turnstile_response` as a
+     query fallback (`api/handler/session_turnstile_token.go`).
 
-Session minting (`GET /session`) expects a Turnstile token when the secret is set
-(see `frontend/src/utils/apiSession.js`).
+Session minting (`GET /session`) sends `CF-Turnstile-Response` when the secret is
+set (see `frontend/src/utils/apiSession.js`).
 
 **API Gateway (manual):** expose `GET` + `OPTIONS` for `/search` and `/session` only; remove
 legacy `/`, `/api`, and `/api/*` routes when traffic has migrated.

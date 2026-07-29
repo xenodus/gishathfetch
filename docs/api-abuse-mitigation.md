@@ -28,7 +28,7 @@ sequenceDiagram
     Note over U: SPA load (gishathfetch.com)
     U->>TS: invisible widget (when site key set)
     TS-->>U: challenge token
-    U->>API: GET /session?cf_turnstile_response=...
+    U->>API: GET /session (CF-Turnstile-Response)
     Note over API: origin check (allowlisted Origin<br/>or X-Origin-Verify)
     API->>CF_API: siteverify (when TURNSTILE_SECRET_KEY set)
     CF_API-->>API: success
@@ -148,11 +148,13 @@ work with no server check.
 
 ### Token transport
 
-The SPA sends the Turnstile token as the **`cf_turnstile_response` query
-parameter** on `GET /session` so browsers avoid a CORS preflight. Live API
-Gateway `OPTIONS /session` historically did not allow the
-`CF-Turnstile-Response` header. Lambda still accepts that header for
-compatibility (`api/handler/session_turnstile_token.go`).
+The SPA sends the Turnstile token in the **`CF-Turnstile-Response`** request
+header on `GET /session` (Cloudflare’s documented browser transport). That
+triggers a CORS preflight; API Gateway must allow `GET`, `OPTIONS`, the SPA
+origin, credentials, and `cf-turnstile-response` / `CF-Turnstile-Response` in
+**Allow headers** and **Allow methods**. Lambda also accepts
+**`cf_turnstile_response`** as a query fallback for compatibility
+(`api/handler/session_turnstile_token.go`).
 
 ### Verification
 

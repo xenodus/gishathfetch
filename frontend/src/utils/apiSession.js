@@ -33,23 +33,18 @@ export async function ensureApiSession(options = {}) {
   }
 }
 
-const TURNSTILE_SESSION_QUERY_PARAM = "cf_turnstile_response";
-
-function sessionMintUrl(turnstileToken) {
-  if (!turnstileToken) {
-    return API_SESSION_URL;
-  }
-  const url = new URL(API_SESSION_URL, window.location.origin);
-  url.searchParams.set(TURNSTILE_SESSION_QUERY_PARAM, turnstileToken);
-  return url.toString();
-}
-
 async function bootstrapSession() {
   try {
+    const headers = {};
     const turnstileToken = await obtainTurnstileToken();
-    const res = await fetch(sessionMintUrl(turnstileToken), {
+    if (turnstileToken) {
+      headers["CF-Turnstile-Response"] = turnstileToken;
+    }
+
+    const res = await fetch(API_SESSION_URL, {
       method: "GET",
       credentials: "include",
+      headers,
     });
 
     if (!res.ok) {
