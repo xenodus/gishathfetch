@@ -80,7 +80,7 @@ func RequireDuellersPointSearchStructure(t *testing.T, ctx context.Context, base
 func RequireMoxAndLotusAPIStructure(t *testing.T, ctx context.Context, query string) {
 	t.Helper()
 	probeURL := BuildURL("https", "moxandlotus.sg", "/api/products", url.Values{
-		"limit":          {"48"},
+		"limit":          {"24"},
 		"full_search":    {"true"},
 		"showStatus":     {"false"},
 		"is_paginated":   {"true"},

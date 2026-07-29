@@ -16,6 +16,10 @@ func TestMoxOutboundOpts(t *testing.T) {
 	require.False(t, opts.PreferResidentialProxy)
 }
 
+func TestMoxSearchLimit(t *testing.T) {
+	require.Equal(t, "24", storeSearchLimit)
+}
+
 func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
