@@ -45,4 +45,14 @@ func TestSession_TurnstileRequiredWhenConfigured(t *testing.T) {
 	res, err = Session(context.Background(), req)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: http.MethodGet,
+		QueryStringParameters: map[string]string{
+			apiauth.TurnstileResponseQueryParam: "valid-token",
+		},
+	}
+	res, err = Session(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, res.StatusCode)
 }

@@ -115,7 +115,7 @@ Proxy target: `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`). 
 Turnstile is **off until both keys are set**. With neither key present:
 
 - Backend (`TURNSTILE_SECRET_KEY` unset): `VerifyTurnstile` is a no-op; `GET /session` mints normally.
-- Frontend (`VITE_TURNSTILE_SITE_KEY` unset): no widget/script; session bootstrap omits `CF-Turnstile-Response`.
+- Frontend (`VITE_TURNSTILE_SITE_KEY` unset): no widget/script; session bootstrap omits the Turnstile token.
 
 To enable in production, do **all** of the following together (secret-only breaks clients):
 
@@ -125,19 +125,14 @@ To enable in production, do **all** of the following together (secret-only break
 3. Set `VITE_TURNSTILE_SITE_KEY` at **frontend build** time and redeploy the SPA
    (`frontend-update` / CI). The deploy workflow does not inject this today — export it in the
    environment that runs `npm run build`, or add it to `.github/workflows/deploy-on-merge.yml`.
-4. Fix API Gateway CORS for the custom header. `CF-Turnstile-Response` triggers a browser
-   preflight. Live `OPTIONS /session` currently returns `204` without
-   `Access-Control-Allow-Origin` / `Access-Control-Allow-Headers`, so enabling Turnstile will
-   block cross-origin session mint from `gishathfetch.com` until gateway CORS allows at least:
-   - Origins: `https://gishathfetch.com`, `http://localhost:5173`
-   - Headers: `Content-Type`, `CF-Turnstile-Response`
-   - Methods: `GET`, `OPTIONS`
-   - Credentials: `true`  
-   Lambda already emits these on OPTIONS (`api/handler/cors.go`); if API Gateway CORS is
-   enabled, it must include the same Allow-Headers (gateway may ignore integration CORS
-   headers). Prefer letting Lambda handle OPTIONS, or align gateway CORS with the Lambda list.
+4. **Session mint CORS:** The SPA sends the Turnstile token as the `cf_turnstile_response`
+   query parameter on `GET /session` (not `CF-Turnstile-Response`) so the browser does not
+   need a preflight. Live API Gateway `OPTIONS /session` does not return
+   `Access-Control-Allow-Headers` for that custom header, which otherwise surfaces as a generic
+   “Unable to connect” error in the UI. Lambda still accepts the header for compatibility.
+   Optionally align API Gateway CORS with `api/handler/cors.go` if you prefer the header.
 
-Session minting (`GET /session`) expects the browser to send `CF-Turnstile-Response`
+Session minting (`GET /session`) expects a Turnstile token when the secret is set
 (see `frontend/src/utils/apiSession.js`).
 
 **API Gateway (manual):** expose `GET` + `OPTIONS` for `/search` and `/session` only; remove

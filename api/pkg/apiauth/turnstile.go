@@ -17,6 +17,9 @@ import (
 const (
 	// TurnstileResponseHeader is the request header carrying the browser Turnstile token.
 	TurnstileResponseHeader = "CF-Turnstile-Response"
+	// TurnstileResponseQueryParam is an alternate token carrier for GET /session so browsers
+	// avoid a CORS preflight when API Gateway does not echo Allow-Headers for the header above.
+	TurnstileResponseQueryParam = "cf_turnstile_response"
 	turnstileSiteverifyURLDefault = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 	turnstileVerifyTimeout  = 5 * time.Second
 )
