@@ -87,21 +87,21 @@ All BinderPOS stores configure a Shopify domain for decklist steps. Card Affinit
 
 ## Backend: non-BinderPOS stores
 
-Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip` (`api/gateway/outbound_get.go`): **direct → dedicated (request-scoped lease or one random slot) → dynamic**. Each transport is tried once; client errors (4xx) and connection errors advance immediately to the next transport. No automatic retry of the same transport.
+Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip` (`api/gateway/outbound_get.go`): **direct → dedicated (request-scoped lease or one random slot) → dynamic**. Callers can reorder with `PreferDedicatedFirst` (**dedicated → direct → dynamic**) or omit direct with `SkipDirect`. Each transport is tried once; client errors (4xx) and connection errors advance immediately to the next transport. No automatic retry of the same transport.
 
 | Store | Strategy | Per-attempt timeout | Proxy / transport order | Retries |
 |-------|----------|----------------------|-------------------------|---------|
-| Agora Hobby | HTML search page (`/store/search`) | 20s | **Dedicated → dynamic**; skips direct on `agorahobby.com` (browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
+| Agora Hobby | HTML search page (`/store/search`) | 20s | **Dedicated → direct → dynamic** (`PreferDedicatedFirst`; browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
 | 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → dynamic**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
 | Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
-| Mox & Lotus | JSON API GET (`/api/products?search=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
+| Mox & Lotus | JSON API GET (`/api/products?search=…`) | 5s | **Dedicated → direct → dynamic** (`PreferDedicatedFirst`) | Transport fallback only |
 | Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 
-For Agora and 5 Mana, `SkipDirect` is cleared when the host is not the production domain so httptest unit tests can use the direct transport.
+For 5 Mana, `SkipDirect` is cleared when the host is not the production domain so httptest unit tests can use the direct transport. Agora and Mox & Lotus keep direct in the fallback chain after dedicated (`PreferDedicatedFirst`).
 
 ---
 

@@ -78,17 +78,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 }
 
 func agoraOutboundOpts(pageURL *url.URL) gateway.OutboundRequestOptions {
-	opts := gateway.OutboundRequestOptions{
-		Style:          gateway.OutboundStyleHTML,
-		PageURL:        pageURL,
-		SkipWebBotAuth: true,
-		SkipDirect:     true,
+	return gateway.OutboundRequestOptions{
+		Style:                gateway.OutboundStyleHTML,
+		PageURL:              pageURL,
+		SkipWebBotAuth:       true,
+		PreferDedicatedFirst: true,
 	}
-	// Non-production hosts (httptest unit tests) must use the direct transport.
-	if pageURL == nil || pageURL.Host != "agorahobby.com" {
-		opts.SkipDirect = false
-	}
-	return opts
 }
 
 func parseStoreItem(se *goquery.Selection, storeName string, apiURL *url.URL, searchStr string) (gateway.Card, bool) {

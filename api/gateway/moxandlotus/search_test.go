@@ -9,6 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMoxOutboundOpts(t *testing.T) {
+	opts := moxOutboundOpts()
+	require.True(t, opts.PreferDedicatedFirst)
+	require.False(t, opts.SkipDirect)
+	require.False(t, opts.PreferResidentialProxy)
+}
+
 func Test_Search(t *testing.T) {
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
