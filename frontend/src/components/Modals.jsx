@@ -115,7 +115,7 @@ const Modals = ({
               </li>
               <li>
                 <a href="#faq-q5" className="link-offset-2">
-                  Known issues
+                  Why do some store links show the wrong condition?
                 </a>
               </li>
               <li>
@@ -128,6 +128,11 @@ const Modals = ({
                   How can I get accurate results from every store?
                 </a>
               </li>
+              <li>
+                <a href="#faq-q8" className="link-offset-2">
+                  What is in Trending?
+                </a>
+              </li>
             </ol>
           </div>
 
@@ -137,10 +142,10 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch queries the local game stores (LGS) you have
-                selected, hitting their sites concurrently in the background. It
-                filters the combined results for higher accuracy and returns
-                them sorted by price.
+                Gishath Fetch searches the local game stores (LGS) you have
+                selected at the same time. It combines their listings, filters
+                for better matches, and sorts everything by price so you can
+                compare quickly.
               </p>
             </div>
           </div>
@@ -150,38 +155,24 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch is built as a project of passion for fellow MTG
-                enthusiasts. There are no plans currently nor in the foreseeable
-                future to paywall it.
+                Yes. Gishath Fetch is a passion project for fellow MTG players,
+                and there are no plans to put it behind a paywall.
               </p>
               <p>
-                Google ads are being served to hopefully generate sufficient
-                earnings to cover the operating cost. This is still being tested
-                and if you have any feedback about the ad placements, feel free
-                to get in touch (below).
+                Ads help cover operating costs. If you have feedback on ad
+                placements, get in touch (below).
               </p>
               <p>
-                If you would like to support Gishath Fetch directly, you can do
-                so via this{" "}
+                If you want to support the site directly, you can do so on{" "}
                 <a
                   href="https://www.patreon.com/GishathFetch"
                   target="_blank"
                   rel="noreferrer"
                 >
                   Patreon
-                </a>{" "}
-                ❤️
-              </p>
-              <p>
-                You can also join as a free member on{" "}
-                <a
-                  href="https://www.patreon.com/GishathFetch"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Patreon
-                </a>{" "}
-                to follow the latest news from Gishath Fetch.
+                </a>
+                . Free Patreon membership is also available if you just want to
+                follow updates.
               </p>
             </div>
           </div>
@@ -191,8 +182,7 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Have a suggestion, want to report a bug or just want to get in
-                touch? Drop an email to{" "}
+                Have a suggestion, found a bug, or just want to say hello? Email{" "}
                 <a
                   href="mailto:contact@alvinyeoh.com"
                   target="_blank"
@@ -210,29 +200,33 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch currently only returns the result from the first
-                page of most LGSs' websites or the first 25 results.
+                Gishath Fetch does not paginate store search results. For most
+                LGSs it only pulls the first results page, or about the first 25
+                products, then filters and sorts what it gets.
               </p>
               <p>
-                This is usually fine because the best matches appear on the
-                first page unless a card has many printings (for example, basic
-                lands). In those cases, you may need to check the LGS site
-                directly.
+                That is usually enough for a specific card search, because the
+                best matches tend to appear first. Broad queries (for example
+                basic lands or a short name with many printings) can spill onto
+                later pages on the store's own site — check the LGS directly if
+                you need every printing or condition.
+              </p>
+              <p>
+                Out-of-stock listings are also left out on purpose, so a store
+                may have a printing that does not appear here.
               </p>
             </div>
           </div>
           <div className="mb-4" id="faq-q5">
             <div className="q-header">
-              <h5>5. Known issues</h5>
+              <h5>5. Why do some store links show the wrong condition?</h5>
             </div>
             <div className="q-answer">
               <p>
-                Links to some of the LGSs' card variants (e.g. Lightly Played)
-                are not showing the correct item upon landing on the LGS's
-                website. You are required to toggle between variants (e.g. click
-                Near Mint and then back to Lightly Played) to see the correct
-                item. This is a problem with the LGS's website and not Gishath
-                Fetch.
+                Some store product links open on the wrong condition (for
+                example Lightly Played instead of Near Mint). Toggle the
+                condition on the store's site to see the correct listing. That
+                comes from the store's website, not Gishath Fetch.
               </p>
             </div>
           </div>
@@ -242,11 +236,10 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                The more LGSs you include, the more work each run has to do. We
-                must throttle how fast we call each store to stay within their
-                rate limits, so extra stores mean more time in the queue.
-                Choosing fewer stores speeds up a search, eases load on the
-                shops, and helps Gishath Fetch keep operating costs down.
+                Each extra store adds work. We throttle requests so we stay
+                within store rate limits, so more shops means more time waiting
+                in the queue. Selecting fewer stores makes searches faster, is
+                gentler on the shops, and helps keep operating costs down.
               </p>
             </div>
           </div>
@@ -256,16 +249,33 @@ const Modals = ({
             </div>
             <div className="q-answer">
               <p>
-                Gishath Fetch uses search optimizations that do not play well
-                with partial card names for every shop. A short or incomplete
-                name may return no results on some stores even when others find
-                a match.
+                Some stores need a full card name to search reliably. A short or
+                partial name may return nothing from some shops even when others
+                find it.
               </p>
               <p>
                 Use the <strong>auto-suggest</strong> to pick a card, or type
-                the <strong>full card name</strong>. This is the most reliable
-                way to get consistent, accurate results across the stores you
-                have selected.
+                the <strong>full card name</strong>. That is the most reliable
+                way to get consistent results across the stores you selected.
+              </p>
+            </div>
+          </div>
+          <div className="mb-4" id="faq-q8">
+            <div className="q-header">
+              <h5>8. What is in Trending?</h5>
+            </div>
+            <div className="q-answer">
+              <p>
+                <strong>Trending</strong> shows the most searched card names on
+                Gishath Fetch for the time range you pick (24 hours, 30 days, 6
+                months, or 1 year). Tap a name to run that search.
+              </p>
+              <p>
+                When available, you can also switch to{" "}
+                <strong>Top risers @ CK (24h)</strong> or{" "}
+                <strong>Top drops @ CK (24h)</strong> to see Card Kingdom cards
+                with the largest USD price increases or decreases over the last
+                24 hours.
               </p>
             </div>
           </div>
