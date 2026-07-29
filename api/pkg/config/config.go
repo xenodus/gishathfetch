@@ -25,6 +25,8 @@ const (
 	SearchAttemptTimeout = 5 * time.Second
 	// AgoraSearchAttemptTimeout is the per-attempt cap for Agora Hobby only (matches per-store deadline).
 	AgoraSearchAttemptTimeout = PerSiteTimeout
+	// MoxAndLotusSearchAttemptTimeout is the per-attempt cap for Mox & Lotus.
+	MoxAndLotusSearchAttemptTimeout = 10 * time.Second
 	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
 	// dynamic-proxy fallback attempts, which BinderPOS reserves for the final
 	// two attempts after dedicated and direct/no-proxy scrap and decklist tries.

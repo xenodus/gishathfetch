@@ -19,7 +19,8 @@ import (
 const StoreName = "Mox & Lotus"
 const StoreBaseURL = "https://moxandlotus.sg"
 const StoreSearchURL = "/products?title="
-const StoreApiURL = "/api/products?&limit=48&full_search=true&showStatus=false&is_paginated=true&in_stock=true&sortVariation=true&&category_id=1&variation_code=all&order_by=Price%20Low%20to%20High&search="
+const StoreApiURL = "/api/products?&limit=24&full_search=true&showStatus=false&is_paginated=true&in_stock=true&sortVariation=true&&category_id=1&variation_code=all&order_by=Price%20Low%20to%20High&search="
+const storeSearchLimit = "24"
 const CardImageURL = "https://d3nmvyqkci0c2u.cloudfront.net/%s/%s.png"
 
 type response struct {
@@ -125,7 +126,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		Host:   "moxandlotus.sg",
 		Path:   "/api/products", // base part of StoreApiURL
 		RawQuery: url.Values{
-			"limit":          {"48"},
+			"limit":          {storeSearchLimit},
 			"full_search":    {"true"},
 			"showStatus":     {"false"},
 			"is_paginated":   {"true"},
@@ -138,7 +139,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), moxOutboundOpts(), config.SearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), moxOutboundOpts(), config.MoxAndLotusSearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
