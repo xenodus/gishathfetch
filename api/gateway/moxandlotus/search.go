@@ -138,7 +138,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{}, config.SearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), moxOutboundOpts(), config.SearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
@@ -205,6 +205,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	return cards, nil
+}
+
+func moxOutboundOpts() gateway.OutboundRequestOptions {
+	return gateway.OutboundRequestOptions{
+		PreferDedicatedFirst: true,
+	}
 }
 
 func resolveCardImageURL(expansionCode, cardNumber string, imagePath any) (string, bool) {
