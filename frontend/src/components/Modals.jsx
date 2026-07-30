@@ -241,6 +241,13 @@ const Modals = ({
                 in the queue. Selecting fewer stores makes searches faster, is
                 gentler on the shops, and helps keep operating costs down.
               </p>
+              <p>
+                <strong>Agora Hobby</strong> and <strong>Mox &amp; Lotus</strong>{" "}
+                are generally slower to respond than other stores, so searches
+                that include them often take longer and time out more
+                frequently. If you need faster results, try searching without
+                those two selected.
+              </p>
             </div>
           </div>
           <div className="mb-4" id="faq-q7">
