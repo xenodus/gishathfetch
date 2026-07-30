@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"mtg-price-checker-sg/controller"
 	"mtg-price-checker-sg/controller/ckprice"
@@ -25,6 +26,10 @@ type WebResponse struct {
 	Data             []controller.Card       `json:"data"`
 	Errors           []controller.StoreError `json:"errors"`
 	Stats            []controller.StoreStat  `json:"stats"`
+	// TotalDurationMs is wall-clock time for the full multi-store search
+	// (including the minimum response pad). Per-store Stats[].DurationMs
+	// only cover each store's own work and can be much lower than this.
+	TotalDurationMs  int64                   `json:"totalDurationMs"`
 	CardKingdomPrice *cardkingdom.Listing    `json:"cardKingdomPrice,omitempty"`
 }
 
@@ -107,20 +112,23 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	var (
-		inStockCards []controller.Card
-		storeErrors  []controller.StoreError
-		storeStats   []controller.StoreStat
-		ckPrice      *cardkingdom.Listing
-		searchErr    error
+		inStockCards      []controller.Card
+		storeErrors       []controller.StoreError
+		storeStats        []controller.StoreStat
+		totalDurationMs   int64
+		ckPrice           *cardkingdom.Listing
+		searchErr         error
 	)
 
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
+		searchStart := time.Now()
 		inStockCards, storeErrors, storeStats, searchErr = searchFunc(ctx, controller.SearchInput{
 			SearchString: searchString,
 			Lgs:          lgs,
 		})
+		totalDurationMs = time.Since(searchStart).Milliseconds()
 	})
 
 	if config.CKPriceLookupEnabled() {
@@ -152,6 +160,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	} else {
 		webRes.Stats = storeStats
 	}
+	webRes.TotalDurationMs = totalDurationMs
 	webRes.CardKingdomPrice = ckPrice
 
 	return searchSuccessResponse(apiRes, webRes, origin)

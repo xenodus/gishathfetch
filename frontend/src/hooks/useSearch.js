@@ -59,6 +59,7 @@ export default function useSearch() {
   const [searchError, setSearchError] = useState(null);
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
   const [searchStoreStats, setSearchStoreStats] = useState([]);
+  const [searchTotalDurationMs, setSearchTotalDurationMs] = useState(null);
   const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
@@ -182,6 +183,7 @@ export default function useSearch() {
       setSearchError(null);
       setSearchStoreErrors([]);
       setSearchStoreStats([]);
+      setSearchTotalDurationMs(null);
       setDismissedStoreErrorsKey(null);
 
       if (window.gtag) {
@@ -257,8 +259,12 @@ export default function useSearch() {
               ? result.errors
               : [];
             const storeStats = Array.isArray(result.stats) ? result.stats : [];
+            const totalDurationMs = Number.isFinite(result.totalDurationMs)
+              ? result.totalDurationMs
+              : null;
             setSearchStoreErrors(storeErrors);
             setSearchStoreStats(storeStats);
+            setSearchTotalDurationMs(totalDurationMs);
             setDismissedStoreErrorsKey(null);
             if (!skipHistorySyncRef.current) {
               syncSearchHistory({
@@ -267,6 +273,7 @@ export default function useSearch() {
                 results: result.data || [],
                 storeErrors,
                 storeStats,
+                totalDurationMs,
                 hasSearched: true,
                 searchError: null,
                 cardKingdomPrice: result.cardKingdomPrice ?? null,
@@ -294,6 +301,7 @@ export default function useSearch() {
               setSearchError(null);
               setSearchStoreErrors([]);
               setSearchStoreStats([]);
+              setSearchTotalDurationMs(null);
               setDismissedStoreErrorsKey(null);
               userCancelledRef.current = false;
             }
@@ -304,6 +312,7 @@ export default function useSearch() {
           setSearchResults([]);
           setSearchStoreErrors([]);
           setSearchStoreStats([]);
+          setSearchTotalDurationMs(null);
           setDismissedStoreErrorsKey(null);
 
           let nextSearchError;
@@ -342,6 +351,7 @@ export default function useSearch() {
               results: [],
               storeErrors: [],
               storeStats: [],
+              totalDurationMs: null,
               hasSearched: true,
               searchError: nextSearchError,
               cardKingdomPrice: null,
@@ -405,6 +415,7 @@ export default function useSearch() {
         setSearchResults([]);
         setSearchStoreErrors([]);
         setSearchStoreStats([]);
+        setSearchTotalDurationMs(null);
         setSearchError(null);
         setCardKingdomPrice(null);
         setDismissedStoreErrorsKey(null);
@@ -433,6 +444,9 @@ export default function useSearch() {
       setSearchResults(state.results || []);
       setSearchStoreErrors(state.storeErrors || []);
       setSearchStoreStats(state.storeStats || []);
+      setSearchTotalDurationMs(
+        Number.isFinite(state.totalDurationMs) ? state.totalDurationMs : null,
+      );
       setHasSearched(!!state.hasSearched);
       setSearchError(state.searchError || null);
       setCardKingdomPrice(state.cardKingdomPrice ?? null);
@@ -685,6 +699,7 @@ export default function useSearch() {
     searchError,
     searchStoreErrors: visibleStoreErrors,
     searchStoreStats,
+    searchTotalDurationMs,
     onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
     cardKingdomPrice,

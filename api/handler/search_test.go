@@ -126,6 +126,7 @@ func Test_Search_Success(t *testing.T) {
 			require.Equal(t, tc.expBodyData, webRes.Data)
 			require.Equal(t, tc.expBodyErrors, webRes.Errors)
 			require.Equal(t, tc.expBodyStats, webRes.Stats)
+			require.GreaterOrEqual(t, webRes.TotalDurationMs, int64(0))
 		})
 	}
 }

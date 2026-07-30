@@ -21,7 +21,12 @@ function readShowStatsPreference() {
   }
 }
 
-const SearchStats = ({ stats, hasSearched, isSearching }) => {
+const SearchStats = ({
+  stats,
+  totalDurationMs,
+  hasSearched,
+  isSearching,
+}) => {
   const [showStats, setShowStats] = useState(readShowStatsPreference);
 
   useEffect(() => {
@@ -37,6 +42,8 @@ const SearchStats = ({ stats, hasSearched, isSearching }) => {
   }
 
   const storeStats = Array.isArray(stats) ? stats : [];
+  const hasTotal =
+    Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
@@ -51,37 +58,52 @@ const SearchStats = ({ stats, hasSearched, isSearching }) => {
 
       {showStats && (
         <div className="search-stats-panel mt-2">
-          {storeStats.length === 0 ? (
+          {storeStats.length === 0 && !hasTotal ? (
             <p className="small text-muted mb-0">
               No store timing data for this search.
             </p>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-sm table-borderless mb-0 search-stats-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Store</th>
-                    <th scope="col" className="text-end">
-                      Items
-                    </th>
-                    <th scope="col" className="text-end">
-                      Time
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storeStats.map((stat) => (
-                    <tr key={stat.store}>
-                      <td>{stat.store}</td>
-                      <td className="text-end">{stat.itemCount}</td>
-                      <td className="text-end text-nowrap">
-                        {formatDurationMs(stat.durationMs)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {hasTotal && (
+                <p className="small text-muted mb-2 search-stats-total">
+                  Total search time:{" "}
+                  <span className="text-body fw-semibold">
+                    {formatDurationMs(totalDurationMs)}
+                  </span>
+                  {storeStats.length > 1
+                    ? " (waits for all selected stores; per-store times below)"
+                    : null}
+                </p>
+              )}
+              {storeStats.length > 0 && (
+                <div className="table-responsive">
+                  <table className="table table-sm table-borderless mb-0 search-stats-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Store</th>
+                        <th scope="col" className="text-end">
+                          Items
+                        </th>
+                        <th scope="col" className="text-end">
+                          Time
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {storeStats.map((stat) => (
+                        <tr key={stat.store}>
+                          <td>{stat.store}</td>
+                          <td className="text-end">{stat.itemCount}</td>
+                          <td className="text-end text-nowrap">
+                            {formatDurationMs(stat.durationMs)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
