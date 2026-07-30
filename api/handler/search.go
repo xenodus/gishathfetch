@@ -24,6 +24,7 @@ import (
 type WebResponse struct {
 	Data             []controller.Card       `json:"data"`
 	Errors           []controller.StoreError `json:"errors"`
+	Stats            []controller.StoreStat  `json:"stats"`
 	CardKingdomPrice *cardkingdom.Listing    `json:"cardKingdomPrice,omitempty"`
 }
 
@@ -108,6 +109,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	var (
 		inStockCards []controller.Card
 		storeErrors  []controller.StoreError
+		storeStats   []controller.StoreStat
 		ckPrice      *cardkingdom.Listing
 		searchErr    error
 	)
@@ -115,7 +117,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
-		inStockCards, storeErrors, searchErr = searchFunc(ctx, controller.SearchInput{
+		inStockCards, storeErrors, storeStats, searchErr = searchFunc(ctx, controller.SearchInput{
 			SearchString: searchString,
 			Lgs:          lgs,
 		})
@@ -144,6 +146,11 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		webRes.Errors = []controller.StoreError{}
 	} else {
 		webRes.Errors = storeErrors
+	}
+	if storeStats == nil {
+		webRes.Stats = []controller.StoreStat{}
+	} else {
+		webRes.Stats = storeStats
 	}
 	webRes.CardKingdomPrice = ckPrice
 

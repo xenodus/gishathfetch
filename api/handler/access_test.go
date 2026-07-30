@@ -21,8 +21,8 @@ func Test_Search_AccessControl(t *testing.T) {
 		searchFunc = originalSearchFunc
 		lookupCKPriceFunc = originalLookupCKPriceFunc
 	}()
-	searchFunc = func(_ context.Context, _ controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
-		return nil, nil, nil
+	searchFunc = func(_ context.Context, _ controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
+		return nil, nil, nil, nil
 	}
 	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
 		return nil, nil
