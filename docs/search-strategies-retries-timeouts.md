@@ -70,6 +70,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 
 | Store | GraphQL token | HTML scrap variant | Max strategy steps |
 |-------|---------------|--------------------|--------------------|
+| Arcane Sanctum | Yes | 2 | 8 |
 | Card Affinity | No | 2 | 6 |
 | Cards Citadel | Yes | 1 | 8 |
 | Flagship | Yes | 2 | 8 |

@@ -54,6 +54,7 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 
 | Store | Scrap variant | GraphQL token | Shopify domain |
 |-------|---------------|---------------|----------------|
+| Arcane Sanctum | 2 | Yes | `30uetm-1y.myshopify.com` |
 | Card Affinity | 2 | No | `563304-2.myshopify.com` |
 | Cards Citadel | 1 | Yes | `card-citadel.myshopify.com` |
 | Flagship | 2 | Yes | `flagship-games.myshopify.com` |
@@ -71,7 +72,7 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 | Variant | Stores | Search query shaping | DOM / data source | MTG filter on scrape path |
 |---------|--------|----------------------|-------------------|---------------------------|
 | **1** | Cards Citadel | `searchStr + " mtg"`; wildcard template `/search?q=*%s*` | `div.Norm` + `div.addNow` price text | Query suffix only |
-| **2** | Card Affinity, Flagship, Hideyoshi, Mana Pro, MTG Asia, One MTG | `searchStr + " mtg"` | Embedded `data-product-variants` JSON (`CardInfo`) | `shouldIncludeBinderposProduct` when `data-product-type` present |
+| **2** | Arcane Sanctum, Card Affinity, Flagship, Hideyoshi, Mana Pro, MTG Asia, One MTG | `searchStr + " mtg"` | Embedded `data-product-variants` JSON (`CardInfo`) | `shouldIncludeBinderposProduct` when `data-product-type` present |
 | **3** | Games Haven, GOG, Hideout | `searchStr + " mtg"` | `div.productCard__card` + `ul.productChip__grid` variant chips | Query suffix only |
 | **4** | Fyendal Hobby | `product_type:"MTG Single Cards" AND {searchStr}` | `div.product-item--vertical` theme layout | Server-side product_type filter in query |
 

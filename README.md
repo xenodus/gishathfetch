@@ -302,7 +302,7 @@ store simply contributes nothing.
 **5 Mana** is Shopify (Dawn, not BinderPOS). It tries Storefront GraphQL first,
 then falls back to a `main-search` HTML section scrape when GraphQL fails.
 
-**BinderPOS stores** (e.g. Card Affinity, Cards Citadel, Flagship, Game's Haven,
+**BinderPOS stores** (e.g. Arcane Sanctum, Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro, MTG Asia,
 OneMTG) share one gateway. Stores with a configured Storefront access token try
 **GraphQL first** (dedicated → direct), then fall back to HTML scrape and
