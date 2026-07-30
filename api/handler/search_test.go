@@ -22,10 +22,12 @@ func Test_Search_Success(t *testing.T) {
 		givenAPIGatewayProxyRequest events.APIGatewayProxyRequest
 		mockSearchResponse          []controller.Card
 		mockStoreErrors             []controller.StoreError
+		mockStoreStats              []controller.StoreStat
 		mockSearchErr               error
 		expStatusCode               int
 		expBodyData                 []controller.Card
 		expBodyErrors               []controller.StoreError
+		expBodyStats                []controller.StoreStat
 	}
 	tcs := map[string]args{
 		"success with results": {
@@ -38,12 +40,18 @@ func Test_Search_Success(t *testing.T) {
 			mockSearchResponse: []controller.Card{
 				{Name: "Abrade", Price: 1.5, Source: "Flagship Games", InStock: true},
 			},
+			mockStoreStats: []controller.StoreStat{
+				{Store: "Flagship Games", ItemCount: 1, DurationMs: 321},
+			},
 			mockSearchErr: nil,
 			expStatusCode: http.StatusOK,
 			expBodyData: []controller.Card{
 				{Name: "Abrade", Price: 1.5, Source: "Flagship Games", InStock: true},
 			},
 			expBodyErrors: []controller.StoreError{},
+			expBodyStats: []controller.StoreStat{
+				{Store: "Flagship Games", ItemCount: 1, DurationMs: 321},
+			},
 		},
 		"success, no results": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
@@ -57,6 +65,7 @@ func Test_Search_Success(t *testing.T) {
 			expStatusCode:      http.StatusOK,
 			expBodyData:        nil, // key: "data": null
 			expBodyErrors:      []controller.StoreError{},
+			expBodyStats:       []controller.StoreStat{},
 		},
 		"success with store errors": {
 			givenAPIGatewayProxyRequest: events.APIGatewayProxyRequest{
@@ -71,6 +80,9 @@ func Test_Search_Success(t *testing.T) {
 			mockStoreErrors: []controller.StoreError{
 				{Store: "Flagship Games", Error: "timeout"},
 			},
+			mockStoreStats: []controller.StoreStat{
+				{Store: "Flagship Games", ItemCount: 1, DurationMs: 20000},
+			},
 			mockSearchErr: nil,
 			expStatusCode: http.StatusOK,
 			expBodyData: []controller.Card{
@@ -78,6 +90,9 @@ func Test_Search_Success(t *testing.T) {
 			},
 			expBodyErrors: []controller.StoreError{
 				{Store: "Flagship Games", Error: "timeout"},
+			},
+			expBodyStats: []controller.StoreStat{
+				{Store: "Flagship Games", ItemCount: 1, DurationMs: 20000},
 			},
 		},
 	}
@@ -90,8 +105,8 @@ func Test_Search_Success(t *testing.T) {
 				searchFunc = originalSearchFunc
 				lookupCKPriceFunc = originalLookupCKPriceFunc
 			}()
-			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
-				return tc.mockSearchResponse, tc.mockStoreErrors, tc.mockSearchErr
+			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
+				return tc.mockSearchResponse, tc.mockStoreErrors, tc.mockStoreStats, tc.mockSearchErr
 			}
 			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
 				return nil, nil
@@ -110,6 +125,7 @@ func Test_Search_Success(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.expBodyData, webRes.Data)
 			require.Equal(t, tc.expBodyErrors, webRes.Errors)
+			require.Equal(t, tc.expBodyStats, webRes.Stats)
 		})
 	}
 }
@@ -122,8 +138,8 @@ func Test_Search_CORS(t *testing.T) {
 		searchFunc = originalSearchFunc
 		lookupCKPriceFunc = originalLookupCKPriceFunc
 	}()
-	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
-		return []controller.Card{}, []controller.StoreError{}, nil
+	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
+		return []controller.Card{}, []controller.StoreError{}, []controller.StoreStat{}, nil
 	}
 	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
 		return nil, nil
@@ -220,8 +236,8 @@ func Test_Search_Err(t *testing.T) {
 				searchFunc = originalSearchFunc
 				lookupCKPriceFunc = originalLookupCKPriceFunc
 			}()
-			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, error) {
-				return tc.mockSearchResponse, nil, tc.mockSearchErr
+			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
+				return tc.mockSearchResponse, nil, nil, tc.mockSearchErr
 			}
 			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
 				return nil, nil

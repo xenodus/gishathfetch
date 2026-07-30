@@ -718,3 +718,31 @@ ins.adsbygoogle.adsbygoogle-noablate {
   box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.35);
   border-radius: var(--bs-border-radius-sm);
 }
+
+.search-stats {
+  text-align: start;
+}
+
+.search-stats-toggle {
+  font-size: 0.875rem;
+  color: var(--bs-secondary-color);
+}
+
+.search-stats-panel {
+  border: 1px solid var(--bs-border-color-translucent);
+  background-color: var(--bs-tertiary-bg);
+}
+
+.search-stats-table {
+  font-size: 0.875rem;
+}
+
+.search-stats-table thead th {
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+  border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+.search-stats-table tbody td {
+  vertical-align: middle;
+}

@@ -57,6 +57,13 @@ type StoreError struct {
 	StatusCode int    `json:"statusCode,omitempty"`
 }
 
+// StoreStat reports per-store search timing and how many in-stock items were returned.
+type StoreStat struct {
+	Store      string `json:"store"`
+	ItemCount  int    `json:"itemCount"`
+	DurationMs int64  `json:"durationMs"`
+}
+
 var sendAlert = alert.SendAlert
 
 type shopSpec struct {
@@ -96,21 +103,21 @@ var binderposStoreNames = func() map[string]struct{} {
 	return storeNames
 }()
 
-func Search(ctx context.Context, input SearchInput) ([]Card, []StoreError, error) {
+func Search(ctx context.Context, input SearchInput) ([]Card, []StoreError, []StoreStat, error) {
 	shopNameToLGSMap := initAndMapShops(input.Lgs)
 	return searchShops(ctx, input, shopNameToLGSMap)
 }
 
-func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, []StoreError, error) {
+func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[string]gateway.LGS) ([]Card, []StoreError, []StoreStat, error) {
 	if len(shopNameToLGSMap) == 0 {
-		return nil, []StoreError{}, nil
+		return nil, []StoreError{}, []StoreStat{}, nil
 	}
 
 	realStart := time.Now()
 	responseThreshold := 1 * time.Second
 
 	// 1. Fetch concurrently
-	cards, siteErrors := fetchCardsConcurrently(ctx, input.SearchString, shopNameToLGSMap)
+	cards, siteErrors, shopDurations := fetchCardsConcurrently(ctx, input.SearchString, shopNameToLGSMap)
 	_ = siteErrors // available for future use (e.g. partial-failure UX)
 
 	// 2. Filter and Sort
@@ -126,7 +133,7 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 		log.Printf("Sleeping for [%s]", sleepDuration)
 	}
 
-	return inStockCards, buildStoreErrors(siteErrors), nil
+	return inStockCards, buildStoreErrors(siteErrors), buildStoreStats(shopDurations, inStockCards), nil
 }
 
 const maxConcurrentStoreSearches = 6
@@ -136,7 +143,7 @@ type shopSearchJob struct {
 	lgs  gateway.LGS
 }
 
-func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error) {
+func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error, []shopSearchDuration) {
 	var wg sync.WaitGroup
 	aggregator := newFetchResultAggregator(len(shops))
 
@@ -160,14 +167,15 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 
 	wg.Wait()
 	cards, siteErrors, alertErrorMessages := aggregator.snapshot()
+	shopDurations := aggregator.shopDurationSnapshot()
 	if len(alertErrorMessages) > 0 {
 		go sendAlert(formatAlertErrorSummary(searchString, alertErrorMessages))
 	}
 	if len(siteErrors) > 0 {
 		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
 	}
-	log.Println(formatShopSearchSummary(searchString, time.Since(start), aggregator.shopDurationSnapshot()))
-	return cards, siteErrors
+	log.Println(formatShopSearchSummary(searchString, time.Since(start), shopDurations))
+	return cards, siteErrors, shopDurations
 }
 
 type shopSearchDuration struct {
@@ -371,6 +379,35 @@ func buildStoreErrors(siteErrors map[string]error) []StoreError {
 	}
 
 	return storeErrors
+}
+
+func buildStoreStats(shopDurations []shopSearchDuration, cards []Card) []StoreStat {
+	if len(shopDurations) == 0 {
+		return []StoreStat{}
+	}
+
+	itemCounts := make(map[string]int, len(shopDurations))
+	for _, card := range cards {
+		if card.Source == "" {
+			continue
+		}
+		itemCounts[card.Source]++
+	}
+
+	sortedDurations := append([]shopSearchDuration(nil), shopDurations...)
+	sort.Slice(sortedDurations, func(i, j int) bool {
+		return sortedDurations[i].name < sortedDurations[j].name
+	})
+
+	stats := make([]StoreStat, 0, len(sortedDurations))
+	for _, shopDuration := range sortedDurations {
+		stats = append(stats, StoreStat{
+			Store:      shopDuration.name,
+			ItemCount:  itemCounts[shopDuration.name],
+			DurationMs: shopDuration.duration.Milliseconds(),
+		})
+	}
+	return stats
 }
 
 func parseSearchErrorMessage(message, searchString string) (shopName, details string, ok bool) {

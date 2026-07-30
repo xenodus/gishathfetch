@@ -58,6 +58,7 @@ export default function useSearch() {
   const [autocompleteSettled, setAutocompleteSettled] = useState(false);
   const [searchError, setSearchError] = useState(null);
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
+  const [searchStoreStats, setSearchStoreStats] = useState([]);
   const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
@@ -180,6 +181,7 @@ export default function useSearch() {
       setHasSearched(true);
       setSearchError(null);
       setSearchStoreErrors([]);
+      setSearchStoreStats([]);
       setDismissedStoreErrorsKey(null);
 
       if (window.gtag) {
@@ -254,7 +256,9 @@ export default function useSearch() {
             const storeErrors = Array.isArray(result.errors)
               ? result.errors
               : [];
+            const storeStats = Array.isArray(result.stats) ? result.stats : [];
             setSearchStoreErrors(storeErrors);
+            setSearchStoreStats(storeStats);
             setDismissedStoreErrorsKey(null);
             if (!skipHistorySyncRef.current) {
               syncSearchHistory({
@@ -262,6 +266,7 @@ export default function useSearch() {
                 stores,
                 results: result.data || [],
                 storeErrors,
+                storeStats,
                 hasSearched: true,
                 searchError: null,
                 cardKingdomPrice: result.cardKingdomPrice ?? null,
@@ -288,6 +293,7 @@ export default function useSearch() {
               setHasSearched(previousResults.length > 0);
               setSearchError(null);
               setSearchStoreErrors([]);
+              setSearchStoreStats([]);
               setDismissedStoreErrorsKey(null);
               userCancelledRef.current = false;
             }
@@ -297,6 +303,7 @@ export default function useSearch() {
           console.error("Search error:", err);
           setSearchResults([]);
           setSearchStoreErrors([]);
+          setSearchStoreStats([]);
           setDismissedStoreErrorsKey(null);
 
           let nextSearchError;
@@ -334,6 +341,7 @@ export default function useSearch() {
               stores,
               results: [],
               storeErrors: [],
+              storeStats: [],
               hasSearched: true,
               searchError: nextSearchError,
               cardKingdomPrice: null,
@@ -396,6 +404,7 @@ export default function useSearch() {
         persistSelectedStores(stores);
         setSearchResults([]);
         setSearchStoreErrors([]);
+        setSearchStoreStats([]);
         setSearchError(null);
         setCardKingdomPrice(null);
         setDismissedStoreErrorsKey(null);
@@ -423,6 +432,7 @@ export default function useSearch() {
       persistSelectedStores(state.stores || LGS_OPTIONS);
       setSearchResults(state.results || []);
       setSearchStoreErrors(state.storeErrors || []);
+      setSearchStoreStats(state.storeStats || []);
       setHasSearched(!!state.hasSearched);
       setSearchError(state.searchError || null);
       setCardKingdomPrice(state.cardKingdomPrice ?? null);
@@ -674,6 +684,7 @@ export default function useSearch() {
     searchProgress,
     searchError,
     searchStoreErrors: visibleStoreErrors,
+    searchStoreStats,
     onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
     cardKingdomPrice,

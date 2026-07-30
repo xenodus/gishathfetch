@@ -7,6 +7,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import SearchForm from "./components/SearchForm";
 import SearchResults from "./components/SearchResults";
+import SearchStats from "./components/SearchStats";
 import TopSearchKeywords from "./components/TopSearchKeywords";
 import TurnstileBootstrap from "./components/TurnstileBootstrap";
 
@@ -54,6 +55,7 @@ export default function App() {
     searchProgress,
     searchError,
     searchStoreErrors,
+    searchStoreStats,
     onDismissStoreErrors,
     storesWarning,
     cardKingdomPrice,
@@ -256,6 +258,12 @@ export default function App() {
         onSearchStore={handleCardSearch}
         cardKingdomPrice={cardKingdomPrice}
         baseUrl={BASE_URL}
+      />
+
+      <SearchStats
+        stats={searchStoreStats}
+        hasSearched={hasSearched}
+        isSearching={isSearching}
       />
 
       <Footer

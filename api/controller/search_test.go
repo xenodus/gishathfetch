@@ -300,7 +300,7 @@ func TestSearchShops(t *testing.T) {
 				}
 			}
 
-			results, storeErrors, err := searchShops(context.Background(), tt.input, mockMap)
+			results, storeErrors, _, err := searchShops(context.Background(), tt.input, mockMap)
 			if err != nil {
 				t.Fatalf("searchShops returned unexpected error: %v", err)
 			}
@@ -335,7 +335,7 @@ func TestSearchShops_IncludesStoreErrors(t *testing.T) {
 		},
 	}
 
-	results, storeErrors, err := searchShops(context.Background(), SearchInput{SearchString: "Card A"}, shops)
+	results, storeErrors, storeStats, err := searchShops(context.Background(), SearchInput{SearchString: "Card A"}, shops)
 	if err != nil {
 		t.Fatalf("searchShops returned unexpected error: %v", err)
 	}
@@ -350,6 +350,22 @@ func TestSearchShops_IncludesStoreErrors(t *testing.T) {
 	}
 	if storeErrors[0].Error != "simulated failure" {
 		t.Fatalf("expected 'simulated failure', got %q", storeErrors[0].Error)
+	}
+	if len(storeStats) != 2 {
+		t.Fatalf("expected 2 store stats, got %d", len(storeStats))
+	}
+	byStore := make(map[string]StoreStat, len(storeStats))
+	for _, stat := range storeStats {
+		byStore[stat.Store] = stat
+	}
+	if byStore["Good Shop"].ItemCount != 1 {
+		t.Fatalf("expected Good Shop itemCount 1, got %d", byStore["Good Shop"].ItemCount)
+	}
+	if byStore["Failing Shop"].ItemCount != 0 {
+		t.Fatalf("expected Failing Shop itemCount 0, got %d", byStore["Failing Shop"].ItemCount)
+	}
+	if byStore["Good Shop"].DurationMs < 0 || byStore["Failing Shop"].DurationMs < 0 {
+		t.Fatalf("expected non-negative durations, got %+v", storeStats)
 	}
 }
 
@@ -381,6 +397,35 @@ func TestBuildStoreErrors_IncludesHTTPStatusCode(t *testing.T) {
 	cardsCentral := byStore["Cards Central"]
 	if cardsCentral.StatusCode != http.StatusTooManyRequests {
 		t.Fatalf("expected status 429 for Cards Central, got %d", cardsCentral.StatusCode)
+	}
+}
+
+func TestBuildStoreStats(t *testing.T) {
+	stats := buildStoreStats(
+		[]shopSearchDuration{
+			{name: "Zebra Games", duration: 2500 * time.Millisecond},
+			{name: "Alpha Games", duration: 120 * time.Millisecond},
+		},
+		[]Card{
+			{Source: "Alpha Games"},
+			{Source: "Alpha Games"},
+			{Source: "Zebra Games"},
+		},
+	)
+
+	if len(stats) != 2 {
+		t.Fatalf("expected 2 stats, got %d", len(stats))
+	}
+	if stats[0].Store != "Alpha Games" || stats[0].ItemCount != 2 || stats[0].DurationMs != 120 {
+		t.Fatalf("unexpected first stat: %+v", stats[0])
+	}
+	if stats[1].Store != "Zebra Games" || stats[1].ItemCount != 1 || stats[1].DurationMs != 2500 {
+		t.Fatalf("unexpected second stat: %+v", stats[1])
+	}
+
+	empty := buildStoreStats(nil, nil)
+	if len(empty) != 0 {
+		t.Fatalf("expected empty stats slice, got %+v", empty)
 	}
 }
 
@@ -440,7 +485,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+		_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Abrade", shops)
 		if len(siteErrors) != 0 {
 			t.Errorf("unexpected site errors: %v", siteErrors)
 		}
@@ -505,7 +550,7 @@ func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t 
 	for _, searchStr := range []string{"Search1", "Search2", "Search3"} {
 		go func(searchStr string) {
 			defer func() { done <- struct{}{} }()
-			_, siteErrors := fetchCardsConcurrently(context.Background(), searchStr, shops)
+			_, siteErrors, _ := fetchCardsConcurrently(context.Background(), searchStr, shops)
 			if len(siteErrors) != 0 {
 				t.Errorf("search %q: unexpected site errors: %v", searchStr, siteErrors)
 			}
@@ -583,7 +628,7 @@ func TestFetchCardsConcurrently_CollatesAlertErrors(t *testing.T) {
 		sendAlert = originalSendAlert
 	})
 
-	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Abrade", shops)
 	if len(siteErrors) != 3 {
 		t.Fatalf("expected 3 site errors, got %d", len(siteErrors))
 	}
@@ -644,7 +689,7 @@ func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToAlert(t *testing.T) {
 		sendAlert = originalSendAlert
 	})
 
-	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Abrade", shops)
 	if len(siteErrors) != 1 {
 		t.Fatalf("expected 1 site error, got %d", len(siteErrors))
 	}
@@ -691,7 +736,7 @@ func TestFetchCardsConcurrently_SkipsCanceledForAlert(t *testing.T) {
 		sendAlert = originalSendAlert
 	})
 
-	_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Abrade", shops)
 	if len(siteErrors) != 1 {
 		t.Fatalf("expected 1 site error, got %d", len(siteErrors))
 	}
@@ -739,7 +784,7 @@ func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_, siteErrors := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+		_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Abrade", shops)
 		if len(siteErrors) != 0 {
 			t.Errorf("unexpected site errors: %v", siteErrors)
 		}
