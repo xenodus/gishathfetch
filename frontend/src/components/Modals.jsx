@@ -125,17 +125,11 @@ const Modals = ({
               </li>
               <li>
                 <a href="#faq-q7" className="link-offset-2">
-                  Why can &quot;Time to results&quot; be much slower than API
-                  search time?
-                </a>
-              </li>
-              <li>
-                <a href="#faq-q8" className="link-offset-2">
                   How can I get accurate results from every store?
                 </a>
               </li>
               <li>
-                <a href="#faq-q9" className="link-offset-2">
+                <a href="#faq-q8" className="link-offset-2">
                   What is in Trending?
                 </a>
               </li>
@@ -258,32 +252,7 @@ const Modals = ({
           </div>
           <div className="mb-4" id="faq-q7">
             <div className="q-header">
-              <h5>
-                7. Why can &quot;Time to results&quot; be much slower than API
-                search time?
-              </h5>
-            </div>
-            <div className="q-answer">
-              <p>
-                Search stats split two clocks. <strong>API search time</strong>{" "}
-                is only the server work that fans out to stores (plus a short
-                Card Kingdom enrichment wait). <strong>Time to results</strong>{" "}
-                is the full browser wait from clicking Search until results
-                appear.
-              </p>
-              <p>
-                Extra time outside the API search clock usually comes from
-                session verification (including Turnstile when enabled), a cold
-                API start after idle, or network latency. Per-store times never
-                include those steps. A single fast store can finish in a few
-                hundred milliseconds while the page still waits on session or
-                cold start.
-              </p>
-            </div>
-          </div>
-          <div className="mb-4" id="faq-q8">
-            <div className="q-header">
-              <h5>8. How can I get accurate results from every store?</h5>
+              <h5>7. How can I get accurate results from every store?</h5>
             </div>
             <div className="q-answer">
               <p>
@@ -298,9 +267,9 @@ const Modals = ({
               </p>
             </div>
           </div>
-          <div className="mb-4" id="faq-q9">
+          <div className="mb-4" id="faq-q8">
             <div className="q-header">
-              <h5>9. What is in Trending?</h5>
+              <h5>8. What is in Trending?</h5>
             </div>
             <div className="q-answer">
               <p>
