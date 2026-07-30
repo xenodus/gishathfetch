@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
+	"mtg-price-checker-sg/gateway/arcanesanctum"
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/hideout"
@@ -431,10 +432,11 @@ func TestBuildStoreStats(t *testing.T) {
 
 func TestIsBinderposStore(t *testing.T) {
 	tests := map[string]bool{
-		cardscitadel.StoreName: true,
-		hideout.StoreName:      true,
-		agora.StoreName:        false,
-		"Unknown Shop":         false,
+		arcanesanctum.StoreName: true,
+		cardscitadel.StoreName:  true,
+		hideout.StoreName:       true,
+		agora.StoreName:         false,
+		"Unknown Shop":          false,
 	}
 
 	for shop, expected := range tests {
