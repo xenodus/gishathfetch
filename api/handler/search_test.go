@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"mtg-price-checker-sg/controller"
 	"mtg-price-checker-sg/gateway/cardkingdom"
@@ -255,4 +256,56 @@ func Test_Search_Err(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_Search_CKPriceLookupTimeoutDoesNotBlockPastCap(t *testing.T) {
+	originalSearchFunc := searchFunc
+	originalLookupCKPriceFunc := lookupCKPriceFunc
+	defer func() {
+		searchFunc = originalSearchFunc
+		lookupCKPriceFunc = originalLookupCKPriceFunc
+	}()
+
+	t.Setenv("ENV", config.EnvProd)
+	t.Setenv(config.CKPriceLookupEnabledEnv, "true")
+
+	searchFunc = func(_ context.Context, _ controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
+		return []controller.Card{}, []controller.StoreError{}, []controller.StoreStat{
+			{Store: "Arcane Sanctum", ItemCount: 0, DurationMs: 700},
+		}, nil
+	}
+	lookupCKPriceFunc = func(ctx context.Context, _ string) (*cardkingdom.Listing, error) {
+		timer := time.NewTimer(10 * time.Second)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+			return &cardkingdom.Listing{CardName: "late", PriceUsd: 1}, nil
+		}
+	}
+
+	start := time.Now()
+	result, err := Search(context.Background(), events.APIGatewayProxyRequest{
+		QueryStringParameters: map[string]string{
+			"s":   "Birds of Paradise",
+			"lgs": "Arcane Sanctum",
+		},
+	})
+	elapsed := time.Since(start)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, result.StatusCode)
+
+	// Enrichment is capped at CKPriceLookupTimeout; a hung CK path must not
+	// stretch a fast single-store search toward double-digit seconds.
+	require.Less(t, elapsed, config.CKPriceLookupTimeout+time.Second)
+	require.GreaterOrEqual(t, elapsed, config.CKPriceLookupTimeout)
+
+	var webRes WebResponse
+	require.NoError(t, json.Unmarshal([]byte(result.Body), &webRes))
+	require.Nil(t, webRes.CardKingdomPrice)
+	require.GreaterOrEqual(t, webRes.TotalDurationMs, config.CKPriceLookupTimeout.Milliseconds())
+	require.Equal(t, []controller.StoreStat{
+		{Store: "Arcane Sanctum", ItemCount: 0, DurationMs: 700},
+	}, webRes.Stats)
 }

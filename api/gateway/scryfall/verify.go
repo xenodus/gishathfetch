@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"mtg-price-checker-sg/gateway"
 )
@@ -14,7 +15,12 @@ import (
 const (
 	autocompleteURL = "https://api.scryfall.com/cards/autocomplete"
 	namedURL        = "https://api.scryfall.com/cards/named"
+	// httpClientTimeout bounds each Scryfall round trip even when the caller
+	// context has a long deadline (e.g. Lambda remaining time).
+	httpClientTimeout = 3 * time.Second
 )
+
+var scryfallHTTPClient = &http.Client{Timeout: httpClientTimeout}
 
 var httpGet = func(ctx context.Context, requestURL string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
@@ -26,7 +32,7 @@ var httpGet = func(ctx context.Context, requestURL string) (*http.Response, erro
 	}); err != nil {
 		return nil, err
 	}
-	return http.DefaultClient.Do(req)
+	return scryfallHTTPClient.Do(req)
 }
 
 // VerifyCardName returns the canonical Scryfall card name when query matches a card.

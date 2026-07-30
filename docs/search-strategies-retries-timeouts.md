@@ -15,6 +15,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
 | Max concurrent store searches | 9 | `maxConcurrentStoreSearches` in `api/controller/search.go` | Worker pool size when fanning out to selected stores. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
+| Card Kingdom enrichment on `/search` | parallel, **2s** cap | See [CK price on search](#backend-ck-price-on-search-apihandlersearchgo-and-refresh-apigatewaycardkingdom) below | Store fan-out and CK lookup run together; CK cannot delay the response past its timeout. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
 | Dedicated proxy per store search | 1 lease | `searchShop` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When dedicated proxies are configured, each store search acquires **one** dedicated-proxy lease for its own goroutine. Up to nine concurrent store searches share the worker pool, but at most **three** proxy-backed searches may hold a dedicated lease at once (`DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go`). Additional proxy-backed stores wait for a slot before leasing. |
 
@@ -107,10 +108,13 @@ For 5 Mana, `SkipDirect` is cleared when the host is not the production domain s
 
 ---
 
-## Backend: CK price refresh (`api/gateway/cardkingdom/`)
+## Backend: CK price on search (`api/handler/search.go`) and refresh (`api/gateway/cardkingdom/`)
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
+| CK lookup on `/search` | parallel with store search | `Search` in `api/handler/search.go` | When enabled (`CKPriceLookupEnabled`), enrichment runs in a sibling goroutine; response waits for search **and** CK (subject to the timeout below). |
+| CK lookup timeout on `/search` | 2s | `config.CKPriceLookupTimeout` | Cancels Scryfall + DynamoDB work so store results are not blocked by a slow enrichment path. Timed-out lookups omit `cardKingdomPrice`. |
+| Scryfall verify HTTP timeout | 3s per request | `httpClientTimeout` in `api/gateway/scryfall/verify.go` | `VerifyCardName` may do autocomplete then exact-named; each call uses this client timeout. |
 | CK pricelist transport | direct → residential | `downloadCKPricelist` in `api/gateway/cardkingdom/pricelist_fetch.go` | Tries direct egress first; on failure retries via `RESIDENTIAL_PROXY_1`, then `CK_PRICELIST_PROXY` when configured. |
 | CK pricelist HTTP timeout | 13m | `ckPricelistHTTPTimeout` in `api/gateway/cardkingdom/pricelist_fetch.go` | Bounds the full `DoOutboundGET` round trip, including streaming the ~65MB JSON body when the residential proxy fallback is used. |
 | CK pricelist fetch timeout | 14m | `ckPricelistFetchTimeout` in `api/gateway/cardkingdom/pricelist_fetch.go` | Context deadline for download + JSON decode + cheapest-listing aggregation. |

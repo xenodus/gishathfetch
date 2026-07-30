@@ -26,9 +26,10 @@ type WebResponse struct {
 	Data             []controller.Card       `json:"data"`
 	Errors           []controller.StoreError `json:"errors"`
 	Stats            []controller.StoreStat  `json:"stats"`
-	// TotalDurationMs is wall-clock time for the full multi-store search
-	// (including the minimum response pad). Per-store Stats[].DurationMs
-	// only cover each store's own work and can be much lower than this.
+	// TotalDurationMs is wall-clock time until the search response is ready,
+	// including store fan-out, the minimum response pad, and any Card Kingdom
+	// enrichment wait. Per-store Stats[].DurationMs only cover each store's
+	// own work and can be much lower than this when enrichment is slow.
 	TotalDurationMs  int64                   `json:"totalDurationMs"`
 	CardKingdomPrice *cardkingdom.Listing    `json:"cardKingdomPrice,omitempty"`
 }
@@ -112,28 +113,29 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	var (
-		inStockCards      []controller.Card
-		storeErrors       []controller.StoreError
-		storeStats        []controller.StoreStat
-		totalDurationMs   int64
-		ckPrice           *cardkingdom.Listing
-		searchErr         error
+		inStockCards []controller.Card
+		storeErrors  []controller.StoreError
+		storeStats   []controller.StoreStat
+		ckPrice      *cardkingdom.Listing
+		searchErr    error
 	)
 
+	requestStart := time.Now()
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
-		searchStart := time.Now()
 		inStockCards, storeErrors, storeStats, searchErr = searchFunc(ctx, controller.SearchInput{
 			SearchString: searchString,
 			Lgs:          lgs,
 		})
-		totalDurationMs = time.Since(searchStart).Milliseconds()
 	})
 
 	if config.CKPriceLookupEnabled() {
 		wg.Go(func() {
-			price, err := lookupCKPriceFunc(ctx, searchString)
+			ckCtx, cancel := context.WithTimeout(ctx, config.CKPriceLookupTimeout)
+			defer cancel()
+
+			price, err := lookupCKPriceFunc(ckCtx, searchString)
 			if err != nil {
 				log.Printf("ck price lookup for [%s]: %v", searchString, err)
 				return
@@ -143,6 +145,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	wg.Wait()
+	totalDurationMs := time.Since(requestStart).Milliseconds()
 
 	if searchErr != nil {
 		return errorResponse(apiRes, origin, "err searching for cards", http.StatusInternalServerError)

@@ -65,8 +65,8 @@ const SearchStats = ({ stats, totalDurationMs, hasSearched, isSearching }) => {
                     {formatDurationMs(totalDurationMs)}
                   </span>
                   {storeStats.length > 1
-                    ? " (waits for all selected stores; per-store times below)"
-                    : null}
+                    ? " (waits for all selected stores and Card Kingdom enrichment; per-store times below)"
+                    : " (includes Card Kingdom enrichment wait; per-store time below)"}
                 </p>
               )}
               {storeStats.length > 0 && (
