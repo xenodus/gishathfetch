@@ -96,7 +96,7 @@ func TestMapGraphQLProductSkipsNonMTG(t *testing.T) {
 
 func TestRunFallbackAttemptsGraphQLEmptyIsFinal(t *testing.T) {
 	sequence := []string{}
-	cards, err := runFallbackAttempts(
+	cards, err := runFallbackAttempts("TestStore", "Opt",
 		fallbackAttempt{strategy: "graphql-dedicated", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
 			sequence = append(sequence, "graphql-dedicated")
 			return nil, nil
@@ -112,8 +112,15 @@ func TestRunFallbackAttemptsGraphQLEmptyIsFinal(t *testing.T) {
 }
 
 func TestRunFallbackAttemptsGraphQLErrorFallsBackToScrap(t *testing.T) {
+	var notified []string
+	originalNotify := notifyStrategyFallback
+	notifyStrategyFallback = func(message string) {
+		notified = append(notified, message)
+	}
+	t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
 	sequence := []string{}
-	cards, err := runFallbackAttempts(
+	cards, err := runFallbackAttempts("Hideyoshi", "Opt",
 		fallbackAttempt{strategy: "graphql-dedicated", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
 			sequence = append(sequence, "graphql-dedicated")
 			return nil, errTest("403 Forbidden")
@@ -131,11 +138,21 @@ func TestRunFallbackAttemptsGraphQLErrorFallsBackToScrap(t *testing.T) {
 	require.Len(t, cards, 1)
 	require.Equal(t, "from-scrap", cards[0].Name)
 	require.Equal(t, []string{"graphql-dedicated", "graphql-direct", "scrap-dedicated"}, sequence)
+	require.Len(t, notified, 2)
+	require.Contains(t, notified[0], "falling back to graphql-direct")
+	require.Contains(t, notified[1], "falling back to scrap-dedicated")
 }
 
 func TestRunFallbackAttemptsGraphQL5xxIsFinal(t *testing.T) {
+	var notified []string
+	originalNotify := notifyStrategyFallback
+	notifyStrategyFallback = func(message string) {
+		notified = append(notified, message)
+	}
+	t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
 	sequence := []string{}
-	cards, err := runFallbackAttempts(
+	cards, err := runFallbackAttempts("Hideyoshi", "Opt",
 		fallbackAttempt{strategy: "graphql-dedicated", family: strategyFamilyGraphQL, fn: func() ([]gateway.Card, error) {
 			sequence = append(sequence, "graphql-dedicated")
 			return nil, errTest("503 Service Unavailable")
@@ -148,6 +165,7 @@ func TestRunFallbackAttemptsGraphQL5xxIsFinal(t *testing.T) {
 	require.Error(t, err)
 	require.Empty(t, cards)
 	require.Equal(t, []string{"graphql-dedicated"}, sequence)
+	require.Empty(t, notified)
 }
 
 type errTest string

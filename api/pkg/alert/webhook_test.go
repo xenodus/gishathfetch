@@ -67,13 +67,18 @@ func testSendWebhookAlert(t *testing.T, webhookURLEnv string, sendAlert func(str
 	})
 }
 
-func TestSendAlert_Integration(t *testing.T) {
-	webhookURL := os.Getenv(AlertWebhookEnv)
-	if webhookURL == "" {
-		t.Skip("SLACK_ALERT_WEBHOOK not set, skipping integration test")
+func TestNotifySearchStrategyFallback(t *testing.T) {
+	var sent []string
+	original := sendAlertAsync
+	sendAlertAsync = func(message string) {
+		sent = append(sent, message)
 	}
+	t.Cleanup(func() { sendAlertAsync = original })
 
-	SendAlert("Integration Test Message (Ignore this)")
+	NotifySearchStrategyFallback("fallback happened")
+	if len(sent) != 1 || sent[0] != "fallback happened" {
+		t.Fatalf("expected async alert with message, got %v", sent)
+	}
 }
 
 func TestSendJobAlert_Integration(t *testing.T) {

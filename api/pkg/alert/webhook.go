@@ -17,6 +17,12 @@ type WebhookPayload struct {
 	Text string `json:"text"`
 }
 
+// sendAlertAsync posts to the search-error webhook without blocking the caller.
+// Tests may replace this to observe notifications synchronously.
+var sendAlertAsync = func(message string) {
+	go SendAlert(message)
+}
+
 // SendAlert sends a message to the search-error alert webhook.
 // It is fire-and-forget; errors are logged but not returned to disrupt the main flow.
 func SendAlert(message string) {
@@ -27,6 +33,14 @@ func SendAlert(message string) {
 // It is fire-and-forget; errors are logged but not returned to disrupt the main flow.
 func SendJobAlert(message string) {
 	sendWebhookAlert(JobAlertWebhookEnv, message)
+}
+
+// NotifySearchStrategyFallback logs a search-strategy fallback and fire-and-forget
+// alerts via SLACK_ALERT_WEBHOOK so mid-chain recoveries are visible in Slack
+// even when the store search eventually succeeds.
+func NotifySearchStrategyFallback(message string) {
+	log.Println(message)
+	sendAlertAsync(message)
 }
 
 func sendWebhookAlert(webhookURLEnv, message string) {

@@ -128,6 +128,13 @@ func Test_MapGraphQLProductFoilVariant(t *testing.T) {
 }
 
 func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
+	var notified []string
+	originalNotify := notifyStrategyFallback
+	notifyStrategyFallback = func(message string) {
+		notified = append(notified, message)
+	}
+	t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
 	var sawGraphQL, sawHTML bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -157,9 +164,19 @@ func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
 	require.True(t, sawHTML)
 	require.Len(t, cards, 1)
 	require.Equal(t, "Abrade [Foundations]", cards[0].Name)
+	require.Len(t, notified, 1)
+	require.Contains(t, notified[0], "Search strategy fallback [5 Mana] for [Abrade]")
+	require.Contains(t, notified[0], "falling back to html")
 }
 
 func Test_SearchDoesNotFallbackToHTMLWhenGraphQL5xx(t *testing.T) {
+	var notified []string
+	originalNotify := notifyStrategyFallback
+	notifyStrategyFallback = func(message string) {
+		notified = append(notified, message)
+	}
+	t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
 	var sawGraphQL, sawHTML bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -185,6 +202,7 @@ func Test_SearchDoesNotFallbackToHTMLWhenGraphQL5xx(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, sawGraphQL)
 	require.False(t, sawHTML)
+	require.Empty(t, notified)
 }
 
 func Test_SearchUsesGraphQLWhenHealthy(t *testing.T) {

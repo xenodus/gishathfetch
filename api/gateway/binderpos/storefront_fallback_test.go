@@ -3,6 +3,7 @@ package binderpos
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"mtg-price-checker-sg/gateway"
@@ -10,7 +11,14 @@ import (
 
 func TestRunFallbackAttempts(t *testing.T) {
 	t.Run("returns the first attempt that succeeds without running later ones", func(t *testing.T) {
-		cards, err := runFallbackAttempts(
+		var notified []string
+		originalNotify := notifyStrategyFallback
+		notifyStrategyFallback = func(message string) {
+			notified = append(notified, message)
+		}
+		t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
+		cards, err := runFallbackAttempts("TestStore", "Opt",
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 				return []gateway.Card{{Name: "scrap-dedicated"}}, nil
 			}},
@@ -25,10 +33,20 @@ func TestRunFallbackAttempts(t *testing.T) {
 		if len(cards) != 1 || cards[0].Name != "scrap-dedicated" {
 			t.Fatalf("expected first attempt card, got %+v", cards)
 		}
+		if len(notified) != 0 {
+			t.Fatalf("expected no fallback notifications on first-attempt success, got %v", notified)
+		}
 	})
 
 	t.Run("falls back to the next attempt only after a non-5xx error", func(t *testing.T) {
-		cards, err := runFallbackAttempts(
+		var notified []string
+		originalNotify := notifyStrategyFallback
+		notifyStrategyFallback = func(message string) {
+			notified = append(notified, message)
+		}
+		t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
+		cards, err := runFallbackAttempts("Hideout", "Opt",
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 				return nil, errors.New("scrap dedicated failed")
 			}},
@@ -42,11 +60,18 @@ func TestRunFallbackAttempts(t *testing.T) {
 		if len(cards) != 1 || cards[0].Name != "scrap-direct" {
 			t.Fatalf("expected fallback card, got %+v", cards)
 		}
+		if len(notified) != 1 {
+			t.Fatalf("expected one fallback notification, got %v", notified)
+		}
+		want := "Search strategy fallback [Hideout] for [Opt]: attempt 1 (scrap-dedicated): scrap dedicated failed; falling back to scrap-direct"
+		if notified[0] != want {
+			t.Fatalf("unexpected fallback notification:\nwant %q\ngot  %q", want, notified[0])
+		}
 	})
 
 	t.Run("falls back to decklist after scrap 429 errors", func(t *testing.T) {
 		sequence := make([]string, 0, 3)
-		cards, err := runFallbackAttempts(
+		cards, err := runFallbackAttempts("TestStore", "Opt",
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 				sequence = append(sequence, "scrap-dedicated")
 				return nil, errors.New("unexpected status 429")
@@ -82,8 +107,15 @@ func TestRunFallbackAttempts(t *testing.T) {
 	})
 
 	t.Run("does not fall back after a scrap 5xx error", func(t *testing.T) {
+		var notified []string
+		originalNotify := notifyStrategyFallback
+		notifyStrategyFallback = func(message string) {
+			notified = append(notified, message)
+		}
+		t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
 		sequence := make([]string, 0, 2)
-		_, err := runFallbackAttempts(
+		_, err := runFallbackAttempts("TestStore", "Opt",
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 				sequence = append(sequence, "scrap-dedicated")
 				return nil, errors.New("503 Service Unavailable")
@@ -102,11 +134,14 @@ func TestRunFallbackAttempts(t *testing.T) {
 		if len(sequence) != 1 || sequence[0] != "scrap-dedicated" {
 			t.Fatalf("expected only scrap-dedicated, got %v", sequence)
 		}
+		if len(notified) != 0 {
+			t.Fatalf("expected no fallback notifications on final 5xx, got %v", notified)
+		}
 	})
 
 	t.Run("when scrap is empty, returns final empty result without trying decklist", func(t *testing.T) {
 		sequence := make([]string, 0, 2)
-		cards, err := runFallbackAttempts(
+		cards, err := runFallbackAttempts("TestStore", "Opt",
 			fallbackAttempt{strategy: "scrap-dedicated", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
 				sequence = append(sequence, "scrap-dedicated")
 				return []gateway.Card{}, nil
@@ -129,7 +164,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 
 	t.Run("returns final empty result without trying later strategies after empty decklist", func(t *testing.T) {
 		sequence := make([]string, 0, 3)
-		cards, err := runFallbackAttempts(
+		cards, err := runFallbackAttempts("TestStore", "Opt",
 			fallbackAttempt{strategy: "decklist-dedicated", family: strategyFamilyDecklist, fn: func() ([]gateway.Card, error) {
 				sequence = append(sequence, "decklist-dedicated")
 				return []gateway.Card{}, nil
@@ -155,6 +190,13 @@ func TestRunFallbackAttempts(t *testing.T) {
 	})
 
 	t.Run("runs attempts in order and returns the final annotated error", func(t *testing.T) {
+		var notified []string
+		originalNotify := notifyStrategyFallback
+		notifyStrategyFallback = func(message string) {
+			notified = append(notified, message)
+		}
+		t.Cleanup(func() { notifyStrategyFallback = originalNotify })
+
 		sequence := make([]string, 0, 3)
 		fail := func(label string) fallbackAttempt {
 			return fallbackAttempt{
@@ -168,7 +210,7 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 
 		lastErr := errors.New("scrap-dynamic failed")
-		_, err := runFallbackAttempts(
+		_, err := runFallbackAttempts("TestStore", "Opt",
 			fail("scrap-dedicated"),
 			fail("scrap-direct"),
 			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
@@ -193,5 +235,22 @@ func TestRunFallbackAttempts(t *testing.T) {
 				t.Fatalf("attempt %d: expected %q, got %q", i+1, expected[i], sequence[i])
 			}
 		}
+		if len(notified) != 2 {
+			t.Fatalf("expected two fallback notifications before final failure, got %v", notified)
+		}
+		if !strings.Contains(notified[0], "falling back to scrap-direct") {
+			t.Fatalf("expected first notification to fall back to scrap-direct, got %q", notified[0])
+		}
+		if !strings.Contains(notified[1], "falling back to scrap-dynamic") {
+			t.Fatalf("expected second notification to fall back to scrap-dynamic, got %q", notified[1])
+		}
 	})
+}
+
+func TestFormatStrategyFallback(t *testing.T) {
+	got := formatStrategyFallback("Hideout", "Opt", errors.New("attempt 1 (graphql-dedicated): boom"), "scrap-dedicated")
+	want := "Search strategy fallback [Hideout] for [Opt]: attempt 1 (graphql-dedicated): boom; falling back to scrap-dedicated"
+	if got != want {
+		t.Fatalf("unexpected format:\nwant %q\ngot  %q", want, got)
+	}
 }

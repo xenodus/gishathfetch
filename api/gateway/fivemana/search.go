@@ -9,10 +9,15 @@ import (
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/PuerkitoBio/goquery"
 )
+
+// notifyStrategyFallback logs and Slack-alerts a search strategy fallback.
+// Tests may replace this to observe notifications without hitting webhooks.
+var notifyStrategyFallback = alert.NotifySearchStrategyFallback
 
 const StoreName = "5 Mana"
 const StoreBaseURL = "https://5-mana.sg"
@@ -45,7 +50,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return nil, err
 	}
 
-	log.Printf("%s: graphql search failed, falling back to HTML: %v", s.Name, err)
+	notifyStrategyFallback(fmt.Sprintf(
+		"Search strategy fallback [%s] for [%s]: graphql failed, falling back to html: %v",
+		s.Name,
+		searchStr,
+		err,
+	))
 
 	htmlCards, htmlErr := s.searchHTML(ctx, searchStr)
 	if htmlErr != nil {

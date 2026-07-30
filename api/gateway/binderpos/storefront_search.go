@@ -85,13 +85,13 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 		strategies = append(strategies, decklistDynamic)
 	}
 
-	return runStorefrontStrategies(ctx, strategies...)
+	return runStorefrontStrategies(ctx, storeName, searchStr, strategies...)
 }
 
 // runStorefrontStrategies runs the ordered strategies through the shared
 // fallback runner. The first attempt starts immediately; later attempts honor
 // per-domain request pacing. Each attempt is bounded by binderposAttemptTimeout.
-func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrategy) ([]gateway.Card, error) {
+func runStorefrontStrategies(ctx context.Context, storeName, searchStr string, strategies ...storefrontStrategy) ([]gateway.Card, error) {
 	attempts := make([]fallbackAttempt, len(strategies))
 	for idx := range strategies {
 		strategy := strategies[idx]
@@ -105,7 +105,7 @@ func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrate
 		}
 	}
 
-	return runFallbackAttempts(attempts...)
+	return runFallbackAttempts(storeName, searchStr, attempts...)
 }
 
 func runWithAttemptTimeout(ctx context.Context, applyRequestPacing bool, fn func(context.Context) ([]gateway.Card, error)) ([]gateway.Card, error) {
