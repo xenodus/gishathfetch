@@ -129,9 +129,27 @@ Constants live in `frontend/src/hooks/useSearch.js` (and related).
 | Item | Value | Notes |
 |------|--------|--------|
 | Autocomplete debounce | 300ms | `AUTOCOMPLETE_DEBOUNCE_MS`; delays Scryfall autocomplete fetches after typing. |
-| Search progress UI tick | 1000ms | `SEARCH_PROGRESS_INTERVAL_MS`; animates the “Searching LGS . . .” label. |
+| Search progress UI tick | 1000ms | `SEARCH_PROGRESS_INTERVAL_MS`; animates the “Searching LGS . . .” / “Checking session . . .” label. |
 | Programmatic search delay on load (URL with `?s=`) | 100ms | `setTimeout` before `performSearch` in the mount `useEffect`. |
 | API `fetch` timeout / retries | None in code | Uses browser `fetch` with `AbortController` only; no app-level timeout or automatic retry. |
+| Session before `/search` | `ensureApiSession()` | Awaited inside the search spinner; may run Turnstile + `GET /session` (up to 3 mint attempts). Not included in API `totalDurationMs`. |
+| Client wall clock in SearchStats | `clientDurationMs` | Measured from search start to JSON response. |
+| Turnstile / session mint in SearchStats | `sessionTiming` | Client breakdown from `ensureApiSession`: `turnstileMs` + `sessionFetchMs` when this search started the mint; wait-only when joining an in-flight bootstrap. |
+
+## End-to-end latency vs search stats
+
+`totalDurationMs` / per-store `durationMs` only cover work **inside** the Lambda search handler after auth checks (store fan-out, 1s minimum response pad, CK enrichment capped at 2s). Wall-clock time until the UI shows results can be much larger when any of these run first:
+
+| Layer | Typical when slow | Included in `totalDurationMs`? | SearchStats field |
+|-------|-------------------|--------------------------------|-------------------|
+| Turnstile challenge | First visit, expired cookie, forced remint after 403 | No | `sessionTiming.turnstileMs` |
+| `GET /session` mint | Same as Turnstile (runs after challenge) | No | `sessionTiming.sessionFetchMs` |
+| Lambda cold start | Idle API after scale-to-zero | No (starts before handler timing) | Remainder under “Other (network / cold start)” |
+| API Gateway / network RTT | Distant client, congested path | No | Same “Other” remainder |
+| Store scrape + 1s pad + CK ≤2s | Measured API search | Yes | `totalDurationMs` / per-store `durationMs` |
+| React render of results | Rarely material for small result sets | No (after fetch) | Not measured |
+
+Example: Cards Central finishes in ~374ms, API pads to ~1.00s, stats show that 1.00s — while the browser may still have spent several seconds on Turnstile/session or cold start before `/search` returned.
 
 ---
 

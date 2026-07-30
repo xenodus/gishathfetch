@@ -57,6 +57,8 @@ export default function App() {
     searchStoreErrors,
     searchStoreStats,
     searchTotalDurationMs,
+    searchClientDurationMs,
+    searchSessionTiming,
     onDismissStoreErrors,
     storesWarning,
     cardKingdomPrice,
@@ -264,6 +266,8 @@ export default function App() {
       <SearchStats
         stats={searchStoreStats}
         totalDurationMs={searchTotalDurationMs}
+        clientDurationMs={searchClientDurationMs}
+        sessionTiming={searchSessionTiming}
         hasSearched={hasSearched}
         isSearching={isSearching}
       />
