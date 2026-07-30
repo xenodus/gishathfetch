@@ -13,6 +13,7 @@ import {
  *   storeErrors: object[],
  *   storeStats: object[],
  *   totalDurationMs: number | null,
+ *   clientDurationMs: number | null,
  *   hasSearched: boolean,
  *   searchError: string | null,
  *   cardKingdomPrice: object | null,
@@ -33,6 +34,11 @@ export function buildSearchHistoryState(snapshot) {
     totalDurationMs:
       Number.isFinite(snapshot.totalDurationMs) && snapshot.totalDurationMs >= 0
         ? snapshot.totalDurationMs
+        : null,
+    clientDurationMs:
+      Number.isFinite(snapshot.clientDurationMs) &&
+      snapshot.clientDurationMs >= 0
+        ? snapshot.clientDurationMs
         : null,
     hasSearched: snapshot.hasSearched,
     searchError: snapshot.searchError,

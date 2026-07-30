@@ -21,7 +21,13 @@ function readShowStatsPreference() {
   }
 }
 
-const SearchStats = ({ stats, totalDurationMs, hasSearched, isSearching }) => {
+const SearchStats = ({
+  stats,
+  totalDurationMs,
+  clientDurationMs,
+  hasSearched,
+  isSearching,
+}) => {
   const [showStats, setShowStats] = useState(readShowStatsPreference);
 
   useEffect(() => {
@@ -38,6 +44,10 @@ const SearchStats = ({ stats, totalDurationMs, hasSearched, isSearching }) => {
 
   const storeStats = Array.isArray(stats) ? stats : [];
   const hasTotal = Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
+  const hasClient = Number.isFinite(clientDurationMs) && clientDurationMs >= 0;
+  const clientGapMs =
+    hasClient && hasTotal ? Math.max(0, clientDurationMs - totalDurationMs) : 0;
+  const showClientGap = hasClient && clientGapMs >= 500;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
@@ -52,21 +62,41 @@ const SearchStats = ({ stats, totalDurationMs, hasSearched, isSearching }) => {
 
       {showStats && (
         <div className="search-stats-panel mt-2">
-          {storeStats.length === 0 && !hasTotal ? (
+          {storeStats.length === 0 && !hasTotal && !hasClient ? (
             <p className="small text-muted mb-0">
               No store timing data for this search.
             </p>
           ) : (
             <>
+              {hasClient && (
+                <p className="small text-muted mb-2 search-stats-client">
+                  Time to results:{" "}
+                  <span className="text-body fw-semibold">
+                    {formatDurationMs(clientDurationMs)}
+                  </span>
+                  {" (browser wall clock: session check, network, and API)"}
+                </p>
+              )}
               {hasTotal && (
                 <p className="small text-muted mb-2 search-stats-total">
-                  Total search time:{" "}
+                  API search time:{" "}
                   <span className="text-body fw-semibold">
                     {formatDurationMs(totalDurationMs)}
                   </span>
                   {storeStats.length > 1
                     ? " (waits for all selected stores and Card Kingdom enrichment; per-store times below)"
                     : " (includes Card Kingdom enrichment wait; per-store time below)"}
+                </p>
+              )}
+              {showClientGap && (
+                <p className="small text-muted mb-2 search-stats-gap">
+                  Outside API search:{" "}
+                  <span className="text-body fw-semibold">
+                    {formatDurationMs(clientGapMs)}
+                  </span>
+                  {
+                    " — usually session/Turnstile, Lambda cold start, or network; not counted in API search time or per-store times"
+                  }
                 </p>
               )}
               {storeStats.length > 0 && (
