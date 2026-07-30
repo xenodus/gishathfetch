@@ -722,7 +722,8 @@ ins.adsbygoogle.adsbygoogle-noablate {
 .search-stats {
   text-align: start;
   background-color: var(--bs-secondary-bg);
-  margin-bottom: 15px;
+  /* Match container-xl my-3 top spacing above the logo */
+  margin-bottom: 1rem;
 }
 
 .search-stats + .site-footer-spacer {
