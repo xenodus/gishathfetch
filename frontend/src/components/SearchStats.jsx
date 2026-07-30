@@ -21,12 +21,7 @@ function readShowStatsPreference() {
   }
 }
 
-const SearchStats = ({
-  stats,
-  totalDurationMs,
-  hasSearched,
-  isSearching,
-}) => {
+const SearchStats = ({ stats, totalDurationMs, hasSearched, isSearching }) => {
   const [showStats, setShowStats] = useState(readShowStatsPreference);
 
   useEffect(() => {
@@ -42,8 +37,7 @@ const SearchStats = ({
   }
 
   const storeStats = Array.isArray(stats) ? stats : [];
-  const hasTotal =
-    Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
+  const hasTotal = Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
