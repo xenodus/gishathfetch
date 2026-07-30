@@ -18,6 +18,21 @@ const NO_SESSION_WORK = Object.freeze({
   sessionMintDurationMs: 0,
 });
 
+function attributeJoinedBootstrapWait(totalWaitMs, bootstrapTiming) {
+  if (!isTurnstileConfigured()) {
+    return {
+      turnstileDurationMs: null,
+      sessionMintDurationMs: totalWaitMs,
+    };
+  }
+
+  const mintMs = bootstrapTiming.sessionMintDurationMs ?? 0;
+  return {
+    turnstileDurationMs: Math.max(0, totalWaitMs - mintMs),
+    sessionMintDurationMs: mintMs,
+  };
+}
+
 /** Refresh before default API session TTL (15m) so idle tabs stay authorized. */
 export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -33,6 +48,7 @@ let sessionBootstrapPromise = null;
  * @returns {Promise<SessionBootstrapTiming>} Time spent in this call. Cached sessions return zeros.
  */
 export async function ensureApiSession(options = {}) {
+  const waitStart = performance.now();
   const { forceRefresh = false } = options;
 
   if (forceRefresh) {
@@ -40,18 +56,28 @@ export async function ensureApiSession(options = {}) {
     resetTurnstileChallenge();
   }
 
+  const initiatedBootstrap = !sessionBootstrapPromise;
   if (!sessionBootstrapPromise) {
     sessionBootstrapPromise = bootstrapSessionWithRetry();
-    try {
-      return await sessionBootstrapPromise;
-    } catch (err) {
-      sessionBootstrapPromise = null;
-      throw err;
-    }
   }
 
-  await sessionBootstrapPromise;
-  return NO_SESSION_WORK;
+  try {
+    const bootstrapTiming = await sessionBootstrapPromise;
+    const totalWaitMs = Math.round(performance.now() - waitStart);
+
+    if (!initiatedBootstrap && totalWaitMs > 0) {
+      return attributeJoinedBootstrapWait(totalWaitMs, bootstrapTiming);
+    }
+
+    if (!initiatedBootstrap) {
+      return NO_SESSION_WORK;
+    }
+
+    return bootstrapTiming;
+  } catch (err) {
+    sessionBootstrapPromise = null;
+    throw err;
+  }
 }
 
 async function bootstrapSessionWithRetry() {
