@@ -52,6 +52,9 @@ const (
 	CKDynamoDBTableEnv = "CK_DYNAMODB_TABLE"
 	// CKPriceLookupEnabledEnv toggles Card Kingdom price lookup on search responses.
 	CKPriceLookupEnabledEnv = "CK_PRICE_LOOKUP_ENABLED"
+	// CKPriceLookupTimeout caps Card Kingdom enrichment on /search so a slow
+	// Scryfall/DynamoDB path cannot delay returning store results.
+	CKPriceLookupTimeout = 2 * time.Second
 	// CKPriceMaxAge is how old a DynamoDB CK listing may be before search omits it.
 	CKPriceMaxAge = 48 * time.Hour
 	// CKPricelistURLEnv overrides the Card Kingdom singles pricelist download URL.

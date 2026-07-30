@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"mtg-price-checker-sg/controller"
 	"mtg-price-checker-sg/controller/ckprice"
@@ -25,6 +26,11 @@ type WebResponse struct {
 	Data             []controller.Card       `json:"data"`
 	Errors           []controller.StoreError `json:"errors"`
 	Stats            []controller.StoreStat  `json:"stats"`
+	// TotalDurationMs is wall-clock time until the search response is ready,
+	// including store fan-out, the minimum response pad, and any Card Kingdom
+	// enrichment wait. Per-store Stats[].DurationMs only cover each store's
+	// own work and can be much lower than this when enrichment is slow.
+	TotalDurationMs  int64                   `json:"totalDurationMs"`
 	CardKingdomPrice *cardkingdom.Listing    `json:"cardKingdomPrice,omitempty"`
 }
 
@@ -114,6 +120,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		searchErr    error
 	)
 
+	requestStart := time.Now()
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
@@ -125,7 +132,10 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 
 	if config.CKPriceLookupEnabled() {
 		wg.Go(func() {
-			price, err := lookupCKPriceFunc(ctx, searchString)
+			ckCtx, cancel := context.WithTimeout(ctx, config.CKPriceLookupTimeout)
+			defer cancel()
+
+			price, err := lookupCKPriceFunc(ckCtx, searchString)
 			if err != nil {
 				log.Printf("ck price lookup for [%s]: %v", searchString, err)
 				return
@@ -135,6 +145,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	wg.Wait()
+	totalDurationMs := time.Since(requestStart).Milliseconds()
 
 	if searchErr != nil {
 		return errorResponse(apiRes, origin, "err searching for cards", http.StatusInternalServerError)
@@ -152,6 +163,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	} else {
 		webRes.Stats = storeStats
 	}
+	webRes.TotalDurationMs = totalDurationMs
 	webRes.CardKingdomPrice = ckPrice
 
 	return searchSuccessResponse(apiRes, webRes, origin)
