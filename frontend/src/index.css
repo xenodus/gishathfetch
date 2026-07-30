@@ -721,6 +721,7 @@ ins.adsbygoogle.adsbygoogle-noablate {
 
 .search-stats {
   text-align: start;
+  background-color: var(--bs-tertiary-bg);
 }
 
 .search-stats-toggle {
@@ -728,13 +729,10 @@ ins.adsbygoogle.adsbygoogle-noablate {
   color: var(--bs-secondary-color);
 }
 
-.search-stats-panel {
-  border: 1px solid var(--bs-border-color-translucent);
-  background-color: var(--bs-tertiary-bg);
-}
-
 .search-stats-table {
   font-size: 0.875rem;
+  --bs-table-bg: transparent;
+  --bs-table-color: inherit;
 }
 
 .search-stats-table thead th {

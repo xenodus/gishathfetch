@@ -39,7 +39,7 @@ const SearchStats = ({ stats, hasSearched, isSearching }) => {
   const storeStats = Array.isArray(stats) ? stats : [];
 
   return (
-    <div className="search-stats mt-3 mb-2">
+    <div className="search-stats mt-3 mb-2 rounded py-2 px-3">
       <Form.Check
         type="switch"
         id="show-search-stats"
@@ -50,7 +50,7 @@ const SearchStats = ({ stats, hasSearched, isSearching }) => {
       />
 
       {showStats && (
-        <div className="search-stats-panel mt-2 rounded py-2 px-3">
+        <div className="search-stats-panel mt-2">
           {storeStats.length === 0 ? (
             <p className="small text-muted mb-0">
               No store timing data for this search.
