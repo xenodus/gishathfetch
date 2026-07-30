@@ -63,6 +63,8 @@ export default function useSearch() {
   const [sessionTurnstileDurationMs, setSessionTurnstileDurationMs] =
     useState(null);
   const [sessionMintDurationMs, setSessionMintDurationMs] = useState(null);
+  const [searchResponseDurationMs, setSearchResponseDurationMs] =
+    useState(null);
   const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
@@ -189,6 +191,7 @@ export default function useSearch() {
       setSearchTotalDurationMs(null);
       setSessionTurnstileDurationMs(null);
       setSessionMintDurationMs(null);
+      setSearchResponseDurationMs(null);
       setDismissedStoreErrorsKey(null);
 
       if (window.gtag) {
@@ -213,6 +216,7 @@ export default function useSearch() {
         setSessionTurnstileDurationMs(sessionTiming.turnstileDurationMs);
         setSessionMintDurationMs(sessionTiming.sessionMintDurationMs);
 
+        const searchFetchStart = performance.now();
         const res = await fetch(searchUrl, {
           signal: searchAbortController.signal,
           credentials: "include",
@@ -254,14 +258,20 @@ export default function useSearch() {
           );
         }
 
+        const result = await res.json();
+        const searchResponseDurationMs = Math.round(
+          performance.now() - searchFetchStart,
+        );
+
         return {
-          result: await res.json(),
+          result,
           sessionTiming,
+          searchResponseDurationMs,
         };
       };
 
       fetchSearchResult(false)
-        .then(({ result, sessionTiming }) => {
+        .then(({ result, sessionTiming, searchResponseDurationMs }) => {
           if (requestId !== activeSearchRequestIdRef.current) return;
           if (result && Object.hasOwn(result, "data")) {
             // Treat null data as empty array
@@ -277,6 +287,7 @@ export default function useSearch() {
             setSearchStoreErrors(storeErrors);
             setSearchStoreStats(storeStats);
             setSearchTotalDurationMs(totalDurationMs);
+            setSearchResponseDurationMs(searchResponseDurationMs);
             setDismissedStoreErrorsKey(null);
             if (!skipHistorySyncRef.current) {
               syncSearchHistory({
@@ -288,6 +299,7 @@ export default function useSearch() {
                 totalDurationMs,
                 sessionTurnstileDurationMs: sessionTiming.turnstileDurationMs,
                 sessionMintDurationMs: sessionTiming.sessionMintDurationMs,
+                searchResponseDurationMs,
                 hasSearched: true,
                 searchError: null,
                 cardKingdomPrice: result.cardKingdomPrice ?? null,
@@ -318,6 +330,7 @@ export default function useSearch() {
               setSearchTotalDurationMs(null);
               setSessionTurnstileDurationMs(null);
               setSessionMintDurationMs(null);
+              setSearchResponseDurationMs(null);
               setDismissedStoreErrorsKey(null);
               userCancelledRef.current = false;
             }
@@ -331,6 +344,7 @@ export default function useSearch() {
           setSearchTotalDurationMs(null);
           setSessionTurnstileDurationMs(null);
           setSessionMintDurationMs(null);
+          setSearchResponseDurationMs(null);
           setDismissedStoreErrorsKey(null);
 
           let nextSearchError;
@@ -372,6 +386,7 @@ export default function useSearch() {
               totalDurationMs: null,
               sessionTurnstileDurationMs: null,
               sessionMintDurationMs: null,
+              searchResponseDurationMs: null,
               hasSearched: true,
               searchError: nextSearchError,
               cardKingdomPrice: null,
@@ -438,6 +453,7 @@ export default function useSearch() {
         setSearchTotalDurationMs(null);
         setSessionTurnstileDurationMs(null);
         setSessionMintDurationMs(null);
+        setSearchResponseDurationMs(null);
         setSearchError(null);
         setCardKingdomPrice(null);
         setDismissedStoreErrorsKey(null);
@@ -479,6 +495,12 @@ export default function useSearch() {
         Number.isFinite(state.sessionMintDurationMs) &&
           state.sessionMintDurationMs >= 0
           ? state.sessionMintDurationMs
+          : null,
+      );
+      setSearchResponseDurationMs(
+        Number.isFinite(state.searchResponseDurationMs) &&
+          state.searchResponseDurationMs >= 0
+          ? state.searchResponseDurationMs
           : null,
       );
       setHasSearched(!!state.hasSearched);
@@ -736,6 +758,7 @@ export default function useSearch() {
     searchTotalDurationMs,
     sessionTurnstileDurationMs,
     sessionMintDurationMs,
+    searchResponseDurationMs,
     onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
     cardKingdomPrice,

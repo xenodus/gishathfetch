@@ -15,6 +15,7 @@ import {
  *   totalDurationMs: number | null,
  *   sessionTurnstileDurationMs: number | null,
  *   sessionMintDurationMs: number | null,
+ *   searchResponseDurationMs: number | null,
  *   hasSearched: boolean,
  *   searchError: string | null,
  *   cardKingdomPrice: object | null,
@@ -46,6 +47,11 @@ export function buildSearchHistoryState(snapshot) {
       Number.isFinite(snapshot.sessionMintDurationMs) &&
       snapshot.sessionMintDurationMs >= 0
         ? snapshot.sessionMintDurationMs
+        : null,
+    searchResponseDurationMs:
+      Number.isFinite(snapshot.searchResponseDurationMs) &&
+      snapshot.searchResponseDurationMs >= 0
+        ? snapshot.searchResponseDurationMs
         : null,
     hasSearched: snapshot.hasSearched,
     searchError: snapshot.searchError,

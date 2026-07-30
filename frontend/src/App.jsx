@@ -59,6 +59,7 @@ export default function App() {
     searchTotalDurationMs,
     sessionTurnstileDurationMs,
     sessionMintDurationMs,
+    searchResponseDurationMs,
     onDismissStoreErrors,
     storesWarning,
     cardKingdomPrice,
@@ -268,6 +269,7 @@ export default function App() {
         totalDurationMs={searchTotalDurationMs}
         sessionTurnstileDurationMs={sessionTurnstileDurationMs}
         sessionMintDurationMs={sessionMintDurationMs}
+        searchResponseDurationMs={searchResponseDurationMs}
         hasSearched={hasSearched}
         isSearching={isSearching}
       />

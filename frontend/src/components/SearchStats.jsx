@@ -26,6 +26,7 @@ const SearchStats = ({
   totalDurationMs,
   sessionTurnstileDurationMs,
   sessionMintDurationMs,
+  searchResponseDurationMs,
   hasSearched,
   isSearching,
 }) => {
@@ -48,7 +49,10 @@ const SearchStats = ({
   const hasTurnstileTiming = sessionTurnstileDurationMs !== null;
   const hasSessionMintTiming =
     Number.isFinite(sessionMintDurationMs) && sessionMintDurationMs >= 0;
-  const hasBootstrapTiming = hasTurnstileTiming || hasSessionMintTiming;
+  const hasSearchResponseTiming =
+    Number.isFinite(searchResponseDurationMs) && searchResponseDurationMs >= 0;
+  const hasClientTiming =
+    hasTurnstileTiming || hasSessionMintTiming || hasSearchResponseTiming;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
@@ -63,7 +67,7 @@ const SearchStats = ({
 
       {showStats && (
         <div className="search-stats-panel mt-2">
-          {storeStats.length === 0 && !hasTotal && !hasBootstrapTiming ? (
+          {storeStats.length === 0 && !hasTotal && !hasClientTiming ? (
             <p className="small text-muted mb-0">
               No store timing data for this search.
             </p>
@@ -80,12 +84,12 @@ const SearchStats = ({
                     : " (includes Card Kingdom enrichment wait; per-store time below)"}
                 </p>
               )}
-              {hasBootstrapTiming && (
+              {hasClientTiming && (
                 <div className="table-responsive mb-2">
                   <table className="table table-sm table-borderless mb-0 search-stats-table">
                     <thead>
                       <tr>
-                        <th scope="col">Session bootstrap</th>
+                        <th scope="col">Client timing</th>
                         <th scope="col" className="text-end">
                           Time
                         </th>
@@ -105,6 +109,14 @@ const SearchStats = ({
                           <td>Session mint</td>
                           <td className="text-end text-nowrap">
                             {formatDurationMs(sessionMintDurationMs)}
+                          </td>
+                        </tr>
+                      )}
+                      {hasSearchResponseTiming && (
+                        <tr>
+                          <td>Search response</td>
+                          <td className="text-end text-nowrap">
+                            {formatDurationMs(searchResponseDurationMs)}
                           </td>
                         </tr>
                       )}
