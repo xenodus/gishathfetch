@@ -39,7 +39,7 @@ const SearchStats = ({ stats, hasSearched, isSearching }) => {
   const storeStats = Array.isArray(stats) ? stats : [];
 
   return (
-    <div className="search-stats mt-3 mb-2 rounded py-2 px-3">
+    <div className="search-stats mt-3 rounded py-2 px-3">
       <Form.Check
         type="switch"
         id="show-search-stats"

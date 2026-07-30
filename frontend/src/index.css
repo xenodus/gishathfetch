@@ -722,6 +722,11 @@ ins.adsbygoogle.adsbygoogle-noablate {
 .search-stats {
   text-align: start;
   background-color: var(--bs-secondary-bg);
+  margin-bottom: 15px;
+}
+
+.search-stats + .site-footer-spacer {
+  margin-top: 0;
 }
 
 .search-stats-toggle {
