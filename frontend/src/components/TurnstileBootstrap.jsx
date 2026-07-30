@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
+import { ensureApiSession } from "../utils/apiSession";
 import {
+  beginTurnstileWidgetPrepare,
   isTurnstileConfigured,
-  prepareTurnstileWidget,
   teardownTurnstileWidget,
 } from "../utils/turnstileSession";
 
@@ -10,12 +11,14 @@ const PREPARE_MAX_ATTEMPTS = 3;
 
 /**
  * Invisible Turnstile widget used to obtain tokens for GET /session on the API host.
- * Retries prepare a few times — script/challenge load is flaky under private browsing.
+ * Prepare runs in useLayoutEffect so the widget is registering before search/session
+ * effects on the parent. Retries prepare a few times — script/challenge load is flaky
+ * under private browsing.
  */
 export default function TurnstileBootstrap() {
   const containerRef = useRef(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isTurnstileConfigured()) {
       return undefined;
     }
@@ -24,11 +27,20 @@ export default function TurnstileBootstrap() {
     const abort = new AbortController();
     let retryTimer = null;
 
+    const prefetchSession = () => {
+      ensureApiSession().catch(() => {
+        // Search retries session bootstrap before the first API call.
+      });
+    };
+
     const prepareWithRetry = async (attempt) => {
       try {
-        await prepareTurnstileWidget(containerRef.current, {
+        await beginTurnstileWidgetPrepare(containerRef.current, {
           signal: abort.signal,
         });
+        if (!cancelled) {
+          prefetchSession();
+        }
       } catch {
         if (cancelled || abort.signal.aborted) {
           return;

@@ -22,6 +22,7 @@ import {
   persistSelectedStores,
 } from "../utils/searchUrl";
 import { applyHomeSeo, applySearchSeo } from "../utils/seo";
+import { isTurnstileConfigured } from "../utils/turnstileSession";
 
 const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
 const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
@@ -93,9 +94,11 @@ export default function useSearch() {
   }, [searchResults]);
 
   useEffect(() => {
-    ensureApiSession().catch(() => {
-      // Search will retry session bootstrap before the first API call.
-    });
+    if (!isTurnstileConfigured()) {
+      ensureApiSession().catch(() => {
+        // Search will retry session bootstrap before the first API call.
+      });
+    }
 
     const refreshTimer = setInterval(() => {
       ensureApiSession({ forceRefresh: true }).catch(() => {

@@ -2,9 +2,12 @@ const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 const TURNSTILE_TIMEOUT_MS = 30_000;
-const TURNSTILE_WIDGET_READY_TIMEOUT_MS = 20_000;
+/** Caps wait when the widget never registers (e.g. script blocked by an extension). */
+const TURNSTILE_WIDGET_READY_TIMEOUT_MS = 12_000;
+const TURNSTILE_SCRIPT_LOAD_TIMEOUT_MS = 8_000;
 
 let scriptLoadPromise = null;
+let widgetPreparePromise = null;
 let widgetId = null;
 let widgetContainer = null;
 
@@ -44,14 +47,27 @@ function loadTurnstileScript() {
   }
 
   scriptLoadPromise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("turnstile script timeout"));
+    }, TURNSTILE_SCRIPT_LOAD_TIMEOUT_MS);
+
+    const finish = (handler) => {
+      clearTimeout(timeout);
+      handler();
+    };
+
     const existing = document.querySelector(
       `script[src^="https://challenges.cloudflare.com/turnstile/"]`,
     );
     if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
+      if (window.turnstile) {
+        finish(resolve);
+        return;
+      }
+      existing.addEventListener("load", () => finish(resolve), { once: true });
       existing.addEventListener(
         "error",
-        () => reject(new Error("turnstile script failed")),
+        () => finish(() => reject(new Error("turnstile script failed"))),
         { once: true },
       );
       return;
@@ -61,8 +77,9 @@ function loadTurnstileScript() {
     script.src = TURNSTILE_SCRIPT_SRC;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("turnstile script failed"));
+    script.onload = () => finish(resolve);
+    script.onerror = () =>
+      finish(() => reject(new Error("turnstile script failed")));
     document.head.appendChild(script);
   });
 
@@ -113,12 +130,35 @@ export function onTurnstileError() {
 export function teardownTurnstileWidget() {
   rejectPendingTokenWaiters(new Error("turnstile widget teardown"));
   cachedToken = "";
+  widgetPreparePromise = null;
   if (widgetId != null && window.turnstile?.remove) {
     window.turnstile.remove(widgetId);
   }
   widgetId = null;
   widgetContainer = null;
   failWidgetReady(new Error("turnstile widget teardown"));
+}
+
+/**
+ * Starts widget preparation once; concurrent callers share the same promise.
+ * TurnstileBootstrap should call this as early as possible on mount.
+ */
+export function beginTurnstileWidgetPrepare(container, options = {}) {
+  if (!isTurnstileConfigured() || !container) {
+    return Promise.resolve();
+  }
+
+  if (widgetPreparePromise) {
+    return widgetPreparePromise;
+  }
+
+  widgetPreparePromise = prepareTurnstileWidget(container, options).catch(
+    (err) => {
+      widgetPreparePromise = null;
+      throw err;
+    },
+  );
+  return widgetPreparePromise;
 }
 
 export async function prepareTurnstileWidget(container, options = {}) {
@@ -215,12 +255,19 @@ function waitForWidgetReady() {
   });
 }
 
+async function ensureTurnstileWidgetReady() {
+  if (widgetPreparePromise) {
+    await widgetPreparePromise;
+  }
+  await waitForWidgetReady();
+}
+
 export async function obtainTurnstileToken() {
   if (!isTurnstileConfigured()) {
     return "";
   }
 
-  await waitForWidgetReady();
+  await ensureTurnstileWidgetReady();
   if (widgetId == null || !window.turnstile) {
     throw new Error("turnstile widget not ready");
   }
