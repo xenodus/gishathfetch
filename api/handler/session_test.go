@@ -26,7 +26,6 @@ func TestSession_SameOriginWithoutOriginHeader(t *testing.T) {
 	t.Cleanup(func() {
 		_ = os.Unsetenv(config.APISessionSecretEnv)
 		_ = os.Unsetenv("ENV")
-		_ = os.Unsetenv(config.TurnstileSecretKeyEnv)
 	})
 
 	req := events.APIGatewayProxyRequest{

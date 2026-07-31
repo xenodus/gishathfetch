@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Form } from "react-bootstrap";
-import { isTurnstileConfigured } from "../utils/turnstileSession";
 
 const SEARCH_STATS_STORAGE_KEY = "gishathfetch-show-search-stats";
 
@@ -25,7 +24,6 @@ function readShowStatsPreference() {
 const SearchStats = ({
   stats,
   totalDurationMs,
-  sessionTurnstileDurationMs,
   sessionMintDurationMs,
   searchResponseDurationMs,
   hasSearched,
@@ -47,14 +45,11 @@ const SearchStats = ({
 
   const storeStats = Array.isArray(stats) ? stats : [];
   const hasTotal = Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
-  const hasTurnstileTiming =
-    isTurnstileConfigured() && sessionTurnstileDurationMs !== null;
   const hasSessionMintTiming =
     Number.isFinite(sessionMintDurationMs) && sessionMintDurationMs >= 0;
   const hasSearchResponseTiming =
     Number.isFinite(searchResponseDurationMs) && searchResponseDurationMs >= 0;
-  const hasClientTiming =
-    hasTurnstileTiming || hasSessionMintTiming || hasSearchResponseTiming;
+  const hasClientTiming = hasSessionMintTiming || hasSearchResponseTiming;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
@@ -98,14 +93,6 @@ const SearchStats = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {hasTurnstileTiming && (
-                        <tr>
-                          <td>Turnstile</td>
-                          <td className="text-end text-nowrap">
-                            {formatDurationMs(sessionTurnstileDurationMs)}
-                          </td>
-                        </tr>
-                      )}
                       {hasSessionMintTiming && (
                         <tr>
                           <td>Session mint</td>

@@ -24,8 +24,7 @@ session use **`https://api.gishathfetch.com/search`** and **`/session`** from th
 browser (cross-origin, credentialed). API Gateway invokes a container-based Lambda
 that scrapes LGS sites in parallel. Inbound API abuse mitigation uses three
 optional layers: a CloudFront→API origin-verify secret (`X-Origin-Verify`), a
-short-lived HttpOnly session cookie (`gf_api_session`), and Cloudflare Turnstile
-on session mint — see
+short-lived HttpOnly session cookie (`gf_api_session`) — see
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md). When
 `WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
 are signed per [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/)
@@ -37,7 +36,7 @@ reads that index when `CK_PRICE_LOOKUP_ENABLED` is set.
 
 For per-store timeouts, proxy tiers, and strategy order, see
 [`docs/search-strategies-retries-timeouts.md`](docs/search-strategies-retries-timeouts.md).
-For inbound API access control (origin secret, session cookie, Turnstile), see
+For inbound API access control (origin secret, session cookie), see
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
 ```mermaid
@@ -94,7 +93,7 @@ flowchart TB
 |---------|-----------------|------|
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | API Gateway `api.gishathfetch.com` | `GET /search`, `GET /session`; abuse mitigation: origin verify + session cookie + optional Turnstile ([docs](docs/api-abuse-mitigation.md)) |
+| Search API | API Gateway `api.gishathfetch.com` | `GET /search`, `GET /session`; abuse mitigation: origin verify + session cookie ([docs](docs/api-abuse-mitigation.md)) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
@@ -254,7 +253,7 @@ Example inline policy (merge with existing permissions on the role, or attach as
 
 ## 🛡️ API abuse mitigation
 
-Inbound `/search` and `/session` are gated by three optional layers (each off
+Inbound `/search` and `/session` are gated by two optional layers (each off
 until configured):
 
 1. **CloudFront → API origin secret** — Lambda `API_ORIGIN_VERIFY_SECRET`;
@@ -262,9 +261,6 @@ until configured):
    requests.
 2. **Session token** — `GET /session` mints HttpOnly `gf_api_session`
    (HMAC via `API_SESSION_SECRET`, default TTL 15m); `/search` requires it.
-3. **Cloudflare Turnstile** — when `TURNSTILE_SECRET_KEY` and
-   `VITE_TURNSTILE_SITE_KEY` are both set, session mint verifies an invisible
-   challenge (`CF-Turnstile-Response` header on `GET /session`).
 
 Details, env reference, CloudFront header setup, and the browser sequence
 diagram: [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
