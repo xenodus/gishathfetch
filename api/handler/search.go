@@ -63,7 +63,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		return optionsResponse(origin)
 	}
 
-	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers); !ok {
+	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers, request.RequestContext.DomainName); !ok {
 		return res, nil
 	}
 	if res, ok := enforceSession(apiRes, origin, request.Headers); !ok {

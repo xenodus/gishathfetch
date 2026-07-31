@@ -30,7 +30,7 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return errorResponse(apiRes, origin, "method not allowed", http.StatusMethodNotAllowed)
 	}
 
-	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers); !ok {
+	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers, request.RequestContext.DomainName); !ok {
 		return res, nil
 	}
 
