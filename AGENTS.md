@@ -118,17 +118,19 @@ Full reference for the two abuse-mitigation layers:
 Two optional layers; each is **off until configured**:
 
 1. **CloudFront → API origin secret** (`API_ORIGIN_VERIFY_SECRET`): when set, requests
-   must pass origin verification — either a matching `X-Origin-Verify` header
-   (CloudFront custom origin header or Vite dev proxy) or an allowlisted `Origin`
-   on the API custom domain (`api.gishathfetch.com`, not `execute-api`). Enforced
-   on both `/session` and `/search`.
+   must include a matching `X-Origin-Verify` header injected by the API CloudFront
+   distribution (origin request) or the Vite dev proxy. Allowlisted `Origin` alone
+   is not accepted. Enforced on both `/session` and `/search`.
 2. **Session cookie** (`API_SESSION_SECRET`): `GET /session` mints HttpOnly `gf_api_session`
    (default TTL 15m via `API_SESSION_TTL_SECONDS`). `/search` requires a valid cookie
    (`session required` / `session expired` → 403). Frontend: `ensureApiSession()` with a
    10-minute background refresh and one retry on expiry
    (`frontend/src/utils/apiSession.js`).
 
-Production should enable both together. `make deploy` does not wire these Lambda
+Production should enable both together. Both public CloudFront distributions
+(`gishathfetch.com` and `api.gishathfetch.com`) have **AWS WAF** web ACLs
+attached; see [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md) →
+*Edge protection*. `make deploy` does not wire these Lambda
 secrets — set them on `mtg-price-scrapper` manually (or via your secrets process).
 
 **API Gateway (manual):** expose `GET` + `OPTIONS` for `/search` and `/session` only; remove

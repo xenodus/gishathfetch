@@ -17,9 +17,8 @@ func enforceOriginVerify(
 	apiRes events.APIGatewayProxyResponse,
 	origin string,
 	headers map[string]string,
-	domainName string,
 ) (events.APIGatewayProxyResponse, bool) {
-	if err := apiauth.VerifyOriginHeader(headers, domainName); err != nil {
+	if err := apiauth.VerifyOriginHeader(headers); err != nil {
 		return accessDeniedResponse(apiRes, origin, "forbidden"), false
 	}
 	return apiRes, true
