@@ -13,10 +13,12 @@ import {
  */
 
 /** @type {SessionBootstrapTiming} */
-const NO_SESSION_WORK = Object.freeze({
-  turnstileDurationMs: 0,
-  sessionMintDurationMs: 0,
-});
+function noSessionWork() {
+  return {
+    turnstileDurationMs: isTurnstileConfigured() ? 0 : null,
+    sessionMintDurationMs: 0,
+  };
+}
 
 function attributeJoinedBootstrapWait(totalWaitMs, bootstrapTiming) {
   if (!isTurnstileConfigured()) {
@@ -70,7 +72,7 @@ export async function ensureApiSession(options = {}) {
     }
 
     if (!initiatedBootstrap) {
-      return NO_SESSION_WORK;
+      return noSessionWork();
     }
 
     return bootstrapTiming;
