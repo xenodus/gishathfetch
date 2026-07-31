@@ -45,9 +45,10 @@ origin request. A separate CloudFront distribution serves the static SPA from S3
 
 ## 1. CloudFront → API origin secret
 
-**Purpose:** Reject callers that do not arrive through a trusted edge hop (CloudFront
-or the Vite dev proxy) that injects a shared secret. When this layer is on, the
-execute-api URL cannot be used with a spoofed `Origin` header alone.
+**Purpose:** Reject direct `execute-api` bypass attempts and other callers that
+cannot prove a shared edge secret injected by CloudFront (or the Vite dev proxy).
+When this layer is on, the execute-api URL cannot be used with a spoofed
+`Origin` header alone.
 
 | Item | Value |
 |------|--------|
@@ -109,8 +110,8 @@ curl -i "https://api.gishathfetch.com/search?s=Opt" \
 5. Verify with the curl probes above after deploy (both bypass attempts return
    403; browser search works).
 
-**Stronger options** (optional; not required when the secret + CloudFront path is
-in place):
+**Stronger options** (optional; not required when origin verify and the CloudFront
+path are in place):
 
 - **Lambda authorizer** on the HTTP API that rejects requests missing the secret
   (blocks before the search Lambda runs; same check, earlier in the chain).
