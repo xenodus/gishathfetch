@@ -115,7 +115,7 @@ Full reference for the three abuse-mitigation layers:
 
 #### API abuse mitigation (overview)
 
-Three optional layers; each is **off until configured**:
+Two optional layers; each is **off until configured**:
 
 1. **CloudFront → API origin secret** (`API_ORIGIN_VERIFY_SECRET`): requests must send
    matching `X-Origin-Verify` (CloudFront custom origin header or Vite dev proxy).
@@ -125,40 +125,9 @@ Three optional layers; each is **off until configured**:
    (`session required` / `session expired` → 403). Frontend: `ensureApiSession()` with a
    10-minute background refresh and one retry on expiry
    (`frontend/src/utils/apiSession.js`).
-3. **Turnstile** (below): bot check on session mint only.
 
-Production should enable all three together. `make deploy` does not wire these Lambda
+Production should enable both together. `make deploy` does not wire these Lambda
 secrets — set them on `mtg-price-scrapper` manually (or via your secrets process).
-
-#### Turnstile (optional)
-
-Turnstile is **off until both keys are set**. With neither key present:
-
-- Backend (`TURNSTILE_SECRET_KEY` unset): `VerifyTurnstile` is a no-op; `GET /session` mints normally.
-- Frontend (`VITE_TURNSTILE_SITE_KEY` unset): no widget/script; session bootstrap omits the Turnstile token.
-
-To enable in production, do **all** of the following together (secret-only breaks clients):
-
-1. Create a Cloudflare Turnstile widget (Invisible mode matches the SPA). Allow hostnames
-   `gishathfetch.com` and `localhost` (local Vite).
-2. Set `TURNSTILE_SECRET_KEY` on Lambda `mtg-price-scrapper` (not wired by `make deploy`).
-3. Set `VITE_TURNSTILE_SITE_KEY` at **frontend build** time and redeploy the SPA
-   (`frontend-update` / CI). The deploy workflow does not inject this today — export it in the
-   environment that runs `npm run build`, or add it to `.github/workflows/deploy-on-merge.yml`.
-4. **API Gateway CORS** (HTTP API → CORS) for cross-origin session mint from
-   `gishathfetch.com`. Required when the SPA sends `CF-Turnstile-Response`
-   (triggers a preflight). Minimum:
-   - **Allow origins:** `https://gishathfetch.com`, `http://localhost:5173`
-   - **Allow methods:** `GET`, `OPTIONS` (empty methods breaks preflight)
-   - **Allow headers:** `Content-Type`, `CF-Turnstile-Response` (browser sends
-     `cf-turnstile-response` in preflight; either casing in the console is fine)
-   - **Allow credentials:** yes
-   - **Max age:** `3600` is reasonable (caches preflight for one hour; use `0`
-     while iterating on CORS). Lambda also accepts `cf_turnstile_response` as a
-     query fallback (`api/handler/session_turnstile_token.go`).
-
-Session minting (`GET /session`) sends `CF-Turnstile-Response` when the secret is
-set (see `frontend/src/utils/apiSession.js`).
 
 **API Gateway (manual):** expose `GET` + `OPTIONS` for `/search` and `/session` only; remove
 legacy `/`, `/api`, and `/api/*` routes when traffic has migrated.

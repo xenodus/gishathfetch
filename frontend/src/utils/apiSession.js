@@ -1,13 +1,7 @@
 import { API_SESSION_URL } from "../constants";
-import {
-  isTurnstileConfigured,
-  obtainTurnstileToken,
-  resetTurnstileChallenge,
-} from "./turnstileSession";
 
 /**
  * @typedef {{
- *   turnstileDurationMs: number | null,
  *   sessionMintDurationMs: number,
  * }} SessionBootstrapTiming
  */
@@ -15,30 +9,21 @@ import {
 /** @type {SessionBootstrapTiming} */
 function noSessionWork() {
   return {
-    turnstileDurationMs: isTurnstileConfigured() ? 0 : null,
     sessionMintDurationMs: 0,
   };
 }
 
 function attributeJoinedBootstrapWait(totalWaitMs, bootstrapTiming) {
-  if (!isTurnstileConfigured()) {
-    return {
-      turnstileDurationMs: null,
-      sessionMintDurationMs: totalWaitMs,
-    };
-  }
-
   const mintMs = bootstrapTiming.sessionMintDurationMs ?? 0;
   return {
-    turnstileDurationMs: Math.max(0, totalWaitMs - mintMs),
-    sessionMintDurationMs: mintMs,
+    sessionMintDurationMs: mintMs > 0 ? mintMs : totalWaitMs,
   };
 }
 
 /** Refresh before default API session TTL (15m) so idle tabs stay authorized. */
 export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
-/** Turnstile / network blips are common in private browsing; retry with a fresh token. */
+/** Network blips are common in private browsing; retry session mint. */
 const SESSION_MINT_MAX_ATTEMPTS = 3;
 
 let sessionBootstrapPromise = null;
@@ -55,7 +40,6 @@ export async function ensureApiSession(options = {}) {
 
   if (forceRefresh) {
     sessionBootstrapPromise = null;
-    resetTurnstileChallenge();
   }
 
   const initiatedBootstrap = !sessionBootstrapPromise;
@@ -84,22 +68,15 @@ export async function ensureApiSession(options = {}) {
 
 async function bootstrapSessionWithRetry() {
   let lastError = null;
-  let turnstileDurationMs = null;
   let sessionMintDurationMs = 0;
 
   for (let attempt = 1; attempt <= SESSION_MINT_MAX_ATTEMPTS; attempt += 1) {
     try {
       const timing = await mintApiSession();
-      if (timing.turnstileDurationMs != null) {
-        turnstileDurationMs =
-          (turnstileDurationMs ?? 0) + timing.turnstileDurationMs;
-      }
       sessionMintDurationMs += timing.sessionMintDurationMs;
-      return { turnstileDurationMs, sessionMintDurationMs };
+      return { sessionMintDurationMs };
     } catch (err) {
       lastError = err;
-      // Drop any pending/used token so the next attempt runs a fresh challenge.
-      resetTurnstileChallenge();
     }
   }
 
@@ -107,30 +84,16 @@ async function bootstrapSessionWithRetry() {
 }
 
 async function mintApiSession() {
-  const headers = {};
-  const turnstileStart = performance.now();
-  const turnstileToken = await obtainTurnstileToken();
-  const turnstileDurationMs = isTurnstileConfigured()
-    ? Math.round(performance.now() - turnstileStart)
-    : null;
-  if (turnstileToken) {
-    headers["CF-Turnstile-Response"] = turnstileToken;
-  }
-
   // Network failures surface as TypeError; rethrow as-is so the UI keeps the
   // accurate "unable to connect" copy instead of blaming session verification.
   const sessionMintStart = performance.now();
   const res = await fetch(API_SESSION_URL, {
     method: "GET",
     credentials: "include",
-    headers,
   });
   const sessionMintDurationMs = Math.round(
     performance.now() - sessionMintStart,
   );
-
-  // Tokens are single-use; never reuse after a mint attempt.
-  resetTurnstileChallenge();
 
   if (!res.ok) {
     if (res.status === 403) {
@@ -141,7 +104,7 @@ async function mintApiSession() {
     throw new Error(`API session failed (${res.status})`);
   }
 
-  return { turnstileDurationMs, sessionMintDurationMs };
+  return { sessionMintDurationMs };
 }
 
 /** True when search API rejected the request for missing or expired session cookie. */
@@ -159,5 +122,4 @@ export function isApiSessionAccessDenied(message, statusCode) {
 /** Clears the cached bootstrap promise (for tests or after auth errors). */
 export function resetApiSessionCache() {
   sessionBootstrapPromise = null;
-  resetTurnstileChallenge();
 }

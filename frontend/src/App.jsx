@@ -9,7 +9,6 @@ import SearchForm from "./components/SearchForm";
 import SearchResults from "./components/SearchResults";
 import SearchStats from "./components/SearchStats";
 import TopSearchKeywords from "./components/TopSearchKeywords";
-import TurnstileBootstrap from "./components/TurnstileBootstrap";
 
 const CartOffcanvas = lazy(() => import("./components/CartOffcanvas"));
 const Modals = lazy(() => import("./components/Modals"));
@@ -57,7 +56,6 @@ export default function App() {
     searchStoreErrors,
     searchStoreStats,
     searchTotalDurationMs,
-    sessionTurnstileDurationMs,
     sessionMintDurationMs,
     searchResponseDurationMs,
     onDismissStoreErrors,
@@ -200,7 +198,6 @@ export default function App() {
   // --- Main Render ---
   return (
     <div id="top" className="container-xl my-3 px-3 pb-3">
-      <TurnstileBootstrap />
       <Header theme={theme} onToggleTheme={handleThemeToggle} />
 
       <SearchForm
@@ -267,7 +264,6 @@ export default function App() {
       <SearchStats
         stats={searchStoreStats}
         totalDurationMs={searchTotalDurationMs}
-        sessionTurnstileDurationMs={sessionTurnstileDurationMs}
         sessionMintDurationMs={sessionMintDurationMs}
         searchResponseDurationMs={searchResponseDurationMs}
         hasSearched={hasSearched}

@@ -13,7 +13,6 @@ import {
  *   storeErrors: object[],
  *   storeStats: object[],
  *   totalDurationMs: number | null,
- *   sessionTurnstileDurationMs: number | null,
  *   sessionMintDurationMs: number | null,
  *   searchResponseDurationMs: number | null,
  *   hasSearched: boolean,
@@ -36,12 +35,6 @@ export function buildSearchHistoryState(snapshot) {
     totalDurationMs:
       Number.isFinite(snapshot.totalDurationMs) && snapshot.totalDurationMs >= 0
         ? snapshot.totalDurationMs
-        : null,
-    sessionTurnstileDurationMs:
-      snapshot.sessionTurnstileDurationMs === null ||
-      (Number.isFinite(snapshot.sessionTurnstileDurationMs) &&
-        snapshot.sessionTurnstileDurationMs >= 0)
-        ? snapshot.sessionTurnstileDurationMs
         : null,
     sessionMintDurationMs:
       Number.isFinite(snapshot.sessionMintDurationMs) &&

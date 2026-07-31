@@ -22,7 +22,6 @@ import {
   persistSelectedStores,
 } from "../utils/searchUrl";
 import { applyHomeSeo, applySearchSeo } from "../utils/seo";
-import { isTurnstileConfigured } from "../utils/turnstileSession";
 
 const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGTH} characters).`;
 const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
@@ -61,8 +60,6 @@ export default function useSearch() {
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
   const [searchStoreStats, setSearchStoreStats] = useState([]);
   const [searchTotalDurationMs, setSearchTotalDurationMs] = useState(null);
-  const [sessionTurnstileDurationMs, setSessionTurnstileDurationMs] =
-    useState(null);
   const [sessionMintDurationMs, setSessionMintDurationMs] = useState(null);
   const [searchResponseDurationMs, setSearchResponseDurationMs] =
     useState(null);
@@ -94,11 +91,9 @@ export default function useSearch() {
   }, [searchResults]);
 
   useEffect(() => {
-    if (!isTurnstileConfigured()) {
-      ensureApiSession().catch(() => {
-        // Search will retry session bootstrap before the first API call.
-      });
-    }
+    ensureApiSession().catch(() => {
+      // Search will retry session bootstrap before the first API call.
+    });
 
     const refreshTimer = setInterval(() => {
       ensureApiSession({ forceRefresh: true }).catch(() => {
@@ -192,7 +187,6 @@ export default function useSearch() {
       setSearchStoreErrors([]);
       setSearchStoreStats([]);
       setSearchTotalDurationMs(null);
-      setSessionTurnstileDurationMs(null);
       setSessionMintDurationMs(null);
       setSearchResponseDurationMs(null);
       setDismissedStoreErrorsKey(null);
@@ -216,7 +210,6 @@ export default function useSearch() {
         const sessionTiming = await ensureApiSession({
           forceRefresh: sessionRetried,
         });
-        setSessionTurnstileDurationMs(sessionTiming.turnstileDurationMs);
         setSessionMintDurationMs(sessionTiming.sessionMintDurationMs);
 
         const searchFetchStart = performance.now();
@@ -300,7 +293,6 @@ export default function useSearch() {
                 storeErrors,
                 storeStats,
                 totalDurationMs,
-                sessionTurnstileDurationMs: sessionTiming.turnstileDurationMs,
                 sessionMintDurationMs: sessionTiming.sessionMintDurationMs,
                 searchResponseDurationMs,
                 hasSearched: true,
@@ -331,7 +323,6 @@ export default function useSearch() {
               setSearchStoreErrors([]);
               setSearchStoreStats([]);
               setSearchTotalDurationMs(null);
-              setSessionTurnstileDurationMs(null);
               setSessionMintDurationMs(null);
               setSearchResponseDurationMs(null);
               setDismissedStoreErrorsKey(null);
@@ -345,7 +336,6 @@ export default function useSearch() {
           setSearchStoreErrors([]);
           setSearchStoreStats([]);
           setSearchTotalDurationMs(null);
-          setSessionTurnstileDurationMs(null);
           setSessionMintDurationMs(null);
           setSearchResponseDurationMs(null);
           setDismissedStoreErrorsKey(null);
@@ -360,8 +350,7 @@ export default function useSearch() {
               "Unable to connect to the server. Please check your internet connection and try again.";
           } else if (
             typeof err.message === "string" &&
-            (err.message.includes("turnstile") ||
-              err.message.includes("API session verification"))
+            err.message.includes("API session verification")
           ) {
             nextSearchError =
               "Could not verify this browser session. Please refresh the page and try again.";
@@ -387,7 +376,6 @@ export default function useSearch() {
               storeErrors: [],
               storeStats: [],
               totalDurationMs: null,
-              sessionTurnstileDurationMs: null,
               sessionMintDurationMs: null,
               searchResponseDurationMs: null,
               hasSearched: true,
@@ -454,7 +442,6 @@ export default function useSearch() {
         setSearchStoreErrors([]);
         setSearchStoreStats([]);
         setSearchTotalDurationMs(null);
-        setSessionTurnstileDurationMs(null);
         setSessionMintDurationMs(null);
         setSearchResponseDurationMs(null);
         setSearchError(null);
@@ -487,12 +474,6 @@ export default function useSearch() {
       setSearchStoreStats(state.storeStats || []);
       setSearchTotalDurationMs(
         Number.isFinite(state.totalDurationMs) ? state.totalDurationMs : null,
-      );
-      setSessionTurnstileDurationMs(
-        state.sessionTurnstileDurationMs === null ||
-          Number.isFinite(state.sessionTurnstileDurationMs)
-          ? state.sessionTurnstileDurationMs
-          : null,
       );
       setSessionMintDurationMs(
         Number.isFinite(state.sessionMintDurationMs) &&
@@ -759,7 +740,6 @@ export default function useSearch() {
     searchStoreErrors: visibleStoreErrors,
     searchStoreStats,
     searchTotalDurationMs,
-    sessionTurnstileDurationMs,
     sessionMintDurationMs,
     searchResponseDurationMs,
     onDismissStoreErrors: dismissStoreErrors,
