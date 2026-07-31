@@ -110,16 +110,18 @@ Proxy target: `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`). 
 `VITE_API_ORIGIN_VERIFY_SECRET` when testing against an environment with
 `API_ORIGIN_VERIFY_SECRET` enabled.
 
-Full reference for the three abuse-mitigation layers:
+Full reference for the two abuse-mitigation layers:
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
 #### API abuse mitigation (overview)
 
 Two optional layers; each is **off until configured**:
 
-1. **CloudFront → API origin secret** (`API_ORIGIN_VERIFY_SECRET`): requests must send
-   matching `X-Origin-Verify` (CloudFront custom origin header or Vite dev proxy).
-   Enforced on both `/session` and `/search`.
+1. **CloudFront → API origin secret** (`API_ORIGIN_VERIFY_SECRET`): when set, requests
+   must pass origin verification — either a matching `X-Origin-Verify` header
+   (CloudFront custom origin header or Vite dev proxy) or an allowlisted `Origin`
+   on the API custom domain (`api.gishathfetch.com`, not `execute-api`). Enforced
+   on both `/session` and `/search`.
 2. **Session cookie** (`API_SESSION_SECRET`): `GET /session` mints HttpOnly `gf_api_session`
    (default TTL 15m via `API_SESSION_TTL_SECONDS`). `/search` requires a valid cookie
    (`session required` / `session expired` → 403). Frontend: `ensureApiSession()` with a
