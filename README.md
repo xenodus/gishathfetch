@@ -258,8 +258,8 @@ Inbound `/search` and `/session` are gated by three optional layers (each off
 until configured):
 
 1. **CloudFront → API origin secret** — Lambda `API_ORIGIN_VERIFY_SECRET`;
-   trusted hops send `X-Origin-Verify`, or browsers present an allowlisted
-   `Origin`.
+   CloudFront (or the Vite dev proxy) injects `X-Origin-Verify` on origin
+   requests.
 2. **Session token** — `GET /session` mints HttpOnly `gf_api_session`
    (HMAC via `API_SESSION_SECRET`, default TTL 15m); `/search` requires it.
 3. **Cloudflare Turnstile** — when `TURNSTILE_SECRET_KEY` and

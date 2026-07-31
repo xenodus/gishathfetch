@@ -29,7 +29,7 @@ sequenceDiagram
     U->>TS: invisible widget (when site key set)
     TS-->>U: challenge token
     U->>API: GET /session (CF-Turnstile-Response)
-    Note over API: origin check (allowlisted Origin<br/>or X-Origin-Verify)
+    Note over API: origin check (X-Origin-Verify<br/>from CloudFront)
     API->>CF_API: siteverify (when TURNSTILE_SECRET_KEY set)
     CF_API-->>API: success
     API-->>U: 204 + Set-Cookie: gf_api_session=...
@@ -47,8 +47,9 @@ CloudFront and inject the origin-verify header (see below).
 
 ## 1. CloudFront → API origin secret
 
-**Purpose:** Reject callers that are neither an allowlisted browser origin nor a
-trusted edge/automation hop that knows the shared secret.
+**Purpose:** Reject callers that do not arrive through a trusted edge hop (CloudFront
+or the Vite dev proxy) that injects a shared secret. When this layer is on, the
+execute-api URL cannot be used with a spoofed `Origin` header alone.
 
 | Item | Value |
 |------|--------|
@@ -56,15 +57,10 @@ trusted edge/automation hop that knows the shared secret.
 | Optional header name override | `API_ORIGIN_VERIFY_HEADER` (default `X-Origin-Verify`) |
 | Code | `api/pkg/apiauth/origin.go`, enforced in `handler/search.go` and `handler/session.go` |
 
-When `API_ORIGIN_VERIFY_SECRET` is set, a request passes origin verification if
-**either**:
-
-- The request includes `X-Origin-Verify` (or the configured header) equal to the
-  secret — for CloudFront custom origin headers, the Vite dev proxy, or other
-  trusted automation; **or**
-- The request includes an `Origin` header in the allowlist from
-  `config.GetAllowedOrigins()` (`https://gishathfetch.com`,
-  `http://localhost:5173`, and the JetBrains built-in server).
+When `API_ORIGIN_VERIFY_SECRET` is set, a request passes origin verification only
+when it includes `X-Origin-Verify` (or the configured header) equal to the secret.
+Allowlisted `Origin` alone is **not** accepted (it is trivially spoofed on direct
+`execute-api` calls that bypass CloudFront and WAF).
 
 Otherwise the handler returns **403** (`forbidden`).
 
@@ -76,9 +72,54 @@ custom origin for `/api/*` / search paths), add a **custom origin header**:
 - Name: `X-Origin-Verify` (unless you override `API_ORIGIN_VERIFY_HEADER`)
 - Value: the same string as Lambda `API_ORIGIN_VERIFY_SECRET`
 
-Keep the secret out of the SPA bundle. Browsers talking directly to
-`api.gishathfetch.com` rely on the allowlisted `Origin` path instead of this
-header.
+Keep the secret out of the SPA bundle. Browsers reach `api.gishathfetch.com`
+through CloudFront; CloudFront adds this header on the **origin request** to API
+Gateway (viewers never send it).
+
+### Lock down the execute-api URL
+
+Production uses an **HTTP API** (`aws_apigatewayv2_api`). HTTP APIs do **not**
+support API Gateway resource policies or IP allowlists the way REST APIs do, so
+you cannot block the raw `*.execute-api.*.amazonaws.com` hostname at the gateway
+with a CloudFront managed prefix list alone.
+
+With `API_ORIGIN_VERIFY_SECRET` set and CloudFront injecting `X-Origin-Verify`,
+direct calls to the execute-api URL are rejected unless the caller also knows the
+secret:
+
+```bash
+# Bypass attempt — should return 403 forbidden (Origin spoofing is not enough)
+curl -i "https://<api-id>.execute-api.ap-southeast-1.amazonaws.com/search?s=Opt" \
+  -H "Origin: https://gishathfetch.com"
+
+# Legit path — should work (WAF + origin secret + session/Turnstile as configured)
+curl -i "https://api.gishathfetch.com/search?s=Opt" \
+  -H "Origin: https://gishathfetch.com" \
+  --cookie "gf_api_session=..."
+```
+
+**Checklist**
+
+1. `api.gishathfetch.com` DNS points to the **API CloudFront** distribution (not
+   directly to API Gateway).
+2. CloudFront origin custom header `X-Origin-Verify` matches Lambda
+   `API_ORIGIN_VERIFY_SECRET`.
+3. `API_ORIGIN_VERIFY_SECRET` is set on Lambda `mtg-price-scrapper`.
+4. Verify step 1 with the curl probes above after deploy.
+
+**Stronger options** (optional; not required when the secret + CloudFront path is
+in place):
+
+- **Lambda authorizer** on the HTTP API that rejects requests missing the secret
+  (blocks before the search Lambda runs; same check, earlier in the chain).
+- **REST API + resource policy / API key** via CloudFront (migration; AWS’s
+  REST-only pattern for native gateway-side blocking).
+- **SigV4 + Lambda@Edge** (AWS security blog “APIProtection” pattern) for IAM-level
+  verification.
+
+Do not point `VITE_API_PROXY_TARGET` at the execute-api URL in local dev when
+origin verify is enabled — use `https://api.gishathfetch.com` or inject
+`VITE_API_ORIGIN_VERIFY_SECRET` via the Vite proxy.
 
 ### Local Vite proxy
 
@@ -196,7 +237,7 @@ never reuses a token after a mint attempt (tokens are single-use).
 
 | Variable | Where | Default / off | Effect when set |
 |----------|--------|---------------|-----------------|
-| `API_ORIGIN_VERIFY_SECRET` | Lambda | unset = skip | Require `X-Origin-Verify` **or** allowlisted `Origin` |
+| `API_ORIGIN_VERIFY_SECRET` | Lambda | unset = skip | Require matching `X-Origin-Verify` (CloudFront / Vite proxy) |
 | `API_ORIGIN_VERIFY_HEADER` | Lambda | `X-Origin-Verify` | Custom header name for the shared secret |
 | `API_SESSION_SECRET` | Lambda | unset = skip session on `/search`; `/session` 503 | Sign/validate `gf_api_session` |
 | `API_SESSION_TTL_SECONDS` | Lambda | `900` | Cookie / token lifetime |
