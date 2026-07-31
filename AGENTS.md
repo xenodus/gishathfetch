@@ -118,8 +118,8 @@ Full reference for the three abuse-mitigation layers:
 Three optional layers; each is **off until configured**:
 
 1. **CloudFront → API origin secret** (`API_ORIGIN_VERIFY_SECRET`): requests must send
-   matching `X-Origin-Verify` (CloudFront custom origin header, Vite proxy, or automation)
-   **or** an allowlisted `Origin`. Enforced on both `/session` and `/search`.
+   matching `X-Origin-Verify` (CloudFront custom origin header or Vite dev proxy).
+   Enforced on both `/session` and `/search`.
 2. **Session cookie** (`API_SESSION_SECRET`): `GET /session` mints HttpOnly `gf_api_session`
    (default TTL 15m via `API_SESSION_TTL_SECONDS`). `/search` requires a valid cookie
    (`session required` / `session expired` → 403). Frontend: `ensureApiSession()` with a

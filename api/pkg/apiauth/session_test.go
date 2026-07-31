@@ -43,7 +43,7 @@ func TestVerifyOriginHeader(t *testing.T) {
 	require.ErrorIs(t, err, errOriginVerifyFailed)
 
 	err = VerifyOriginHeader(map[string]string{"origin": "https://gishathfetch.com"})
-	require.NoError(t, err)
+	require.ErrorIs(t, err, errOriginVerifyFailed)
 
 	err = VerifyOriginHeader(map[string]string{})
 	require.ErrorIs(t, err, errOriginVerifyFailed)
