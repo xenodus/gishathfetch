@@ -520,6 +520,59 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 	}
 }
 
+func TestFetchCardsConcurrently_QueuedStoresKeepPerSiteBudgetAfterProxySlot(t *testing.T) {
+	if testing.Short() {
+		t.Skip("timing-sensitive proxy queue regression test")
+	}
+
+	for i := 1; i <= 7; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
+	}
+	for i := 1; i <= 3; i++ {
+		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), fmt.Sprintf("10.0.0.%d|8080|user|pass", i))
+	}
+
+	// With only three dedicated-proxy slots, the second worker wave waits for the
+	// first wave to finish. Queue time must not consume the per-store deadline.
+	const searchWork = 11 * time.Second
+
+	var searched sync.Map
+	makeShop := func(name string) gateway.LGS {
+		return &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				timer := time.NewTimer(searchWork)
+				defer timer.Stop()
+				select {
+				case <-timer.C:
+					searched.Store(name, true)
+					return []gateway.Card{{Name: "Bolt", Source: name, Price: 1, InStock: true}}, nil
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				}
+			},
+		}
+	}
+
+	shops := map[string]gateway.LGS{
+		"Shop1": makeShop("Shop1"),
+		"Shop2": makeShop("Shop2"),
+		"Shop3": makeShop("Shop3"),
+		"Shop4": makeShop("Shop4"),
+		"Shop5": makeShop("Shop5"),
+		"Shop6": makeShop("Shop6"),
+	}
+
+	_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Bolt", shops)
+	if len(siteErrors) != 0 {
+		t.Fatalf("expected no site errors after proxy slot wait, got: %v", siteErrors)
+	}
+	for _, name := range []string{"Shop1", "Shop2", "Shop3", "Shop4", "Shop5", "Shop6"} {
+		if _, ok := searched.Load(name); !ok {
+			t.Fatalf("expected %q to complete search", name)
+		}
+	}
+}
+
 func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t *testing.T) {
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
