@@ -259,24 +259,27 @@ func searchShop(
 		aggregator.addShopDuration(shopName, time.Since(start))
 	}()
 
-	shopCtx, cancel := context.WithTimeout(ctx, config.PerSiteTimeout)
-	defer cancel()
-
+	searchCtx := ctx
 	if config.UseProxy {
 		if proxyURLs := util.GetDedicatedProxyURLs(); len(proxyURLs) > 0 {
-			releaseSearchSlot, slotErr := gateway.AcquireDedicatedProxySearchSlot(shopCtx)
+			// Wait for a proxy slot on the request context so queue time does not
+			// consume the per-store search budget (see PerSiteTimeout below).
+			releaseSearchSlot, slotErr := gateway.AcquireDedicatedProxySearchSlot(ctx)
 			if slotErr != nil {
 				recordShopSearchError(searchString, shopName, slotErr, aggregator)
 				return
 			}
 			defer releaseSearchSlot()
 
-			if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(shopCtx, proxyURLs); err == nil {
+			if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs); err == nil {
 				defer release()
-				shopCtx = gateway.WithRequestDedicatedProxy(shopCtx, proxyURL)
+				searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
 			}
 		}
 	}
+
+	shopCtx, cancel := context.WithTimeout(searchCtx, config.PerSiteTimeout)
+	defer cancel()
 
 	cards, err := lgs.Search(shopCtx, searchString)
 	if err != nil {
