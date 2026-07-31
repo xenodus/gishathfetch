@@ -17,7 +17,7 @@ func normalizeAPIPath(request events.APIGatewayProxyRequest) string {
 		path = "/"
 	}
 
-	for _, prefix := range []string{"/prod", "/staging", "/dev"} {
+	for _, prefix := range []string{"/prod", "/staging", "/dev", "/default"} {
 		if strings.HasPrefix(path, prefix+"/") || path == prefix {
 			path = strings.TrimPrefix(path, prefix)
 			if path == "" {
