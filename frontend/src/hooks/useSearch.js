@@ -183,254 +183,235 @@ export default function useSearch() {
       resultsBeforeSearchRef.current = searchResultsRef.current;
       lastSearchRef.current = { query, stores };
 
+      setIsSearching(true);
+      setSearchProgress("Searching LGS");
+      setSearchResults([]);
+      setCardKingdomPrice(null);
+      setHasSearched(true);
+      setSearchError(null);
+      setSearchStoreErrors([]);
+      setSearchStoreStats([]);
+      setSearchTotalDurationMs(null);
+      setSessionTurnstileDurationMs(null);
+      setSessionMintDurationMs(null);
+      setSearchResponseDurationMs(null);
+      setDismissedStoreErrorsKey(null);
+
+      if (window.gtag) {
+        window.gtag("event", "search", { search_term: query });
+      }
+
       const searchUrl = `${API_SEARCH_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
 
-      const runSearch = async () => {
-        let prefetchedSessionTiming = null;
-        if (isTurnstileConfigured()) {
+      const progressInterval = setInterval(() => {
+        setSearchProgress((prev) => {
+          const dots = (prev.match(/\./g) || []).length;
+          if (dots >= MAX_PROGRESS_DOTS) return "Searching LGS";
+          return `${prev} .`;
+        });
+      }, SEARCH_PROGRESS_INTERVAL_MS);
+      progressIntervalRef.current = progressInterval;
+
+      const fetchSearchResult = async (sessionRetried) => {
+        const sessionTiming = await ensureApiSession({
+          forceRefresh: sessionRetried,
+        });
+        setSessionTurnstileDurationMs(sessionTiming.turnstileDurationMs);
+        setSessionMintDurationMs(sessionTiming.sessionMintDurationMs);
+
+        const searchFetchStart = performance.now();
+        const res = await fetch(searchUrl, {
+          signal: searchAbortController.signal,
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          let errorBody = null;
           try {
-            prefetchedSessionTiming = await ensureApiSession();
+            errorBody = await res.json();
           } catch {
-            // fetchSearchResult retries session bootstrap before the API call.
+            // Ignore malformed error responses.
           }
-        }
 
-        if (requestId !== activeSearchRequestIdRef.current) {
-          return;
-        }
+          const validationMessage =
+            typeof errorBody?.error === "string" && errorBody.error
+              ? errorBody.error
+              : null;
+          const statusCode = errorBody?.statusCode || res.status;
 
-        setIsSearching(true);
-        setSearchProgress("Searching LGS");
-        setSearchResults([]);
-        setCardKingdomPrice(null);
-        setHasSearched(true);
-        setSearchError(null);
-        setSearchStoreErrors([]);
-        setSearchStoreStats([]);
-        setSearchTotalDurationMs(null);
-        setSessionTurnstileDurationMs(null);
-        setSessionMintDurationMs(null);
-        setSearchResponseDurationMs(null);
-        setDismissedStoreErrorsKey(null);
+          if (
+            !sessionRetried &&
+            isApiSessionAccessDenied(validationMessage, statusCode)
+          ) {
+            resetApiSessionCache();
+            return fetchSearchResult(true);
+          }
 
-        if (window.gtag) {
-          window.gtag("event", "search", { search_term: query });
-        }
-
-        const progressInterval = setInterval(() => {
-          setSearchProgress((prev) => {
-            const dots = (prev.match(/\./g) || []).length;
-            if (dots >= MAX_PROGRESS_DOTS) return "Searching LGS";
-            return `${prev} .`;
-          });
-        }, SEARCH_PROGRESS_INTERVAL_MS);
-        progressIntervalRef.current = progressInterval;
-
-        const fetchSearchResult = async (sessionRetried) => {
-          const sessionTiming = sessionRetried
-            ? await ensureApiSession({ forceRefresh: true })
-            : (prefetchedSessionTiming ?? (await ensureApiSession()));
-          setSessionTurnstileDurationMs(sessionTiming.turnstileDurationMs);
-          setSessionMintDurationMs(sessionTiming.sessionMintDurationMs);
-
-          const searchFetchStart = performance.now();
-          const res = await fetch(searchUrl, {
-            signal: searchAbortController.signal,
-            credentials: "include",
-          });
-
-          if (!res.ok) {
-            let errorBody = null;
-            try {
-              errorBody = await res.json();
-            } catch {
-              // Ignore malformed error responses.
-            }
-
-            const validationMessage =
-              typeof errorBody?.error === "string" && errorBody.error
-                ? errorBody.error
-                : null;
-            const statusCode = errorBody?.statusCode || res.status;
-
-            if (
-              !sessionRetried &&
-              isApiSessionAccessDenied(validationMessage, statusCode)
-            ) {
-              resetApiSessionCache();
-              return fetchSearchResult(true);
-            }
-
-            if (validationMessage) {
-              throw new Error(
-                formatErrorWithStatusCode(validationMessage, statusCode),
-              );
-            }
-
+          if (validationMessage) {
             throw new Error(
-              formatErrorWithStatusCode(
-                res.statusText || "The server returned an error.",
-                statusCode,
-              ),
+              formatErrorWithStatusCode(validationMessage, statusCode),
             );
           }
 
-          const result = await res.json();
-          const searchResponseDurationMs = Math.round(
-            performance.now() - searchFetchStart,
+          throw new Error(
+            formatErrorWithStatusCode(
+              res.statusText || "The server returned an error.",
+              statusCode,
+            ),
           );
+        }
 
-          return {
-            result,
-            sessionTiming,
-            searchResponseDurationMs,
-          };
+        const result = await res.json();
+        const searchResponseDurationMs = Math.round(
+          performance.now() - searchFetchStart,
+        );
+
+        return {
+          result,
+          sessionTiming,
+          searchResponseDurationMs,
         };
+      };
 
-        fetchSearchResult(false)
-          .then(({ result, sessionTiming, searchResponseDurationMs }) => {
-            if (requestId !== activeSearchRequestIdRef.current) return;
-            if (result && Object.hasOwn(result, "data")) {
-              // Treat null data as empty array
-              setSearchResults(result.data || []);
-              setCardKingdomPrice(result.cardKingdomPrice ?? null);
-              const storeErrors = Array.isArray(result.errors)
-                ? result.errors
-                : [];
-              const storeStats = Array.isArray(result.stats)
-                ? result.stats
-                : [];
-              const totalDurationMs = Number.isFinite(result.totalDurationMs)
-                ? result.totalDurationMs
-                : null;
-              setSearchStoreErrors(storeErrors);
-              setSearchStoreStats(storeStats);
-              setSearchTotalDurationMs(totalDurationMs);
-              setSearchResponseDurationMs(searchResponseDurationMs);
-              setDismissedStoreErrorsKey(null);
-              if (!skipHistorySyncRef.current) {
-                syncSearchHistory({
-                  query,
-                  stores,
-                  results: result.data || [],
-                  storeErrors,
-                  storeStats,
-                  totalDurationMs,
-                  sessionTurnstileDurationMs: sessionTiming.turnstileDurationMs,
-                  sessionMintDurationMs: sessionTiming.sessionMintDurationMs,
-                  searchResponseDurationMs,
-                  hasSearched: true,
-                  searchError: null,
-                  cardKingdomPrice: result.cardKingdomPrice ?? null,
-                });
-              }
-              skipHistorySyncRef.current = false;
-              if (window.gtag) {
-                window.gtag("event", "view_search_results", {
-                  search_term: query,
-                });
-              }
-            } else {
-              throw new Error("Invalid response format from server");
-            }
-          })
-          .catch((err) => {
-            if (err.name === "AbortError") {
-              if (
-                userCancelledRef.current &&
-                requestId === activeSearchRequestIdRef.current
-              ) {
-                const previousResults = resultsBeforeSearchRef.current;
-                setSearchResults(previousResults);
-                setHasSearched(previousResults.length > 0);
-                setSearchError(null);
-                setSearchStoreErrors([]);
-                setSearchStoreStats([]);
-                setSearchTotalDurationMs(null);
-                setSessionTurnstileDurationMs(null);
-                setSessionMintDurationMs(null);
-                setSearchResponseDurationMs(null);
-                setDismissedStoreErrorsKey(null);
-                userCancelledRef.current = false;
-              }
-              return;
-            }
-            if (requestId !== activeSearchRequestIdRef.current) return;
-            console.error("Search error:", err);
-            setSearchResults([]);
-            setSearchStoreErrors([]);
-            setSearchStoreStats([]);
-            setSearchTotalDurationMs(null);
-            setSessionTurnstileDurationMs(null);
-            setSessionMintDurationMs(null);
-            setSearchResponseDurationMs(null);
+      fetchSearchResult(false)
+        .then(({ result, sessionTiming, searchResponseDurationMs }) => {
+          if (requestId !== activeSearchRequestIdRef.current) return;
+          if (result && Object.hasOwn(result, "data")) {
+            // Treat null data as empty array
+            setSearchResults(result.data || []);
+            setCardKingdomPrice(result.cardKingdomPrice ?? null);
+            const storeErrors = Array.isArray(result.errors)
+              ? result.errors
+              : [];
+            const storeStats = Array.isArray(result.stats) ? result.stats : [];
+            const totalDurationMs = Number.isFinite(result.totalDurationMs)
+              ? result.totalDurationMs
+              : null;
+            setSearchStoreErrors(storeErrors);
+            setSearchStoreStats(storeStats);
+            setSearchTotalDurationMs(totalDurationMs);
+            setSearchResponseDurationMs(searchResponseDurationMs);
             setDismissedStoreErrorsKey(null);
-
-            let nextSearchError;
-            // Set user-friendly error message
-            if (
-              err.message.includes("Failed to fetch") ||
-              err.name === "TypeError"
-            ) {
-              nextSearchError =
-                "Unable to connect to the server. Please check your internet connection and try again.";
-            } else if (
-              typeof err.message === "string" &&
-              (err.message.includes("turnstile") ||
-                err.message.includes("API session verification"))
-            ) {
-              nextSearchError =
-                "Could not verify this browser session. Please refresh the page and try again.";
-            } else if (err.message.includes("API session failed")) {
-              nextSearchError =
-                "The server is experiencing issues. Please try again later.";
-            } else if (err.message.startsWith("Error (")) {
-              nextSearchError = err.message;
-            } else if (err.message.includes("Server error")) {
-              nextSearchError =
-                "The server is experiencing issues. Please try again later.";
-            } else {
-              nextSearchError =
-                "An error occurred while searching. Please try again.";
-            }
-            setSearchError(nextSearchError);
-
             if (!skipHistorySyncRef.current) {
               syncSearchHistory({
                 query,
                 stores,
-                results: [],
-                storeErrors: [],
-                storeStats: [],
-                totalDurationMs: null,
-                sessionTurnstileDurationMs: null,
-                sessionMintDurationMs: null,
-                searchResponseDurationMs: null,
+                results: result.data || [],
+                storeErrors,
+                storeStats,
+                totalDurationMs,
+                sessionTurnstileDurationMs: sessionTiming.turnstileDurationMs,
+                sessionMintDurationMs: sessionTiming.sessionMintDurationMs,
+                searchResponseDurationMs,
                 hasSearched: true,
-                searchError: nextSearchError,
-                cardKingdomPrice: null,
+                searchError: null,
+                cardKingdomPrice: result.cardKingdomPrice ?? null,
               });
             }
             skipHistorySyncRef.current = false;
-          })
-          .finally(() => {
-            clearInterval(progressInterval);
-            if (progressIntervalRef.current === progressInterval) {
-              progressIntervalRef.current = null;
+            if (window.gtag) {
+              window.gtag("event", "view_search_results", {
+                search_term: query,
+              });
             }
-
-            if (searchAbortControllerRef.current === searchAbortController) {
-              searchAbortControllerRef.current = null;
+          } else {
+            throw new Error("Invalid response format from server");
+          }
+        })
+        .catch((err) => {
+          if (err.name === "AbortError") {
+            if (
+              userCancelledRef.current &&
+              requestId === activeSearchRequestIdRef.current
+            ) {
+              const previousResults = resultsBeforeSearchRef.current;
+              setSearchResults(previousResults);
+              setHasSearched(previousResults.length > 0);
+              setSearchError(null);
+              setSearchStoreErrors([]);
+              setSearchStoreStats([]);
+              setSearchTotalDurationMs(null);
+              setSessionTurnstileDurationMs(null);
+              setSessionMintDurationMs(null);
+              setSearchResponseDurationMs(null);
+              setDismissedStoreErrorsKey(null);
+              userCancelledRef.current = false;
             }
+            return;
+          }
+          if (requestId !== activeSearchRequestIdRef.current) return;
+          console.error("Search error:", err);
+          setSearchResults([]);
+          setSearchStoreErrors([]);
+          setSearchStoreStats([]);
+          setSearchTotalDurationMs(null);
+          setSessionTurnstileDurationMs(null);
+          setSessionMintDurationMs(null);
+          setSearchResponseDurationMs(null);
+          setDismissedStoreErrorsKey(null);
 
-            if (requestId !== activeSearchRequestIdRef.current) return;
-            setIsSearching(false);
-            setSearchProgress("Search");
-            skipSuggestionsRef.current = false;
-          });
-      };
+          let nextSearchError;
+          // Set user-friendly error message
+          if (
+            err.message.includes("Failed to fetch") ||
+            err.name === "TypeError"
+          ) {
+            nextSearchError =
+              "Unable to connect to the server. Please check your internet connection and try again.";
+          } else if (
+            typeof err.message === "string" &&
+            (err.message.includes("turnstile") ||
+              err.message.includes("API session verification"))
+          ) {
+            nextSearchError =
+              "Could not verify this browser session. Please refresh the page and try again.";
+          } else if (err.message.includes("API session failed")) {
+            nextSearchError =
+              "The server is experiencing issues. Please try again later.";
+          } else if (err.message.startsWith("Error (")) {
+            nextSearchError = err.message;
+          } else if (err.message.includes("Server error")) {
+            nextSearchError =
+              "The server is experiencing issues. Please try again later.";
+          } else {
+            nextSearchError =
+              "An error occurred while searching. Please try again.";
+          }
+          setSearchError(nextSearchError);
 
-      void runSearch();
+          if (!skipHistorySyncRef.current) {
+            syncSearchHistory({
+              query,
+              stores,
+              results: [],
+              storeErrors: [],
+              storeStats: [],
+              totalDurationMs: null,
+              sessionTurnstileDurationMs: null,
+              sessionMintDurationMs: null,
+              searchResponseDurationMs: null,
+              hasSearched: true,
+              searchError: nextSearchError,
+              cardKingdomPrice: null,
+            });
+          }
+          skipHistorySyncRef.current = false;
+        })
+        .finally(() => {
+          clearInterval(progressInterval);
+          if (progressIntervalRef.current === progressInterval) {
+            progressIntervalRef.current = null;
+          }
+
+          if (searchAbortControllerRef.current === searchAbortController) {
+            searchAbortControllerRef.current = null;
+          }
+
+          if (requestId !== activeSearchRequestIdRef.current) return;
+          setIsSearching(false);
+          setSearchProgress("Search");
+          skipSuggestionsRef.current = false;
+        });
     },
     [syncSearchHistory],
   );
@@ -763,18 +744,7 @@ export default function useSearch() {
       const urlStores = getStoresFromUrl(urlParams);
       const stores = urlStores ?? selectedStores;
 
-      const runInitialUrlSearch = async () => {
-        if (isTurnstileConfigured()) {
-          // Warm the session before searching so Turnstile runs during page load
-          // (TurnstileBootstrap prefetch) instead of blocking the first search.
-          await ensureApiSession().catch(() => {
-            // performSearch retries session bootstrap before the API call.
-          });
-        }
-        performSearch(q, stores);
-      };
-
-      void runInitialUrlSearch();
+      setTimeout(() => performSearch(q, stores), 100);
     }
   }, [performSearch, selectedStores]);
 
