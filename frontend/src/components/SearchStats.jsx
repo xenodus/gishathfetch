@@ -53,14 +53,6 @@ const SearchStats = ({
     Number.isFinite(searchResponseDurationMs) && searchResponseDurationMs >= 0;
   const hasClientTiming =
     hasTurnstileTiming || hasSessionMintTiming || hasSearchResponseTiming;
-  const clientSetupMs =
-    (hasTurnstileTiming ? sessionTurnstileDurationMs : 0) +
-    (hasSessionMintTiming ? sessionMintDurationMs : 0);
-  const showClientSetupNote =
-    hasTotal &&
-    hasClientTiming &&
-    clientSetupMs > totalDurationMs &&
-    clientSetupMs >= 1000;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
@@ -90,13 +82,6 @@ const SearchStats = ({
                   {storeStats.length > 1
                     ? " (waits for all selected stores and Card Kingdom enrichment; per-store times below)"
                     : " (includes Card Kingdom enrichment wait; per-store time below)"}
-                </p>
-              )}
-              {showClientSetupNote && (
-                <p className="small text-muted mb-2">
-                  Browser session setup (Turnstile and session mint) can take
-                  longer than the server search total below; that work runs in
-                  the browser before the API request.
                 </p>
               )}
               {hasClientTiming && (
