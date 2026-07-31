@@ -25,6 +25,8 @@ let widgetReady = createDeferred();
 
 let cachedToken = "";
 let pendingTokenPromise = null;
+/** True after execute() until token, error, expiry, reset, or teardown. */
+let challengeInFlight = false;
 
 function siteKey() {
   const key = import.meta.env.VITE_TURNSTILE_SITE_KEY;
@@ -112,6 +114,7 @@ export function registerTurnstileWidget(id) {
 
 export function onTurnstileToken(token) {
   cachedToken = token;
+  challengeInFlight = false;
   if (pendingTokenPromise) {
     pendingTokenPromise.resolve(token);
     pendingTokenPromise = null;
@@ -120,16 +123,20 @@ export function onTurnstileToken(token) {
 
 export function onTurnstileExpired() {
   cachedToken = "";
+  challengeInFlight = false;
+  startTurnstileChallenge();
 }
 
 export function onTurnstileError() {
   cachedToken = "";
+  challengeInFlight = false;
   rejectPendingTokenWaiters(new Error("turnstile challenge failed"));
 }
 
 export function teardownTurnstileWidget() {
   rejectPendingTokenWaiters(new Error("turnstile widget teardown"));
   cachedToken = "";
+  challengeInFlight = false;
   widgetPreparePromise = null;
   if (widgetId != null && window.turnstile?.remove) {
     window.turnstile.remove(widgetId);
@@ -180,6 +187,7 @@ export async function prepareTurnstileWidget(container, options = {}) {
 
   if (widgetId != null) {
     if (widgetContainer === container && container.isConnected) {
+      startTurnstileChallenge();
       return;
     }
     teardownTurnstileWidget();
@@ -193,7 +201,7 @@ export async function prepareTurnstileWidget(container, options = {}) {
 
   try {
     // Widget mode (Invisible / Managed / …) is chosen in the Cloudflare dashboard for the
-    // sitekey. execution: "execute" defers the challenge until obtainTurnstileToken().
+    // sitekey. execution: "execute" defers the challenge until startTurnstileChallenge().
     const id = window.turnstile.render(container, {
       sitekey: siteKey(),
       execution: "execute",
@@ -203,6 +211,7 @@ export async function prepareTurnstileWidget(container, options = {}) {
     });
     widgetContainer = container;
     registerTurnstileWidget(id);
+    startTurnstileChallenge();
   } catch (err) {
     failWidgetReady(err);
     throw err;
@@ -262,6 +271,17 @@ async function ensureTurnstileWidgetReady() {
   await waitForWidgetReady();
 }
 
+function startTurnstileChallenge() {
+  if (widgetId == null || !window.turnstile?.execute) {
+    return;
+  }
+  if (cachedToken || challengeInFlight) {
+    return;
+  }
+  challengeInFlight = true;
+  window.turnstile.execute(widgetId);
+}
+
 export async function obtainTurnstileToken() {
   if (!isTurnstileConfigured()) {
     return "";
@@ -276,14 +296,16 @@ export async function obtainTurnstileToken() {
     return cachedToken;
   }
 
-  window.turnstile.execute(widgetId);
+  startTurnstileChallenge();
   return waitForTurnstileToken();
 }
 
 export function resetTurnstileChallenge() {
   cachedToken = "";
+  challengeInFlight = false;
   rejectPendingTokenWaiters(new Error("turnstile challenge reset"));
   if (widgetId != null && window.turnstile) {
     window.turnstile.reset(widgetId);
   }
+  startTurnstileChallenge();
 }
