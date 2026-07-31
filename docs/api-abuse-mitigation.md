@@ -10,6 +10,9 @@ Each layer is **off until its secret/key is configured**. With none set, `/searc
 and `/session` behave as open CORS-allowlisted endpoints (useful for local
 Lambda/`go run` testing). In production, enable both together.
 
+Production also attaches **AWS WAF** web ACLs to both public CloudFront
+distributions (see [Edge protection](#edge-protection-aws-waf) below).
+
 For agent-oriented enablement notes (env vars, Vite), see also
 [`AGENTS.md`](../AGENTS.md) → *Frontend API connection*.
 
@@ -40,6 +43,26 @@ Production SPA calls go **cross-origin** to `https://api.gishathfetch.com`
 (`credentials: "include"`). That hostname must resolve to the **API CloudFront**
 distribution, which forwards to API Gateway and injects `X-Origin-Verify` on the
 origin request. A separate CloudFront distribution serves the static SPA from S3.
+Both distributions have **AWS WAF** web ACLs attached at the edge.
+
+---
+
+## Edge protection (AWS WAF)
+
+Production attaches an **AWS WAF** web ACL to each public CloudFront
+distribution:
+
+| Distribution | Hostname | Origin | WAF scope |
+|--------------|----------|--------|-----------|
+| Frontend CDN | `gishathfetch.com` | S3 (`gishathfetch.com` bucket) | Viewer requests to the SPA |
+| API CDN | `api.gishathfetch.com` | API Gateway (`execute-api`, origin path `/default`) | Viewer requests to `/search` and `/session` |
+
+WAF evaluates traffic at the CloudFront edge before the request is forwarded to
+S3 or API Gateway. Rule groups and rate limits are configured in the AWS console
+(or your IaC process); `make deploy` does not manage WAF resources.
+
+Together with origin verify and the session cookie, WAF adds edge filtering
+against automated abuse and common web attacks before traffic reaches Lambda.
 
 ---
 
@@ -102,12 +125,13 @@ curl -i "https://api.gishathfetch.com/search?s=Opt" \
 
 1. `api.gishathfetch.com` DNS points to the **API CloudFront** distribution (not
    directly to API Gateway).
-2. CloudFront origin custom header `X-Origin-Verify` matches Lambda
+2. An **AWS WAF** web ACL is associated with the API CloudFront distribution.
+3. CloudFront origin custom header `X-Origin-Verify` matches Lambda
    `API_ORIGIN_VERIFY_SECRET`.
-3. `API_ORIGIN_VERIFY_SECRET` is set on Lambda `mtg-price-scrapper`.
-4. Remove any API Gateway **custom domain** mapping for `api.gishathfetch.com`
+4. `API_ORIGIN_VERIFY_SECRET` is set on Lambda `mtg-price-scrapper`.
+5. Remove any API Gateway **custom domain** mapping for `api.gishathfetch.com`
    that would allow callers to bypass CloudFront.
-5. Verify with the curl probes above after deploy (both bypass attempts return
+6. Verify with the curl probes above after deploy (both bypass attempts return
    403; browser search works).
 
 **Stronger options** (optional; not required when origin verify and the CloudFront

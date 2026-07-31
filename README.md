@@ -23,8 +23,9 @@ Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search and
 session use **`https://api.gishathfetch.com/search`** and **`/session`** from the
 browser (cross-origin, credentialed). That API hostname is fronted by a separate
 CloudFront distribution that injects `X-Origin-Verify` before forwarding to API
-Gateway. API Gateway invokes a container-based Lambda that scrapes LGS sites in
-parallel. Inbound API abuse mitigation uses two optional layers: a
+Gateway. Both public CloudFront distributions (`gishathfetch.com` and
+`api.gishathfetch.com`) have **AWS WAF** web ACLs attached at the edge. API
+Gateway invokes a container-based Lambda that scrapes LGS sites in parallel. Inbound API abuse mitigation uses two optional layers: a
 CloudFront→API origin-verify secret (`X-Origin-Verify`), a short-lived HttpOnly
 session cookie (`gf_api_session`) — see
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md). When
@@ -48,6 +49,8 @@ flowchart TB
     end
 
     subgraph aws["AWS ap-southeast-1"]
+        WAFSPA[WAF web ACL]
+        WAFAPI[WAF web ACL]
         CF[CloudFront gishathfetch.com]
         APICF[CloudFront api.gishathfetch.com]
         S3[(S3 gishathfetch.com)]
@@ -68,10 +71,12 @@ flowchart TB
         GA4[Google Analytics GA4]
     end
 
-    Browser -->|HTTPS| CF
+    Browser -->|HTTPS| WAFSPA
+    WAFSPA --> CF
     CF --> S3
     Browser -->|gtag search events| GA4
-    Browser -->|GET /session, /search| APICF
+    Browser -->|GET /session, /search| WAFAPI
+    WAFAPI --> APICF
     APICF -->|+ X-Origin-Verify| AGW
     AGW --> SearchLambda
     SearchLambda -->|optional Web Bot Auth signatures| Proxies
@@ -95,9 +100,9 @@ flowchart TB
 
 | Service | Name / endpoint | Role |
 |---------|-----------------|------|
-| Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
+| Frontend CDN | WAF → CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`; CloudFront injects origin-verify header; session cookie ([docs](docs/api-abuse-mitigation.md)) |
+| Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`; CloudFront injects origin-verify header; session cookie ([docs](docs/api-abuse-mitigation.md)) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
@@ -258,7 +263,7 @@ Example inline policy (merge with existing permissions on the role, or attach as
 ## 🛡️ API abuse mitigation
 
 Inbound `/search` and `/session` are gated by two optional layers (each off
-until configured):
+until configured), with **AWS WAF** on both CloudFront distributions at the edge:
 
 1. **CloudFront → API origin secret** — Lambda `API_ORIGIN_VERIFY_SECRET`;
    CloudFront (or the Vite dev proxy) injects `X-Origin-Verify` on origin
