@@ -309,3 +309,9 @@ export function resetTurnstileChallenge() {
   }
   startTurnstileChallenge();
 }
+
+if (isTurnstileConfigured()) {
+  loadTurnstileScript().catch(() => {
+    // TurnstileBootstrap / session mint will retry on prepare.
+  });
+}
