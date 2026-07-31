@@ -747,8 +747,9 @@ export default function useSearch() {
   }, []);
 
   // --- Initialization ---
-  // Note: performSearch is included in deps but is stable (empty dep array in useCallback)
-  // This effect should only run once on mount, not when selectedStores changes
+  // Run once on mount when the URL includes ?s=. Defer with queueMicrotask so
+  // TurnstileBootstrap's useLayoutEffect can start widget prepare first; performSearch
+  // already warms the API session before showing the searching spinner.
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -756,27 +757,20 @@ export default function useSearch() {
     hasInitializedRef.current = true;
 
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has("s") && urlParams.get("s") !== "") {
-      const q = decodeURIComponent(urlParams.get("s"));
-      skipSuggestionsRef.current = true;
-
-      const urlStores = getStoresFromUrl(urlParams);
-      const stores = urlStores ?? selectedStores;
-
-      const runInitialUrlSearch = async () => {
-        if (isTurnstileConfigured()) {
-          // Warm the session before searching so Turnstile runs during page load
-          // (TurnstileBootstrap prefetch) instead of blocking the first search.
-          await ensureApiSession().catch(() => {
-            // performSearch retries session bootstrap before the API call.
-          });
-        }
-        performSearch(q, stores);
-      };
-
-      void runInitialUrlSearch();
+    if (!urlParams.has("s") || urlParams.get("s") === "") {
+      return;
     }
-  }, [performSearch, selectedStores]);
+
+    const q = decodeURIComponent(urlParams.get("s"));
+    skipSuggestionsRef.current = true;
+
+    const urlStores = getStoresFromUrl(urlParams);
+    const stores = urlStores ?? selectedStores;
+
+    queueMicrotask(() => {
+      performSearchRef.current(q, resolveStoresToSearch(stores));
+    });
+  }, [resolveStoresToSearch, selectedStores]);
 
   return {
     searchQuery,
