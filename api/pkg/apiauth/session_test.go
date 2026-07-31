@@ -36,24 +36,15 @@ func TestVerifyOriginHeader(t *testing.T) {
 	require.NoError(t, os.Setenv(config.APIOriginVerifySecretEnv, "cloudfront-secret"))
 	t.Cleanup(func() { _ = os.Unsetenv(config.APIOriginVerifySecretEnv) })
 
-	err := VerifyOriginHeader(map[string]string{"x-origin-verify": "cloudfront-secret"}, "")
+	err := VerifyOriginHeader(map[string]string{"x-origin-verify": "cloudfront-secret"})
 	require.NoError(t, err)
 
-	err = VerifyOriginHeader(map[string]string{"x-origin-verify": "wrong"}, "")
+	err = VerifyOriginHeader(map[string]string{"x-origin-verify": "wrong"})
 	require.ErrorIs(t, err, errOriginVerifyFailed)
 
-	err = VerifyOriginHeader(
-		map[string]string{"origin": "https://gishathfetch.com"},
-		"api.gishathfetch.com",
-	)
-	require.NoError(t, err)
-
-	err = VerifyOriginHeader(
-		map[string]string{"origin": "https://gishathfetch.com"},
-		"abc123.execute-api.ap-southeast-1.amazonaws.com",
-	)
+	err = VerifyOriginHeader(map[string]string{"origin": "https://gishathfetch.com"})
 	require.ErrorIs(t, err, errOriginVerifyFailed)
 
-	err = VerifyOriginHeader(map[string]string{}, "api.gishathfetch.com")
+	err = VerifyOriginHeader(map[string]string{})
 	require.ErrorIs(t, err, errOriginVerifyFailed)
 }

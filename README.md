@@ -21,10 +21,12 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 
 Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search and
 session use **`https://api.gishathfetch.com/search`** and **`/session`** from the
-browser (cross-origin, credentialed). API Gateway invokes a container-based Lambda
-that scrapes LGS sites in parallel. Inbound API abuse mitigation uses three
-optional layers: a CloudFront→API origin-verify secret (`X-Origin-Verify`), a
-short-lived HttpOnly session cookie (`gf_api_session`) — see
+browser (cross-origin, credentialed). That API hostname is fronted by a separate
+CloudFront distribution that injects `X-Origin-Verify` before forwarding to API
+Gateway. API Gateway invokes a container-based Lambda that scrapes LGS sites in
+parallel. Inbound API abuse mitigation uses two optional layers: a
+CloudFront→API origin-verify secret (`X-Origin-Verify`), a short-lived HttpOnly
+session cookie (`gf_api_session`) — see
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md). When
 `WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
 are signed per [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/)
@@ -46,9 +48,10 @@ flowchart TB
     end
 
     subgraph aws["AWS ap-southeast-1"]
-        CF[CloudFront]
+        CF[CloudFront gishathfetch.com]
+        APICF[CloudFront api.gishathfetch.com]
         S3[(S3 gishathfetch.com)]
-        AGW[API Gateway api.gishathfetch.com]
+        AGW[API Gateway]
         SearchLambda[Lambda mtg-price-scrapper]
         RefreshLambda[Lambda mtg-price-ck-refresh]
         AnalyticsLambda[Lambda mtg-analytics-keywords-export]
@@ -68,7 +71,8 @@ flowchart TB
     Browser -->|HTTPS| CF
     CF --> S3
     Browser -->|gtag search events| GA4
-    Browser -->|GET /session, /search| AGW
+    Browser -->|GET /session, /search| APICF
+    APICF -->|+ X-Origin-Verify| AGW
     AGW --> SearchLambda
     SearchLambda -->|optional Web Bot Auth signatures| Proxies
     Proxies --> LGS
@@ -93,7 +97,7 @@ flowchart TB
 |---------|-----------------|------|
 | Frontend CDN | CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | API Gateway `api.gishathfetch.com` | `GET /search`, `GET /session`; abuse mitigation: origin verify + session cookie ([docs](docs/api-abuse-mitigation.md)) |
+| Search API | CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`; CloudFront injects origin-verify header; session cookie ([docs](docs/api-abuse-mitigation.md)) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
