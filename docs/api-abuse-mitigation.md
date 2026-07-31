@@ -57,10 +57,17 @@ execute-api URL cannot be used with a spoofed `Origin` header alone.
 | Optional header name override | `API_ORIGIN_VERIFY_HEADER` (default `X-Origin-Verify`) |
 | Code | `api/pkg/apiauth/origin.go`, enforced in `handler/search.go` and `handler/session.go` |
 
-When `API_ORIGIN_VERIFY_SECRET` is set, a request passes origin verification only
-when it includes `X-Origin-Verify` (or the configured header) equal to the secret.
-Allowlisted `Origin` alone is **not** accepted (it is trivially spoofed on direct
-`execute-api` calls that bypass CloudFront and WAF).
+When `API_ORIGIN_VERIFY_SECRET` is set, a request passes origin verification when
+either:
+
+1. It includes `X-Origin-Verify` (or the configured header) equal to the secret
+   (CloudFront origin request or Vite dev proxy), or
+2. It arrives on the **API custom domain** (not `*.execute-api.*.amazonaws.com`)
+   with an allowlisted `Origin` header (normal browser traffic to
+   `api.gishathfetch.com`).
+
+Allowlisted `Origin` alone is **rejected** on execute-api hostnames because it is
+trivially spoofed on direct calls that bypass the custom domain.
 
 Otherwise the handler returns **403** (`forbidden`).
 
@@ -72,9 +79,10 @@ custom origin for `/api/*` / search paths), add a **custom origin header**:
 - Name: `X-Origin-Verify` (unless you override `API_ORIGIN_VERIFY_HEADER`)
 - Value: the same string as Lambda `API_ORIGIN_VERIFY_SECRET`
 
-Keep the secret out of the SPA bundle. Browsers reach `api.gishathfetch.com`
-through CloudFront; CloudFront adds this header on the **origin request** to API
-Gateway (viewers never send it).
+Keep the secret out of the SPA bundle. When CloudFront fronts the API, it can add
+this header on the **origin request** to API Gateway (viewers never send it).
+Browser calls to `api.gishathfetch.com` also pass via allowlisted `Origin` when
+the request hostname is the custom domain.
 
 ### Lock down the execute-api URL
 
@@ -83,9 +91,8 @@ support API Gateway resource policies or IP allowlists the way REST APIs do, so
 you cannot block the raw `*.execute-api.*.amazonaws.com` hostname at the gateway
 with a CloudFront managed prefix list alone.
 
-With `API_ORIGIN_VERIFY_SECRET` set and CloudFront injecting `X-Origin-Verify`,
-direct calls to the execute-api URL are rejected unless the caller also knows the
-secret:
+With `API_ORIGIN_VERIFY_SECRET` set, direct calls to the execute-api URL are
+rejected even with a spoofed allowlisted `Origin`:
 
 ```bash
 # Bypass attempt — should return 403 forbidden (Origin spoofing is not enough)
