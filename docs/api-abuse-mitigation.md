@@ -24,7 +24,7 @@ sequenceDiagram
 
     Note over U: SPA load (gishathfetch.com)
     U->>API: GET /session
-    Note over API: origin check (X-Origin-Verify<br/>from CloudFront)
+    Note over API: origin check (allowlisted Origin<br/>on api.gishathfetch.com)
     API-->>U: 204 + Set-Cookie: gf_api_session=...
     U->>API: GET /search?s=... (credentials: include)
     Note over API: origin check + session cookie HMAC
@@ -40,9 +40,10 @@ CloudFront and inject the origin-verify header (see below).
 
 ## 1. CloudFront → API origin secret
 
-**Purpose:** Reject callers that do not arrive through a trusted edge hop (CloudFront
-or the Vite dev proxy) that injects a shared secret. When this layer is on, the
-execute-api URL cannot be used with a spoofed `Origin` header alone.
+**Purpose:** Reject direct `execute-api` bypass attempts and other callers that
+cannot prove an allowlisted browser origin or a shared edge secret. When this
+layer is on, the execute-api URL cannot be used with a spoofed `Origin` header
+alone.
 
 | Item | Value |
 |------|--------|
@@ -100,15 +101,18 @@ curl -i "https://api.gishathfetch.com/search?s=Opt" \
 
 **Checklist**
 
-1. `api.gishathfetch.com` DNS points to the **API CloudFront** distribution (not
-   directly to API Gateway).
-2. CloudFront origin custom header `X-Origin-Verify` matches Lambda
-   `API_ORIGIN_VERIFY_SECRET`.
-3. `API_ORIGIN_VERIFY_SECRET` is set on Lambda `mtg-price-scrapper`.
-4. Verify step 1 with the curl probes above after deploy.
+1. `api.gishathfetch.com` is mapped to the HTTP API custom domain (production
+   routes directly to API Gateway; allowlisted `Origin` satisfies origin verify
+   for browser traffic).
+2. `API_ORIGIN_VERIFY_SECRET` is set on Lambda `mtg-price-scrapper`.
+3. Verify with the curl probes above after deploy (execute-api bypass blocked;
+   custom domain + allowlisted `Origin` works).
+4. **Optional:** if CloudFront fronts the API origin, its custom header
+   `X-Origin-Verify` must match `API_ORIGIN_VERIFY_SECRET` (browsers still pass
+   via allowlisted `Origin` when using the custom domain).
 
-**Stronger options** (optional; not required when the secret + CloudFront path is
-in place):
+**Stronger options** (optional; not required when origin verify and the custom
+domain path are in place):
 
 - **Lambda authorizer** on the HTTP API that rejects requests missing the secret
   (blocks before the search Lambda runs; same check, earlier in the chain).
@@ -177,7 +181,7 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
 
 | Variable | Where | Default / off | Effect when set |
 |----------|--------|---------------|-----------------|
-| `API_ORIGIN_VERIFY_SECRET` | Lambda | unset = skip | Require matching `X-Origin-Verify` (CloudFront / Vite proxy) |
+| `API_ORIGIN_VERIFY_SECRET` | Lambda | unset = skip | Require `X-Origin-Verify` (CloudFront / Vite proxy) or allowlisted `Origin` on the API custom domain |
 | `API_ORIGIN_VERIFY_HEADER` | Lambda | `X-Origin-Verify` | Custom header name for the shared secret |
 | `API_SESSION_SECRET` | Lambda | unset = skip session on `/search`; `/session` 503 | Sign/validate `gf_api_session` |
 | `API_SESSION_TTL_SECONDS` | Lambda | `900` | Cookie / token lifetime |
@@ -196,5 +200,10 @@ Expose **`GET` + `OPTIONS`** for `/search` and `/session` only (legacy `/`,
 `/api`, and `/api/*` paths are still accepted by Lambda path routing for
 compatibility, but should be removed from the gateway once traffic has
 migrated).
+
+Lambda strips common API Gateway stage prefixes before routing (`/prod`,
+`/staging`, `/dev`, `/default`). CloudFront origins that target `execute-api`
+with origin path `/default` therefore reach `/default/search` and
+`/default/session` correctly.
 
 CORS allowlist and header policy live in `api/handler/cors.go`.

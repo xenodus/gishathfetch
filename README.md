@@ -22,7 +22,7 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search and
 session use **`https://api.gishathfetch.com/search`** and **`/session`** from the
 browser (cross-origin, credentialed). API Gateway invokes a container-based Lambda
-that scrapes LGS sites in parallel. Inbound API abuse mitigation uses three
+that scrapes LGS sites in parallel. Inbound API abuse mitigation uses two
 optional layers: a CloudFront→API origin-verify secret (`X-Origin-Verify`), a
 short-lived HttpOnly session cookie (`gf_api_session`) — see
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md). When
