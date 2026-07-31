@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Form } from "react-bootstrap";
+import { isTurnstileConfigured } from "../utils/turnstileSession";
 
 const SEARCH_STATS_STORAGE_KEY = "gishathfetch-show-search-stats";
 
@@ -46,7 +47,8 @@ const SearchStats = ({
 
   const storeStats = Array.isArray(stats) ? stats : [];
   const hasTotal = Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
-  const hasTurnstileTiming = sessionTurnstileDurationMs !== null;
+  const hasTurnstileTiming =
+    isTurnstileConfigured() && sessionTurnstileDurationMs !== null;
   const hasSessionMintTiming =
     Number.isFinite(sessionMintDurationMs) && sessionMintDurationMs >= 0;
   const hasSearchResponseTiming =
