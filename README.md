@@ -16,251 +16,22 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 
 ## 🏗️ Architecture
 
-- Frontend: React 19 + Vite + Bootstrap (`frontend/`)
-- Backend: Go Lambda handlers + concurrent scrapers (`api/`)
+Gishath Fetch has three main layers plus external integrations. Full diagrams,
+service tables, batch-job flows, and IAM notes:
+[`docs/architecture.md`](docs/architecture.md).
 
-### System overview
+| Layer | Location | Summary |
+|-------|----------|---------|
+| **Frontend** | `frontend/` | React 19 + Vite + Bootstrap SPA — search UI, cart, trending keywords |
+| **Backend** | `api/` | Go Lambda handlers, search controller, per-store scraper gateways |
+| **Infrastructure** | AWS ap-southeast-1 | CloudFront, WAF, S3, API Gateway, Lambda, DynamoDB, EventBridge, ECR |
 
-Gishath Fetch is a static React SPA served from S3 behind CloudFront. Search and
-session use **`https://api.gishathfetch.com/search`** and **`/session`** from the
-browser (cross-origin, credentialed). That API hostname is fronted by a separate
-CloudFront distribution that injects `X-Origin-Verify` before forwarding to API
-Gateway. Both public CloudFront distributions (`gishathfetch.com` and
-`api.gishathfetch.com`) have **AWS WAF** web ACLs attached at the edge. API
-Gateway invokes a container-based Lambda that scrapes LGS sites in parallel. Inbound API abuse mitigation uses two optional layers: a
-CloudFront→API origin-verify secret (`X-Origin-Verify`), a short-lived HttpOnly
-session cookie (`gf_api_session`) — see
-[`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md). When
-`WEB_BOT_AUTH_ENABLED` is set, outbound scraper requests
-are signed per [Web Bot Auth](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/)
-(RFC 9421 HTTP Message Signatures); the public key directory is published at
-`/.well-known/http-message-signatures-directory` on the same origin during
-frontend deploy. Card Kingdom (CK) retail prices are maintained in DynamoDB by
-a separate refresh Lambda on a daily EventBridge schedule; the search Lambda
-reads that index when `CK_PRICE_LOOKUP_ENABLED` is set.
-
-For per-store timeouts, proxy tiers, and strategy order, see
-[`docs/search-strategies-retries-timeouts.md`](docs/search-strategies-retries-timeouts.md).
-For inbound API access control (origin secret, session cookie), see
+The browser loads the SPA from **S3 via CloudFront** (`gishathfetch.com`). Search
+and session call **`api.gishathfetch.com`** (separate CloudFront → API Gateway →
+Lambda path). Daily EventBridge jobs refresh Card Kingdom prices in DynamoDB and
+export GA4 trending keywords to S3. Both CloudFront distributions sit behind **AWS
+WAF**; inbound API abuse mitigation is documented in
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
-
-```mermaid
-flowchart TB
-    subgraph client["Client"]
-        Browser[Browser]
-    end
-
-    subgraph aws["AWS ap-southeast-1"]
-        WAFSPA[WAF web ACL]
-        WAFAPI[WAF web ACL]
-        CF[CloudFront gishathfetch.com]
-        APICF[CloudFront api.gishathfetch.com]
-        S3[(S3 gishathfetch.com)]
-        AGW[API Gateway]
-        SearchLambda[Lambda mtg-price-scrapper]
-        RefreshLambda[Lambda mtg-price-ck-refresh]
-        AnalyticsLambda[Lambda mtg-analytics-keywords-export]
-        EB[EventBridge daily schedule]
-        DDB[(DynamoDB CK prices)]
-        ECR[ECR mtg-price-scrapper image]
-    end
-
-    subgraph external["External services"]
-        LGS[LGS store websites]
-        Proxies[Proxy tiers direct / dedicated / dynamic / residential]
-        CKAPI[Card Kingdom pricelist API]
-        Scryfall[Scryfall API]
-        GA4[Google Analytics GA4]
-    end
-
-    Browser -->|HTTPS| WAFSPA
-    WAFSPA --> CF
-    CF --> S3
-    Browser -->|gtag search events| GA4
-    Browser -->|GET /session, /search| WAFAPI
-    WAFAPI --> APICF
-    APICF -->|+ X-Origin-Verify| AGW
-    AGW --> SearchLambda
-    SearchLambda -->|optional Web Bot Auth signatures| Proxies
-    Proxies --> LGS
-    SearchLambda -->|optional CK lookup| DDB
-    SearchLambda -->|verify card name| Scryfall
-    EB -->|action: ck-price-refresh-run| RefreshLambda
-    RefreshLambda -->|pricelist direct or residential proxy| CKAPI
-    RefreshLambda -->|batch write cheapest CK retail| DDB
-    RefreshLambda -->|write latest.json| S3
-    EB -->|action: analytics-keywords-export-run| AnalyticsLambda
-    AnalyticsLambda -->|GA4 Data API| GA4
-    AnalyticsLambda -->|write latest.json| S3
-    ECR -.->|deploy| SearchLambda
-    ECR -.->|deploy| RefreshLambda
-    ECR -.->|deploy| AnalyticsLambda
-    Deploy[Frontend deploy] -.->|http-message-signatures-directory| S3
-```
-
-### Services
-
-| Service | Name / endpoint | Role |
-|---------|-----------------|------|
-| Frontend CDN | WAF → CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
-| Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys for verifiers; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`; CloudFront injects origin-verify header; session cookie ([docs](docs/api-abuse-mitigation.md)) |
-| Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth on outbound requests; optional CK price lookup from DynamoDB |
-| CK refresh Lambda | `mtg-price-ck-refresh` | Daily Card Kingdom pricelist download, DynamoDB index rebuild, and CK price change export to S3 |
-| Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
-| Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
-| CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
-| Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for all Lambdas (different handlers via event shape) |
-
-### Analytics keywords export flow
-
-The frontend sends GA4 `search` events with a `search_term` parameter whenever a
-user starts a valid card-name search (`frontend/src/hooks/useSearch.js`). The
-analytics Lambda queries the GA4 Data API for the `search` event and `searchTerm`
-dimension, ranks the top 20 keywords for the last 24 hours, 7 days, 30 days, 6
-months, and 1 year, and writes JSON to S3.
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant FE as Frontend
-    participant GA as Google Analytics
-    participant EB as EventBridge
-    participant L as mtg-analytics-keywords-export
-    participant S3 as S3 gishathfetch.com
-
-    U->>FE: search for card name
-    FE->>GA: gtag event search (search_term)
-    EB->>L: daily analytics-keywords-export-run
-    L->>GA: GA4 Data API RunReport
-    L->>S3: analytics/top-search-keywords/latest.json
-    L->>S3: robots.txt
-    FE->>S3: fetch latest.json via CloudFront
-```
-
-S3 output (default bucket `gishathfetch.com`, prefix `analytics/top-search-keywords/`):
-
-- `latest.json` — most recent export, served at `https://gishathfetch.com/analytics/top-search-keywords/latest.json`
-- `robots.txt` — bucket root; baseline crawl policy plus daily `Allow` lines for top search keywords
-
-The export Lambda writes to the same bucket as the frontend SPA so the report is
-available same-origin through CloudFront. The object is uploaded with
-`Cache-Control: public, max-age=3600` so edge caches can serve it between daily
-exports without a separate invalidation.
-
-Frontend deploys exclude `robots.txt` from `aws s3 sync` so the daily Lambda export
-remains the source of truth for the live file.
-
-Example report shape:
-
-```json
-{
-  "generatedAt": "2026-06-28T12:00:00Z",
-  "propertyId": "123456789",
-  "eventName": "search",
-  "periods": {
-    "last24Hours": { "start": "...", "end": "...", "keywords": [{"term": "Opt", "count": 4}] },
-    "last7Days": { "startDate": "7daysAgo", "endDate": "today", "keywords": [] },
-    "last30Days": { "startDate": "30daysAgo", "endDate": "today", "keywords": [] },
-    "last6Months": { "startDate": "2025-12-28", "endDate": "today", "keywords": [] },
-    "last1Year": { "startDate": "2025-06-28", "endDate": "today", "keywords": [] }
-  }
-}
-```
-
-### CK price refresh flow
-
-CK prices are downloaded from Card Kingdom's public pricelist API
-(`https://api.cardkingdom.com/api/v2/pricelist`). The download tries direct
-egress first, then falls back to a residential proxy when configured. The refresh
-Lambda picks the cheapest listed retail price per card name and batch-writes the
-index. Search
-verifies the query against Scryfall before looking up DynamoDB and omits stale
-entries older than 48 hours.
-
-```mermaid
-sequenceDiagram
-    participant EB as EventBridge
-    participant R as mtg-price-ck-refresh
-    participant CK as Card Kingdom API
-    participant D as DynamoDB
-    participant S3 as S3 gishathfetch.com
-    participant S as mtg-price-scrapper
-    participant SF as Scryfall
-    participant U as User
-
-    EB->>R: daily ck-price-refresh-run
-    R->>CK: download api/v2/pricelist direct or residential
-    R->>D: PutAll cheapest CK retail by name
-    R->>D: query top/bottom 20 price changes
-    R->>S3: analytics/ck-price-changes/latest.json
-    U->>S: GET /?s=Lightning+Bolt
-    par LGS scrape + CK lookup
-        S->>S: scrape selected stores
-        S->>SF: verify card name
-        S->>D: GetByNameKey
-    end
-    S-->>U: data + cardKingdomPrice
-```
-
-S3 output (default bucket `gishathfetch.com`, prefix `analytics/ck-price-changes/`):
-
-- `latest.json` — most recent export of the top 20 CK price increases and decreases, overwritten on each daily run
-
-The export Lambda writes to the same bucket as the frontend SPA so the report can be served same-origin through CloudFront when needed. The object is uploaded with `Cache-Control: public, max-age=3600`.
-
-Example report shape:
-
-```json
-{
-  "generatedAt": "2026-07-11T12:00:00Z",
-  "syncedAt": "2026-07-11T00:00:00Z",
-  "rankingLimit": 20,
-  "top": [{"nameKey": "lightning bolt", "cardName": "Lightning Bolt", "priceUsd": 1.25, "priceChangeUsd": 0.16}],
-  "bottom": [{"nameKey": "counterspell", "cardName": "Counterspell", "priceUsd": 0.75, "priceChangeUsd": -0.08}]
-}
-```
-
-#### IAM permissions for `mtg-price-ck-refresh`
-
-The shared `lambda-mtg` role must allow:
-
-- `s3:PutObject` on the export prefix (`arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*`)
-- `dynamodb:BatchGetItem`, `dynamodb:BatchWriteItem`, `dynamodb:Scan` on the CK prices **table**:
-  - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices`
-- `dynamodb:Query` on the CK price-change GSI:
-  - `arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index`
-
-`BatchWriteItem` covers pricelist upserts and batch **deletes** of rows no longer in the pricelist. `Scan` is required for that cleanup pass. If `Scan` is missing, the Lambda fails after the upsert with `AccessDeniedException` on `dynamodb:Scan`. If the GSI is missing from the role policy, it fails when exporting price changes with `AccessDeniedException` on `dynamodb:Query`.
-
-Example inline policy (merge with existing permissions on the role, or attach as a dedicated inline policy name):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "dynamodb:BatchGetItem",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:Scan"
-      ],
-      "Resource": "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices"
-    },
-    {
-      "Effect": "Allow",
-      "Action": "dynamodb:Query",
-      "Resource": "arn:aws:dynamodb:ap-southeast-1:206363131200:table/gishathfetch-ck-prices/index/priceChangeUsd-index"
-    },
-    {
-      "Effect": "Allow",
-      "Action": "s3:PutObject",
-      "Resource": "arn:aws:s3:::gishathfetch.com/analytics/ck-price-changes/*"
-    }
-  ]
-}
-```
 
 ## 🛡️ API abuse mitigation
 
@@ -363,7 +134,7 @@ flowchart TD
 ```text
 .
 |-- api/         # Go backend (Lambda handler, scraping gateways, tests)
-|-- docs/        # Maintainer docs (API abuse mitigation, search strategies, skills)
+|-- docs/        # Maintainer docs (architecture, API abuse mitigation, search strategies, skills)
 |-- frontend/    # React + Vite single-page app
 |-- Makefile     # Local helpers for common project tasks
 `-- Dockerfile   # Backend container build definition
