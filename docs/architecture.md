@@ -301,3 +301,39 @@ Example inline policy (merge with existing permissions on the role, or attach as
 - [`api-abuse-mitigation.md`](api-abuse-mitigation.md) — WAF, origin secret, session cookie, env reference
 - [`search-strategies-retries-timeouts.md`](search-strategies-retries-timeouts.md) — per-store timeouts, proxy tiers, strategy order
 - [`binderpos-search-feature-parity.md`](binderpos-search-feature-parity.md) — BinderPOS gateway feature matrix
+
+## Secrets and sensitive configuration
+
+Nothing in this repository should commit **private keys**, **HMAC/API secrets**, **proxy
+passwords**, **Google service-account JSON**, or **Shopify Admin API** credentials.
+Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
+(gitignored).
+
+### Must stay out of git
+
+| Material | Where it lives | Env / secret name |
+|----------|----------------|-------------------|
+| API origin-verify secret | Lambda | `API_ORIGIN_VERIFY_SECRET` |
+| Search session HMAC key | Lambda | `API_SESSION_SECRET` |
+| Web Bot Auth signing key | Lambda / deploy | `WEB_BOT_AUTH_PRIVATE_KEY` or `WEB_BOT_AUTH_PRIVATE_KEY_FILE` |
+| Dedicated / dynamic / residential proxies | Lambda | `DEDICATED_PROXY_*`, `DYNAMIC_PROXY`, `RESIDENTIAL_PROXY_1`, `CK_PRICELIST_PROXY` |
+| TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |
+| GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |
+| Local dev origin secret | Vite only | `VITE_API_ORIGIN_VERIFY_SECRET` |
+| Deploy role | GitHub Actions | `AWS_DEPLOY_ROLE_ARN` |
+
+The Web Bot Auth **public** key directory is generated at deploy time and uploaded to
+S3; the source file `frontend/public/.well-known/http-message-signatures-directory`
+is gitignored.
+
+### Intentionally public (not secrets)
+
+| Item | Why it is public |
+|------|------------------|
+| GA4 measurement ID (`G-…` in `frontend/index.html`) | Embedded in the browser for analytics |
+| Shopify **Storefront** access tokens in `api/gateway/*/search.go` | Shopify publishes these for client-side Storefront API use; they grant read-only storefront access, not admin |
+| AWS account ID / resource ARNs in `Makefile` and IAM examples below | Identifiers, not credentials — substitute your account ID when copying policies |
+| `api.gishathfetch.com`, bucket names, Lambda function names | Public infrastructure endpoints |
+
+When copying IAM policies below, replace `206363131200` with your AWS account ID (see
+`AWS_ACCOUNT_ID` in the root `Makefile`).

@@ -1,5 +1,10 @@
 .idea
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+.cache/
 mtg-price-checker-sg
 .DS_Store
 .cache/

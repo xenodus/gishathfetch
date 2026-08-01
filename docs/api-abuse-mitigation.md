@@ -202,6 +202,10 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
 
 ## Environment reference
 
+Never commit real values for these variables. Set them in Lambda configuration,
+GitHub Actions secrets, or a local `.env` file (gitignored). See also
+[`docs/architecture.md`](architecture.md) → *Secrets and sensitive configuration*.
+
 | Variable | Where | Default / off | Effect when set |
 |----------|--------|---------------|-----------------|
 | `API_ORIGIN_VERIFY_SECRET` | Lambda | unset = skip | Require matching `X-Origin-Verify` (CloudFront origin request or Vite dev proxy) |
