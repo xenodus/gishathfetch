@@ -11,6 +11,8 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 - 💰 Price-first sorting for faster deal discovery
 - 🧭 Store filtering (query specific LGS only)
 - 🛒 Persistent cart in the frontend UI
+- 📈 Trending searches — popular card names by time range (24 hours to 1 year), plus top Card Kingdom price risers and drops (24h)
+- 🏷️ Card Kingdom price reference on search results (USD retail from a daily-updated index)
 
 ## 🏗️ Architecture
 
