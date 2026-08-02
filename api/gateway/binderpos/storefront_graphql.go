@@ -243,7 +243,7 @@ func mapGraphQLProduct(scrapVariant int, storeName, baseURL string, product *gra
 	var cards []gateway.Card
 	for _, edge := range product.Variants.Edges {
 		variant := edge.Node
-		if variant == nil || !variant.AvailableForSale {
+		if variant == nil || !variant.AvailableForSale || isUnusableVariantTitle(variant.Title) {
 			continue
 		}
 		price, err := strconv.ParseFloat(strings.TrimSpace(variant.Price.Amount), 64)

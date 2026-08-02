@@ -59,6 +59,14 @@ func TestMapGraphQLProduct(t *testing.T) {
 				Amount string `json:"amount"`
 			}{Amount: "0.00"},
 		}},
+		{Node: &graphQLVariant{
+			ID:               "gid://shopify/ProductVariant/444",
+			Title:            "Default Title",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "1.00"},
+		}},
 	}
 
 	cards := mapGraphQLProduct(3, "Hideout", "https://hideoutcg.com", product)
