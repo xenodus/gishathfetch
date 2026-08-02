@@ -103,7 +103,7 @@ func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines 
 
 			image := buildCardImageURL(product.Image, productTitle)
 			for _, variant := range product.Variants {
-				if variant.Price <= 0 || variant.Quantity <= 0 || isUnusableVariantTitle(variant.Title) {
+				if variant.Price <= 0 || variant.Quantity <= 0 {
 					continue
 				}
 				if variant.ShopifyID <= 0 || productPath == "" {
@@ -115,14 +115,14 @@ func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines 
 					continue
 				}
 
-				quality := strings.TrimSpace(strings.ReplaceAll(variant.Title, "Foil", ""))
+				quality := qualityFromVariantTitle(variant.Title)
 				card := gateway.Card{
 					Name:    formatCardName(scrapVariant, productTitle, variant.Title),
 					Url:     cardURL,
 					Img:     image,
 					Price:   variant.Price,
 					InStock: variant.Quantity > 0,
-					IsFoil:  strings.Contains(strings.ToLower(variant.Title), "foil"),
+					IsFoil:  strings.Contains(strings.ToLower(effectiveVariantTitle(variant.Title)), "foil"),
 					Source:  storeName,
 					Quality: util.MapQuality(quality),
 				}
