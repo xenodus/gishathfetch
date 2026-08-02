@@ -1,0 +1,54 @@
+{
+  "info": {
+    "name": "The TCG Marketplace - LGS Search API",
+    "description": "Advanced search API on port 3501. Requires access_token (set TCG_MARKETPLACE_ACCESS_TOKEN env var in production).\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "api_url",
+      "value": "https://thetcgmarketplace.com:3501"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "search_query",
+      "value": "Abrade"
+    }
+  ],
+  "item": [
+    {
+      "name": "Advanced Search",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{api_url}}/encoder/advancedsearch",
+          "host": [
+            "{{api_url}}"
+          ],
+          "path": [
+            "encoder",
+            "advancedsearch"
+          ]
+        },
+        "description": "POST /encoder/advancedsearch. category=3 is MTG. Set access_token collection variable before sending.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"access_token\": \"{{access_token}}\",\n  \"name\": \"{{search_query}}\",\n  \"category\": 3,\n  \"order\": \"name_asc\"\n}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "info": {
+    "name": "Card Affinity - LGS Search API",
+    "description": "Card Affinity has no public Storefront token; only the BinderPOS Decklist API is available.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://card-affinity.com"
+    },
+    {
+      "key": "shopify_domain",
+      "value": "563304-2.myshopify.com"
+    },
+    {
+      "key": "search_query",
+      "value": "Opt"
+    }
+  ],
+  "item": [
+    {
+      "name": "BinderPOS Decklist API Search",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+          "protocol": "https",
+          "host": [
+            "portal",
+            "binderpos",
+            "com"
+          ],
+          "path": [
+            "external",
+            "shopify",
+            "decklist"
+          ],
+          "query": [
+            {
+              "key": "storeUrl",
+              "value": "{{shopify_domain}}"
+            },
+            {
+              "key": "type",
+              "value": "mtg"
+            }
+          ]
+        },
+        "description": "Search Card Affinity via BinderPOS portal decklist API (storeUrl=563304-2.myshopify.com).",
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+        }
+      }
+    }
+  ]
+}

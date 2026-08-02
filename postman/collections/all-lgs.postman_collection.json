@@ -1,0 +1,1318 @@
+{
+  "info": {
+    "name": "GishathFetch - All LGS Search APIs",
+    "description": "Combined Postman collection for all API-based LGS integrations in gishathfetch. Excludes HTML-only stores (Agora Hobby). Each folder mirrors an individual per-store collection in postman/collections/.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "search_query",
+      "value": "Opt"
+    }
+  ],
+  "item": [
+    {
+      "name": "Cards Central",
+      "item": [
+        {
+          "name": "LGS Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/lgs/search?q={{search_query}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lgs",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{search_query}}"
+                }
+              ]
+            },
+            "description": "GET /api/lgs/search?q={card name}. Returns JSON array of in-stock MTG singles."
+          }
+        }
+      ],
+      "description": "Custom LGS search API at /api/lgs/search. No authentication required."
+    },
+    {
+      "name": "Cards & Collections",
+      "item": [
+        {
+          "name": "Catalog Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/catalog/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "catalog",
+                ""
+              ]
+            },
+            "description": "POST Elasticsearch query to /api/catalog/. Filters to MTG and accessories.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": {\n    \"bool\": {\n      \"should\": [\n        {\n          \"simple_query_string\": {\n            \"query\": \"{{search_query}}\",\n            \"fields\": [\n              \"name\",\n              \"setCode\",\n              \"setName\"\n            ],\n            \"default_operator\": \"AND\"\n          }\n        },\n        {\n          \"multi_match\": {\n            \"query\": \"{{search_query}}\",\n            \"type\": \"phrase_prefix\",\n            \"fields\": [\n              \"name\",\n              \"setCode\",\n              \"setName\"\n            ]\n          }\n        }\n      ]\n    }\n  },\n  \"post_filter\": {\n    \"bool\": {\n      \"must\": {\n        \"terms\": {\n          \"collectableContext.raw\": [\n            \"MTG\",\n            \"ACCESSORY\"\n          ]\n        }\n      }\n    }\n  },\n  \"aggs\": {\n    \"productCategory4\": {\n      \"filter\": {\n        \"bool\": {\n          \"must\": {\n            \"terms\": {\n              \"collectableContext.raw\": [\n                \"MTG\",\n                \"ACCESSORY\"\n              ]\n            }\n          }\n        }\n      },\n      \"aggs\": {\n        \"productCategory.raw\": {\n          \"terms\": {\n            \"field\": \"productCategory.raw\",\n            \"size\": 50\n          }\n        },\n        \"productCategory.raw_count\": {\n          \"cardinality\": {\n            \"field\": \"productCategory.raw\"\n          }\n        }\n      }\n    }\n  },\n  \"size\": 20,\n  \"sort\": [\n    {\n      \"quantityOnSale\": \"desc\"\n    }\n  ]\n}"
+            }
+          }
+        }
+      ],
+      "description": "Elasticsearch-style catalog API at POST /api/catalog/. No authentication required."
+    },
+    {
+      "name": "Dueller's Point",
+      "item": [
+        {
+          "name": "Product Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products/search?search_text={{search_query}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "search_text",
+                  "value": "{{search_query}}"
+                }
+              ]
+            },
+            "description": "GET /products/search?search_text={card name}. Returns JSON with results array."
+          }
+        }
+      ],
+      "description": "REST search API at GET /products/search. No authentication required."
+    },
+    {
+      "name": "Mox & Lotus",
+      "item": [
+        {
+          "name": "Product Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/products?limit=24&full_search=true&showStatus=false&is_paginated=true&in_stock=true&sortVariation=true&category_id=1&variation_code=all&order_by=Price Low to High&search={{search_query}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "24"
+                },
+                {
+                  "key": "full_search",
+                  "value": "true"
+                },
+                {
+                  "key": "showStatus",
+                  "value": "false"
+                },
+                {
+                  "key": "is_paginated",
+                  "value": "true"
+                },
+                {
+                  "key": "in_stock",
+                  "value": "true"
+                },
+                {
+                  "key": "sortVariation",
+                  "value": "true"
+                },
+                {
+                  "key": "category_id",
+                  "value": "1"
+                },
+                {
+                  "key": "variation_code",
+                  "value": "all"
+                },
+                {
+                  "key": "order_by",
+                  "value": "Price Low to High"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search_query}}"
+                }
+              ]
+            },
+            "description": "GET /api/products with MTG category filters and in_stock=true."
+          }
+        }
+      ],
+      "description": "REST product API at GET /api/products. No authentication required."
+    },
+    {
+      "name": "The TCG Marketplace",
+      "item": [
+        {
+          "name": "Advanced Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{api_url}}/encoder/advancedsearch",
+              "host": [
+                "{{api_url}}"
+              ],
+              "path": [
+                "encoder",
+                "advancedsearch"
+              ]
+            },
+            "description": "POST /encoder/advancedsearch. category=3 is MTG. Set access_token collection variable before sending.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"access_token\": \"{{access_token}}\",\n  \"name\": \"{{search_query}}\",\n  \"category\": 3,\n  \"order\": \"name_asc\"\n}"
+            }
+          }
+        }
+      ],
+      "description": "Advanced search API on port 3501. Requires access_token (set TCG_MARKETPLACE_ACCESS_TOKEN env var in production)."
+    },
+    {
+      "name": "5 Mana",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "{{storefront_access_token}}"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "POST /api/2024-10/graphql.json with MTG Single product filter.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }, { productType: \\\"MTG Single\\\" }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        }
+      ],
+      "description": "Shopify Storefront GraphQL (primary path). Filters to available MTG Single products."
+    },
+    {
+      "name": "Arcane Sanctum",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "228ce7e7cffe6623f36634d0ca085e9e"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Arcane Sanctum inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Arcane Sanctum via BinderPOS portal decklist API (storeUrl=30uetm-1y.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Card Affinity",
+      "item": [
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Card Affinity via BinderPOS portal decklist API (storeUrl=563304-2.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cards Citadel",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "b68bd33b7d819fc110eb25a07988cc8e"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Cards Citadel inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Cards Citadel via BinderPOS portal decklist API (storeUrl=card-citadel.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flagship Games",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "e08d01a75c052a2ba9e40b5cfa5b0e36"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Flagship Games inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Flagship Games via BinderPOS portal decklist API (storeUrl=flagship-games.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fyendal Hobby",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "62ebf8066d0372bca57bb96d7a009a79"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Fyendal Hobby inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Fyendal Hobby via BinderPOS portal decklist API (storeUrl=fyendal-hobby.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Games Haven",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "5938b052bbbd595d317fdeb5464a6733"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Games Haven inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Games Haven via BinderPOS portal decklist API (storeUrl=games-haven-sg.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Grey Ogre Games",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "80c454d63abad6ad0ebb6b3aaf649fcd"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Grey Ogre Games inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Grey Ogre Games via BinderPOS portal decklist API (storeUrl=grey-ogre-games-singapore.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hideout",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "986e6f452e7b632be7a14cba965f64a8"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Hideout inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Hideout via BinderPOS portal decklist API (storeUrl=220022-20.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hideyoshi",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "08d34daee87c87da96bab125075f193a"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Hideyoshi inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Hideyoshi via BinderPOS portal decklist API (storeUrl=bposacct-9.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mana Pro",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "ba695fbdd730f9fa7b1e8f32e36691cf"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Mana Pro inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search Mana Pro via BinderPOS portal decklist API (storeUrl=mana-pro-sg.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MTG Asia",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "199d9ab7d26aaba337bd43110a51265f"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search MTG Asia inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search MTG Asia via BinderPOS portal decklist API (storeUrl=mtgasia.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OneMtg",
+      "item": [
+        {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "84d91e8d0ae281e71b204f4c5a8101df"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search OneMtg inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "BinderPOS Decklist API Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
+              "protocol": "https",
+              "host": [
+                "portal",
+                "binderpos",
+                "com"
+              ],
+              "path": [
+                "external",
+                "shopify",
+                "decklist"
+              ],
+              "query": [
+                {
+                  "key": "storeUrl",
+                  "value": "{{shopify_domain}}"
+                },
+                {
+                  "key": "type",
+                  "value": "mtg"
+                }
+              ]
+            },
+            "description": "Search OneMtg via BinderPOS portal decklist API (storeUrl=one-mtg.myshopify.com).",
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

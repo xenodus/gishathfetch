@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "Cards Central - LGS Search API",
+    "description": "Custom LGS search API at /api/lgs/search. No authentication required.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://cardscentral.com"
+    },
+    {
+      "key": "search_query",
+      "value": "Lightning Bolt"
+    }
+  ],
+  "item": [
+    {
+      "name": "LGS Search",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/lgs/search?q={{search_query}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "lgs",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "{{search_query}}"
+            }
+          ]
+        },
+        "description": "GET /api/lgs/search?q={card name}. Returns JSON array of in-stock MTG singles."
+      }
+    }
+  ]
+}

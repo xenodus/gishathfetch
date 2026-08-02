@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "Dueller's Point - LGS Search API",
+    "description": "REST search API at GET /products/search. No authentication required.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://www.duellerspoint.com"
+    },
+    {
+      "key": "search_query",
+      "value": "Lightning Bolt"
+    }
+  ],
+  "item": [
+    {
+      "name": "Product Search",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/products/search?search_text={{search_query}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "products",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "search_text",
+              "value": "{{search_query}}"
+            }
+          ]
+        },
+        "description": "GET /products/search?search_text={card name}. Returns JSON with results array."
+      }
+    }
+  ]
+}
