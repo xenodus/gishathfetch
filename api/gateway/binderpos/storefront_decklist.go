@@ -115,14 +115,14 @@ func mapDecklistLinesToCards(scrapVariant int, storeName, baseURL string, lines 
 					continue
 				}
 
-				quality := qualityFromVariantTitle(variant.Title)
+				quality := resolveCardQuality(productTitle, variant.Title)
 				card := gateway.Card{
 					Name:    formatCardName(scrapVariant, productTitle, variant.Title),
 					Url:     cardURL,
 					Img:     image,
 					Price:   variant.Price,
 					InStock: variant.Quantity > 0,
-					IsFoil:  strings.Contains(strings.ToLower(effectiveVariantTitle(variant.Title)), "foil"),
+					IsFoil:  strings.Contains(strings.ToLower(effectiveVariantTitle(variant.Title)), "foil") || titleIndicatesFoil(productTitle) || productTitleIndicatesFoil(productTitle),
 					Source:  storeName,
 					Quality: util.MapQuality(quality),
 				}

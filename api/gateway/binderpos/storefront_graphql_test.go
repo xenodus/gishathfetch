@@ -111,6 +111,60 @@ func TestMapGraphQLProductDefaultTitleVariantNameForScrapVariant2(t *testing.T) 
 	require.Empty(t, cards[0].Quality)
 }
 
+func TestMapGraphQLProductEmbeddedQualityInTitle(t *testing.T) {
+	product := &graphQLProduct{
+		Title:            "Reanimate — NM [Breaking News]",
+		Handle:           "reanimate-nm-breaking-news",
+		AvailableForSale: true,
+		ProductType:      "MTG Single",
+	}
+	product.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			ID:               "gid://shopify/ProductVariant/555",
+			Title:            "Default Title",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "13.5"},
+		}},
+	}
+
+	cards := mapGraphQLProduct(2, "Arcane Sanctum", "https://arcanesanctumtcg.com", product)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Reanimate [Breaking News]", cards[0].Name)
+	require.Equal(t, "Near Mint", cards[0].Quality)
+	require.False(t, cards[0].IsFoil)
+}
+
+func TestMapGraphQLProductEmbeddedQualityFoilInTitle(t *testing.T) {
+	product := &graphQLProduct{
+		Title:            "Subtlety — NM Foil [Secret Lair Drop]",
+		Handle:           "subtlety-nm-foil-secret-lair-drop",
+		AvailableForSale: true,
+		ProductType:      "MTG Single",
+	}
+	product.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			ID:               "gid://shopify/ProductVariant/556",
+			Title:            "Default Title",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "25.0"},
+		}},
+	}
+
+	cards := mapGraphQLProduct(2, "Arcane Sanctum", "https://arcanesanctumtcg.com", product)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Subtlety [Secret Lair Drop]", cards[0].Name)
+	require.Equal(t, "Near Mint", cards[0].Quality)
+	require.True(t, cards[0].IsFoil)
+}
+
 func TestMapGraphQLProductSkipsNonMTG(t *testing.T) {
 	product := &graphQLProduct{
 		Title:            "Pikachu",
