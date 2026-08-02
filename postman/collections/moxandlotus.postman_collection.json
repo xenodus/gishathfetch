@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "Mox & Lotus - LGS Search API",
+    "description": "REST product API at GET /api/products. No authentication required.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://moxandlotus.sg"
+    },
+    {
+      "key": "search_query",
+      "value": "Abrade"
+    }
+  ],
+  "item": [
+    {
+      "name": "Product Search",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/products?limit=24&full_search=true&showStatus=false&is_paginated=true&in_stock=true&sortVariation=true&category_id=1&variation_code=all&order_by=Price Low to High&search={{search_query}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "products"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "24"
+            },
+            {
+              "key": "full_search",
+              "value": "true"
+            },
+            {
+              "key": "showStatus",
+              "value": "false"
+            },
+            {
+              "key": "is_paginated",
+              "value": "true"
+            },
+            {
+              "key": "in_stock",
+              "value": "true"
+            },
+            {
+              "key": "sortVariation",
+              "value": "true"
+            },
+            {
+              "key": "category_id",
+              "value": "1"
+            },
+            {
+              "key": "variation_code",
+              "value": "all"
+            },
+            {
+              "key": "order_by",
+              "value": "Price Low to High"
+            },
+            {
+              "key": "search",
+              "value": "{{search_query}}"
+            }
+          ]
+        },
+        "description": "GET /api/products with MTG category filters and in_stock=true."
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "info": {
+    "name": "5 Mana - LGS Search API",
+    "description": "Shopify Storefront GraphQL (primary path). Filters to available MTG Single products.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://5-mana.sg"
+    },
+    {
+      "key": "storefront_access_token",
+      "value": "9e4cb078af6a814458ce898eb9631fe6"
+    },
+    {
+      "key": "search_query",
+      "value": "Abrade"
+    }
+  ],
+  "item": [
+    {
+      "name": "Shopify Storefront GraphQL Search",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Shopify-Storefront-Access-Token",
+            "value": "{{storefront_access_token}}"
+          },
+          {
+            "key": "Cookie",
+            "value": "cart_currency=SGD; localization=SG"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/2024-10/graphql.json",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "2024-10",
+            "graphql.json"
+          ]
+        },
+        "description": "POST /api/2024-10/graphql.json with MTG Single product filter.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }, { productType: \\\"MTG Single\\\" }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+        }
+      }
+    }
+  ]
+}

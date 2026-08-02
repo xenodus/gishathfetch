@@ -1,0 +1,51 @@
+{
+  "info": {
+    "name": "Cards & Collections - LGS Search API",
+    "description": "Elasticsearch-style catalog API at POST /api/catalog/. No authentication required.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://cardsandcollections.com"
+    },
+    {
+      "key": "search_query",
+      "value": "Counterspell"
+    }
+  ],
+  "item": [
+    {
+      "name": "Catalog Search",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/catalog/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "catalog",
+            ""
+          ]
+        },
+        "description": "POST Elasticsearch query to /api/catalog/. Filters to MTG and accessories.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": {\n    \"bool\": {\n      \"should\": [\n        {\n          \"simple_query_string\": {\n            \"query\": \"{{search_query}}\",\n            \"fields\": [\n              \"name\",\n              \"setCode\",\n              \"setName\"\n            ],\n            \"default_operator\": \"AND\"\n          }\n        },\n        {\n          \"multi_match\": {\n            \"query\": \"{{search_query}}\",\n            \"type\": \"phrase_prefix\",\n            \"fields\": [\n              \"name\",\n              \"setCode\",\n              \"setName\"\n            ]\n          }\n        }\n      ]\n    }\n  },\n  \"post_filter\": {\n    \"bool\": {\n      \"must\": {\n        \"terms\": {\n          \"collectableContext.raw\": [\n            \"MTG\",\n            \"ACCESSORY\"\n          ]\n        }\n      }\n    }\n  },\n  \"aggs\": {\n    \"productCategory4\": {\n      \"filter\": {\n        \"bool\": {\n          \"must\": {\n            \"terms\": {\n              \"collectableContext.raw\": [\n                \"MTG\",\n                \"ACCESSORY\"\n              ]\n            }\n          }\n        }\n      },\n      \"aggs\": {\n        \"productCategory.raw\": {\n          \"terms\": {\n            \"field\": \"productCategory.raw\",\n            \"size\": 50\n          }\n        },\n        \"productCategory.raw_count\": {\n          \"cardinality\": {\n            \"field\": \"productCategory.raw\"\n          }\n        }\n      }\n    }\n  },\n  \"size\": 20,\n  \"sort\": [\n    {\n      \"quantityOnSale\": \"desc\"\n    }\n  ]\n}"
+        }
+      }
+    }
+  ]
+}
