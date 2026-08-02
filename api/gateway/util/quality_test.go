@@ -2,6 +2,27 @@ package util
 
 import "testing"
 
+func TestIsKnownQuality(t *testing.T) {
+	tests := []struct {
+		quality string
+		want    bool
+	}{
+		{"NM", true},
+		{"nm", true},
+		{"LP", true},
+		{"Gift Bundle", false},
+		{"Near Mint", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.quality, func(t *testing.T) {
+			if got := IsKnownQuality(tt.quality); got != tt.want {
+				t.Errorf("IsKnownQuality(%q) = %v, want %v", tt.quality, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestMapQuality(t *testing.T) {
 	tests := []struct {
 		name    string

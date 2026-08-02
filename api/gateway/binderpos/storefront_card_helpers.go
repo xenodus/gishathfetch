@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
 )
 
@@ -43,7 +44,7 @@ func qualityFromProductTitle(productTitle string) string {
 	}
 	quality := strings.TrimSpace(strings.ReplaceAll(segment, "Foil", ""))
 	quality = strings.Join(strings.Fields(quality), " ")
-	if !looksLikeCardQuality(quality) {
+	if !util.IsKnownQuality(quality) {
 		return ""
 	}
 	return quality
@@ -59,8 +60,8 @@ func embeddedQualitySegment(productTitle string) string {
 	if after == "" {
 		return ""
 	}
-	if bracket := strings.Index(after, "["); bracket >= 0 {
-		return strings.TrimSpace(after[:bracket])
+	if before, _, ok := strings.Cut(after, "["); ok {
+		return strings.TrimSpace(before)
 	}
 	return after
 }
@@ -81,16 +82,6 @@ func embeddedQualitySeparator(productTitle string, dash int) string {
 	return " – "
 }
 
-func looksLikeCardQuality(quality string) bool {
-	switch strings.ToUpper(strings.TrimSpace(quality)) {
-	case "NM", "NM/M", "LP", "MP", "HP", "DM", "EX/EX+",
-		"NEAR MINT", "LIGHTLY PLAYED", "MODERATELY PLAYED", "HEAVILY PLAYED", "DAMAGED", "EXCELLENT":
-		return true
-	default:
-		return false
-	}
-}
-
 func stripEmbeddedQualityFromProductTitle(productTitle string) string {
 	productTitle = strings.TrimSpace(productTitle)
 	dash := embeddedQualityDashIndex(productTitle)
@@ -103,7 +94,7 @@ func stripEmbeddedQualityFromProductTitle(productTitle string) string {
 	}
 	quality := strings.TrimSpace(strings.ReplaceAll(segment, "Foil", ""))
 	quality = strings.Join(strings.Fields(quality), " ")
-	if !looksLikeCardQuality(quality) {
+	if !util.IsKnownQuality(quality) {
 		return productTitle
 	}
 
