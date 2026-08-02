@@ -8,6 +8,10 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 )
 
+func isUnusableVariantTitle(title string) bool {
+	return strings.EqualFold(strings.TrimSpace(title), "Default Title")
+}
+
 func formatCardName(scrapVariant int, productTitle, variantTitle string) string {
 	productTitle = strings.TrimSpace(productTitle)
 	variantTitle = strings.TrimSpace(variantTitle)
