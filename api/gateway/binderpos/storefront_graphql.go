@@ -259,14 +259,14 @@ func mapGraphQLProduct(scrapVariant int, storeName, baseURL string, product *gra
 			continue
 		}
 
-		quality := qualityFromVariantTitle(variant.Title)
+		quality := resolveCardQuality(title, variant.Title)
 		card := gateway.Card{
 			Name:    formatCardName(scrapVariant, title, variant.Title),
 			Url:     cardURL,
 			Img:     img,
 			Price:   price,
 			InStock: true,
-			IsFoil:  strings.Contains(strings.ToLower(effectiveVariantTitle(variant.Title)), "foil") || titleIndicatesFoil(title),
+			IsFoil:  strings.Contains(strings.ToLower(effectiveVariantTitle(variant.Title)), "foil") || titleIndicatesFoil(title) || productTitleIndicatesFoil(title),
 			Source:  storeName,
 			Quality: util.MapQuality(quality),
 		}
