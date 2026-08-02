@@ -8,13 +8,30 @@ import (
 	"mtg-price-checker-sg/pkg/config"
 )
 
-func isUnusableVariantTitle(title string) bool {
+func isPlaceholderVariantTitle(title string) bool {
 	return strings.EqualFold(strings.TrimSpace(title), "Default Title")
+}
+
+func effectiveVariantTitle(title string) string {
+	title = strings.TrimSpace(title)
+	if isPlaceholderVariantTitle(title) {
+		return ""
+	}
+	return title
+}
+
+func qualityFromVariantTitle(title string) string {
+	title = effectiveVariantTitle(title)
+	if title == "" {
+		return ""
+	}
+	quality := strings.TrimSpace(strings.ReplaceAll(title, "Foil", ""))
+	return strings.Join(strings.Fields(quality), " ")
 }
 
 func formatCardName(scrapVariant int, productTitle, variantTitle string) string {
 	productTitle = strings.TrimSpace(productTitle)
-	variantTitle = strings.TrimSpace(variantTitle)
+	variantTitle = effectiveVariantTitle(variantTitle)
 
 	switch scrapVariant {
 	case 2:

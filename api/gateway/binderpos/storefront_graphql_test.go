@@ -70,7 +70,7 @@ func TestMapGraphQLProduct(t *testing.T) {
 	}
 
 	cards := mapGraphQLProduct(3, "Hideout", "https://hideoutcg.com", product)
-	require.Len(t, cards, 1)
+	require.Len(t, cards, 2)
 	require.Equal(t, "Abrade", cards[0].Name)
 	require.Equal(t, "Near Mint", cards[0].Quality)
 	require.False(t, cards[0].IsFoil)
@@ -78,6 +78,37 @@ func TestMapGraphQLProduct(t *testing.T) {
 	require.Equal(t, []string{"Foundations"}, cards[0].ExtraInfo)
 	require.Contains(t, cards[0].Url, "variant=111")
 	require.Contains(t, cards[0].Url, "utm_source=")
+
+	require.Equal(t, "Abrade", cards[1].Name)
+	require.Empty(t, cards[1].Quality)
+	require.Equal(t, 1.00, cards[1].Price)
+	require.Contains(t, cards[1].Url, "variant=444")
+}
+
+func TestMapGraphQLProductDefaultTitleVariantNameForScrapVariant2(t *testing.T) {
+	product := &graphQLProduct{
+		Title:            "Opt [Ixalan]",
+		Handle:           "opt-ixalan",
+		AvailableForSale: true,
+		ProductType:      "MTG Single",
+	}
+	product.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			ID:               "gid://shopify/ProductVariant/555",
+			Title:            "Default Title",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "0.25"},
+		}},
+	}
+
+	cards := mapGraphQLProduct(2, "Arcane Sanctum", "https://arcanesanctumtcg.com", product)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Opt [Ixalan]", cards[0].Name)
+	require.Empty(t, cards[0].Quality)
 }
 
 func TestMapGraphQLProductSkipsNonMTG(t *testing.T) {

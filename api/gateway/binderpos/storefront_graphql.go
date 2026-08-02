@@ -243,7 +243,7 @@ func mapGraphQLProduct(scrapVariant int, storeName, baseURL string, product *gra
 	var cards []gateway.Card
 	for _, edge := range product.Variants.Edges {
 		variant := edge.Node
-		if variant == nil || !variant.AvailableForSale || isUnusableVariantTitle(variant.Title) {
+		if variant == nil || !variant.AvailableForSale {
 			continue
 		}
 		price, err := strconv.ParseFloat(strings.TrimSpace(variant.Price.Amount), 64)
@@ -259,15 +259,14 @@ func mapGraphQLProduct(scrapVariant int, storeName, baseURL string, product *gra
 			continue
 		}
 
-		quality := strings.TrimSpace(strings.ReplaceAll(variant.Title, "Foil", ""))
-		quality = strings.Join(strings.Fields(quality), " ")
+		quality := qualityFromVariantTitle(variant.Title)
 		card := gateway.Card{
 			Name:    formatCardName(scrapVariant, title, variant.Title),
 			Url:     cardURL,
 			Img:     img,
 			Price:   price,
 			InStock: true,
-			IsFoil:  strings.Contains(strings.ToLower(variant.Title), "foil") || titleIndicatesFoil(title),
+			IsFoil:  strings.Contains(strings.ToLower(effectiveVariantTitle(variant.Title)), "foil") || titleIndicatesFoil(title),
 			Source:  storeName,
 			Quality: util.MapQuality(quality),
 		}
