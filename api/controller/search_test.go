@@ -417,10 +417,10 @@ func TestBuildStoreStats(t *testing.T) {
 	if len(stats) != 2 {
 		t.Fatalf("expected 2 stats, got %d", len(stats))
 	}
-	if stats[0].Store != "Alpha Games" || stats[0].ItemCount != 2 || stats[0].DurationMs != 120 {
+	if stats[0].Store != "Zebra Games" || stats[0].ItemCount != 1 || stats[0].DurationMs != 2500 {
 		t.Fatalf("unexpected first stat: %+v", stats[0])
 	}
-	if stats[1].Store != "Zebra Games" || stats[1].ItemCount != 1 || stats[1].DurationMs != 2500 {
+	if stats[1].Store != "Alpha Games" || stats[1].ItemCount != 2 || stats[1].DurationMs != 120 {
 		t.Fatalf("unexpected second stat: %+v", stats[1])
 	}
 

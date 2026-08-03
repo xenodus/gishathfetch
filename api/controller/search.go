@@ -401,6 +401,9 @@ func buildStoreStats(shopDurations []shopSearchDuration, cards []Card) []StoreSt
 
 	sortedDurations := append([]shopSearchDuration(nil), shopDurations...)
 	sort.Slice(sortedDurations, func(i, j int) bool {
+		if sortedDurations[i].duration != sortedDurations[j].duration {
+			return sortedDurations[i].duration > sortedDurations[j].duration
+		}
 		return sortedDurations[i].name < sortedDurations[j].name
 	})
 
