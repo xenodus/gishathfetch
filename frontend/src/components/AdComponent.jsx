@@ -231,7 +231,7 @@ const AdComponent = memo(
         style={{ overflow: "hidden" }}
       >
         {isFilled && (
-          <div className="text-center mb-2" style={{ fontSize: "11px" }}>
+          <div className="text-center mb-2" style={{ fontSize: "12px" }}>
             <a
               href="https://www.patreon.com/GishathFetch"
               target="_blank"
