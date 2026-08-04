@@ -332,8 +332,5 @@ is gitignored.
 |------|------------------|
 | GA4 measurement ID (`G-…` in `frontend/index.html`) | Embedded in the browser for analytics |
 | Shopify **Storefront** access tokens in `api/gateway/*/search.go` | Shopify publishes these for client-side Storefront API use; they grant read-only storefront access, not admin |
-| AWS account ID / resource ARNs in `Makefile` and IAM examples below | Identifiers, not credentials — substitute your account ID when copying policies |
+| AWS account ID / resource ARNs in `Makefile` and IAM examples | Identifiers, not credentials |
 | `api.gishathfetch.com`, bucket names, Lambda function names | Public infrastructure endpoints |
-
-When copying IAM policies below, replace `206363131200` with your AWS account ID (see
-`AWS_ACCOUNT_ID` in the root `Makefile`).
