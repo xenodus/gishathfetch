@@ -6,13 +6,20 @@ const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-const Footer = ({ cartCount, onShowCart, onShowMap, onShowFaq }) => {
+const Footer = ({
+  cartCount,
+  onShowCart,
+  onShowMap,
+  onShowFaq,
+  searchStatsSlot,
+}) => {
   useBottomChromeLayout();
 
   return (
     <>
       <div className="mt-4 site-footer-spacer">
         <AdComponent />
+        {searchStatsSlot}
       </div>
 
       {/* Fixed Bottom Navigation */}

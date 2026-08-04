@@ -261,20 +261,21 @@ export default function App() {
         baseUrl={BASE_URL}
       />
 
-      <SearchStats
-        stats={searchStoreStats}
-        totalDurationMs={searchTotalDurationMs}
-        sessionMintDurationMs={sessionMintDurationMs}
-        searchResponseDurationMs={searchResponseDurationMs}
-        hasSearched={hasSearched}
-        isSearching={isSearching}
-      />
-
       <Footer
         cartCount={cart.length}
         onShowCart={() => setShowCart(true)}
         onShowMap={() => setModalType("MAP")}
         onShowFaq={() => setModalType("FAQ")}
+        searchStatsSlot={
+          <SearchStats
+            stats={searchStoreStats}
+            totalDurationMs={searchTotalDurationMs}
+            sessionMintDurationMs={sessionMintDurationMs}
+            searchResponseDurationMs={searchResponseDurationMs}
+            hasSearched={hasSearched}
+            isSearching={isSearching}
+          />
+        }
       />
 
       <CartActionFeedback
