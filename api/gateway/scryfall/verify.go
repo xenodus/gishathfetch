@@ -61,32 +61,51 @@ func VerifyCardName(ctx context.Context, query string) (string, error) {
 			return "", err
 		}
 		for _, name := range autocomplete.Data {
-			if strings.EqualFold(name, trimmed) {
+			if cardNamesMatchForVerify(name, trimmed) {
 				return name, nil
 			}
 		}
 	}
 
-	namedRequestURL := fmt.Sprintf("%s?exact=%s", namedURL, url.QueryEscape(trimmed))
+	if verifiedName, ok, err := lookupNamedCard(ctx, trimmed, "exact"); err != nil {
+		return "", err
+	} else if ok {
+		return verifiedName, nil
+	}
+
+	if verifiedName, ok, err := lookupNamedCard(ctx, trimmed, "fuzzy"); err != nil {
+		return "", err
+	} else if ok {
+		return verifiedName, nil
+	}
+
+	return "", nil
+}
+
+func lookupNamedCard(ctx context.Context, query, matchMode string) (string, bool, error) {
+	namedRequestURL := fmt.Sprintf("%s?%s=%s", namedURL, matchMode, url.QueryEscape(query))
 	namedResp, err := httpGet(ctx, namedRequestURL)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	defer namedResp.Body.Close()
 
 	if namedResp.StatusCode != http.StatusOK {
-		return "", nil
+		return "", false, nil
 	}
 
 	body, err := gateway.ReadResponseBody(namedResp)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	var card struct {
 		Name string `json:"name"`
 	}
 	if err := json.Unmarshal(body, &card); err != nil {
-		return "", err
+		return "", false, err
 	}
-	return card.Name, nil
+	if card.Name == "" || !cardNamesMatchForVerify(card.Name, query) {
+		return "", false, nil
+	}
+	return card.Name, true, nil
 }
