@@ -14,10 +14,6 @@ import {
   resetApiSessionCache,
 } from "../utils/apiSession";
 import {
-  applyCanonicalCardNames,
-  resolveCanonicalCardNames,
-} from "../utils/cardName";
-import {
   buildSearchHistoryState,
   buildSearchUrl,
   getInitialSelectedStores,
@@ -31,17 +27,6 @@ const SEARCH_TOO_LONG_ERROR = `Card name is too long (maximum ${MAX_SEARCH_LENGT
 const SEARCH_TOO_SHORT_ERROR = `Enter at least ${MIN_SEARCH_LENGTH} characters to search.`;
 const NO_STORES_WARNING =
   "No stores selected — searching all stores. Select specific stores to search faster.";
-
-const canonicalizeSearchResults = async (cards) => {
-  if (!Array.isArray(cards) || cards.length === 0) {
-    return cards;
-  }
-
-  const resolvedNames = await resolveCanonicalCardNames(
-    cards.map((card) => card.name),
-  );
-  return applyCanonicalCardNames(cards, resolvedNames);
-};
 
 function formatErrorWithStatusCode(message, statusCode) {
   if (!statusCode) {
@@ -286,8 +271,7 @@ export default function useSearch() {
           if (requestId !== activeSearchRequestIdRef.current) return;
           if (result && Object.hasOwn(result, "data")) {
             // Treat null data as empty array
-            const initialResults = result.data || [];
-            setSearchResults(initialResults);
+            setSearchResults(result.data || []);
             setCardKingdomPrice(result.cardKingdomPrice ?? null);
             const storeErrors = Array.isArray(result.errors)
               ? result.errors
@@ -305,7 +289,7 @@ export default function useSearch() {
               syncSearchHistory({
                 query,
                 stores,
-                results: initialResults,
+                results: result.data || [],
                 storeErrors,
                 storeStats,
                 totalDurationMs,
@@ -322,33 +306,6 @@ export default function useSearch() {
                 search_term: query,
               });
             }
-
-            void canonicalizeSearchResults(initialResults).then(
-              (canonicalResults) => {
-                if (requestId !== activeSearchRequestIdRef.current) {
-                  return;
-                }
-                if (canonicalResults === initialResults) {
-                  return;
-                }
-                setSearchResults(canonicalResults);
-                if (!skipHistorySyncRef.current) {
-                  syncSearchHistory({
-                    query,
-                    stores,
-                    results: canonicalResults,
-                    storeErrors,
-                    storeStats,
-                    totalDurationMs,
-                    sessionMintDurationMs: sessionTiming.sessionMintDurationMs,
-                    searchResponseDurationMs,
-                    hasSearched: true,
-                    searchError: null,
-                    cardKingdomPrice: result.cardKingdomPrice ?? null,
-                  });
-                }
-              },
-            );
           } else {
             throw new Error("Invalid response format from server");
           }

@@ -4,10 +4,6 @@ import {
   cardsExactMatch,
   dedupeCartItems,
 } from "../utils/cardIdentity";
-import {
-  resolveCanonicalCardName,
-  resolveCanonicalCardNames,
-} from "../utils/cardName";
 import { mergeCartImport } from "../utils/cartTransfer";
 
 const CART_FEEDBACK_DURATION_MS = 2500;
@@ -68,7 +64,6 @@ export default function useCart() {
   const [showCart, setShowCart] = useState(false);
   const [cartActionFeedback, setCartActionFeedback] = useState(null);
   const feedbackTimeoutRef = useRef(null);
-  const hasMigratedCardNamesRef = useRef(false);
 
   const showCartActionFeedback = useCallback((message) => {
     if (feedbackTimeoutRef.current) {
@@ -90,85 +85,32 @@ export default function useCart() {
     };
   }, []);
 
-  useEffect(() => {
-    if (hasMigratedCardNamesRef.current || cart.length === 0) {
-      return;
-    }
-    hasMigratedCardNamesRef.current = true;
-
-    let cancelled = false;
-
-    void (async () => {
-      const resolvedNames = await resolveCanonicalCardNames(
-        cart.map((item) => item.name),
-      );
-      if (cancelled) {
-        return;
-      }
-
-      const migrated = cart.map((item) => {
-        const canonicalName = resolvedNames.get(item.name);
-        if (!canonicalName || canonicalName === item.name) {
-          return item;
-        }
-        return { ...item, name: canonicalName };
-      });
-
-      const changed = migrated.some((item, index) => item !== cart[index]);
-      if (!changed) {
-        return;
-      }
-
-      const deduped = dedupeCartItems(migrated);
-      setCart(deduped);
-      try {
-        localStorage.setItem("cart", JSON.stringify(deduped));
-      } catch (err) {
-        console.error("Failed to migrate saved card names:", err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cart]);
-
   const addToCart = useCallback(
     (card) => {
       let feedbackMessage = "Card saved";
 
-      void (async () => {
-        const canonicalName = await resolveCanonicalCardName(card.name);
-        const cardToSave =
-          canonicalName && canonicalName !== card.name
-            ? { ...card, name: canonicalName }
-            : card;
+      setCart((prev) => {
+        const wasInCart = prev.some((item) => cardsExactMatch(item, card));
+        if (wasInCart) {
+          feedbackMessage = "Card updated";
+        }
 
-        setCart((prev) => {
-          const wasInCart = prev.some((item) =>
-            cardsExactMatch(item, cardToSave),
-          );
-          if (wasInCart) {
-            feedbackMessage = "Card updated";
-          }
+        const withoutExactMatch = prev.filter(
+          (item) => !cardsExactMatch(item, card),
+        );
+        const newCart = [
+          { ...card, savedAt: Date.now() },
+          ...withoutExactMatch,
+        ];
+        try {
+          localStorage.setItem("cart", JSON.stringify(newCart));
+        } catch (err) {
+          console.error("Failed to save cart to localStorage:", err);
+        }
+        return newCart;
+      });
 
-          const withoutExactMatch = prev.filter(
-            (item) => !cardsExactMatch(item, cardToSave),
-          );
-          const newCart = [
-            { ...cardToSave, savedAt: Date.now() },
-            ...withoutExactMatch,
-          ];
-          try {
-            localStorage.setItem("cart", JSON.stringify(newCart));
-          } catch (err) {
-            console.error("Failed to save cart to localStorage:", err);
-          }
-          return newCart;
-        });
-
-        showCartActionFeedback(feedbackMessage);
-      })();
+      showCartActionFeedback(feedbackMessage);
     },
     [showCartActionFeedback],
   );
