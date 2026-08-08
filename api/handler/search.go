@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +16,7 @@ import (
 	"mtg-price-checker-sg/controller/ckprice"
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/logger"
 	"mtg-price-checker-sg/store/ckprices"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -137,7 +137,7 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 
 			price, err := lookupCKPriceFunc(ckCtx, searchString)
 			if err != nil {
-				log.Printf("ck price lookup for [%s]: %v", searchString, err)
+				logger.From(ckCtx).WarnContext(ckCtx, "ck price lookup failed", "search", searchString, "err", err)
 				return
 			}
 			ckPrice = price

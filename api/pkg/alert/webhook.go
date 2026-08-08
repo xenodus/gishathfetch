@@ -3,7 +3,7 @@ package alert
 import (
 	"bytes"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 )
@@ -32,7 +32,7 @@ func SendJobAlert(message string) {
 func sendWebhookAlert(webhookURLEnv, message string) {
 	webhookURL := os.Getenv(webhookURLEnv)
 	if webhookURL == "" {
-		log.Printf("%s not set, skipping alert", webhookURLEnv)
+		slog.Warn("alert webhook not set, skipping alert", "env", webhookURLEnv)
 		return
 	}
 
@@ -42,18 +42,18 @@ func sendWebhookAlert(webhookURLEnv, message string) {
 
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Failed to marshal alert payload: %v", err)
+		slog.Error("failed to marshal alert payload", "err", err)
 		return
 	}
 
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		log.Printf("Failed to send alert: %v", err)
+		slog.Error("failed to send alert", "err", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		log.Printf("Alert webhook returned non-2xx status: %d", resp.StatusCode)
+		slog.Warn("alert webhook returned non-2xx status", "status", resp.StatusCode)
 	}
 }

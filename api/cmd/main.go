@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
 	"mtg-price-checker-sg/handler"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/logger"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -17,9 +18,10 @@ import (
 func init() {
 	// load .env file
 	err := godotenv.Load()
+	logger.Init()
 	if err != nil {
 		if os.Getenv("ENV") != config.EnvProd {
-			log.Println("No .env file found or error loading .env")
+			slog.Warn("No .env file found or error loading .env")
 		}
 	}
 }
@@ -29,7 +31,13 @@ func main() {
 		lambda.Start(handler.Handle)
 	} else {
 		start := time.Now()
-		log.Println(handler.Search(context.Background(), events.APIGatewayProxyRequest{}))
-		log.Printf("Took: %s", time.Since(start))
+		ctx := context.Background()
+		resp, err := handler.Search(ctx, events.APIGatewayProxyRequest{})
+		if err != nil {
+			slog.ErrorContext(ctx, "local search failed", "err", err)
+		} else {
+			slog.InfoContext(ctx, "local search result", "result", resp)
+		}
+		slog.InfoContext(ctx, "local search duration", "duration", time.Since(start))
 	}
 }

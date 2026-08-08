@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"maps"
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/agora"
@@ -29,6 +29,7 @@ import (
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/alert"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/logger"
 	"sort"
 	"strings"
 	"sync"
@@ -132,7 +133,7 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	if time.Since(realStart) < responseThreshold {
 		sleepDuration := responseThreshold - time.Since(realStart)
 		time.Sleep(sleepDuration)
-		log.Printf("Sleeping for [%s]", sleepDuration)
+		logger.From(ctx).InfoContext(ctx, "Sleeping for minimum response threshold", "duration", sleepDuration)
 	}
 
 	return inStockCards, buildStoreErrors(siteErrors), buildStoreStats(shopDurations, inStockCards), nil
@@ -174,9 +175,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 		go sendAlert(formatAlertErrorSummary(searchString, alertErrorMessages))
 	}
 	if len(siteErrors) > 0 {
-		log.Printf("Shops with errors for [%s]: %d", searchString, len(siteErrors))
+		logger.From(ctx).InfoContext(ctx, "Shops with errors", "search", searchString, "count", len(siteErrors))
 	}
-	log.Println(formatShopSearchSummary(searchString, time.Since(start), shopDurations))
+	logger.From(ctx).InfoContext(ctx, formatShopSearchSummary(searchString, time.Since(start), shopDurations))
 	return cards, siteErrors, shopDurations
 }
 
@@ -186,17 +187,17 @@ type shopSearchDuration struct {
 }
 
 type fetchResultAggregator struct {
-	mu                   sync.Mutex
-	cards                []gateway.Card
-	siteErrors           map[string]error
+	mu                 sync.Mutex
+	cards              []gateway.Card
+	siteErrors         map[string]error
 	alertErrorMessages []string
-	shopDurations        []shopSearchDuration
+	shopDurations      []shopSearchDuration
 }
 
 func newFetchResultAggregator(shopCount int) *fetchResultAggregator {
 	return &fetchResultAggregator{
-		cards:                []gateway.Card{},
-		siteErrors:           make(map[string]error, shopCount),
+		cards:              []gateway.Card{},
+		siteErrors:         make(map[string]error, shopCount),
 		alertErrorMessages: make([]string, 0, shopCount),
 	}
 }
@@ -359,7 +360,7 @@ func storeCardKey(card gateway.Card) string {
 func recoverShopPanic(shopName string, aggregator *fetchResultAggregator) {
 	if r := recover(); r != nil {
 		errMsg := fmt.Sprintf("Recovered from panic in shop [%s]: %v", shopName, r)
-		log.Println(errMsg)
+		slog.Error(errMsg, "shop", shopName, "panic", r)
 		aggregator.addSiteError(shopName, fmt.Errorf("panic: %v", r))
 		aggregator.addAlertErrorMessage(errMsg)
 	}
@@ -373,7 +374,7 @@ func recordShopSearchError(searchString, shopName string, err error, aggregator 
 			searchString,
 			gateway.EnsureHTTPStatusInErrorMessage(err.Error()),
 		)
-		log.Println(errMsg)
+		slog.Warn(errMsg, "shop", shopName, "search", searchString, "err", err)
 		aggregator.addAlertErrorMessage(errMsg)
 	}
 	aggregator.addSiteError(shopName, err)

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -203,7 +203,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 						u := fmt.Sprintf(StoreBaseURL+"/product/%s", hit.ID)
 						cleanPageURL, err := url.Parse(u)
 						if err != nil {
-							log.Printf("error parsing url for %s with value [%s]: %v", s.Name, u, err)
+							slog.Warn("error parsing url", "store", s.Name, "value", u, "err", err)
 							continue
 						}
 						cleanPageURL.RawQuery = url.Values{

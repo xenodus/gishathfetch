@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/logger"
 )
 
 type outboundAttempt struct {
@@ -92,22 +92,26 @@ func doOutboundAttempt(
 		return nil, "", false, err
 	}
 
-	log.Printf("outbound request: trying %s url=%s", proxyDesc, outboundRequestURL(req))
+	logger.From(ctx).InfoContext(ctx, "outbound request: trying", "proxy", proxyDesc, "url", outboundRequestURL(req))
 
 	resp, err := attempt.client.Do(req)
 	if err != nil {
 		lastFailure := fmt.Sprintf("%s: %v", attempt.strategy, err)
-		log.Printf("outbound request: failed %s: %v", proxyDesc, err)
+		logger.From(ctx).WarnContext(ctx, "outbound request: failed", "proxy", proxyDesc, "err", err)
 		return nil, lastFailure, false, nil
 	}
 
 	if isOutboundClientError(resp.StatusCode) {
 		lastFailure := outboundStatusFailure(attempt.strategy, resp)
-		log.Printf("outbound request: failed %s: status %d", proxyDesc, resp.StatusCode)
+		logger.From(ctx).WarnContext(ctx, "outbound request: failed", "proxy", proxyDesc, "status", resp.StatusCode)
 		return nil, lastFailure, false, nil
 	}
 
-	log.Printf("outbound request: succeeded %s status=%d url=%s", proxyDesc, resp.StatusCode, outboundRequestURL(req))
+	logger.From(ctx).InfoContext(ctx, "outbound request: succeeded",
+		"proxy", proxyDesc,
+		"status", resp.StatusCode,
+		"url", outboundRequestURL(req),
+	)
 	return resp, "", true, nil
 }
 
