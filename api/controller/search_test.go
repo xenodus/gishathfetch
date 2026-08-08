@@ -142,6 +142,53 @@ func TestCleanName(t *testing.T) {
 	}
 }
 
+func TestFilterAndSortCards_AccentedQueryMatchesAsciiStoreName(t *testing.T) {
+	cards := []gateway.Card{
+		{Name: "Kili the Resourceful", Price: 1.5, InStock: true, Source: "Shop1"},
+		{Name: "Lightning Bolt", Price: 1.0, InStock: true, Source: "Shop1"},
+	}
+
+	results := filterAndSortCards(cards, "Kíli")
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].Name != "Kili the Resourceful" {
+		t.Fatalf("expected Kili result, got %q", results[0].Name)
+	}
+}
+
+func TestSearchShops_NormalizesAccentedQueryForStores(t *testing.T) {
+	var receivedQuery string
+	shops := map[string]gateway.LGS{
+		"Shop1": &MockLGS{
+			SearchFunc: func(_ context.Context, searchStr string) ([]gateway.Card, error) {
+				receivedQuery = searchStr
+				return []gateway.Card{
+					{Name: "Kili the Resourceful", Price: 1.5, InStock: true, Source: "Shop1"},
+				}, nil
+			},
+		},
+	}
+
+	results, storeErrors, _, err := searchShops(
+		context.Background(),
+		SearchInput{SearchString: "Kíli"},
+		shops,
+	)
+	if err != nil {
+		t.Fatalf("searchShops returned unexpected error: %v", err)
+	}
+	if len(storeErrors) != 0 {
+		t.Fatalf("expected no store errors, got %d", len(storeErrors))
+	}
+	if receivedQuery != "Kili" {
+		t.Fatalf("store search query = %q, want %q", receivedQuery, "Kili")
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+}
+
 func TestIsArtCard(t *testing.T) {
 	tests := map[string]struct {
 		input    string

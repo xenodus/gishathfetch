@@ -118,8 +118,10 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	realStart := time.Now()
 	responseThreshold := 1 * time.Second
 
+	storeSearchString := util.StripDiacritics(input.SearchString)
+
 	// 1. Fetch concurrently
-	cards, siteErrors, shopDurations := fetchCardsConcurrently(ctx, input.SearchString, shopNameToLGSMap)
+	cards, siteErrors, shopDurations := fetchCardsConcurrently(ctx, storeSearchString, shopNameToLGSMap)
 	_ = siteErrors // available for future use (e.g. partial-failure UX)
 
 	// 2. Filter and Sort
@@ -455,7 +457,7 @@ func filterAndSortCards(cards []gateway.Card, searchString string) []Card {
 		return cards[i].Price < cards[j].Price
 	})
 
-	lowerSearchString := strings.ToLower(searchString)
+	foldedSearchString := util.FoldForMatch(searchString)
 
 	// Only showing in stock, contains searched string and not art card
 	for _, c := range cards {
@@ -483,21 +485,21 @@ func filterAndSortCards(cards []gateway.Card, searchString string) []Card {
 				continue
 			}
 
-			lowerName := strings.ToLower(cleanCardName)
+			foldedName := util.FoldForMatch(cleanCardName)
 
-			if !strings.Contains(lowerName, lowerSearchString) {
+			if !strings.Contains(foldedName, foldedSearchString) {
 				// skip card if not in substring
 				continue
 			}
 
 			// exact match
-			if lowerName == lowerSearchString {
+			if foldedName == foldedSearchString {
 				inStockExactMatchCards = append(inStockExactMatchCards, card)
 				continue
 			}
 
 			// prefix
-			if strings.HasPrefix(lowerName, lowerSearchString) {
+			if strings.HasPrefix(foldedName, foldedSearchString) {
 				inStockPrefixMatchCards = append(inStockPrefixMatchCards, card)
 				continue
 			}
