@@ -10,6 +10,12 @@ func TestAgoraSearchEnabled(t *testing.T) {
 	}
 }
 
+func TestManaproSearchEnabled(t *testing.T) {
+	if ManaproSearchEnabled {
+		t.Fatalf("expected manapro search to be disabled while storefront is password-protected")
+	}
+}
+
 func TestUseDynamicProxy(t *testing.T) {
 	t.Run("defaults to disabled when unset", func(t *testing.T) {
 		t.Setenv(UseDynamicProxyEnv, "")

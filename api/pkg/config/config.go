@@ -115,6 +115,11 @@ const UseLeasedDedicatedProxy = false
 // AgoraSearchEnabled toggles Agora Hobby search in the search Lambda.
 const AgoraSearchEnabled = true
 
+// ManaproSearchEnabled toggles Mana Pro search in the search Lambda.
+// Disabled while sg-manapro.com serves Shopify's password ("Opening Soon") page,
+// which locks the Online Store channel and breaks scrape, GraphQL, and decklist.
+const ManaproSearchEnabled = false
+
 func UseDynamicProxy() bool {
 	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
 	if rawValue == "" {

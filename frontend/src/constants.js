@@ -1,9 +1,13 @@
 // --- App Constants ---
 
 const AGORA_STORE_NAME = "Agora Hobby";
+const MANAPRO_STORE_NAME = "Mana Pro";
 
 // Toggle Agora Hobby in the store list and search UI.
 export const AGORA_SEARCH_ENABLED = true;
+
+// Toggle Mana Pro while sg-manapro.com is behind Shopify's password page.
+export const MANAPRO_SEARCH_ENABLED = false;
 
 export const PAGE_TITLE =
   "Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops";
@@ -30,9 +34,15 @@ const ALL_LGS_OPTIONS = [
   "The TCG Marketplace",
 ];
 
-export const LGS_OPTIONS = AGORA_SEARCH_ENABLED
-  ? ALL_LGS_OPTIONS
-  : ALL_LGS_OPTIONS.filter((store) => store !== AGORA_STORE_NAME);
+export const LGS_OPTIONS = ALL_LGS_OPTIONS.filter((store) => {
+  if (!AGORA_SEARCH_ENABLED && store === AGORA_STORE_NAME) {
+    return false;
+  }
+  if (!MANAPRO_SEARCH_ENABLED && store === MANAPRO_STORE_NAME) {
+    return false;
+  }
+  return true;
+});
 
 export const SITE_TAGLINE =
   "Magic: The Gathering price checker for Singapore's LGS and online shops";

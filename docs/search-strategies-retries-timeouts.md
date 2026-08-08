@@ -80,7 +80,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | GOG | Yes | 3 | 8 |
 | Hideout | Yes | 3 | 8 |
 | Hideyoshi | Yes | 2 | 8 |
-| Mana Pro | Yes | 2 | 8 |
+| Mana Pro | Yes | 2 | 8 | **Search disabled** — storefront password page locks Online Store channel |
 | MTG Asia | Yes | 2 | 8 |
 | One MTG | Yes | 2 | 8 |
 

@@ -592,6 +592,9 @@ func initAndMapShops(lgs []string) map[string]gateway.LGS {
 		if shop.name == agora.StoreName && !config.AgoraSearchEnabled {
 			continue
 		}
+		if shop.name == manapro.StoreName && !config.ManaproSearchEnabled {
+			continue
+		}
 		if len(selectedLGS) > 0 {
 			if _, exists := selectedLGS[shop.name]; !exists {
 				continue
