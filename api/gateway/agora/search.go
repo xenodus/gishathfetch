@@ -2,7 +2,7 @@ package agora
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -119,7 +119,7 @@ func parseStoreItem(se *goquery.Selection, storeName string, apiURL *url.URL, se
 
 	cardURL, err := buildCardURL(apiURL, searchStr)
 	if err != nil {
-		log.Printf("error parsing url for %s with value [%s]: %v", storeName, apiURL.String(), err)
+		slog.Warn("error parsing url", "store", storeName, "value", apiURL.String(), "err", err)
 		return gateway.Card{}, false
 	}
 

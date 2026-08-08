@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -30,15 +30,15 @@ type searchResponse struct {
 }
 
 type searchResult struct {
-	Name              string `json:"name"`
-	Slug              string `json:"slug"`
-	Price             string `json:"price"`
-	FoilPrice         string `json:"foil_price"`
-	Quantity          int    `json:"quantity"`
-	IsActive          bool   `json:"is_active"`
-	FoilType          string `json:"foil_type"`
-	GetNameWithFoil   string `json:"get_name_with_foil"`
-	GetVariationName  string `json:"get_variation_name"`
+	Name               string `json:"name"`
+	Slug               string `json:"slug"`
+	Price              string `json:"price"`
+	FoilPrice          string `json:"foil_price"`
+	Quantity           int    `json:"quantity"`
+	IsActive           bool   `json:"is_active"`
+	FoilType           string `json:"foil_type"`
+	GetNameWithFoil    string `json:"get_name_with_foil"`
+	GetVariationName   string `json:"get_variation_name"`
 	TCGPlayerProductID string `json:"tcgplayer_product_id_ext"`
 }
 
@@ -88,7 +88,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 
 		cleanPageURL, err := url.Parse(card.Url)
 		if err != nil {
-			log.Printf("error parsing url for %s with value [%s]: %v", s.Name, card.Url, err)
+			slog.Warn("error parsing url", "store", s.Name, "value", card.Url, "err", err)
 			continue
 		}
 		cleanPageURL.RawQuery = url.Values{

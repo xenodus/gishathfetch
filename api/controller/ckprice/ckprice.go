@@ -2,12 +2,12 @@ package ckprice
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/gateway/scryfall"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/logger"
 	"mtg-price-checker-sg/store/ckprices"
 )
 
@@ -84,7 +84,7 @@ type RefreshResult struct {
 
 // RefreshPrices downloads Card Kingdom retail prices from the CK pricelist API and upserts the DynamoDB index.
 func RefreshPrices(ctx context.Context, store ckprices.Store) (*RefreshResult, error) {
-	log.Printf("ck price refresh: fetching card kingdom pricelist")
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: fetching card kingdom pricelist")
 	fetchStarted := time.Now()
 
 	listings, err := fetchCheapestFunc(ctx)
@@ -92,25 +92,31 @@ func RefreshPrices(ctx context.Context, store ckprices.Store) (*RefreshResult, e
 		return nil, err
 	}
 
-	log.Printf("ck price refresh: fetched card kingdom pricelist listings=%d duration=%s", len(listings), time.Since(fetchStarted).Round(time.Millisecond))
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: fetched card kingdom pricelist",
+		"listings", len(listings),
+		"duration", time.Since(fetchStarted).Round(time.Millisecond),
+	)
 
-	log.Printf("ck price refresh: writing dynamodb listings=%d", len(listings))
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: writing dynamodb", "listings", len(listings))
 	writeStarted := time.Now()
 	syncedAt, err := store.PutAll(ctx, listings)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("ck price refresh: wrote dynamodb listings=%d syncedAt=%s duration=%s", len(listings), syncedAt, time.Since(writeStarted).Round(time.Millisecond))
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: wrote dynamodb",
+		"listings", len(listings),
+		"syncedAt", syncedAt,
+		"duration", time.Since(writeStarted).Round(time.Millisecond),
+	)
 
 	deleteStarted := time.Now()
 	deleted, err := store.DeleteListingsNotInPricelist(ctx, listings)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf(
-		"ck price refresh: deleted dynamodb listings not in pricelist count=%d duration=%s",
-		deleted,
-		time.Since(deleteStarted).Round(time.Millisecond),
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: deleted dynamodb listings not in pricelist",
+		"count", deleted,
+		"duration", time.Since(deleteStarted).Round(time.Millisecond),
 	)
 
 	return &RefreshResult{

@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -140,16 +140,16 @@ func loadWebBotAuth() {
 	pemData, keyErr := webbotauth.LoadPrivateKeyPEM()
 	signatureAgentURL := strings.TrimSpace(os.Getenv(config.WebBotAuthSignatureAgentEnv))
 	if keyErr != nil || signatureAgentURL == "" {
-		log.Printf(
-			"%s is true but signing credentials are not fully configured; Web Bot Auth disabled",
-			config.WebBotAuthEnabledEnv,
+		slog.Warn(
+			"Web Bot Auth disabled: signing credentials not fully configured",
+			"env", config.WebBotAuthEnabledEnv,
 		)
 		return
 	}
 
 	privateKey, err := webbotauth.ParseEd25519PrivateKeyPEM(pemData)
 	if err != nil {
-		log.Printf("invalid Web Bot Auth signing key: %v; Web Bot Auth disabled", err)
+		slog.Warn("invalid Web Bot Auth signing key; Web Bot Auth disabled", "err", err)
 		return
 	}
 
@@ -168,12 +168,12 @@ func loadWebBotAuth() {
 		userAgent:         userAgent,
 		ttl:               ttl,
 	}
-	log.Printf(
-		"Web Bot Auth enabled: signature_agent=%s key_id=%s user_agent=%q ttl=%s",
-		signatureAgentURL,
-		keyID,
-		userAgent,
-		ttl,
+	slog.Info(
+		"Web Bot Auth enabled",
+		"signature_agent", signatureAgentURL,
+		"key_id", keyID,
+		"user_agent", userAgent,
+		"ttl", ttl,
 	)
 }
 

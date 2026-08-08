@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"mtg-price-checker-sg/gateway/util"
 	"net/url"
 	"strconv"
@@ -151,7 +151,7 @@ func scrapVariant3(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 						u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
 						cleanPageURL, err := url.Parse(u)
 						if err != nil {
-							log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+							slog.Warn("error parsing url", "store", storeName, "value", u, "err", err)
 							return
 						}
 						cleanPageURL.RawQuery = url.Values{
@@ -240,7 +240,7 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 			)
 			price, err := util.ParsePrice(priceStr)
 			if err != nil || price <= 0 {
-				log.Printf("error parsing price for %s with value [%s]: %v", storeName, priceStr, err)
+				slog.Warn("error parsing price", "store", storeName, "value", priceStr, "err", err)
 				return
 			}
 
@@ -261,7 +261,7 @@ func scrapVariant4(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 
 			cleanPageURL, err := url.Parse(strings.TrimSpace(baseUrl + link))
 			if err != nil {
-				log.Printf("error parsing url for %s with value [%s]: %v", storeName, link, err)
+				slog.Warn("error parsing url", "store", storeName, "value", link, "err", err)
 				return
 			}
 			cleanPageURL.RawQuery = url.Values{
@@ -326,7 +326,7 @@ func scrapVariant2(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 							// url with variant (quality)
 							cleanPageURL, err := url.Parse(strings.TrimSpace(baseUrl + pageUrl))
 							if err != nil {
-								log.Printf("error parsing url for %s with value [%s]: %v", storeName, pageUrl, err)
+								slog.Warn("error parsing url", "store", storeName, "value", pageUrl, "err", err)
 								return
 							}
 							cleanPageURL.RawQuery = url.Values{
@@ -399,7 +399,7 @@ func scrapVariant1(ctx context.Context, storeName, baseUrl, searchUrl, searchStr
 						u := strings.TrimSpace(baseUrl + el.ChildAttr("a", "href"))
 						cleanPageURL, err := url.Parse(u)
 						if err != nil {
-							log.Printf("error parsing url for %s with value [%s]: %v", storeName, u, err)
+							slog.Warn("error parsing url", "store", storeName, "value", u, "err", err)
 							return
 						}
 

@@ -3,7 +3,7 @@ package fivemana
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strings"
 
@@ -45,7 +45,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return nil, err
 	}
 
-	log.Printf("%s: graphql search failed, falling back to HTML: %v", s.Name, err)
+	slog.Warn("graphql search failed, falling back to HTML", "store", s.Name, "err", err)
 
 	htmlCards, htmlErr := s.searchHTML(ctx, searchStr)
 	if htmlErr != nil {
@@ -101,9 +101,9 @@ func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card
 
 func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.OutboundRequestStyle) gateway.OutboundRequestOptions {
 	opts := gateway.OutboundRequestOptions{
-		Style:                  style,
-		PageURL:                pageURL,
-		StoreBase:              storeBase,
+		Style:              style,
+		PageURL:            pageURL,
+		StoreBase:          storeBase,
 		ShopifySGDCurrency: true,
 		SkipDirect:         true,
 	}
@@ -139,7 +139,7 @@ func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bo
 
 	cardURL, err := productURLWithUTM(StoreBaseURL + se.Find("h3.card__heading a").AttrOr("href", ""))
 	if err != nil {
-		log.Printf("error parsing url for %s with value [%s]: %v", storeName, heading.AttrOr("href", ""), err)
+		slog.Warn("error parsing url", "store", storeName, "value", heading.AttrOr("href", ""), "err", err)
 		return gateway.Card{}, false
 	}
 

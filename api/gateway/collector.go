@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/rand/v2"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
@@ -263,10 +263,10 @@ func applyCollectorHTTPClient(
 	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL)
 	client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
 	if err != nil {
-		log.Printf("browser TLS client setup failed for colly (%s): %v", mode, err)
+		slog.Warn("browser TLS client setup failed for colly", "mode", mode, "err", err)
 		if proxyURL != "" {
 			if setErr := c.SetProxy(proxyURL); setErr != nil {
-				log.Printf("invalid proxy configured for colly (%s): %v", mode, setErr)
+				slog.Warn("invalid proxy configured for colly", "mode", mode, "err", setErr)
 			}
 		}
 		return
@@ -335,7 +335,7 @@ func applyInitialProxy(c *colly.Collector, leasedDedicatedProxyURL, requestDedic
 	}
 	if err := c.SetProxy(proxyURL); err != nil {
 		if mode == "dynamic" {
-			log.Printf("invalid dynamic proxy configured: %v", err)
+			slog.Warn("invalid dynamic proxy configured", "err", err)
 		}
 		return clearProxy(c)
 	}
@@ -354,7 +354,7 @@ func registerRequestHandler(
 			return
 		}
 		if err := waitForDomainRequestSlot(c.Context, r.URL); err != nil {
-			log.Printf("Skipping request pacing for %s due to context cancellation: %v", r.URL, err)
+			slog.Warn("Skipping request pacing due to context cancellation", "url", r.URL, "err", err)
 			r.Abort()
 			return
 		}
@@ -368,7 +368,7 @@ func registerRequestHandler(
 			} else {
 				r.Headers.Set("User-Agent", OutboundUserAgent())
 				if err := SignWebBotAuthCollyRequest(r); err != nil {
-					log.Printf("Web Bot Auth signing failed for %s: %v", r.URL, err)
+					slog.Warn("Web Bot Auth signing failed", "url", r.URL, "err", err)
 				}
 			}
 		}

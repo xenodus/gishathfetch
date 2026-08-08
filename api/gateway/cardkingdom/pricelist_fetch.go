@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,11 +15,12 @@ import (
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/util"
 	"mtg-price-checker-sg/pkg/config"
+	"mtg-price-checker-sg/pkg/logger"
 )
 
 const (
-	defaultCKPricelistURL   = "https://api.cardkingdom.com/api/v2/pricelist"
-	ckPricelistErrorPrefix  = "ck price pricelist"
+	defaultCKPricelistURL  = "https://api.cardkingdom.com/api/v2/pricelist"
+	ckPricelistErrorPrefix = "ck price pricelist"
 	// The CK pricelist JSON is ~65MB (~150k products). When the residential proxy
 	// fallback is used, the body can take several minutes after headers return;
 	// http.Client.Timeout covers the full round trip including body read.
@@ -40,14 +41,14 @@ type ckPricelistMeta struct {
 }
 
 type ckPricelistItem struct {
-	URL              string              `json:"url"`
-	Name             string              `json:"name"`
-	Variation        string              `json:"variation"`
-	Edition          string              `json:"edition"`
-	IsFoil           jsonStringBool      `json:"is_foil"`
-	PriceRetail      jsonStringFloat     `json:"price_retail"`
-	QtyRetail        jsonStringInt       `json:"qty_retail"`
-	ConditionValues  ckConditionValues   `json:"condition_values"`
+	URL             string            `json:"url"`
+	Name            string            `json:"name"`
+	Variation       string            `json:"variation"`
+	Edition         string            `json:"edition"`
+	IsFoil          jsonStringBool    `json:"is_foil"`
+	PriceRetail     jsonStringFloat   `json:"price_retail"`
+	QtyRetail       jsonStringInt     `json:"qty_retail"`
+	ConditionValues ckConditionValues `json:"condition_values"`
 }
 
 type ckConditionValues struct {
@@ -164,18 +165,17 @@ func fetchCheapestFromCKPricelist(ctx context.Context) (map[string]Listing, erro
 	defer cancel()
 
 	downloadURL := ckPricelistURL()
-	log.Printf("ck price refresh: downloading pricelist from %s", downloadURL)
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: downloading pricelist", "url", downloadURL)
 
 	downloadStarted := time.Now()
 	payload, err := downloadCKPricelist(ctx, downloadURL)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf(
-		"ck price refresh: downloaded pricelist products=%d created_at=%s duration=%s",
-		len(payload.Data),
-		payload.Meta.CreatedAt,
-		time.Since(downloadStarted).Round(time.Millisecond),
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: downloaded pricelist",
+		"products", len(payload.Data),
+		"created_at", payload.Meta.CreatedAt,
+		"duration", time.Since(downloadStarted).Round(time.Millisecond),
 	)
 
 	updatedAt, err := pricelistUpdatedAt(payload.Meta.CreatedAt)
@@ -220,7 +220,7 @@ func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistP
 		return nil, err
 	}
 
-	log.Printf("ck price refresh: direct pricelist download failed, retrying via residential proxy")
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: direct pricelist download failed, retrying via residential proxy")
 	proxyOpts := ckPricelistOutboundOptions()
 	proxyOpts.OnlyProxyURL = proxyURL
 	return downloadCKPricelistOnceFunc(ctx, downloadURL, proxyOpts)
@@ -238,7 +238,7 @@ func downloadCKPricelistOnce(ctx context.Context, downloadURL string, opts gatew
 		return nil, fmt.Errorf("%s: status %d: %s", ckPricelistErrorPrefix, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
-	log.Printf("ck price refresh: reading pricelist body")
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: reading pricelist body")
 	readStarted := time.Now()
 	bodyReader := &progressLogReader{
 		reader:     resp.Body,
@@ -250,10 +250,9 @@ func downloadCKPricelistOnce(ctx context.Context, downloadURL string, opts gatew
 	if err != nil {
 		return nil, fmt.Errorf("%s: read body: %w", ckPricelistErrorPrefix, err)
 	}
-	log.Printf(
-		"ck price refresh: read pricelist body bytes=%d duration=%s",
-		len(raw),
-		time.Since(readStarted).Round(time.Millisecond),
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: read pricelist body",
+		"bytes", len(raw),
+		"duration", time.Since(readStarted).Round(time.Millisecond),
 	)
 
 	var payload ckPricelistPayload
@@ -303,18 +302,16 @@ func (r *progressLogReader) logProgress(now time.Time) {
 	elapsed := now.Sub(r.readStarted).Round(time.Millisecond)
 	if r.totalBytes > 0 {
 		pct := (float64(r.readBytes) * 100) / float64(r.totalBytes)
-		log.Printf(
-			"%s progress bytes=%d total=%d pct=%.1f%% elapsed=%s",
-			r.label,
-			r.readBytes,
-			r.totalBytes,
-			pct,
-			elapsed,
+		slog.Info(r.label+" progress",
+			"bytes", r.readBytes,
+			"total", r.totalBytes,
+			"pct", pct,
+			"elapsed", elapsed,
 		)
 		return
 	}
 
-	log.Printf("%s progress bytes=%d elapsed=%s", r.label, r.readBytes, elapsed)
+	slog.Info(r.label+" progress", "bytes", r.readBytes, "elapsed", elapsed)
 }
 
 func cheapestListingsFromPricelist(payload *ckPricelistPayload, updatedAt time.Time) map[string]Listing {
