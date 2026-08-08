@@ -36,3 +36,22 @@ func FoldForMatch(value string) string {
 	}
 	return b.String()
 }
+
+// StoreSearchQueries returns the query variants to send to a store. When the
+// search string contains diacritics, both the original and ASCII-stripped forms
+// are searched so shops that index either spelling can return results.
+func StoreSearchQueries(searchString string) []string {
+	trimmed := strings.TrimSpace(searchString)
+	if trimmed == "" {
+		return nil
+	}
+
+	stripped := StripDiacritics(trimmed)
+	if stripped == trimmed {
+		return []string{trimmed}
+	}
+	if stripped == "" {
+		return []string{trimmed}
+	}
+	return []string{trimmed, stripped}
+}

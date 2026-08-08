@@ -31,3 +31,16 @@ func TestFoldForMatch(t *testing.T) {
 		t.Fatalf("FoldForMatch() = %q, want %q", FoldForMatch("Juzám Djinn"), "juzam djinn")
 	}
 }
+
+func TestStoreSearchQueries(t *testing.T) {
+	t.Parallel()
+
+	if got := StoreSearchQueries("Lightning Bolt"); len(got) != 1 || got[0] != "Lightning Bolt" {
+		t.Fatalf("StoreSearchQueries() = %v, want single plain query", got)
+	}
+
+	got := StoreSearchQueries("Kíli")
+	if len(got) != 2 || got[0] != "Kíli" || got[1] != "Kili" {
+		t.Fatalf("StoreSearchQueries() = %v, want [Kíli Kili]", got)
+	}
+}

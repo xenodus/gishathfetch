@@ -157,14 +157,36 @@ func TestFilterAndSortCards_AccentedQueryMatchesAsciiStoreName(t *testing.T) {
 	}
 }
 
-func TestSearchShops_NormalizesAccentedQueryForStores(t *testing.T) {
-	var receivedQuery string
+func TestSearchShops_SearchesAccentedAndStrippedQueriesInParallel(t *testing.T) {
+	var receivedQueries []string
+	var mu sync.Mutex
 	shops := map[string]gateway.LGS{
 		"Shop1": &MockLGS{
 			SearchFunc: func(_ context.Context, searchStr string) ([]gateway.Card, error) {
-				receivedQuery = searchStr
+				mu.Lock()
+				receivedQueries = append(receivedQueries, searchStr)
+				mu.Unlock()
+
+				if searchStr == "Kíli" {
+					return []gateway.Card{
+						{
+							Name:    "Kíli the Resourceful",
+							Url:     "https://shop.example/kili-accent",
+							Price:   2.0,
+							InStock: true,
+							Source:  "Shop1",
+						},
+					}, nil
+				}
+
 				return []gateway.Card{
-					{Name: "Kili the Resourceful", Price: 1.5, InStock: true, Source: "Shop1"},
+					{
+						Name:    "Kili the Resourceful",
+						Url:     "https://shop.example/kili-ascii",
+						Price:   1.5,
+						InStock: true,
+						Source:  "Shop1",
+					},
 				}, nil
 			},
 		},
@@ -181,11 +203,24 @@ func TestSearchShops_NormalizesAccentedQueryForStores(t *testing.T) {
 	if len(storeErrors) != 0 {
 		t.Fatalf("expected no store errors, got %d", len(storeErrors))
 	}
-	if receivedQuery != "Kili" {
-		t.Fatalf("store search query = %q, want %q", receivedQuery, "Kili")
+	if len(receivedQueries) != 2 {
+		t.Fatalf("expected 2 store queries, got %v", receivedQueries)
 	}
-	if len(results) != 1 {
-		t.Fatalf("expected 1 result, got %d", len(results))
+	if len(results) != 2 {
+		t.Fatalf("expected 2 merged results, got %d", len(results))
+	}
+}
+
+func TestDedupeStoreCards_RemovesDuplicateListings(t *testing.T) {
+	cards := []gateway.Card{
+		{Name: "Kili the Resourceful", Url: "https://shop.example/card", Price: 1.5, InStock: true},
+		{Name: "Kíli the Resourceful", Url: "https://shop.example/card", Price: 1.5, InStock: true},
+		{Name: "Other Card", Url: "https://shop.example/other", Price: 1.0, InStock: true},
+	}
+
+	deduped := dedupeStoreCards(cards)
+	if len(deduped) != 2 {
+		t.Fatalf("expected 2 deduped cards, got %d", len(deduped))
 	}
 }
 

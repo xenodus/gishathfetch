@@ -118,10 +118,8 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	realStart := time.Now()
 	responseThreshold := 1 * time.Second
 
-	storeSearchString := util.StripDiacritics(input.SearchString)
-
-	// 1. Fetch concurrently
-	cards, siteErrors, shopDurations := fetchCardsConcurrently(ctx, storeSearchString, shopNameToLGSMap)
+	// 1. Fetch concurrently (each store may search original + stripped forms)
+	cards, siteErrors, shopDurations := fetchCardsConcurrently(ctx, input.SearchString, shopNameToLGSMap)
 	_ = siteErrors // available for future use (e.g. partial-failure UX)
 
 	// 2. Filter and Sort
@@ -283,11 +281,79 @@ func searchShop(
 	shopCtx, cancel := context.WithTimeout(searchCtx, config.PerSiteTimeout)
 	defer cancel()
 
-	cards, err := lgs.Search(shopCtx, searchString)
-	if err != nil {
-		recordShopSearchError(searchString, shopName, err, aggregator)
+	queries := util.StoreSearchQueries(searchString)
+	if len(queries) == 0 {
+		return
 	}
-	aggregator.addCards(cards)
+
+	if len(queries) == 1 {
+		cards, err := lgs.Search(shopCtx, queries[0])
+		if err != nil {
+			recordShopSearchError(searchString, shopName, err, aggregator)
+		}
+		aggregator.addCards(cards)
+		return
+	}
+
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		allCards []gateway.Card
+		errs     []error
+	)
+
+	for _, query := range queries {
+		wg.Add(1)
+		go func(query string) {
+			defer wg.Done()
+			cards, err := lgs.Search(shopCtx, query)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errs = append(errs, err)
+				return
+			}
+			allCards = append(allCards, cards...)
+		}(query)
+	}
+	wg.Wait()
+
+	allCards = dedupeStoreCards(allCards)
+	if len(allCards) == 0 && len(errs) > 0 {
+		recordShopSearchError(searchString, shopName, errors.Join(errs...), aggregator)
+	}
+	aggregator.addCards(allCards)
+}
+
+func dedupeStoreCards(cards []gateway.Card) []gateway.Card {
+	if len(cards) <= 1 {
+		return cards
+	}
+
+	seen := make(map[string]struct{}, len(cards))
+	deduped := make([]gateway.Card, 0, len(cards))
+	for _, card := range cards {
+		key := storeCardKey(card)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		deduped = append(deduped, card)
+	}
+	return deduped
+}
+
+func storeCardKey(card gateway.Card) string {
+	if url := strings.TrimSpace(card.Url); url != "" {
+		return url
+	}
+	return fmt.Sprintf(
+		"%s|%s|%v|%0.2f",
+		card.Name,
+		card.Quality,
+		card.IsFoil,
+		card.Price,
+	)
 }
 
 func recoverShopPanic(shopName string, aggregator *fetchResultAggregator) {
