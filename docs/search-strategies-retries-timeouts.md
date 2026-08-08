@@ -8,7 +8,7 @@ This document records **where** the app configures search behavior, **timeouts**
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| Per-store deadline | 20s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. |
+| Per-store deadline | 20s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. When the query contains diacritics, the original and ASCII-stripped forms are searched **in parallel** under the same per-store deadline, then merged and deduped. |
 | Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step, default colly scrape request, and most `DoOutboundGET` / `DoOutboundRoundTrip` calls. |
 | Agora per-attempt timeout | 20s | `config.AgoraSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/agora/search.go` | Same as per-store deadline (`PerSiteTimeout`). |
 | Mox & Lotus per-attempt timeout | 10s | `config.MoxAndLotusSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/moxandlotus/search.go` | Longer than the default 5s attempt timeout. |
