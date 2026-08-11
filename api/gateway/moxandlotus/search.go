@@ -209,8 +209,14 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 }
 
 func moxOutboundOpts() gateway.OutboundRequestOptions {
+	storeBase, err := url.Parse(StoreBaseURL)
+	if err != nil {
+		storeBase = nil
+	}
 	return gateway.OutboundRequestOptions{
-		PreferDedicatedFirst: true,
+		Style:          gateway.OutboundStyleJSON,
+		StoreBase:      storeBase,
+		SkipWebBotAuth: true,
 	}
 }
 
