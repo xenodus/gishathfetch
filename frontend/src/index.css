@@ -591,8 +591,12 @@ ins.adsbygoogle.adsbygoogle-noablate {
   flex-wrap: wrap;
 }
 
+.popular-search-period-btn,
+.popular-search-pill {
+  font-size: clamp(0.75rem, 0.6875rem + 0.35vw, 0.875rem);
+}
+
 .popular-search-period-btn {
-  font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-primary);
   background-color: transparent;
@@ -620,7 +624,6 @@ ins.adsbygoogle.adsbygoogle-noablate {
 }
 
 .popular-search-pill {
-  font-size: 0.75rem;
   border-radius: var(--bs-border-radius-sm);
   border: 1px solid var(--bs-border-color);
   background-color: var(--bs-body-bg);
