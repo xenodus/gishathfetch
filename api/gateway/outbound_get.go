@@ -255,6 +255,9 @@ func outboundStatusFailure(strategy string, resp *http.Response) string {
 	if cfRay := resp.Header.Get("cf-ray"); cfRay != "" {
 		msg += " cf-ray=" + cfRay
 	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return msg
+	}
 	trimmed := strings.TrimSpace(string(body))
 	if trimmed == "" {
 		return msg

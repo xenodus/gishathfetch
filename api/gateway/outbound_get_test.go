@@ -271,6 +271,7 @@ func TestDoOutboundGET_429FailsOverWithoutRetry(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, int32(1), calls.Load())
 	require.Contains(t, err.Error(), "direct: status 429")
+	require.NotContains(t, err.Error(), "rate limited")
 }
 
 func TestDoOutboundGET_FailsOverOn429ToNextTransport(t *testing.T) {
@@ -292,6 +293,29 @@ func TestDoOutboundGET_FailsOverOn429ToNextTransport(t *testing.T) {
 	require.Contains(t, err.Error(), "direct: status 429")
 	require.Contains(t, err.Error(), "dedicated-1:")
 	require.NotContains(t, err.Error(), "dedicated-2:")
+	require.NotContains(t, err.Error(), "rate limited")
+}
+
+func TestOutboundStatusFailure_OmitsBodyOn429(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Body:       io.NopCloser(strings.NewReader("<html><title>429 Too Many Requests</title></html>")),
+		Header:     make(http.Header),
+	}
+	resp.Header.Set("cf-ray", "abc123")
+
+	got := outboundStatusFailure("dedicated-4", resp)
+	require.Equal(t, "dedicated-4: status 429 cf-ray=abc123", got)
+}
+
+func TestOutboundStatusFailure_IncludesBodyOnOther4xx(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Body:       io.NopCloser(strings.NewReader("forbidden")),
+	}
+
+	got := outboundStatusFailure("direct", resp)
+	require.Contains(t, got, "(forbidden)")
 }
 
 func TestDoOutboundGET_FailsOverOn4xxWithoutRetry(t *testing.T) {

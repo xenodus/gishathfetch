@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/gatewaytest"
 
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,10 @@ import (
 
 func TestMoxOutboundOpts(t *testing.T) {
 	opts := moxOutboundOpts()
-	require.True(t, opts.PreferDedicatedFirst)
+	require.Equal(t, gateway.OutboundStyleJSON, opts.Style)
+	require.Equal(t, StoreBaseURL, opts.StoreBase.String())
+	require.True(t, opts.SkipWebBotAuth)
+	require.False(t, opts.PreferDedicatedFirst)
 	require.False(t, opts.SkipDirect)
 	require.False(t, opts.PreferResidentialProxy)
 }

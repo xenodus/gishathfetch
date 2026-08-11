@@ -98,13 +98,13 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 | 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → dynamic**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
 | Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
-| Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Dedicated → direct → dynamic** (`PreferDedicatedFirst`) | Transport fallback only |
+| Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated → dynamic**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
 | Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 
-For 5 Mana, `SkipDirect` is cleared when the host is not the production domain so httptest unit tests can use the direct transport. Agora and Mox & Lotus keep direct in the fallback chain after dedicated (`PreferDedicatedFirst`).
+For 5 Mana, `SkipDirect` is cleared when the host is not the production domain so httptest unit tests can use the direct transport. Agora uses `PreferDedicatedFirst` (dedicated before direct). Mox & Lotus use the default direct-first order with dedicated as fallback.
 
 ---
 
