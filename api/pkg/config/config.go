@@ -86,12 +86,12 @@ const (
 	// CKPriceChangesS3KeyPrefix is the object key prefix for exported CK price change reports.
 	CKPriceChangesS3KeyPrefix = "analytics/ck-price-changes"
 	// CKPriceChangesLatestJSONCacheControl is applied to latest.json so CloudFront can cache it
-	// between daily exports without a separate invalidation.
+	// between daily CK exports without a separate invalidation.
 	CKPriceChangesLatestJSONCacheControl = AnalyticsLatestJSONCacheControl
 	// AnalyticsLatestJSONCacheControl is applied to latest.json so CloudFront can cache it
-	// between daily exports without a separate invalidation.
+	// between hourly exports without a separate invalidation.
 	AnalyticsLatestJSONCacheControl = "public, max-age=3600"
-	// RobotsTxtCacheControl is applied to robots.txt so CloudFront can cache it between daily exports.
+	// RobotsTxtCacheControl is applied to robots.txt so CloudFront can cache it between hourly exports.
 	RobotsTxtCacheControl = "public, max-age=3600"
 	// SiteBaseURL is the public frontend origin used when generating robots.txt search URLs.
 	SiteBaseURL = "https://gishathfetch.com/"

@@ -70,7 +70,7 @@ func BuildRobotsTxt(report *Report, baseURL string) string {
 
 	var builder strings.Builder
 	builder.WriteString(RobotsTxtBase)
-	builder.WriteString("\n# Popular MTG card search pages (updated daily)\n")
+	builder.WriteString("\n# Popular MTG card search pages (updated hourly)\n")
 	for _, term := range terms {
 		builder.WriteString("Allow: ")
 		builder.WriteString(BuildSearchPageURL(baseURL, term))

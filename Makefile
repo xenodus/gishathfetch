@@ -4,6 +4,10 @@ ECR_REPO := mtg-price-scrapper
 ECR_IMAGE := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):latest
 LAMBDA_ROLE := arn:aws:iam::$(AWS_ACCOUNT_ID):role/lambda-mtg
 LAMBDA_FUNCTIONS := mtg-price-scrapper mtg-price-ck-refresh mtg-analytics-keywords-export
+ANALYTICS_KEYWORDS_EXPORT_RULE := analytics-keywords-export-daily
+ANALYTICS_KEYWORDS_EXPORT_LAMBDA := mtg-analytics-keywords-export
+ANALYTICS_KEYWORDS_EXPORT_ACTION := analytics-keywords-export-run
+ANALYTICS_KEYWORDS_EXPORT_SCHEDULE := rate(1 hour)
 
 deploy: deploy-common docker-tag docker-push lambda-update frontend-update
 
@@ -69,6 +73,26 @@ lambda-update:
 
 aws-login:
 	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
+
+# Hourly GA4 keyword export: updates the existing EventBridge rule schedule and target.
+eventbridge-analytics-keywords-hourly:
+	export AWS_PAGER="" && aws events put-rule \
+		--name $(ANALYTICS_KEYWORDS_EXPORT_RULE) \
+		--schedule-expression "$(ANALYTICS_KEYWORDS_EXPORT_SCHEDULE)" \
+		--state ENABLED \
+		--description "Hourly GA4 top-search-keywords export to S3" \
+		--region $(AWS_REGION)
+	export AWS_PAGER="" && aws events put-targets \
+		--rule $(ANALYTICS_KEYWORDS_EXPORT_RULE) \
+		--targets "Id=1,Arn=arn:aws:lambda:$(AWS_REGION):$(AWS_ACCOUNT_ID):function:$(ANALYTICS_KEYWORDS_EXPORT_LAMBDA),Input={\"action\":\"$(ANALYTICS_KEYWORDS_EXPORT_ACTION)\"}" \
+		--region $(AWS_REGION)
+	export AWS_PAGER="" && aws lambda add-permission \
+		--function-name $(ANALYTICS_KEYWORDS_EXPORT_LAMBDA) \
+		--statement-id $(ANALYTICS_KEYWORDS_EXPORT_RULE) \
+		--action lambda:InvokeFunction \
+		--principal events.amazonaws.com \
+		--source-arn arn:aws:events:$(AWS_REGION):$(AWS_ACCOUNT_ID):rule/$(ANALYTICS_KEYWORDS_EXPORT_RULE) \
+		--region $(AWS_REGION) || true
 
 test:
 	cd api && go clean -testcache && go test -mod=vendor -failfast -timeout 5m ./...

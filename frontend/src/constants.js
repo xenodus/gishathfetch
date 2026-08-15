@@ -210,6 +210,9 @@ export const BASE_URL = "https://gishathfetch.com/";
 export const TOP_SEARCH_KEYWORDS_URL =
   "/analytics/top-search-keywords/latest.json";
 
+// Poll trending keywords on the same cadence as the hourly GA4 export + S3 cache TTL.
+export const TOP_SEARCH_KEYWORDS_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
+
 // Same-origin on production (served from gishathfetch.com via CloudFront).
 export const CK_PRICE_CHANGES_URL = "/analytics/ck-price-changes/latest.json";
 

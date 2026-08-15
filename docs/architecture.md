@@ -46,7 +46,7 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   is set; card names verified against Scryfall before lookup.
 - Two additional Lambda handlers share the same ECR image and IAM role:
   `mtg-price-ck-refresh` (daily CK pricelist sync) and
-  `mtg-analytics-keywords-export` (daily GA4 keyword export).
+  `mtg-analytics-keywords-export` (hourly GA4 keyword export).
 
 ### Infrastructure
 
@@ -59,8 +59,10 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   handler selected by event shape.
 - **Data:** DynamoDB table for CK retail prices (`CK_DYNAMODB_TABLE`, default
   `gishathfetch-ck-prices`).
-- **Scheduler:** EventBridge rules `ck-price-refresh-daily` and
-  `analytics-keywords-export-daily` invoke the refresh/export Lambdas.
+- **Scheduler:** EventBridge rules `ck-price-refresh-daily` (daily) and
+  `analytics-keywords-export-daily` (hourly GA4 export; run `make
+  eventbridge-analytics-keywords-hourly` to apply the schedule) invoke the
+  refresh/export Lambdas.
 - **Deploy:** `make deploy` builds the Docker image, pushes to ECR, updates all
   Lambdas, and syncs the frontend build to S3 (with CloudFront invalidation). WAF
   rules, API Gateway route wiring, and Lambda env secrets are managed outside
@@ -97,7 +99,7 @@ flowchart TB
         SearchLambda[Lambda mtg-price-scrapper]
         RefreshLambda[Lambda mtg-price-ck-refresh]
         AnalyticsLambda[Lambda mtg-analytics-keywords-export]
-        EB[EventBridge daily schedule]
+        EB[EventBridge schedules]
         DDB[(DynamoDB CK prices)]
         ECR[ECR mtg-price-scrapper image]
     end
@@ -144,8 +146,8 @@ flowchart TB
 | Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`; origin-verify header; session cookie ([docs](api-abuse-mitigation.md)) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth; optional CK price lookup |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily CK pricelist download, DynamoDB rebuild, price-change export to S3 |
-| Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
-| Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
+| Analytics keywords Lambda | `mtg-analytics-keywords-export` | Hourly GA4 export of top search keywords to S3 |
+| Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily` hourly) | Invokes refresh/export Lambdas with action payloads |
 | CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
 | Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for all Lambdas (different handlers via event shape) |
 | IAM role | `lambda-mtg` | Shared execution role for all three Lambdas |
@@ -168,7 +170,7 @@ sequenceDiagram
 
     U->>FE: search for card name
     FE->>GA: gtag event search (search_term)
-    EB->>L: daily analytics-keywords-export-run
+    EB->>L: hourly analytics-keywords-export-run
     L->>GA: GA4 Data API RunReport
     L->>S3: analytics/top-search-keywords/latest.json
     L->>S3: robots.txt
@@ -178,14 +180,14 @@ sequenceDiagram
 S3 output (default bucket `gishathfetch.com`, prefix `analytics/top-search-keywords/`):
 
 - `latest.json` — most recent export, served at `https://gishathfetch.com/analytics/top-search-keywords/latest.json`
-- `robots.txt` — bucket root; baseline crawl policy plus daily `Allow` lines for top search keywords
+- `robots.txt` — bucket root; baseline crawl policy plus hourly `Allow` lines for top search keywords
 
 The export Lambda writes to the same bucket as the frontend SPA so the report is
 available same-origin through CloudFront. Objects use `Cache-Control: public,
-max-age=3600` so edge caches can serve them between daily exports without a
+max-age=3600` so edge caches can serve them between hourly exports without a
 separate invalidation.
 
-Frontend deploys exclude `robots.txt` from `aws s3 sync` so the daily Lambda export
+Frontend deploys exclude `robots.txt` from `aws s3 sync` so the hourly Lambda export
 remains the source of truth for the live file.
 
 Example report shape:
