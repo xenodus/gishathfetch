@@ -307,14 +307,21 @@ func searchShop(
 		wg.Add(1)
 		go func(query string) {
 			defer wg.Done()
-			cards, err := lgs.Search(shopCtx, query)
+
+			var queryCards []gateway.Card
+			var queryErr error
+			func() {
+				defer recoverShopPanic(shopName, aggregator)
+				queryCards, queryErr = lgs.Search(shopCtx, query)
+			}()
+
 			mu.Lock()
 			defer mu.Unlock()
-			if err != nil {
-				errs = append(errs, err)
+			if queryErr != nil {
+				errs = append(errs, queryErr)
 				return
 			}
-			allCards = append(allCards, cards...)
+			allCards = append(allCards, queryCards...)
 		}(query)
 	}
 	wg.Wait()
