@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   TOP_SEARCH_KEYWORDS_DISPLAY_LIMIT,
-  TOP_SEARCH_KEYWORDS_REFRESH_INTERVAL_MS,
   TOP_SEARCH_KEYWORDS_URL,
 } from "../constants";
 
@@ -46,10 +45,8 @@ export default function useTopSearchKeywords(enabled) {
     const controller = new AbortController();
     let cancelled = false;
 
-    const loadKeywords = async (isBackgroundRefresh = false) => {
-      if (!isBackgroundRefresh) {
-        setIsLoading(true);
-      }
+    const loadKeywords = async () => {
+      setIsLoading(true);
       try {
         const response = await fetch(TOP_SEARCH_KEYWORDS_URL, {
           signal: controller.signal,
@@ -70,7 +67,7 @@ export default function useTopSearchKeywords(enabled) {
           setKeywordsByPeriod(EMPTY_KEYWORDS_BY_PERIOD);
         }
       } finally {
-        if (!cancelled && !isBackgroundRefresh) {
+        if (!cancelled) {
           setIsLoading(false);
         }
       }
@@ -78,15 +75,9 @@ export default function useTopSearchKeywords(enabled) {
 
     loadKeywords();
 
-    const refreshId = window.setInterval(
-      () => loadKeywords(true),
-      TOP_SEARCH_KEYWORDS_REFRESH_INTERVAL_MS,
-    );
-
     return () => {
       cancelled = true;
       controller.abort();
-      window.clearInterval(refreshId);
     };
   }, [enabled]);
 
