@@ -29,9 +29,9 @@ service tables, batch-job flows, and IAM notes:
 The browser loads the SPA from **S3 via CloudFront** (`gishathfetch.com`). Search
 and session call **`api.gishathfetch.com`** (separate CloudFront → API Gateway →
 Lambda path). Daily EventBridge jobs refresh Card Kingdom prices in DynamoDB; an
-hourly job exports GA4 trending keywords to S3 (`make
-eventbridge-analytics-keywords-hourly` applies the schedule). Both CloudFront
-distributions sit behind **AWS WAF**; inbound API abuse mitigation is documented in
+hourly job exports GA4 trending keywords to S3 (configure the EventBridge schedule
+manually). Both CloudFront distributions sit behind **AWS WAF**; inbound API abuse
+mitigation is documented in
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
 ## 🛡️ API abuse mitigation

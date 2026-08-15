@@ -60,9 +60,8 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
 - **Data:** DynamoDB table for CK retail prices (`CK_DYNAMODB_TABLE`, default
   `gishathfetch-ck-prices`).
 - **Scheduler:** EventBridge rules `ck-price-refresh-daily` (daily) and
-  `analytics-keywords-export-daily` (hourly GA4 export; run `make
-  eventbridge-analytics-keywords-hourly` to apply the schedule) invoke the
-  refresh/export Lambdas.
+  `analytics-keywords-export-daily` (hourly GA4 export; configure the schedule
+  manually in EventBridge) invoke the refresh/export Lambdas.
 - **Deploy:** `make deploy` builds the Docker image, pushes to ECR, updates all
   Lambdas, and syncs the frontend build to S3 (with CloudFront invalidation). WAF
   rules, API Gateway route wiring, and Lambda env secrets are managed outside
@@ -176,6 +175,10 @@ sequenceDiagram
     L->>S3: robots.txt
     FE->>S3: fetch latest.json via CloudFront
 ```
+
+**EventBridge (manual):** update rule `analytics-keywords-export-daily` to run hourly
+(`rate(1 hour)` or `cron(0 * * * ? *)` UTC). Target Lambda
+`mtg-analytics-keywords-export` with payload `{"action":"analytics-keywords-export-run"}`.
 
 S3 output (default bucket `gishathfetch.com`, prefix `analytics/top-search-keywords/`):
 
