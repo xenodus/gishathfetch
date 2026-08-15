@@ -156,7 +156,7 @@ flowchart TB
 The frontend sends GA4 `search` events with a `search_term` parameter whenever a
 user starts a valid card-name search. The analytics Lambda queries the GA4 Data API
 for the `search` event and `searchTerm` dimension, ranks the top 20 keywords for
-the last 24 hours, 7 days, 30 days, 6 months, and 1 year, and writes JSON to S3.
+the last hour, 24 hours, 7 days, 30 days, 6 months, and 1 year, and writes JSON to S3.
 
 ```mermaid
 sequenceDiagram
@@ -201,6 +201,7 @@ Example report shape:
   "propertyId": "123456789",
   "eventName": "search",
   "periods": {
+    "last1Hour": { "start": "...", "end": "...", "keywords": [{"term": "Sol Ring", "count": 2}] },
     "last24Hours": { "start": "...", "end": "...", "keywords": [{"term": "Opt", "count": 4}] },
     "last7Days": { "startDate": "7daysAgo", "endDate": "today", "keywords": [] },
     "last30Days": { "startDate": "30daysAgo", "endDate": "today", "keywords": [] },

@@ -237,7 +237,8 @@ export default function App() {
             collapseOnSearch={isSearching}
             defaultExpanded={
               searchQuery.trim() === "" &&
-              topSearchKeywordsByPeriod.last24Hours.length > 0
+              (topSearchKeywordsByPeriod.last1Hour.length > 0 ||
+                topSearchKeywordsByPeriod.last24Hours.length > 0)
             }
           />
         }

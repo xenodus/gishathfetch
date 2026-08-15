@@ -33,6 +33,7 @@ type SearchTermCount struct {
 // Reporter fetches top search keywords from GA4.
 type Reporter interface {
 	TopSearchTerms(ctx context.Context, startDate, endDate string, limit int) ([]SearchTermCount, error)
+	TopSearchTermsLast1Hour(ctx context.Context, now time.Time, limit int) ([]SearchTermCount, error)
 	TopSearchTermsLast24Hours(ctx context.Context, now time.Time, limit int) ([]SearchTermCount, error)
 }
 
@@ -110,12 +111,19 @@ func (c *Client) TopSearchTerms(ctx context.Context, startDate, endDate string, 
 	return parseSearchTermRows(response.Rows), nil
 }
 
+func (c *Client) TopSearchTermsLast1Hour(ctx context.Context, now time.Time, limit int) ([]SearchTermCount, error) {
+	return c.topSearchTermsSince(ctx, now.UTC().Add(-1*time.Hour), limit)
+}
+
 func (c *Client) TopSearchTermsLast24Hours(ctx context.Context, now time.Time, limit int) ([]SearchTermCount, error) {
+	return c.topSearchTermsSince(ctx, now.UTC().Add(-24*time.Hour), limit)
+}
+
+func (c *Client) topSearchTermsSince(ctx context.Context, since time.Time, limit int) ([]SearchTermCount, error) {
 	if limit <= 0 {
 		return nil, fmt.Errorf("ga4: limit must be positive")
 	}
 
-	since := now.UTC().Add(-24 * time.Hour)
 	sinceDateHour, err := strconv.ParseInt(since.Format("2006010215"), 10, 64)
 	if err != nil {
 		return nil, err

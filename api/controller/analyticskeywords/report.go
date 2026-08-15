@@ -13,6 +13,7 @@ import (
 const (
 	TopKeywordLimit   = 20
 	ga4CandidateLimit = 20
+	periodLast1Hour   = "last1Hour"
 	periodLast24Hours = "last24Hours"
 	periodLast7Days   = "last7Days"
 	periodLast30Days  = "last30Days"
@@ -49,7 +50,7 @@ var (
 	verifyCardNameFunc = scryfall.VerifyCardName
 )
 
-// BuildReport fetches top search keywords for the last 24 hours, 7 days, 30 days, 6 months, and 1 year.
+// BuildReport fetches top search keywords for the last hour, 24 hours, 7 days, 30 days, 6 months, and 1 year.
 func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, limit int) (*Report, error) {
 	if reporter == nil {
 		return nil, fmt.Errorf("analyticskeywords: reporter is required")
@@ -65,7 +66,22 @@ func BuildReport(ctx context.Context, reporter ga4.Reporter, propertyID string, 
 		GeneratedAt: now.Format(time.RFC3339),
 		PropertyID:  propertyID,
 		EventName:   ga4.SearchEventName,
-		Periods:     make(map[string]PeriodReport, 5),
+		Periods:     make(map[string]PeriodReport, 6),
+	}
+
+	last1Hour, err := reporter.TopSearchTermsLast1Hour(ctx, now, ga4CandidateLimit)
+	if err != nil {
+		return nil, fmt.Errorf("analyticskeywords: last 1 hour: %w", err)
+	}
+	validated1Hour, err := validateKeywords(ctx, last1Hour, limit)
+	if err != nil {
+		return nil, fmt.Errorf("analyticskeywords: last 1 hour: %w", err)
+	}
+	report.Periods[periodLast1Hour] = PeriodReport{
+		Start:        now.Add(-1 * time.Hour).Format(time.RFC3339),
+		End:          now.Format(time.RFC3339),
+		Keywords:     validated1Hour,
+		KeywordLimit: limit,
 	}
 
 	last24Hours, err := reporter.TopSearchTermsLast24Hours(ctx, now, ga4CandidateLimit)

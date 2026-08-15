@@ -132,6 +132,10 @@ func (m *mockAnalyticsReporter) TopSearchTerms(_ context.Context, _, _ string, _
 	return []ga4.SearchTermCount{{Term: "Opt", Count: 1}}, nil
 }
 
+func (m *mockAnalyticsReporter) TopSearchTermsLast1Hour(_ context.Context, _ time.Time, _ int) ([]ga4.SearchTermCount, error) {
+	return []ga4.SearchTermCount{{Term: "Opt", Count: 1}}, nil
+}
+
 func (m *mockAnalyticsReporter) TopSearchTermsLast24Hours(_ context.Context, _ time.Time, _ int) ([]ga4.SearchTermCount, error) {
 	return []ga4.SearchTermCount{{Term: "Opt", Count: 1}}, nil
 }

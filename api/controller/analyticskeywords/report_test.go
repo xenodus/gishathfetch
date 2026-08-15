@@ -12,6 +12,7 @@ import (
 type mockReporter struct {
 	start6Months string
 	start1Year   string
+	last1Hour    []ga4.SearchTermCount
 	last24Hours  []ga4.SearchTermCount
 	last7Days    []ga4.SearchTermCount
 	last30Days   []ga4.SearchTermCount
@@ -32,6 +33,10 @@ func (m *mockReporter) TopSearchTerms(_ context.Context, startDate, endDate stri
 	default:
 		return nil, nil
 	}
+}
+
+func (m *mockReporter) TopSearchTermsLast1Hour(_ context.Context, _ time.Time, limit int) ([]ga4.SearchTermCount, error) {
+	return trimTerms(m.last1Hour, limit), nil
 }
 
 func (m *mockReporter) TopSearchTermsLast24Hours(_ context.Context, _ time.Time, limit int) ([]ga4.SearchTermCount, error) {
@@ -68,6 +73,7 @@ func TestBuildReport(t *testing.T) {
 	reporter := &mockReporter{
 		start6Months: ga4CalendarDate(fixedNow.AddDate(0, -6, 0)),
 		start1Year:   ga4CalendarDate(fixedNow.AddDate(-1, 0, 0)),
+		last1Hour:    []ga4.SearchTermCount{{Term: "Sol Ring", Count: 2}},
 		last24Hours:  []ga4.SearchTermCount{{Term: "Opt", Count: 4}},
 		last7Days:   []ga4.SearchTermCount{{Term: "Lightning Bolt", Count: 10}},
 		last30Days:  []ga4.SearchTermCount{{Term: "Sol Ring", Count: 20}},
@@ -82,6 +88,14 @@ func TestBuildReport(t *testing.T) {
 
 	if report.PropertyID != "123456789" || report.EventName != ga4.SearchEventName {
 		t.Fatalf("unexpected report metadata: %+v", report)
+	}
+
+	last1Hour := report.Periods[periodLast1Hour]
+	if last1Hour.Start != "2026-06-28T11:00:00Z" || last1Hour.End != "2026-06-28T12:00:00Z" {
+		t.Fatalf("unexpected 1h window: %+v", last1Hour)
+	}
+	if len(last1Hour.Keywords) != 1 || last1Hour.Keywords[0].Term != "Sol Ring" {
+		t.Fatalf("unexpected 1h keywords: %+v", last1Hour.Keywords)
 	}
 
 	last24Hours := report.Periods[periodLast24Hours]

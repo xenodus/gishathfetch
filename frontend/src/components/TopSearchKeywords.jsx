@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, TrendingUp } from "react-feather";
 import {
   BASE_URL,
@@ -39,6 +39,7 @@ const LOADING_SKELETON_KEYS = [
 ];
 
 const PERIOD_OPTIONS = [
+  { id: "last1Hour", label: "1 hour" },
   { id: "last24Hours", label: "24 hours" },
   { id: "last30Days", label: "30 days" },
   { id: "last6Months", label: "6 months" },
@@ -233,7 +234,7 @@ export default function TopSearchKeywords({
   collapseOnSearch = false,
   defaultExpanded = false,
 }) {
-  const [period, setPeriod] = useState("last24Hours");
+  const [period, setPeriod] = useState("last1Hour");
   const [isExpanded, setIsExpanded] = useState(
     () => !collapsible || defaultExpanded,
   );
@@ -248,6 +249,7 @@ export default function TopSearchKeywords({
     loadPriceChanges,
   } = useCKPriceChanges();
   const isDesktop = useMediaQuery(DESKTOP_MIN_WIDTH_MEDIA_QUERY);
+  const hasAppliedInitialPeriod = useRef(false);
   const displayLimit = getDisplayLimit(isDesktop, showAllKeywords);
   const panelId = useId();
 
@@ -256,6 +258,22 @@ export default function TopSearchKeywords({
       setIsExpanded(true);
     }
   }, [defaultExpanded]);
+
+  useEffect(() => {
+    if (isLoading || hasAppliedInitialPeriod.current) {
+      return;
+    }
+    hasAppliedInitialPeriod.current = true;
+    if ((keywordsByPeriod?.last1Hour?.length ?? 0) > 0) {
+      return;
+    }
+    const fallback = PERIOD_OPTIONS.find(
+      (option) => (keywordsByPeriod?.[option.id]?.length ?? 0) > 0,
+    );
+    if (fallback) {
+      setPeriod(fallback.id);
+    }
+  }, [keywordsByPeriod, isLoading]);
 
   useEffect(() => {
     if (collapseOnSearch) {

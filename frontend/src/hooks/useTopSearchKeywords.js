@@ -17,6 +17,7 @@ function parseKeywordList(keywords) {
 
 function parseTopSearchKeywords(payload) {
   return {
+    last1Hour: parseKeywordList(payload?.periods?.last1Hour?.keywords),
     last24Hours: parseKeywordList(payload?.periods?.last24Hours?.keywords),
     last30Days: parseKeywordList(payload?.periods?.last30Days?.keywords),
     last6Months: parseKeywordList(payload?.periods?.last6Months?.keywords),
@@ -25,6 +26,7 @@ function parseTopSearchKeywords(payload) {
 }
 
 const EMPTY_KEYWORDS_BY_PERIOD = {
+  last1Hour: [],
   last24Hours: [],
   last30Days: [],
   last6Months: [],
