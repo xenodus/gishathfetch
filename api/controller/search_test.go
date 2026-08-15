@@ -799,6 +799,59 @@ func TestFetchCardsConcurrently_CollatesAlertErrors(t *testing.T) {
 	}
 }
 
+func TestFetchCardsConcurrently_RecoversPanicForDiacriticDualQuery(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"PanicShop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				panic("shop panic")
+			},
+		},
+	}
+
+	var mu sync.Mutex
+	alertMessages := make([]string, 0, 1)
+	alertDone := make(chan struct{}, 1)
+
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
+		mu.Lock()
+		alertMessages = append(alertMessages, message)
+		mu.Unlock()
+		select {
+		case alertDone <- struct{}{}:
+		default:
+		}
+	}
+	t.Cleanup(func() {
+		sendAlert = originalSendAlert
+	})
+
+	_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Kíli", shops)
+	if len(siteErrors) != 1 {
+		t.Fatalf("expected 1 site error, got %d", len(siteErrors))
+	}
+	if siteErrors["PanicShop"] == nil {
+		t.Fatal("expected PanicShop site error")
+	}
+
+	select {
+	case <-alertDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for panic alert")
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(alertMessages) != 1 {
+		t.Fatalf("expected exactly 1 alert, got %d", len(alertMessages))
+	}
+	if !strings.Contains(alertMessages[0], "Recovered from panic in shop [PanicShop]: shop panic") {
+		t.Fatalf("expected panic alert, got: %s", alertMessages[0])
+	}
+}
+
 func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToAlert(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"Timeout Shop": &MockLGS{
