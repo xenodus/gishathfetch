@@ -1,3 +1,42 @@
+/* Warm neutral light-mode palette — overrides Bootstrap's cool gray defaults */
+[data-bs-theme="light"] {
+  --bs-body-bg: #faf8f5;
+  --bs-body-color: #3d3630;
+  --bs-secondary-color: rgba(61, 54, 48, 0.72);
+  --bs-tertiary-color: rgba(61, 54, 48, 0.5);
+  --bs-tertiary-bg: #f3efe8;
+  --bs-secondary-bg: #ebe5dc;
+  --bs-secondary-bg-subtle: #e3dcd2;
+  --bs-border-color: #d9d2c7;
+  --bs-border-color-translucent: rgba(61, 54, 48, 0.14);
+  --bs-emphasis-color: #2a2520;
+
+  --bs-gray-100: #f3efe8;
+  --bs-gray-200: #ebe5dc;
+  --bs-gray-300: #d9d2c7;
+  --bs-gray-400: #c4bbb0;
+  --bs-gray-500: #a69e94;
+  --bs-gray-600: #8a8175;
+  --bs-gray-700: #6b6359;
+  --bs-gray-800: #4d4640;
+  --bs-gray-900: #3d3630;
+
+  --bs-secondary: #8a8175;
+  --bs-secondary-rgb: 138, 129, 117;
+  --bs-light: #f3efe8;
+  --bs-light-rgb: 243, 239, 232;
+  --bs-dark: #3d3630;
+  --bs-dark-rgb: 61, 54, 48;
+
+  --bs-box-shadow-sm: 0 0.125rem 0.25rem rgba(61, 54, 48, 0.06);
+  --bs-box-shadow: 0 0.5rem 1rem rgba(61, 54, 48, 0.1);
+  --bs-box-shadow-lg: 0 1rem 3rem rgba(61, 54, 48, 0.12);
+
+  /* Form controls: warm white instead of cool pure white */
+  --bs-form-control-bg: #fffcf8;
+  --bs-form-control-disabled-bg: #f3efe8;
+}
+
 @keyframes pulse {
   0% {
     opacity: 0.6;
@@ -37,7 +76,7 @@ body {
 
 .btn.btn-outline-primary.theme-toggle-btn:hover,
 .btn.btn-outline-primary.theme-toggle-btn:focus-visible {
-  background-color: rgba(13, 110, 253, 0.25);
+  background-color: rgba(var(--bs-primary-rgb), 0.25);
 }
 
 .store-selector-section {
@@ -393,7 +432,7 @@ input#search:focus-visible {
 
 ::-webkit-scrollbar-thumb {
   border-radius: 5px;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: color-mix(in srgb, var(--bs-body-color) 35%, transparent);
   -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
