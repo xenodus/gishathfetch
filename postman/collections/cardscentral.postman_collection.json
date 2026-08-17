@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Cards Central - LGS Search API",
-    "description": "Custom LGS search API at /api/lgs/search. No authentication required.\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
+    "description": "Custom LGS search API at /api/lgs/search. Requires x-gishath-key (set CARDS_CENTRAL_KEY env var in production).\n\nGenerated from gishathfetch gateway definitions. API paths only (no HTML scrape fallbacks).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,6 +12,10 @@
     {
       "key": "search_query",
       "value": "Lightning Bolt"
+    },
+    {
+      "key": "cards_central_key",
+      "value": ""
     }
   ],
   "item": [
@@ -23,6 +27,10 @@
           {
             "key": "Accept",
             "value": "application/json"
+          },
+          {
+            "key": "x-gishath-key",
+            "value": "{{cards_central_key}}"
           }
         ],
         "url": {

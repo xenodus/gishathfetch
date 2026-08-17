@@ -2,14 +2,26 @@ package cardscentral
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 
 	"mtg-price-checker-sg/gateway/gatewaytest"
+	"mtg-price-checker-sg/pkg/config"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	_ = godotenv.Load("../../.env")
+}
+
 func Test_Search(t *testing.T) {
+	if strings.TrimSpace(os.Getenv(config.CardsCentralKeyEnv)) == "" {
+		t.Skip("CARDS_CENTRAL_KEY not set")
+	}
+
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "lightning bolt")
 	require.NoError(t, err)

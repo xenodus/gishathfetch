@@ -106,6 +106,10 @@ const (
 	APISessionSecretEnv = "API_SESSION_SECRET"
 	// APISessionTTLEnv overrides session lifetime in seconds (default 15 minutes).
 	APISessionTTLEnv = "API_SESSION_TTL_SECONDS"
+	// CardsCentralKeyEnv is the API key for Cards Central LGS search requests.
+	CardsCentralKeyEnv = "CARDS_CENTRAL_KEY"
+	// CardsCentralKeyHeader is the request header Cards Central expects for aggregator access.
+	CardsCentralKeyHeader = "x-gishath-key"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
