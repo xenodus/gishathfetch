@@ -172,7 +172,9 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	cards, siteErrors, alertErrorMessages := aggregator.snapshot()
 	shopDurations := aggregator.shopDurationSnapshot()
 	if len(alertErrorMessages) > 0 {
-		go sendAlert(formatAlertErrorSummary(searchString, alertErrorMessages))
+		// Send synchronously so Lambda does not freeze the runtime before the
+		// Slack webhook POST completes (fire-and-forget goroutines are dropped).
+		sendAlert(formatAlertErrorSummary(searchString, alertErrorMessages))
 	}
 	if len(siteErrors) > 0 {
 		logger.From(ctx).InfoContext(ctx, "Shops with errors", "search", searchString, "count", len(siteErrors))
