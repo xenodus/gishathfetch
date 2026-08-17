@@ -64,7 +64,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	resp, err := gateway.DoOutboundGET(
 		ctx,
 		apiURL.String(),
-		gateway.OutboundRequestOptions{Style: gateway.OutboundStyleJSON},
+		cardsCentralOutboundOpts(),
 		config.SearchAttemptTimeout,
 	)
 	if err != nil {
@@ -121,4 +121,17 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	return cards, nil
+}
+
+func cardsCentralOutboundOpts() gateway.OutboundRequestOptions {
+	storeBase, err := url.Parse(StoreBaseURL)
+	if err != nil {
+		storeBase = nil
+	}
+	return gateway.OutboundRequestOptions{
+		Style:                  gateway.OutboundStyleJSON,
+		StoreBase:              storeBase,
+		SkipWebBotAuth:         true,
+		PreferResidentialProxy: true,
+	}
 }
