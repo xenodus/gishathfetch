@@ -6,7 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 )
+
+const webhookPostTimeout = 5 * time.Second
+
+var webhookHTTPClient = &http.Client{Timeout: webhookPostTimeout}
 
 const (
 	AlertWebhookEnv    = "SLACK_ALERT_WEBHOOK"
@@ -46,7 +51,7 @@ func sendWebhookAlert(webhookURLEnv, message string) {
 		return
 	}
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	resp, err := webhookHTTPClient.Post(webhookURL, "application/json", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		slog.Error("failed to send alert", "err", err)
 		return

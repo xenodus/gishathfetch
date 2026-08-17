@@ -728,6 +728,33 @@ func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t 
 	}
 }
 
+func TestFetchCardsConcurrently_CompletesAlertBeforeReturn(t *testing.T) {
+	alertCompleted := false
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
+		alertCompleted = true
+	}
+	t.Cleanup(func() {
+		sendAlert = originalSendAlert
+	})
+
+	shops := map[string]gateway.LGS{
+		"ErrorShop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, fmt.Errorf("shop failed")
+			},
+		},
+	}
+
+	_, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Abrade", shops)
+	if len(siteErrors) != 1 {
+		t.Fatalf("expected 1 site error, got %d", len(siteErrors))
+	}
+	if !alertCompleted {
+		t.Fatal("expected alert to complete before fetchCardsConcurrently returns")
+	}
+}
+
 func TestFetchCardsConcurrently_CollatesAlertErrors(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"ErrorShopA": &MockLGS{
