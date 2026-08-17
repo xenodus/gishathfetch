@@ -35,6 +35,45 @@
   /* Form controls: warm white instead of cool pure white */
   --bs-form-control-bg: #fffcf8;
   --bs-form-control-disabled-bg: #f3efe8;
+
+  /* Warm primary blue — replaces Bootstrap's electric blue */
+  --bs-primary: #4a6275;
+  --bs-primary-rgb: 74, 98, 117;
+  --bs-primary-text-emphasis: #2a3842;
+  --bs-primary-bg-subtle: #e6ebef;
+  --bs-primary-border-subtle: #b4c4cf;
+
+  --bs-link-color: #4a6275;
+  --bs-link-color-rgb: 74, 98, 117;
+  --bs-link-hover-color: #364a58;
+  --bs-link-hover-color-rgb: 54, 74, 88;
+
+  --bs-focus-ring-color: rgba(74, 98, 117, 0.25);
+}
+
+/* Bootstrap hardcodes primary button states — override for light mode */
+[data-bs-theme="light"] .btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: #3f5565;
+  --bs-btn-hover-border-color: #3a505f;
+  --bs-btn-focus-shadow-rgb: 74, 98, 117;
+  --bs-btn-active-bg: #364a58;
+  --bs-btn-active-border-color: #314550;
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+}
+
+[data-bs-theme="light"] .btn-outline-primary {
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: 74, 98, 117;
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
 }
 
 @keyframes pulse {
