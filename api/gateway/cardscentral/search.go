@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"mtg-price-checker-sg/gateway"
@@ -64,7 +65,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	resp, err := gateway.DoOutboundGET(
 		ctx,
 		apiURL.String(),
-		gateway.OutboundRequestOptions{Style: gateway.OutboundStyleJSON},
+		cardsCentralOutboundOpts(),
 		config.SearchAttemptTimeout,
 	)
 	if err != nil {
@@ -121,4 +122,14 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	}
 
 	return cards, nil
+}
+
+func cardsCentralOutboundOpts() gateway.OutboundRequestOptions {
+	opts := gateway.OutboundRequestOptions{Style: gateway.OutboundStyleJSON}
+	if key := strings.TrimSpace(os.Getenv(config.CardsCentralKeyEnv)); key != "" {
+		opts.ExtraHeaders = map[string]string{
+			config.CardsCentralKeyHeader: key,
+		}
+	}
+	return opts
 }

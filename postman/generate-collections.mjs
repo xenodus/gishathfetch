@@ -228,10 +228,11 @@ const customStores = [
   {
     id: 'cardscentral',
     name: 'Cards Central',
-    description: 'Custom LGS search API at /api/lgs/search. No authentication required.',
+    description: 'Custom LGS search API at /api/lgs/search. Requires x-gishath-key (set CARDS_CENTRAL_KEY env var in production).',
     variables: [
       { key: 'base_url', value: 'https://cardscentral.com' },
       { key: 'search_query', value: 'Lightning Bolt' },
+      { key: 'cards_central_key', value: '' },
     ],
     items: [
       getRequest(
@@ -244,7 +245,7 @@ const customStores = [
           path: ['api', 'lgs', 'search'],
           query: [{ key: 'q', value: '{{search_query}}' }],
         },
-        [{ key: 'Accept', value: 'application/json' }],
+        [{ key: 'Accept', value: 'application/json' }, { key: 'x-gishath-key', value: '{{cards_central_key}}' }],
       ),
     ],
   },

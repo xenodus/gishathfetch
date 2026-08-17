@@ -22,6 +22,10 @@
               {
                 "key": "Accept",
                 "value": "application/json"
+              },
+              {
+                "key": "x-gishath-key",
+                "value": "{{cards_central_key}}"
               }
             ],
             "url": {
@@ -45,7 +49,7 @@
           }
         }
       ],
-      "description": "Custom LGS search API at /api/lgs/search. No authentication required."
+      "description": "Custom LGS search API at /api/lgs/search. Requires x-gishath-key (set CARDS_CENTRAL_KEY env var in production)."
     },
     {
       "name": "Cards & Collections",

@@ -26,6 +26,24 @@ func TestPrepareOutboundRequest_CKMinimalPricelistHeaders(t *testing.T) {
 	require.Empty(t, req.Header.Get("Signature-Input"))
 }
 
+func TestPrepareOutboundRequest_ExtraHeaders(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "https://cardscentral.com/api/lgs/search", nil)
+	require.NoError(t, err)
+
+	err = PrepareOutboundRequest(context.Background(), req, OutboundRequestOptions{
+		Style:          OutboundStyleJSON,
+		SkipWebBotAuth: true,
+		ExtraHeaders: map[string]string{
+			"x-gishath-key": "test-key",
+			"":              "ignored",
+			"empty-value":   "",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "test-key", req.Header.Get("x-gishath-key"))
+	require.Empty(t, req.Header.Get("empty-value"))
+}
+
 func TestPrepareOutboundRequest_JSONStyleSetsOrigin(t *testing.T) {
 	storeBase, err := url.Parse("https://www.cardkingdom.com/")
 	require.NoError(t, err)

@@ -37,6 +37,8 @@ type OutboundRequestOptions struct {
 	SkipWebBotAuth bool
 	// ShopifySGDCurrency sets cart_currency/localization cookies for Shopify storefronts.
 	ShopifySGDCurrency bool
+	// ExtraHeaders sets additional request headers after style-specific headers apply.
+	ExtraHeaders map[string]string
 }
 
 // PrepareOutboundRequest applies per-domain pacing, browser-like headers, a
@@ -67,6 +69,12 @@ func PrepareOutboundRequest(ctx context.Context, req *http.Request, opts Outboun
 
 	if opts.ShopifySGDCurrency {
 		ApplyShopifySGDCurrencyCookie(&req.Header)
+	}
+
+	for key, value := range opts.ExtraHeaders {
+		if key != "" && value != "" {
+			req.Header.Set(key, value)
+		}
 	}
 
 	profile := ResolveBrowserProfileForOutbound(ctx, opts)

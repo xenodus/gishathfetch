@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
+
+	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/stretchr/testify/require"
 )
@@ -137,11 +140,15 @@ func RequireCardsCentralAPIStructure(t *testing.T, ctx context.Context, baseURL,
 	t.Helper()
 	host := strings.TrimPrefix(strings.TrimPrefix(baseURL, "https://"), "http://")
 	probeURL := BuildURL("https", host, "/api/lgs/search", url.Values{"q": {query}})
+	headers := map[string]string{
+		"Accept": "application/json",
+	}
+	if key := strings.TrimSpace(os.Getenv(config.CardsCentralKeyEnv)); key != "" {
+		headers[config.CardsCentralKeyHeader] = key
+	}
 	RequireJSONStructure(t, ctx, JSONProbe{
-		URL: probeURL,
-		Headers: map[string]string{
-			"Accept": "application/json",
-		},
+		URL:     probeURL,
+		Headers: headers,
 		Validate: func(body []byte) error {
 			var payload []json.RawMessage
 			if err := json.Unmarshal(body, &payload); err != nil {
