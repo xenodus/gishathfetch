@@ -116,24 +116,36 @@ const CartOffcanvas = ({
           not be updated automatically.
         </div>
 
-        <div className="mb-4 d-flex flex-column flex-sm-row gap-2">
-          <Button
-            variant="outline-primary"
-            size="sm"
-            className="flex-fill"
-            onClick={handleOpenExport}
-            disabled={cart.length === 0}
-          >
-            Export saved list
-          </Button>
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            className="flex-fill"
-            onClick={handleOpenImport}
-          >
-            Import saved list
-          </Button>
+        <div className="mb-4 d-flex flex-column gap-2">
+          <div className="d-flex flex-column flex-sm-row gap-2">
+            <Button
+              variant="outline-primary"
+              size="sm"
+              className="flex-fill"
+              onClick={handleOpenExport}
+              disabled={cart.length === 0}
+            >
+              Export saved list
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              className="flex-fill"
+              onClick={handleOpenImport}
+            >
+              Import saved list
+            </Button>
+          </div>
+          {cart.length > 0 && (
+            <Button
+              variant="outline-danger"
+              size="sm"
+              className="w-100 text-uppercase"
+              onClick={handleClearCart}
+            >
+              Remove all saved cards
+            </Button>
+          )}
         </div>
 
         {cart.length > 0 && (
@@ -207,18 +219,6 @@ const CartOffcanvas = ({
             <div className="mt-4">
               <AdComponent lazyLoad />
             </div>
-
-            {cart.length >= 2 && (
-              <div className="mt-5">
-                <Button
-                  variant="danger"
-                  className="w-100 text-uppercase"
-                  onClick={handleClearCart}
-                >
-                  Remove all saved cards
-                </Button>
-              </div>
-            )}
           </>
         ) : (
           <strong>No cards saved yet.</strong>
