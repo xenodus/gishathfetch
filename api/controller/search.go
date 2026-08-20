@@ -231,6 +231,33 @@ func (f *fetchResultAggregator) addShopDuration(shopName string, duration time.D
 	f.mu.Unlock()
 }
 
+func (f *fetchResultAggregator) clearShopFailure(shopName string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	delete(f.siteErrors, shopName)
+
+	if len(f.alertErrorMessages) == 0 {
+		return
+	}
+
+	filtered := f.alertErrorMessages[:0]
+	for _, message := range f.alertErrorMessages {
+		if isShopFailureAlertMessage(message, shopName) {
+			continue
+		}
+		filtered = append(filtered, message)
+	}
+	f.alertErrorMessages = filtered
+}
+
+func isShopFailureAlertMessage(message, shopName string) bool {
+	if strings.HasPrefix(message, fmt.Sprintf("Recovered from panic in shop [%s]:", shopName)) {
+		return true
+	}
+	return strings.HasPrefix(message, fmt.Sprintf("Error encountered searching [%s] for [", shopName))
+}
+
 func (f *fetchResultAggregator) shopDurationSnapshot() []shopSearchDuration {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -329,7 +356,11 @@ func searchShop(
 	wg.Wait()
 
 	allCards = dedupeStoreCards(allCards)
-	if len(allCards) == 0 && len(errs) > 0 {
+	if len(allCards) > 0 {
+		// A sibling query may have panicked or errored while another variant still
+		// returned inventory; partial success should not surface a store failure.
+		aggregator.clearShopFailure(shopName)
+	} else if len(errs) > 0 {
 		recordShopSearchError(searchString, shopName, errors.Join(errs...), aggregator)
 	}
 	aggregator.addCards(allCards)

@@ -879,6 +879,53 @@ func TestFetchCardsConcurrently_RecoversPanicForDiacriticDualQuery(t *testing.T)
 	}
 }
 
+func TestFetchCardsConcurrently_DiacriticDualQueryOmitsErrorWhenPartialSuccess(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"PartialShop": &MockLGS{
+			SearchFunc: func(_ context.Context, searchStr string) ([]gateway.Card, error) {
+				if searchStr == "Kíli" {
+					panic("accented query panic")
+				}
+				return []gateway.Card{
+					{
+						Name:    "Kili the Resourceful",
+						Url:     "https://shop.example/kili",
+						Price:   1.5,
+						InStock: true,
+						Source:  "PartialShop",
+					},
+				}, nil
+			},
+		},
+	}
+
+	alertSent := make(chan struct{}, 1)
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
+		select {
+		case alertSent <- struct{}{}:
+		default:
+		}
+	}
+	t.Cleanup(func() {
+		sendAlert = originalSendAlert
+	})
+
+	cards, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Kíli", shops)
+	if len(siteErrors) != 0 {
+		t.Fatalf("expected no site errors after partial success, got %v", siteErrors)
+	}
+	if len(cards) != 1 {
+		t.Fatalf("expected 1 card from partial success, got %d", len(cards))
+	}
+
+	select {
+	case <-alertSent:
+		t.Fatal("did not expect Slack alert when a dual-query variant returned cards")
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
 func TestFetchCardsConcurrently_ReportsPerSiteTimeoutToAlert(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"Timeout Shop": &MockLGS{
