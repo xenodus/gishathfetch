@@ -54,6 +54,25 @@ func RequireFiveManaSearchStructure(t *testing.T, ctx context.Context, baseURL, 
 	})
 }
 
+// RequireTefudaSearchStructure verifies the Tefuda Shopify MTG singles search page markup.
+func RequireTefudaSearchStructure(t *testing.T, ctx context.Context, baseURL, searchPath, query string) {
+	t.Helper()
+	host := strings.TrimPrefix(strings.TrimPrefix(baseURL, "https://"), "http://")
+	probeURL := BuildURL("https", host, searchPath, url.Values{
+		"q":    {fmt.Sprintf(`product_type:"Magic: The Gathering Singles" AND %s`, query)},
+		"type": {"product"},
+	})
+	pageURL, err := url.Parse(probeURL)
+	require.NoError(t, err)
+	RequireHTMLStructure(t, ctx, HTMLProbe{
+		URL:                    probeURL,
+		PrimarySelector:        "ul.product-grid li",
+		FallbackSelector:       "ul.product-grid",
+		PageURL:                pageURL,
+		ShopifySGDCurrency: true,
+	})
+}
+
 // RequireDuellersPointSearchStructure verifies the Dueller's Point search API response shape.
 func RequireDuellersPointSearchStructure(t *testing.T, ctx context.Context, baseURL, searchPath, query string) {
 	t.Helper()
