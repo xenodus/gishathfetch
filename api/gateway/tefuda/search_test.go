@@ -56,6 +56,16 @@ func Test_ParseNameAndFoil(t *testing.T) {
 	name, foil = parseNameAndFoil("Polluted Delta [KTK - 239] R Khans of Tarkir")
 	require.Equal(t, "Polluted Delta [KTK - 239] R Khans of Tarkir", name)
 	require.False(t, foil)
+
+	name, foil = parseNameAndFoil("Belladonna Took [HOB - 4] R The Hobbit - Foil")
+	require.Equal(t, "Belladonna Took [HOB - 4] R The Hobbit", name)
+	require.True(t, foil)
+}
+
+func Test_HandleIndicatesFoil(t *testing.T) {
+	require.True(t, handleIndicatesFoil("belladonna-took-hob-4-foil-en"))
+	require.False(t, handleIndicatesFoil("belladonna-took-hob-4-normal-en"))
+	require.False(t, handleIndicatesFoil("some-card-non-foil-en"))
 }
 
 func Test_QualityFromVariantTitle(t *testing.T) {
@@ -83,6 +93,33 @@ func Test_MapGraphQLProductSkipsSealed(t *testing.T) {
 	}
 
 	require.Empty(t, mapGraphQLProduct(StoreName, product))
+}
+
+func Test_MapGraphQLProductDetectsTefudaTitleSuffixFoil(t *testing.T) {
+	product := &graphQLProduct{
+		Title:            "Belladonna Took [HOB - 4] R The Hobbit - Foil",
+		Handle:           "belladonna-took-hob-4-foil-en",
+		AvailableForSale: true,
+		ProductType:      storefrontMTGType,
+		Tags:             []string{"English", "Rare", "The Hobbit"},
+	}
+	product.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			Title:            "Near Mint",
+			AvailableForSale: true,
+			Price: struct {
+				Amount string `json:"amount"`
+			}{Amount: "3.5"},
+		}},
+	}
+
+	cards := mapGraphQLProduct(StoreName, product)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Belladonna Took [HOB - 4] R The Hobbit", cards[0].Name)
+	require.True(t, cards[0].IsFoil)
+	require.Equal(t, "Near Mint", cards[0].Quality)
 }
 
 func Test_MapGraphQLProductKeepsSingles(t *testing.T) {
