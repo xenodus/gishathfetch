@@ -59,7 +59,7 @@ For any PR that includes UI changes:
 
 ### Go version requirement
 
-The project requires Go 1.26.5 (per `api/go.mod`). The update script installs it to `/usr/local/go`. You must have `/usr/local/go/bin` in your PATH:
+The project requires Go 1.27.0 (per `api/go.mod`). Cloud Agent VMs install the matching toolchain to `/usr/local/go` via `.cursor/environment.json` → `.cursor/scripts/cloud-agent-install.sh` (reads `api/go.mod`). You must have `/usr/local/go/bin` in your PATH:
 
 ```bash
 export PATH="/usr/local/go/bin:$PATH"

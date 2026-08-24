@@ -42,22 +42,18 @@ func TestRunCKPriceRefresh_SendsSuccessAlert(t *testing.T) {
 			priceChangesByUsd: map[bool][]ckprices.PriceChangeListing{
 				false: {
 					{
-						NameKey: "bolt",
-						Listing: cardkingdom.Listing{
-							CardName:       "Lightning Bolt",
-							PriceUsd:       1.25,
-							PriceChangeUsd: new(0.16),
-						},
+						NameKey:        "bolt",
+						CardName:       "Lightning Bolt",
+						PriceUsd:       1.25,
+						PriceChangeUsd: new(0.16),
 					},
 				},
 				true: {
 					{
-						NameKey: "counterspell",
-						Listing: cardkingdom.Listing{
-							CardName:       "Counterspell",
-							PriceUsd:       0.75,
-							PriceChangeUsd: new(-0.08),
-						},
+						NameKey:        "counterspell",
+						CardName:       "Counterspell",
+						PriceUsd:       0.75,
+						PriceChangeUsd: new(-0.08),
 					},
 				},
 			},

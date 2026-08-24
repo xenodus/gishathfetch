@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/store/ckprices"
 )
 
@@ -14,24 +13,20 @@ func TestNewReportIncludesSyncedAtAndRankings(t *testing.T) {
 	changes := &ckprices.TopBottomPriceChanges{
 		Top: []ckprices.PriceChangeListing{
 			{
-				NameKey: "lightning bolt",
-				Listing: cardkingdom.Listing{
-					CardName:           "Lightning Bolt",
-					PriceUsd:           1.25,
-					PriceChangePercent: &increase,
-					SyncedAt:           "2026-07-11T00:00:00Z",
-				},
+				NameKey:            "lightning bolt",
+				CardName:           "Lightning Bolt",
+				PriceUsd:           1.25,
+				PriceChangePercent: &increase,
+				SyncedAt:           "2026-07-11T00:00:00Z",
 			},
 		},
 		Bottom: []ckprices.PriceChangeListing{
 			{
-				NameKey: "counterspell",
-				Listing: cardkingdom.Listing{
-					CardName:           "Counterspell",
-					PriceUsd:           0.75,
-					PriceChangePercent: &decrease,
-					SyncedAt:           "2026-07-11T00:00:00Z",
-				},
+				NameKey:            "counterspell",
+				CardName:           "Counterspell",
+				PriceUsd:           0.75,
+				PriceChangePercent: &decrease,
+				SyncedAt:           "2026-07-11T00:00:00Z",
 			},
 		},
 	}

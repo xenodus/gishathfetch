@@ -22,17 +22,17 @@ import (
 )
 
 const (
-	batchGetLimit               = 100
-	batchWriteLimit             = 25
-	batchWriteBackoffMin        = 200 * time.Millisecond
-	batchWriteBackoffMax        = 30 * time.Second
-	batchWriteMaxRetries        = 12
-	batchWriteInterBatchDelay   = 50 * time.Millisecond
-	dynamoDBClientMaxAttempts   = 10
-	priceChangeUsdIndexName     = "priceChangeUsd-index"
-	priceChangeIndexPKValue     = "CURRENT"
-	syncMetadataKey             = "__sync__"
-	syncMetadataLabel           = "CK price sync metadata"
+	batchGetLimit             = 100
+	batchWriteLimit           = 25
+	batchWriteBackoffMin      = 200 * time.Millisecond
+	batchWriteBackoffMax      = 30 * time.Second
+	batchWriteMaxRetries      = 12
+	batchWriteInterBatchDelay = 50 * time.Millisecond
+	dynamoDBClientMaxAttempts = 10
+	priceChangeUsdIndexName   = "priceChangeUsd-index"
+	priceChangeIndexPKValue   = "CURRENT"
+	syncMetadataKey           = "__sync__"
+	syncMetadataLabel         = "CK price sync metadata"
 )
 
 type dynamoRecord struct {
@@ -43,12 +43,12 @@ type dynamoRecord struct {
 	PreviousPriceUsd   *float64 `dynamodbav:"previousPriceUsd,omitempty"`
 	PriceChangePercent *int     `dynamodbav:"priceChangePercent,omitempty"`
 	PriceChangeUsd     *float64 `dynamodbav:"priceChangeUsd,omitempty"`
-	PriceChangeIndexPK *string `dynamodbav:"priceChangeIndexPK,omitempty"`
-	URL                string  `dynamodbav:"url"`
-	IsFoil             bool    `dynamodbav:"isFoil"`
-	InStock            *bool   `dynamodbav:"inStock,omitempty"`
-	UpdatedAt          string  `dynamodbav:"updatedAt"`
-	SyncedAt           string  `dynamodbav:"syncedAt"`
+	PriceChangeIndexPK *string  `dynamodbav:"priceChangeIndexPK,omitempty"`
+	URL                string   `dynamodbav:"url"`
+	IsFoil             bool     `dynamodbav:"isFoil"`
+	InStock            *bool    `dynamodbav:"inStock,omitempty"`
+	UpdatedAt          string   `dynamodbav:"updatedAt"`
+	SyncedAt           string   `dynamodbav:"syncedAt"`
 }
 
 type syncMetadataRecord struct {
@@ -508,16 +508,13 @@ func (s *DynamoDBStore) writeBatch(ctx context.Context, batch []types.WriteReque
 }
 
 func isDynamoDBThrottleError(err error) bool {
-	var throttling *types.ThrottlingException
-	if errors.As(err, &throttling) {
+	if _, ok := errors.AsType[*types.ThrottlingException](err); ok {
 		return true
 	}
-	var provisioned *types.ProvisionedThroughputExceededException
-	if errors.As(err, &provisioned) {
+	if _, ok := errors.AsType[*types.ProvisionedThroughputExceededException](err); ok {
 		return true
 	}
-	var apiErr smithy.APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[smithy.APIError](err); ok {
 		switch apiErr.ErrorCode() {
 		case "ThrottlingException", "ProvisionedThroughputExceededException":
 			return true
