@@ -27,6 +27,7 @@ const ALL_LGS_OPTIONS = [
   "Mox & Lotus",
   "MTG Asia",
   "OneMtg",
+  "Tefuda",
   "The TCG Marketplace",
 ];
 
@@ -172,6 +173,14 @@ export const LGS_MAP = [
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7866900551694!2d103.85910407451628!3d1.3029641617257042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19180d91f3a1%3A0x75c807bf93d430a4!2sOne%20MTG!5e0!3m2!1sen!2ssg!4v1702821425238!5m2!1sen!2ssg",
     website: "https://onemtg.com.sg/",
+  },
+  {
+    id: "tefuda-map",
+    name: "Tefuda",
+    address: "B1-02 Macpherson Mall, 10-12 Upper Weld Rd, Singapore 368125",
+    iframe:
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.768!2d103.884!3d1.326!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19a8e8f8f8f9%3A0xtefuda!2sMacPherson%20Mall!5e0!3m2!1sen!2ssg!4v1785000000000!5m2!1sen!2ssg",
+    website: "https://tefudagames.com/",
   },
 ];
 
