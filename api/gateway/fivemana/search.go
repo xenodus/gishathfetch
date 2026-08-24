@@ -37,19 +37,41 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	cards, err := s.searchGraphQL(ctx, searchStr)
-	if err == nil {
+	cards, gqlErr := s.searchGraphQL(ctx, searchStr)
+	if gqlErr == nil && gateway.CardsMatchSearch(cards, searchStr) {
 		return cards, nil
 	}
-	if gateway.IsHTTPServerError(err) {
-		return nil, err
+	if gqlErr != nil && gateway.IsHTTPServerError(gqlErr) {
+		return nil, gqlErr
+	}
+	if gqlErr == nil && len(cards) > 0 {
+		slog.Warn("graphql results do not match query, trying suggest", "store", s.Name, "query", searchStr)
+	} else if gqlErr != nil {
+		slog.Warn("graphql search failed, trying suggest", "store", s.Name, "err", gqlErr)
 	}
 
-	slog.Warn("graphql search failed, falling back to HTML", "store", s.Name, "err", err)
+	suggestCards, suggestErr := s.searchSuggest(ctx, searchStr)
+	if suggestErr == nil && gateway.CardsMatchSearch(suggestCards, searchStr) {
+		return suggestCards, nil
+	}
+	if suggestErr != nil && gateway.IsHTTPServerError(suggestErr) {
+		return nil, suggestErr
+	}
+	if suggestErr == nil && len(suggestCards) > 0 {
+		slog.Warn("suggest results do not match query, falling back to HTML", "store", s.Name, "query", searchStr)
+	} else if suggestErr != nil {
+		slog.Warn("suggest search failed, falling back to HTML", "store", s.Name, "err", suggestErr)
+	}
 
 	htmlCards, htmlErr := s.searchHTML(ctx, searchStr)
 	if htmlErr != nil {
-		return nil, fmt.Errorf("graphql: %w; html: %v", err, htmlErr)
+		if gqlErr != nil {
+			return nil, fmt.Errorf("graphql: %w; html: %v", gqlErr, htmlErr)
+		}
+		return nil, htmlErr
+	}
+	if !gateway.CardsMatchSearch(htmlCards, searchStr) {
+		return nil, nil
 	}
 	return htmlCards, nil
 }

@@ -128,13 +128,17 @@ func Test_MapGraphQLProductFoilVariant(t *testing.T) {
 }
 
 func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
-	var sawGraphQL, sawHTML bool
+	var sawGraphQL, sawSuggest, sawHTML bool
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.Contains(r.URL.Path, "graphql"):
 			sawGraphQL = true
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"errors":[{"message":"boom"}]}`))
+		case strings.Contains(r.URL.Path, "suggest.json"):
+			sawSuggest = true
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"resources":{"results":{"products":[]}}}`))
 		case strings.Contains(r.URL.Path, "search"):
 			sawHTML = true
 			require.Equal(t, storefrontSearchSectionID, r.URL.Query().Get("section_id"))
@@ -154,9 +158,163 @@ func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
 	cards, err := store.Search(context.Background(), "Abrade")
 	require.NoError(t, err)
 	require.True(t, sawGraphQL)
+	require.True(t, sawSuggest)
 	require.True(t, sawHTML)
 	require.Len(t, cards, 1)
 	require.Equal(t, "Abrade [Foundations]", cards[0].Name)
+}
+
+func Test_SearchFallsBackToSuggestWhenGraphQLIrrelevant(t *testing.T) {
+	irrelevantPayload := graphQLResponse{
+		Data: &struct {
+			Search *struct {
+				Edges []graphQLEdge `json:"edges"`
+			} `json:"search"`
+		}{
+			Search: &struct {
+				Edges []graphQLEdge `json:"edges"`
+			}{
+				Edges: []graphQLEdge{{
+					Node: &graphQLProduct{
+						Title:            "Teferi, Time Raveler [War of the Spark]",
+						Handle:           "teferi-time-raveler-war-of-the-spark",
+						AvailableForSale: true,
+						ProductType:      storefrontMTGType,
+						FeaturedImage: &struct {
+							URL string `json:"url"`
+						}{URL: "https://cdn.shopify.com/teferi.png"},
+					},
+				}},
+			},
+		},
+	}
+	irrelevantPayload.Data.Search.Edges[0].Node.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			Title:            "Near Mint Foil",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "11.80"},
+		}},
+	}
+	body, err := json.Marshal(irrelevantPayload)
+	require.NoError(t, err)
+
+	var sawGraphQL, sawSuggest, sawHTML bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "graphql"):
+			sawGraphQL = true
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+		case strings.Contains(r.URL.Path, "suggest.json"):
+			sawSuggest = true
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(suggestAbradeJSON))
+		case strings.Contains(r.URL.Path, "search"):
+			sawHTML = true
+			http.Error(w, "should not hit HTML", http.StatusInternalServerError)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	store := Store{
+		Name:       StoreName,
+		BaseUrl:    server.URL,
+		SearchPath: StoreSearchPath,
+	}
+	cards, err := store.Search(context.Background(), "Abrade")
+	require.NoError(t, err)
+	require.True(t, sawGraphQL)
+	require.True(t, sawSuggest)
+	require.False(t, sawHTML)
+	require.Len(t, cards, 1)
+	require.Equal(t, "Abrade [Foundations]", cards[0].Name)
+	require.Equal(t, 0.40, cards[0].Price)
+}
+
+func Test_SearchReturnsEmptyWhenNoStrategyMatches(t *testing.T) {
+	irrelevantPayload := graphQLResponse{
+		Data: &struct {
+			Search *struct {
+				Edges []graphQLEdge `json:"edges"`
+			} `json:"search"`
+		}{
+			Search: &struct {
+				Edges []graphQLEdge `json:"edges"`
+			}{
+				Edges: []graphQLEdge{{
+					Node: &graphQLProduct{
+						Title:            "Lightning Strike [Dominaria United]",
+						Handle:           "lightning-strike",
+						AvailableForSale: true,
+						ProductType:      storefrontMTGType,
+					},
+				}},
+			},
+		},
+	}
+	irrelevantPayload.Data.Search.Edges[0].Node.Variants.Edges = []struct {
+		Node *graphQLVariant `json:"node"`
+	}{
+		{Node: &graphQLVariant{
+			Title:            "Near Mint",
+			AvailableForSale: true,
+			Price:            struct {
+				Amount string `json:"amount"`
+			}{Amount: "0.25"},
+		}},
+	}
+	body, err := json.Marshal(irrelevantPayload)
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.Contains(r.URL.Path, "graphql"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+		case strings.Contains(r.URL.Path, "suggest.json"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"resources":{"results":{"products":[]}}}`))
+		case strings.Contains(r.URL.Path, "search"):
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(inStockProductHTML))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	store := Store{
+		Name:       StoreName,
+		BaseUrl:    server.URL,
+		SearchPath: StoreSearchPath,
+	}
+	cards, err := store.Search(context.Background(), "Lightning Bolt")
+	require.NoError(t, err)
+	require.Empty(t, cards)
+}
+
+func Test_MapSuggestProduct(t *testing.T) {
+	card, ok := mapSuggestProduct(StoreName, suggestProduct{
+		Available: true,
+		Handle:    "abrade-foundations",
+		Image:     "https://cdn.shopify.com/abrade.png",
+		Price:     "0.40",
+		Tags:      []string{"Foundations", "Red"},
+		Title:     "Abrade [Foundations]",
+		URL:       "/products/abrade-foundations",
+	})
+	require.True(t, ok)
+	require.Equal(t, "Abrade [Foundations]", card.Name)
+	require.Equal(t, 0.40, card.Price)
+	require.False(t, card.IsFoil)
+	require.Equal(t, []string{"[Foundations]"}, card.ExtraInfo)
+	require.Contains(t, card.Url, "utm_source="+config.UtmSource)
 }
 
 func Test_SearchDoesNotFallbackToHTMLWhenGraphQL5xx(t *testing.T) {

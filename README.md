@@ -78,7 +78,8 @@ multi-strategy fallback chain (5 Mana is an exception; see below). On failure th
 store simply contributes nothing.
 
 **5 Mana** is Shopify (Dawn, not BinderPOS). It tries Storefront GraphQL first,
-then falls back to a `main-search` HTML section scrape when GraphQL fails.
+then Shopify `suggest.json` when GraphQL fails or returns irrelevant matches,
+then falls back to a `main-search` HTML section scrape.
 
 **BinderPOS stores** (e.g. Arcane Sanctum, Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro, MTG Asia,

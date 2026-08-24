@@ -54,3 +54,21 @@ const inStockProductHTML = `
 </li>
 </ul>
 `
+
+const suggestAbradeJSON = `{
+  "resources": {
+    "results": {
+      "products": [
+        {
+          "available": true,
+          "handle": "abrade-foundations",
+          "image": "https://cdn.shopify.com/abrade.png",
+          "price": "0.40",
+          "tags": ["Foundations", "Red"],
+          "title": "Abrade [Foundations]",
+          "url": "/products/abrade-foundations"
+        }
+      ]
+    }
+  }
+}`
