@@ -96,7 +96,7 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 |-------|----------|----------------------|-------------------------|---------|
 | Agora Hobby | HTML search page (`/store/search`) | 20s | **Dedicated → direct → dynamic** (`PreferDedicatedFirst`; browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
 | 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → dynamic**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
-| Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 5s per path | Direct → dedicated → dynamic | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
+| Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 5s per path | **Dedicated → direct → dynamic** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
 | Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 | Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated → dynamic**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |

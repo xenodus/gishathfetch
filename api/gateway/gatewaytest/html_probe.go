@@ -22,6 +22,7 @@ type HTMLProbe struct {
 	FallbackSelector       string
 	PageURL                *url.URL
 	ShopifySGDCurrency     bool
+	PreferDedicatedFirst   bool
 	PreferResidentialProxy bool
 	SkipDirect             bool
 	SkipWebBotAuth         bool
@@ -45,7 +46,8 @@ func RequireHTMLStructure(t *testing.T, ctx context.Context, probe HTMLProbe) {
 		Style:                  gateway.OutboundStyleHTML,
 		PageURL:                pageURL,
 		ShopifySGDCurrency:     probe.ShopifySGDCurrency,
-		PreferResidentialProxy:   probe.PreferResidentialProxy,
+		PreferDedicatedFirst:   probe.PreferDedicatedFirst,
+		PreferResidentialProxy: probe.PreferResidentialProxy,
 		SkipDirect:               probe.SkipDirect,
 		SkipWebBotAuth:           probe.SkipWebBotAuth,
 	}, 20*time.Second)

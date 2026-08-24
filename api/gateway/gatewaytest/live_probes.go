@@ -70,6 +70,7 @@ func RequireTefudaSearchStructure(t *testing.T, ctx context.Context, baseURL, se
 		FallbackSelector:       "ul.product-grid",
 		PageURL:                pageURL,
 		ShopifySGDCurrency: true,
+		PreferDedicatedFirst: true,
 	})
 }
 
