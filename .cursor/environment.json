@@ -1,0 +1,17 @@
+{
+  "name": "Gishath Fetch",
+  "install": "bash .cursor/scripts/cloud-agent-install.sh",
+  "terminals": [
+    {
+      "name": "vite-dev",
+      "command": "cd frontend && npm run dev",
+      "description": "Frontend Vite dev server (port 5173)"
+    }
+  ],
+  "ports": [
+    {
+      "name": "frontend",
+      "port": 5173
+    }
+  ]
+}
