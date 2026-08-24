@@ -202,7 +202,10 @@ func mapGraphQLProduct(storeName string, product *graphQLProduct) []gateway.Card
 		}
 
 		quality := qualityFromVariantTitle(variant.Title)
-		isFoil := titleFoil || variantIsFoil(variant.Title) || tagsIndicateFoil(product.Tags)
+		isFoil := titleFoil ||
+			variantIsFoil(variant.Title) ||
+			tagsIndicateFoil(product.Tags) ||
+			handleIndicatesFoil(product.Handle)
 
 		cardURL, err := productURLWithUTM(StoreBaseURL + "/products/" + product.Handle)
 		if err != nil {
@@ -245,11 +248,26 @@ func parseNameAndFoil(raw string) (name string, isFoil bool) {
 		strings.Contains(lower, "(foil)") ||
 		strings.Contains(lower, "surge foil") ||
 		strings.Contains(lower, "rainbow foil") ||
-		strings.Contains(lower, "etched foil")
+		strings.Contains(lower, "etched foil") ||
+		strings.HasSuffix(lower, "- foil")
 	name = strings.ReplaceAll(name, "[Foil]", "")
 	name = strings.ReplaceAll(name, "[foil]", "")
+	if strings.HasSuffix(strings.ToLower(name), "- foil") {
+		name = strings.TrimSpace(name[:len(name)-len("- foil")])
+	}
 	name = strings.Join(strings.Fields(name), " ")
 	return name, isFoil
+}
+
+func handleIndicatesFoil(handle string) bool {
+	lower := strings.ToLower(strings.TrimSpace(handle))
+	if lower == "" {
+		return false
+	}
+	if strings.Contains(lower, "non-foil") || strings.Contains(lower, "nonfoil") {
+		return false
+	}
+	return strings.Contains(lower, "-foil-") || strings.HasSuffix(lower, "-foil")
 }
 
 func variantIsFoil(variantTitle string) bool {
