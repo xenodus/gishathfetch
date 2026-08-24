@@ -76,11 +76,9 @@ func TestPriceChangesByUsdFromListings(t *testing.T) {
 	}
 	listing := func(nameKey string, change float64) PriceChangeListing {
 		return PriceChangeListing{
-			NameKey: nameKey,
-			Listing: cardkingdom.Listing{
-				CardName:       nameKey,
-				PriceChangeUsd: usd(change),
-			},
+			NameKey:        nameKey,
+			CardName:       nameKey,
+			PriceChangeUsd: usd(change),
 		}
 	}
 
@@ -111,12 +109,10 @@ func TestTopBottomPriceChangesByUsd(t *testing.T) {
 	}
 	listing := func(nameKey string, changeUsd float64, changePercent int) PriceChangeListing {
 		return PriceChangeListing{
-			NameKey: nameKey,
-			Listing: cardkingdom.Listing{
-				CardName:           nameKey,
-				PriceChangeUsd:     usd(changeUsd),
-				PriceChangePercent: percent(changePercent),
-			},
+			NameKey:            nameKey,
+			CardName:           nameKey,
+			PriceChangeUsd:     usd(changeUsd),
+			PriceChangePercent: percent(changePercent),
 		}
 	}
 
@@ -145,28 +141,22 @@ func TestDedupePriceChangeListingsByURL(t *testing.T) {
 	sharedURL := "https://www.cardkingdom.com/mtg/example/tony-stark"
 	listings := []PriceChangeListing{
 		{
-			NameKey: "tony stark // the invincible iron man",
-			Listing: cardkingdom.Listing{
-				CardName:       "Tony Stark // The Invincible Iron Man",
-				PriceChangeUsd: usd(26),
-				URL:            sharedURL,
-			},
+			NameKey:        "tony stark // the invincible iron man",
+			CardName:       "Tony Stark // The Invincible Iron Man",
+			PriceChangeUsd: usd(26),
+			URL:            sharedURL,
 		},
 		{
-			NameKey: "the invincible iron man",
-			Listing: cardkingdom.Listing{
-				CardName:       "Tony Stark // The Invincible Iron Man",
-				PriceChangeUsd: usd(26),
-				URL:            sharedURL,
-			},
+			NameKey:        "the invincible iron man",
+			CardName:       "Tony Stark // The Invincible Iron Man",
+			PriceChangeUsd: usd(26),
+			URL:            sharedURL,
 		},
 		{
-			NameKey: "lightning bolt",
-			Listing: cardkingdom.Listing{
-				CardName:       "Lightning Bolt",
-				PriceChangeUsd: usd(0.50),
-				URL:            "https://www.cardkingdom.com/mtg/example/lightning-bolt",
-			},
+			NameKey:        "lightning bolt",
+			CardName:       "Lightning Bolt",
+			PriceChangeUsd: usd(0.50),
+			URL:            "https://www.cardkingdom.com/mtg/example/lightning-bolt",
 		},
 	}
 
@@ -181,9 +171,9 @@ func TestFilterPriceChangesByUsdSign(t *testing.T) {
 		return &value
 	}
 	listings := []PriceChangeListing{
-		{NameKey: "riser", Listing: cardkingdom.Listing{PriceChangeUsd: usd(2.50)}},
-		{NameKey: "drop", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-1.25)}},
-		{NameKey: "flat", Listing: cardkingdom.Listing{PriceChangeUsd: usd(0)}},
+		{NameKey: "riser", PriceChangeUsd: usd(2.50)},
+		{NameKey: "drop", PriceChangeUsd: usd(-1.25)},
+		{NameKey: "flat", PriceChangeUsd: usd(0)},
 		{NameKey: "missing", Listing: cardkingdom.Listing{}},
 	}
 
@@ -292,9 +282,9 @@ func TestFinalizePriceChangesInPricelist_DropsStaleRowsAndBackfills(t *testing.T
 	}
 
 	listings := []PriceChangeListing{
-		{NameKey: "orphan riser", Listing: cardkingdom.Listing{PriceChangeUsd: usd(50)}},
-		{NameKey: "live riser", Listing: cardkingdom.Listing{PriceChangeUsd: usd(5)}},
-		{NameKey: "another orphan", Listing: cardkingdom.Listing{PriceChangeUsd: usd(4)}},
+		{NameKey: "orphan riser", PriceChangeUsd: usd(50)},
+		{NameKey: "live riser", PriceChangeUsd: usd(5)},
+		{NameKey: "another orphan", PriceChangeUsd: usd(4)},
 	}
 
 	increases := finalizePriceChangesInPricelist(listings, pricelist, true, 20)
@@ -303,8 +293,8 @@ func TestFinalizePriceChangesInPricelist_DropsStaleRowsAndBackfills(t *testing.T
 	require.InDelta(t, 5, *increases[0].PriceChangeUsd, 0.001)
 
 	drops := finalizePriceChangesInPricelist([]PriceChangeListing{
-		{NameKey: "orphan drop", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-50)}},
-		{NameKey: "live drop", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-2)}},
+		{NameKey: "orphan drop", PriceChangeUsd: usd(-50)},
+		{NameKey: "live drop", PriceChangeUsd: usd(-2)},
 	}, pricelist, false, 20)
 	require.Len(t, drops, 1)
 	require.Equal(t, "live drop", drops[0].NameKey)
@@ -317,12 +307,12 @@ func TestTopBottomPriceChangesInPricelist(t *testing.T) {
 	store := &mockPriceChangeStore{
 		byAscending: map[bool][]PriceChangeListing{
 			false: {
-				{NameKey: "stale", Listing: cardkingdom.Listing{PriceChangeUsd: usd(99)}},
-				{NameKey: "bolt", Listing: cardkingdom.Listing{CardName: "Lightning Bolt", PriceChangeUsd: usd(1)}},
+				{NameKey: "stale", PriceChangeUsd: usd(99)},
+				{NameKey: "bolt", CardName: "Lightning Bolt", PriceChangeUsd: usd(1)},
 			},
 			true: {
-				{NameKey: "stale", Listing: cardkingdom.Listing{PriceChangeUsd: usd(-99)}},
-				{NameKey: "counterspell", Listing: cardkingdom.Listing{CardName: "Counterspell", PriceChangeUsd: usd(-1)}},
+				{NameKey: "stale", PriceChangeUsd: usd(-99)},
+				{NameKey: "counterspell", CardName: "Counterspell", PriceChangeUsd: usd(-1)},
 			},
 		},
 	}
