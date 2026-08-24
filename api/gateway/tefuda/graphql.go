@@ -176,7 +176,7 @@ func mapGraphQLProduct(storeName string, product *graphQLProduct) []gateway.Card
 		return nil
 	}
 
-	name, titleFoil := parseNameAndFoil(product.Title)
+	name, extra, titleFoil := parseTefudaProductTitle(product.Title)
 	if name == "" || strings.TrimSpace(product.Handle) == "" {
 		return nil
 	}
@@ -185,7 +185,6 @@ func mapGraphQLProduct(storeName string, product *graphQLProduct) []gateway.Card
 	if product.FeaturedImage != nil {
 		img = strings.TrimSpace(product.FeaturedImage.URL)
 	}
-	extra := extraInfoFromTitle(product.Title)
 	if len(extra) == 0 {
 		extra = extraInfoFromTags(product.Tags)
 	}
@@ -295,17 +294,46 @@ func qualityFromVariantTitle(variantTitle string) string {
 	return util.MapQuality(quality)
 }
 
-func extraInfoFromTitle(title string) []string {
-	start := strings.LastIndex(title, "[")
-	end := strings.LastIndex(title, "]")
-	if start < 0 || end <= start {
+// parseTefudaProductTitle splits a Shopify product title into a clean card name,
+// optional [SET]/[collector] extraInfo tags, and foil state.
+func parseTefudaProductTitle(raw string) (name string, extra []string, isFoil bool) {
+	title, isFoil := parseNameAndFoil(raw)
+	if title == "" {
+		return "", nil, false
+	}
+
+	bracketStart := strings.Index(title, "[")
+	if bracketStart <= 0 {
+		return title, nil, isFoil
+	}
+
+	name = strings.TrimSpace(title[:bracketStart])
+	bracketEnd := strings.Index(title[bracketStart:], "]")
+	if bracketEnd < 0 {
+		return name, nil, isFoil
+	}
+
+	inner := strings.TrimSpace(title[bracketStart+1 : bracketStart+bracketEnd])
+	return name, extraInfoFromSetBracket(inner), isFoil
+}
+
+func extraInfoFromSetBracket(inner string) []string {
+	if inner == "" || strings.EqualFold(inner, "foil") {
 		return nil
 	}
-	setName := strings.TrimSpace(title[start+1 : end])
-	if setName == "" || strings.EqualFold(setName, "foil") {
-		return nil
+
+	if before, after, ok := strings.Cut(inner, " - "); ok {
+		setCode := strings.TrimSpace(before)
+		collectorNum := strings.TrimSpace(after)
+		if setCode != "" && collectorNum != "" {
+			return []string{
+				fmt.Sprintf("[%s]", setCode),
+				fmt.Sprintf("[%s]", collectorNum),
+			}
+		}
 	}
-	return []string{fmt.Sprintf("[%s]", setName)}
+
+	return []string{fmt.Sprintf("[%s]", inner)}
 }
 
 func extraInfoFromTags(tags []string) []string {

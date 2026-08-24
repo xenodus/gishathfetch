@@ -41,11 +41,33 @@ func Test_ParseProductCardKeepsInStock(t *testing.T) {
 
 	card, ok := parseProductCard(doc.Find("ul.product-grid li").First(), StoreName)
 	require.True(t, ok)
-	require.Equal(t, "Polluted Delta [KTK - 239] R Khans of Tarkir", card.Name)
+	require.Equal(t, "Polluted Delta", card.Name)
 	require.True(t, card.InStock)
 	require.Equal(t, 38.50, card.Price)
-	require.Equal(t, []string{"[KTK - 239]"}, card.ExtraInfo)
+	require.Equal(t, []string{"[KTK]", "[239]"}, card.ExtraInfo)
 	require.Contains(t, card.Url, "utm_source="+config.UtmSource)
+}
+
+func Test_ParseTefudaProductTitle(t *testing.T) {
+	name, extra, foil := parseTefudaProductTitle("Belladonna Took [HOB - 4] R The Hobbit - Foil")
+	require.Equal(t, "Belladonna Took", name)
+	require.Equal(t, []string{"[HOB]", "[4]"}, extra)
+	require.True(t, foil)
+
+	name, extra, foil = parseTefudaProductTitle("Polluted Delta [KTK - 239] R Khans of Tarkir")
+	require.Equal(t, "Polluted Delta", name)
+	require.Equal(t, []string{"[KTK]", "[239]"}, extra)
+	require.False(t, foil)
+
+	name, extra, foil = parseTefudaProductTitle("Lightning Bolt (Foil) [FIN]")
+	require.Equal(t, "Lightning Bolt (Foil)", name)
+	require.Equal(t, []string{"[FIN]"}, extra)
+	require.True(t, foil)
+
+	name, extra, foil = parseTefudaProductTitle("The One Ring [LTR]")
+	require.Equal(t, "The One Ring", name)
+	require.Equal(t, []string{"[LTR]"}, extra)
+	require.False(t, foil)
 }
 
 func Test_ParseNameAndFoil(t *testing.T) {
@@ -117,7 +139,8 @@ func Test_MapGraphQLProductDetectsTefudaTitleSuffixFoil(t *testing.T) {
 
 	cards := mapGraphQLProduct(StoreName, product)
 	require.Len(t, cards, 1)
-	require.Equal(t, "Belladonna Took [HOB - 4] R The Hobbit", cards[0].Name)
+	require.Equal(t, "Belladonna Took", cards[0].Name)
+	require.Equal(t, []string{"[HOB]", "[4]"}, cards[0].ExtraInfo)
 	require.True(t, cards[0].IsFoil)
 	require.Equal(t, "Near Mint", cards[0].Quality)
 }
@@ -147,7 +170,8 @@ func Test_MapGraphQLProductKeepsSingles(t *testing.T) {
 
 	cards := mapGraphQLProduct(StoreName, product)
 	require.Len(t, cards, 1)
-	require.Equal(t, "Polluted Delta [KTK - 239] R Khans of Tarkir", cards[0].Name)
+	require.Equal(t, "Polluted Delta", cards[0].Name)
+	require.Equal(t, []string{"[KTK]", "[239]"}, cards[0].ExtraInfo)
 	require.Equal(t, "Near Mint", cards[0].Quality)
 	require.Equal(t, 38.5, cards[0].Price)
 	require.Contains(t, cards[0].Url, "/products/polluted-delta-ktk-239")
@@ -183,7 +207,8 @@ func Test_SearchFallsBackToHTMLWhenGraphQLFails(t *testing.T) {
 	require.True(t, sawGraphQL)
 	require.True(t, sawHTML)
 	require.Len(t, cards, 1)
-	require.Equal(t, "Polluted Delta [KTK - 239] R Khans of Tarkir", cards[0].Name)
+	require.Equal(t, "Polluted Delta", cards[0].Name)
+	require.Equal(t, []string{"[KTK]", "[239]"}, cards[0].ExtraInfo)
 }
 
 func Test_SearchUsesGraphQLWhenHealthy(t *testing.T) {

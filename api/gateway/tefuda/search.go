@@ -119,7 +119,7 @@ func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bo
 
 	heading := se.Find("h3.card__heading a").First()
 	rawName := strings.TrimSpace(heading.Text())
-	name, isFoil := parseNameAndFoil(rawName)
+	name, extra, isFoil := parseTefudaProductTitle(rawName)
 	if name == "" {
 		return gateway.Card{}, false
 	}
@@ -147,7 +147,7 @@ func parseProductCard(se *goquery.Selection, storeName string) (gateway.Card, bo
 		IsFoil:    isFoil,
 		Price:     price,
 		Source:    storeName,
-		ExtraInfo: extraInfoFromTitle(rawName),
+		ExtraInfo: extra,
 	}, true
 }
 

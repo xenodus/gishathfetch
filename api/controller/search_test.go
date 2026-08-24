@@ -142,6 +142,16 @@ func TestCleanName(t *testing.T) {
 	}
 }
 
+func TestCleanName_TefudaPreparsedSetTags(t *testing.T) {
+	gotName, gotExtra := cleanName("Belladonna Took", "Near Mint", []string{"[HOB]", "[4]"})
+	if gotName != "Belladonna Took" {
+		t.Fatalf("gotName = %q, want %q", gotName, "Belladonna Took")
+	}
+	if len(gotExtra) != 2 || gotExtra[0] != "[HOB]" || gotExtra[1] != "[4]" {
+		t.Fatalf("gotExtra = %v, want [HOB] and [4]", gotExtra)
+	}
+}
+
 func TestFilterAndSortCards_AccentedQueryMatchesAsciiStoreName(t *testing.T) {
 	cards := []gateway.Card{
 		{Name: "Kili the Resourceful", Price: 1.5, InStock: true, Source: "Shop1"},
