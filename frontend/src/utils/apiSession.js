@@ -1,8 +1,16 @@
 import { API_SESSION_URL } from "../constants";
 
+export const DEFAULT_MAINTENANCE_MESSAGE =
+  "Search is temporarily unavailable. Please try again later.";
+
+const MAINTENANCE_MODE_HEADER = "X-Maintenance-Mode";
+const MAINTENANCE_MESSAGE_HEADER = "X-Maintenance-Message";
+
 /**
  * @typedef {{
  *   sessionMintDurationMs: number,
+ *   maintenanceMode?: boolean,
+ *   maintenanceMessage?: string,
  * }} SessionBootstrapTiming
  */
 
@@ -10,6 +18,26 @@ import { API_SESSION_URL } from "../constants";
 function noSessionWork() {
   return {
     sessionMintDurationMs: 0,
+    maintenanceMode: false,
+    maintenanceMessage: "",
+  };
+}
+
+export function parseMaintenanceFromSessionResponse(res) {
+  if (res.headers.get(MAINTENANCE_MODE_HEADER) !== "1") {
+    return {
+      maintenanceMode: false,
+      maintenanceMessage: "",
+    };
+  }
+
+  const message = res.headers.get(MAINTENANCE_MESSAGE_HEADER);
+  return {
+    maintenanceMode: true,
+    maintenanceMessage:
+      typeof message === "string" && message.trim() !== ""
+        ? message
+        : DEFAULT_MAINTENANCE_MESSAGE,
   };
 }
 
@@ -104,7 +132,11 @@ async function mintApiSession() {
     throw new Error(`API session failed (${res.status})`);
   }
 
-  return { sessionMintDurationMs };
+  const maintenance = parseMaintenanceFromSessionResponse(res);
+  return {
+    sessionMintDurationMs,
+    ...maintenance,
+  };
 }
 
 /** True when search API rejected the request for missing or expired session cookie. */

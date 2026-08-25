@@ -60,6 +60,8 @@ export default function App() {
     searchResponseDurationMs,
     onDismissStoreErrors,
     storesWarning,
+    maintenanceMode,
+    maintenanceMessage,
     cardKingdomPrice,
     suggestions,
     showSuggestions,
@@ -227,6 +229,8 @@ export default function App() {
         onCloseSuggestions={() => setShowSuggestions(false)}
         searchError={searchError}
         storesWarning={storesWarning}
+        maintenanceMode={maintenanceMode}
+        maintenanceMessage={maintenanceMessage}
         onCancelSearch={cancelSearch}
         popularSearchesSlot={
           <TopSearchKeywords

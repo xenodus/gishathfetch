@@ -16,11 +16,12 @@ func applyCORSHeaders(apiResponse *events.APIGatewayProxyResponse, origin string
 		return
 	}
 	apiResponse.Headers = map[string]string{
-		"Access-Control-Allow-Origin":  origin,
-		"Access-Control-Allow-Methods": "GET, OPTIONS",
-		"Access-Control-Allow-Headers": "Content-Type",
+		"Access-Control-Allow-Origin":      origin,
+		"Access-Control-Allow-Methods":       "GET, OPTIONS",
+		"Access-Control-Allow-Headers":       "Content-Type",
 		"Access-Control-Allow-Credentials": "true",
-		"Vary":                         "Origin",
+		"Access-Control-Expose-Headers":    maintenanceModeHeader + ", " + maintenanceMessageHeader,
+		"Vary":                               "Origin",
 	}
 }
 

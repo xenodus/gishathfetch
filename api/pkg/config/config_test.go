@@ -70,6 +70,45 @@ func TestUseDedicatedProxy(t *testing.T) {
 	})
 }
 
+func TestAPIMaintenanceMode(t *testing.T) {
+	t.Run("defaults to disabled when unset", func(t *testing.T) {
+		t.Setenv(APIMaintenanceModeEnv, "")
+		if APIMaintenanceMode() {
+			t.Fatalf("expected maintenance mode to be disabled by default")
+		}
+	})
+
+	t.Run("respects explicit true", func(t *testing.T) {
+		t.Setenv(APIMaintenanceModeEnv, "true")
+		if !APIMaintenanceMode() {
+			t.Fatalf("expected maintenance mode to be enabled")
+		}
+	})
+
+	t.Run("respects explicit false", func(t *testing.T) {
+		t.Setenv(APIMaintenanceModeEnv, "false")
+		if APIMaintenanceMode() {
+			t.Fatalf("expected maintenance mode to be disabled")
+		}
+	})
+}
+
+func TestAPIMaintenanceMessage(t *testing.T) {
+	t.Run("uses custom message when set", func(t *testing.T) {
+		t.Setenv(APIMaintenanceMessageEnv, "Custom maintenance message.")
+		if got := APIMaintenanceMessage(); got != "Custom maintenance message." {
+			t.Fatalf("unexpected message: %q", got)
+		}
+	})
+
+	t.Run("uses default when unset", func(t *testing.T) {
+		t.Setenv(APIMaintenanceMessageEnv, "")
+		if got := APIMaintenanceMessage(); got != DefaultAPIMaintenanceMessage {
+			t.Fatalf("unexpected default message: %q", got)
+		}
+	})
+}
+
 func TestCKPriceLookupEnabled(t *testing.T) {
 	t.Run("defaults to enabled when dynamodb table is configured", func(t *testing.T) {
 		t.Setenv(CKPriceLookupEnabledEnv, "")

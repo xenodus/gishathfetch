@@ -30,6 +30,8 @@ const SearchForm = ({
   onCloseSuggestions,
   searchError,
   storesWarning,
+  maintenanceMode,
+  maintenanceMessage,
   onCancelSearch,
   popularSearchesSlot,
 }) => {
@@ -161,6 +163,12 @@ const SearchForm = ({
 
   return (
     <div ref={wrapperRef}>
+      {maintenanceMode && (
+        <div className="alert alert-warning mb-3" role="alert">
+          {maintenanceMessage}
+        </div>
+      )}
+
       <form id="searchForm" onSubmit={onSearchSubmit}>
         <div className="mb-3 position-relative">
           <div className="form-floating search-input-wrapper">
@@ -352,7 +360,7 @@ const SearchForm = ({
               id="searchBtn"
               type="submit"
               className="btn btn-primary"
-              disabled={queryTooShort}
+              disabled={queryTooShort || maintenanceMode}
             >
               Search
             </button>
