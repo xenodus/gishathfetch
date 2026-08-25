@@ -198,6 +198,7 @@ func TestCKPricelistOutboundOptions_UsesDirectFirst(t *testing.T) {
 	require.Empty(t, opts.OnlyProxyURL)
 	require.Equal(t, "application/json", opts.Accept)
 	require.True(t, opts.SkipWebBotAuth)
+	require.True(t, opts.SkipDynamic)
 }
 
 func TestCKPricelistResidentialProxyURL_PrefersResidential(t *testing.T) {

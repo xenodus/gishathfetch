@@ -14,8 +14,19 @@ func trackProxyOutboundClient(client *http.Client) {
 	trackedProxyOutboundClients.Store(client, client)
 }
 
+// TrackedProxyOutboundClientCount reports proxy-backed outbound clients awaiting
+// idle connection cleanup. Intended for tests that verify cleanup after outbound work.
+func TrackedProxyOutboundClientCount() int {
+	count := 0
+	trackedProxyOutboundClients.Range(func(_, _ any) bool {
+		count++
+		return true
+	})
+	return count
+}
+
 // CloseTrackedProxyIdleConnections closes idle keep-alive connections on outbound
-// HTTP clients that routed through a proxy during the current search fan-out.
+// HTTP clients that routed through a proxy during outbound scraping work.
 func CloseTrackedProxyIdleConnections() {
 	trackedProxyOutboundClients.Range(func(key, _ any) bool {
 		CloseHTTPClientIdleConnections(key.(*http.Client))
