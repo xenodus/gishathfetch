@@ -20,7 +20,7 @@ func applyCORSHeaders(apiResponse *events.APIGatewayProxyResponse, origin string
 		"Access-Control-Allow-Methods":       "GET, OPTIONS",
 		"Access-Control-Allow-Headers":       "Content-Type",
 		"Access-Control-Allow-Credentials": "true",
-		"Access-Control-Expose-Headers":    maintenanceModeHeader + ", " + maintenanceMessageHeader,
+		"Access-Control-Expose-Headers":    maintenanceModeHeader + ", " + maintenanceMessageHeader + ", " + noticeMessageHeader,
 		"Vary":                               "Origin",
 	}
 }

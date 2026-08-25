@@ -62,6 +62,7 @@ export default function App() {
     storesWarning,
     maintenanceMode,
     maintenanceMessage,
+    noticeMessage,
     cardKingdomPrice,
     suggestions,
     showSuggestions,
@@ -231,6 +232,7 @@ export default function App() {
         storesWarning={storesWarning}
         maintenanceMode={maintenanceMode}
         maintenanceMessage={maintenanceMessage}
+        noticeMessage={noticeMessage}
         onCancelSearch={cancelSearch}
         popularSearchesSlot={
           <TopSearchKeywords

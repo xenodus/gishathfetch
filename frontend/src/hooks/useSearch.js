@@ -68,6 +68,7 @@ export default function useSearch() {
   const [storesWarning, setStoresWarning] = useState(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [noticeMessage, setNoticeMessage] = useState("");
   const [sessionBootstrapped, setSessionBootstrapped] = useState(false);
   const [selectedStores, setSelectedStores] = useState(() =>
     getInitialSelectedStores(),
@@ -103,6 +104,7 @@ export default function useSearch() {
         }
         setMaintenanceMode(Boolean(timing.maintenanceMode));
         setMaintenanceMessage(timing.maintenanceMessage ?? "");
+        setNoticeMessage(timing.noticeMessage ?? "");
         setSessionBootstrapped(true);
       })
       .catch(() => {
@@ -116,6 +118,7 @@ export default function useSearch() {
         .then((timing) => {
           setMaintenanceMode(Boolean(timing.maintenanceMode));
           setMaintenanceMessage(timing.maintenanceMessage ?? "");
+          setNoticeMessage(timing.noticeMessage ?? "");
         })
         .catch(() => {
           // Next search or interval will try again.
@@ -782,6 +785,7 @@ export default function useSearch() {
     storesWarning,
     maintenanceMode,
     maintenanceMessage,
+    noticeMessage,
     cardKingdomPrice,
     suggestions,
     showSuggestions,

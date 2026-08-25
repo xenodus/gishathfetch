@@ -51,3 +51,21 @@ func TestSession_AdvertisesMaintenanceHeaders(t *testing.T) {
 	require.Equal(t, "1", result.Headers[maintenanceModeHeader])
 	require.Equal(t, "Back soon.", result.Headers[maintenanceMessageHeader])
 }
+
+func TestSession_AdvertisesNoticeHeader(t *testing.T) {
+	t.Setenv(config.APISessionSecretEnv, "test-session-secret")
+	t.Setenv(config.APINoticeMessageEnv, "Card Kingdom prices may be delayed today.")
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: http.MethodGet,
+		Headers: map[string]string{
+			"origin": "http://localhost:5173",
+		},
+	}
+
+	result, err := Session(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusNoContent, result.StatusCode)
+	require.Equal(t, "Card Kingdom prices may be delayed today.", result.Headers[noticeMessageHeader])
+	require.Empty(t, result.Headers[maintenanceModeHeader])
+}

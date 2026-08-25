@@ -109,6 +109,22 @@ func TestAPIMaintenanceMessage(t *testing.T) {
 	})
 }
 
+func TestAPINoticeMessage(t *testing.T) {
+	t.Run("returns empty when unset", func(t *testing.T) {
+		t.Setenv(APINoticeMessageEnv, "")
+		if got := APINoticeMessage(); got != "" {
+			t.Fatalf("unexpected notice message: %q", got)
+		}
+	})
+
+	t.Run("returns trimmed message when set", func(t *testing.T) {
+		t.Setenv(APINoticeMessageEnv, "  Prices may be delayed.  ")
+		if got := APINoticeMessage(); got != "Prices may be delayed." {
+			t.Fatalf("unexpected notice message: %q", got)
+		}
+	})
+}
+
 func TestCKPriceLookupEnabled(t *testing.T) {
 	t.Run("defaults to enabled when dynamodb table is configured", func(t *testing.T) {
 		t.Setenv(CKPriceLookupEnabledEnv, "")

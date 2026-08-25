@@ -5,12 +5,14 @@ export const DEFAULT_MAINTENANCE_MESSAGE =
 
 const MAINTENANCE_MODE_HEADER = "X-Maintenance-Mode";
 const MAINTENANCE_MESSAGE_HEADER = "X-Maintenance-Message";
+const NOTICE_MESSAGE_HEADER = "X-Notice-Message";
 
 /**
  * @typedef {{
  *   sessionMintDurationMs: number,
  *   maintenanceMode?: boolean,
  *   maintenanceMessage?: string,
+ *   noticeMessage?: string,
  * }} SessionBootstrapTiming
  */
 
@@ -20,6 +22,7 @@ function noSessionWork() {
     sessionMintDurationMs: 0,
     maintenanceMode: false,
     maintenanceMessage: "",
+    noticeMessage: "",
   };
 }
 
@@ -38,6 +41,23 @@ export function parseMaintenanceFromSessionResponse(res) {
       typeof message === "string" && message.trim() !== ""
         ? message
         : DEFAULT_MAINTENANCE_MESSAGE,
+  };
+}
+
+export function parseNoticeFromSessionResponse(res) {
+  const message = res.headers.get(NOTICE_MESSAGE_HEADER);
+  return {
+    noticeMessage:
+      typeof message === "string" && message.trim() !== ""
+        ? message.trim()
+        : "",
+  };
+}
+
+export function parseSiteStatusFromSessionResponse(res) {
+  return {
+    ...parseMaintenanceFromSessionResponse(res),
+    ...parseNoticeFromSessionResponse(res),
   };
 }
 
@@ -102,7 +122,12 @@ async function bootstrapSessionWithRetry() {
     try {
       const timing = await mintApiSession();
       sessionMintDurationMs += timing.sessionMintDurationMs;
-      return { sessionMintDurationMs };
+      return {
+        sessionMintDurationMs,
+        maintenanceMode: timing.maintenanceMode,
+        maintenanceMessage: timing.maintenanceMessage,
+        noticeMessage: timing.noticeMessage,
+      };
     } catch (err) {
       lastError = err;
     }
@@ -132,10 +157,10 @@ async function mintApiSession() {
     throw new Error(`API session failed (${res.status})`);
   }
 
-  const maintenance = parseMaintenanceFromSessionResponse(res);
+  const siteStatus = parseSiteStatusFromSessionResponse(res);
   return {
     sessionMintDurationMs,
-    ...maintenance,
+    ...siteStatus,
   };
 }
 

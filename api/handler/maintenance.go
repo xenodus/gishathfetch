@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	maintenanceModeHeader   = "X-Maintenance-Mode"
+	maintenanceModeHeader    = "X-Maintenance-Mode"
 	maintenanceMessageHeader = "X-Maintenance-Message"
+	noticeMessageHeader      = "X-Notice-Message"
 )
 
 func maintenanceActiveResponse(
@@ -26,10 +27,12 @@ func maintenanceActiveResponse(
 }
 
 func applyMaintenanceHeaders(apiRes *events.APIGatewayProxyResponse) {
-	if !config.APIMaintenanceMode() {
-		return
-	}
 	headers := ensureResponseHeaders(apiRes)
-	headers[maintenanceModeHeader] = "1"
-	headers[maintenanceMessageHeader] = config.APIMaintenanceMessage()
+	if config.APIMaintenanceMode() {
+		headers[maintenanceModeHeader] = "1"
+		headers[maintenanceMessageHeader] = config.APIMaintenanceMessage()
+	}
+	if noticeMessage := config.APINoticeMessage(); noticeMessage != "" {
+		headers[noticeMessageHeader] = noticeMessage
+	}
 }
