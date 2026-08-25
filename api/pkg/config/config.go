@@ -35,6 +35,10 @@ const (
 	// attempts. When false, dynamic proxy is skipped even if configured.
 	// Defaults to disabled when unset or invalid.
 	UseDynamicProxyEnv = "USE_DYNAMIC_PROXY"
+	// UseDedicatedProxyEnv toggles whether DEDICATED_PROXY_* may be used for outbound
+	// scrapes and API calls. When false, dedicated proxy transports are skipped even
+	// if configured. Defaults to enabled when unset or invalid.
+	UseDedicatedProxyEnv = "USE_DEDICATED_PROXY"
 	// WebBotAuthEnabledEnv toggles RFC 9421 Web Bot Auth signing on outbound gateway requests.
 	WebBotAuthEnabledEnv = "WEB_BOT_AUTH_ENABLED"
 	// WebBotAuthPrivateKeyEnv holds a PEM (or base64-encoded PEM) Ed25519 PKCS8 private key.
@@ -128,6 +132,22 @@ func UseDynamicProxy() bool {
 	enabled, err := strconv.ParseBool(rawValue)
 	if err != nil {
 		return false
+	}
+
+	return enabled
+}
+
+// UseDedicatedProxy reports whether DEDICATED_PROXY_* env vars may be used.
+// Defaults to enabled when unset or invalid.
+func UseDedicatedProxy() bool {
+	rawValue := strings.TrimSpace(os.Getenv(UseDedicatedProxyEnv))
+	if rawValue == "" {
+		return true
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return true
 	}
 
 	return enabled

@@ -287,7 +287,7 @@ func leaseDedicatedProxyIfNeeded(enforceDedicatedProxyLease bool, requestDedicat
 	if requestDedicatedProxyURL != "" {
 		return "", releaseLeasedDedicatedProxy
 	}
-	if enforceDedicatedProxyLease && config.UseProxy && config.UseLeasedDedicatedProxy {
+	if enforceDedicatedProxyLease && config.UseProxy && config.UseLeasedDedicatedProxy && DedicatedProxiesEnabled() {
 		if proxyURL, ok := dedicatedProxyLeases.acquire(util.GetDedicatedProxyURLs()); ok {
 			leasedDedicatedProxyURL = proxyURL
 			releaseLeasedDedicatedProxy = func() {
@@ -311,14 +311,16 @@ func selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL strin
 	if !config.UseProxy {
 		return "direct", ""
 	}
-	if requestDedicatedProxyURL != "" {
-		return "dedicated", requestDedicatedProxyURL
-	}
-	if leasedDedicatedProxyURL != "" {
-		return "dedicated", leasedDedicatedProxyURL
-	}
-	if proxyURL, ok := randomDedicatedProxyURL(""); ok {
-		return "dedicated", proxyURL
+	if DedicatedProxiesEnabled() {
+		if requestDedicatedProxyURL != "" {
+			return "dedicated", requestDedicatedProxyURL
+		}
+		if leasedDedicatedProxyURL != "" {
+			return "dedicated", leasedDedicatedProxyURL
+		}
+		if proxyURL, ok := randomDedicatedProxyURL(""); ok {
+			return "dedicated", proxyURL
+		}
 	}
 	if proxyURL := DynamicProxyURL(); proxyURL != "" {
 		return "dynamic", proxyURL
@@ -470,6 +472,9 @@ func RandomDedicatedProxyURL() (string, bool) {
 }
 
 func randomDedicatedProxyURL(avoidProxyURL string) (string, bool) {
+	if !DedicatedProxiesEnabled() {
+		return "", false
+	}
 	dedicatedProxies := util.GetDedicatedProxy()
 	valid := make([]util.DedicatedProxy, 0, len(dedicatedProxies))
 	for _, proxy := range dedicatedProxies {

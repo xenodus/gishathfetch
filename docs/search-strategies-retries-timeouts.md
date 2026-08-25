@@ -32,6 +32,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Notes |
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
+| Dedicated proxy toggle | **`USE_DEDICATED_PROXY`** | When `false`, dedicated proxy transports are skipped even if `DEDICATED_PROXY_*` are set. Defaults to **enabled** when unset or invalid. |
 | Dedicated proxy search concurrency | 3 in-flight | `DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go` | Caps how many store searches may hold a dedicated-proxy lease at once so datacenter egress does not burst every configured slot. |
 | Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final two fallback attempts (`scrap-dynamic` and `decklist-dynamic`) after dedicated and direct/no-proxy scrap and decklist tries. Disabled by default via `USE_DYNAMIC_PROXY`. |
 | Dynamic proxy concurrency | 3 in-flight | `dynamicProxyMaxConcurrent` in `api/gateway/dynamic_proxy_gate.go` | Caps concurrent requests through `DYNAMIC_PROXY` across all stores and strategies so the final BinderPOS fallbacks do not burst the proxy endpoint and trigger 429. |

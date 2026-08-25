@@ -40,6 +40,36 @@ func TestUseDynamicProxy(t *testing.T) {
 	})
 }
 
+func TestUseDedicatedProxy(t *testing.T) {
+	t.Run("defaults to enabled when unset", func(t *testing.T) {
+		t.Setenv(UseDedicatedProxyEnv, "")
+		if !UseDedicatedProxy() {
+			t.Fatalf("expected dedicated proxy to be enabled by default")
+		}
+	})
+
+	t.Run("respects explicit true", func(t *testing.T) {
+		t.Setenv(UseDedicatedProxyEnv, "true")
+		if !UseDedicatedProxy() {
+			t.Fatalf("expected dedicated proxy to be enabled")
+		}
+	})
+
+	t.Run("respects explicit false", func(t *testing.T) {
+		t.Setenv(UseDedicatedProxyEnv, "false")
+		if UseDedicatedProxy() {
+			t.Fatalf("expected dedicated proxy to be disabled")
+		}
+	})
+
+	t.Run("defaults to enabled for invalid value", func(t *testing.T) {
+		t.Setenv(UseDedicatedProxyEnv, "not-a-bool")
+		if !UseDedicatedProxy() {
+			t.Fatalf("expected invalid toggle to default to enabled")
+		}
+	})
+}
+
 func TestCKPriceLookupEnabled(t *testing.T) {
 	t.Run("defaults to enabled when dynamodb table is configured", func(t *testing.T) {
 		t.Setenv(CKPriceLookupEnabledEnv, "")

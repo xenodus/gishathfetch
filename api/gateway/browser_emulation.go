@@ -201,10 +201,22 @@ func IsBrowserEmulatedTransport(rt http.RoundTripper) bool {
 // newOutboundHTTPClient returns an HTTP client for outbound scraping. When profile
 // is enabled the client uses a browser-matched TLS fingerprint and HTTP/2 settings.
 func newOutboundHTTPClient(proxyURL string, timeout time.Duration, profile BrowserEmulationProfile) (*http.Client, error) {
+	proxyURL = strings.TrimSpace(proxyURL)
 	if profile.Enabled {
-		return newBrowserEmulatedHTTPClient(proxyURL, timeout, profile)
+		client, err := newBrowserEmulatedHTTPClient(proxyURL, timeout, profile)
+		if err != nil {
+			return nil, err
+		}
+		if proxyURL != "" {
+			trackProxyOutboundClient(client)
+		}
+		return client, nil
 	}
-	return newStdlibHTTPClient(proxyURL, timeout), nil
+	client := newStdlibHTTPClient(proxyURL, timeout)
+	if proxyURL != "" {
+		trackProxyOutboundClient(client)
+	}
+	return client, nil
 }
 
 func newStdlibHTTPClient(proxyURL string, timeout time.Duration) *http.Client {
@@ -221,7 +233,9 @@ func newStdlibHTTPClient(proxyURL string, timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,
 		Transport: &http.Transport{
-			Proxy: http.ProxyURL(parsedProxyURL),
+			Proxy:               http.ProxyURL(parsedProxyURL),
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: -1,
 		},
 	}
 }
@@ -236,6 +250,10 @@ func newBrowserEmulatedHTTPClient(proxyURL string, timeout time.Duration, profil
 	}
 	if proxyURL = strings.TrimSpace(proxyURL); proxyURL != "" {
 		options = append(options, tls_client.WithProxyUrl(proxyURL))
+		options = append(options, tls_client.WithTransportOptions(&tls_client.TransportOptions{
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: -1,
+		}))
 	}
 
 	inner, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)

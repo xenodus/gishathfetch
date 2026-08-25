@@ -34,4 +34,17 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 		}
 		require.Equal(t, want, got)
 	})
+
+	t.Run("without dedicated proxies", func(t *testing.T) {
+		t.Setenv("USE_DEDICATED_PROXY", "false")
+		got := storefrontStrategyNames("token", "example.myshopify.com")
+		want := []string{
+			"graphql-direct",
+			"scrap-direct",
+			"decklist-direct",
+			"scrap-dynamic",
+			"decklist-dynamic",
+		}
+		require.Equal(t, want, got)
+	})
 }
