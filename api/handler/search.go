@@ -70,6 +70,10 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		return res, nil
 	}
 
+	if config.APIMaintenanceMode() {
+		return maintenanceActiveResponse(apiRes, origin)
+	}
+
 	searchString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["s"]))
 	if err != nil {
 		searchString = ""

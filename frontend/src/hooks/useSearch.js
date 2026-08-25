@@ -66,6 +66,9 @@ export default function useSearch() {
   const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [sessionBootstrapped, setSessionBootstrapped] = useState(false);
   const [selectedStores, setSelectedStores] = useState(() =>
     getInitialSelectedStores(),
   );
@@ -91,17 +94,38 @@ export default function useSearch() {
   }, [searchResults]);
 
   useEffect(() => {
-    ensureApiSession().catch(() => {
-      // Search will retry session bootstrap before the first API call.
-    });
+    let cancelled = false;
+
+    ensureApiSession()
+      .then((timing) => {
+        if (cancelled) {
+          return;
+        }
+        setMaintenanceMode(Boolean(timing.maintenanceMode));
+        setMaintenanceMessage(timing.maintenanceMessage ?? "");
+        setSessionBootstrapped(true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSessionBootstrapped(true);
+        }
+      });
 
     const refreshTimer = setInterval(() => {
-      ensureApiSession({ forceRefresh: true }).catch(() => {
-        // Next search or interval will try again.
-      });
+      ensureApiSession({ forceRefresh: true })
+        .then((timing) => {
+          setMaintenanceMode(Boolean(timing.maintenanceMode));
+          setMaintenanceMessage(timing.maintenanceMessage ?? "");
+        })
+        .catch(() => {
+          // Next search or interval will try again.
+        });
     }, API_SESSION_REFRESH_INTERVAL_MS);
 
-    return () => clearInterval(refreshTimer);
+    return () => {
+      cancelled = true;
+      clearInterval(refreshTimer);
+    };
   }, []);
 
   const syncSearchHistory = useCallback((snapshot) => {
@@ -146,6 +170,14 @@ export default function useSearch() {
 
   const performSearch = useCallback(
     (query, stores) => {
+      if (maintenanceMode) {
+        setSearchError(maintenanceMessage);
+        setHasSearched(true);
+        setIsSearching(false);
+        setSearchProgress("Search");
+        return;
+      }
+
       if (!query || query.length < MIN_SEARCH_LENGTH) {
         setSearchError(SEARCH_TOO_SHORT_ERROR);
         setHasSearched(false);
@@ -401,7 +433,7 @@ export default function useSearch() {
           skipSuggestionsRef.current = false;
         });
     },
-    [syncSearchHistory],
+    [maintenanceMessage, maintenanceMode, syncSearchHistory],
   );
 
   performSearchRef.current = performSearch;
@@ -714,8 +746,12 @@ export default function useSearch() {
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
-    if (hasInitializedRef.current) return;
+    if (!sessionBootstrapped || hasInitializedRef.current) return;
     hasInitializedRef.current = true;
+
+    if (maintenanceMode) {
+      return;
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("s") && urlParams.get("s") !== "") {
@@ -727,7 +763,7 @@ export default function useSearch() {
 
       setTimeout(() => performSearch(q, stores), 100);
     }
-  }, [performSearch, selectedStores]);
+  }, [sessionBootstrapped, maintenanceMode, performSearch, selectedStores]);
 
   return {
     searchQuery,
@@ -744,6 +780,8 @@ export default function useSearch() {
     searchResponseDurationMs,
     onDismissStoreErrors: dismissStoreErrors,
     storesWarning,
+    maintenanceMode,
+    maintenanceMessage,
     cardKingdomPrice,
     suggestions,
     showSuggestions,

@@ -24,6 +24,9 @@ func nextBinderposStorefrontProxyURL(proxyURLs []string) string {
 }
 
 func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
+	if !gateway.DedicatedProxiesEnabled() {
+		return nil, fmt.Errorf("dedicated proxies disabled for binderpos storefront api")
+	}
 	proxyURLs := util.GetDedicatedProxyURLs()
 	if len(proxyURLs) == 0 {
 		return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront api")

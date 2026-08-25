@@ -22,6 +22,7 @@ func clearProxyEnv(t *testing.T) {
 	}
 	t.Setenv("DYNAMIC_PROXY", "")
 	t.Setenv("USE_DYNAMIC_PROXY", "")
+	t.Setenv("USE_DEDICATED_PROXY", "")
 	t.Setenv("RESIDENTIAL_PROXY_1", "")
 }
 
@@ -63,6 +64,16 @@ func TestDoOutboundGET_DirectSuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, resp.Body.Close())
+}
+
+func TestBuildOutboundGETAttempts_SkipsDedicatedWhenDisabled(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("USE_DEDICATED_PROXY", "false")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{})
+	require.Len(t, attempts, 1)
+	require.Equal(t, "direct", attempts[0].strategy)
 }
 
 func TestBuildOutboundGETAttempts_TriesOneRandomDedicatedProxy(t *testing.T) {

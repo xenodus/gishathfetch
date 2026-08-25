@@ -212,6 +212,8 @@ GitHub Actions secrets, or a local `.env` file (gitignored). See also
 | `API_ORIGIN_VERIFY_HEADER` | Lambda | `X-Origin-Verify` | Custom header name for the shared secret |
 | `API_SESSION_SECRET` | Lambda | unset = skip session on `/search`; `/session` 503 | Sign/validate `gf_api_session` |
 | `API_SESSION_TTL_SECONDS` | Lambda | `900` | Cookie / token lifetime |
+| `API_MAINTENANCE_MODE` | Lambda | unset/`false` = off | `/search` returns **503**; `/session` advertises maintenance headers |
+| `API_MAINTENANCE_MESSAGE` | Lambda | generic unavailable message | User-visible banner text while maintenance mode is on |
 | `VITE_API_ORIGIN_VERIFY_SECRET` | Vite only | unset | Proxy injects `X-Origin-Verify` |
 | `VITE_API_PROXY_TARGET` | Vite only | `https://api.gishathfetch.com` | Dev proxy target for `/search`, `/session` |
 | `VITE_API_BASE_URL` | Frontend | production API host in `constants.js` | Empty string → same-origin paths via Vite proxy |

@@ -95,6 +95,9 @@ type graphQLVariant struct {
 }
 
 func searchByStorefrontGraphQLDedicated(ctx context.Context, scrapVariant int, storeName, baseURL, accessToken, searchStr string) ([]gateway.Card, error) {
+	if !gateway.DedicatedProxiesEnabled() {
+		return nil, fmt.Errorf("dedicated proxies disabled for binderpos storefront graphql")
+	}
 	proxyURLs := util.GetDedicatedProxyURLs()
 	if len(proxyURLs) == 0 {
 		return nil, fmt.Errorf("no dedicated proxy configured for binderpos storefront graphql")

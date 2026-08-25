@@ -171,6 +171,7 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	}
 
 	wg.Wait()
+	gateway.CloseTrackedProxyIdleConnections()
 	cards, siteErrors, alertErrorMessages := aggregator.snapshot()
 	shopDurations := aggregator.shopDurationSnapshot()
 	if len(alertErrorMessages) > 0 {
@@ -292,21 +293,19 @@ func searchShop(
 	}()
 
 	searchCtx := ctx
-	if config.UseProxy {
-		if proxyURLs := util.GetDedicatedProxyURLs(); len(proxyURLs) > 0 {
-			// Wait for a proxy slot on the request context so queue time does not
-			// consume the per-store search budget (see PerSiteTimeout below).
-			releaseSearchSlot, slotErr := gateway.AcquireDedicatedProxySearchSlot(ctx)
-			if slotErr != nil {
-				recordShopSearchError(searchString, shopName, slotErr, aggregator)
-				return
-			}
-			defer releaseSearchSlot()
+	if gateway.DedicatedProxiesEnabled() {
+		// Wait for a proxy slot on the request context so queue time does not
+		// consume the per-store search budget (see PerSiteTimeout below).
+		releaseSearchSlot, slotErr := gateway.AcquireDedicatedProxySearchSlot(ctx)
+		if slotErr != nil {
+			recordShopSearchError(searchString, shopName, slotErr, aggregator)
+			return
+		}
+		defer releaseSearchSlot()
 
-			if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, proxyURLs); err == nil {
-				defer release()
-				searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
-			}
+		if proxyURL, release, err := gateway.LeaseDedicatedProxyURL(ctx, util.GetDedicatedProxyURLs()); err == nil {
+			defer release()
+			searchCtx = gateway.WithRequestDedicatedProxy(ctx, proxyURL)
 		}
 	}
 

@@ -35,6 +35,10 @@ const (
 	// attempts. When false, dynamic proxy is skipped even if configured.
 	// Defaults to disabled when unset or invalid.
 	UseDynamicProxyEnv = "USE_DYNAMIC_PROXY"
+	// UseDedicatedProxyEnv toggles whether DEDICATED_PROXY_* may be used for outbound
+	// scrapes and API calls. When false, dedicated proxy transports are skipped even
+	// if configured. Defaults to enabled when unset or invalid.
+	UseDedicatedProxyEnv = "USE_DEDICATED_PROXY"
 	// WebBotAuthEnabledEnv toggles RFC 9421 Web Bot Auth signing on outbound gateway requests.
 	WebBotAuthEnabledEnv = "WEB_BOT_AUTH_ENABLED"
 	// WebBotAuthPrivateKeyEnv holds a PEM (or base64-encoded PEM) Ed25519 PKCS8 private key.
@@ -106,6 +110,15 @@ const (
 	APISessionSecretEnv = "API_SESSION_SECRET"
 	// APISessionTTLEnv overrides session lifetime in seconds (default 15 minutes).
 	APISessionTTLEnv = "API_SESSION_TTL_SECONDS"
+	// APIMaintenanceModeEnv toggles maintenance mode for /search. When true, search
+	// requests are rejected and the API advertises maintenance via response headers.
+	APIMaintenanceModeEnv = "API_MAINTENANCE_MODE"
+	// APIMaintenanceMessageEnv overrides the user-visible maintenance message when
+	// API_MAINTENANCE_MODE is enabled. Ignored when maintenance mode is off.
+	APIMaintenanceMessageEnv = "API_MAINTENANCE_MESSAGE"
+	// DefaultAPIMaintenanceMessage is shown when maintenance mode is on but no
+	// custom message is configured.
+	DefaultAPIMaintenanceMessage = "Search is temporarily unavailable. Please try again later."
 	// CardsCentralKeyEnv is the API key for Cards Central LGS search requests.
 	CardsCentralKeyEnv = "CARDS_CENTRAL_KEY"
 	// CardsCentralKeyHeader is the request header Cards Central expects for aggregator access.
@@ -128,6 +141,22 @@ func UseDynamicProxy() bool {
 	enabled, err := strconv.ParseBool(rawValue)
 	if err != nil {
 		return false
+	}
+
+	return enabled
+}
+
+// UseDedicatedProxy reports whether DEDICATED_PROXY_* env vars may be used.
+// Defaults to enabled when unset or invalid.
+func UseDedicatedProxy() bool {
+	rawValue := strings.TrimSpace(os.Getenv(UseDedicatedProxyEnv))
+	if rawValue == "" {
+		return true
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return true
 	}
 
 	return enabled
@@ -220,6 +249,30 @@ func APISessionTTL() time.Duration {
 		return defaultAPISessionTTL
 	}
 	return time.Duration(seconds) * time.Second
+}
+
+// APIMaintenanceMode reports whether /search is disabled for maintenance.
+func APIMaintenanceMode() bool {
+	rawValue := strings.TrimSpace(os.Getenv(APIMaintenanceModeEnv))
+	if rawValue == "" {
+		return false
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return false
+	}
+
+	return enabled
+}
+
+// APIMaintenanceMessage returns the user-visible maintenance message when
+// maintenance mode is enabled.
+func APIMaintenanceMessage() string {
+	if message := strings.TrimSpace(os.Getenv(APIMaintenanceMessageEnv)); message != "" {
+		return message
+	}
+	return DefaultAPIMaintenanceMessage
 }
 
 // APIAccessControlEnabled is true when origin verification or session enforcement is configured.

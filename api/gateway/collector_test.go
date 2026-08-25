@@ -20,12 +20,23 @@ func TestInitialProxy(t *testing.T) {
 		t.Setenv("DEDICATED_PROXY_"+string(rune('0'+i)), "")
 	}
 	t.Setenv("DYNAMIC_PROXY", "")
+	t.Setenv("USE_DEDICATED_PROXY", "")
 
 	t.Run("uses leased dedicated when provided", func(t *testing.T) {
+		t.Setenv("DEDICATED_PROXY_1", "1.1.1.1|8080|user|pass")
 		leased := "http://lease:1"
 		mode, proxyURL := applyInitialProxy(c, leased, "")
 		if mode != "dedicated" || proxyURL != leased {
 			t.Fatalf("expected dedicated leased, got mode=%q url=%q", mode, proxyURL)
+		}
+	})
+
+	t.Run("skips leased dedicated when disabled", func(t *testing.T) {
+		t.Setenv("USE_DEDICATED_PROXY", "false")
+		t.Setenv("DEDICATED_PROXY_1", "1.1.1.1|8080|user|pass")
+		mode, proxyURL := applyInitialProxy(c, "http://lease:1", "")
+		if mode != "direct" || proxyURL != "" {
+			t.Fatalf("expected direct when dedicated disabled, got mode=%q url=%q", mode, proxyURL)
 		}
 	})
 

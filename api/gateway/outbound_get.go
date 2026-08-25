@@ -171,6 +171,9 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 	// When searchShop pins a request-scoped lease, reuse that URL instead of
 	// picking a new random slot for each outbound store.
 	appendDedicated := func(dst []outboundAttempt) []outboundAttempt {
+		if !DedicatedProxiesEnabled() {
+			return dst
+		}
 		proxyURL, ok := dedicatedProxyURLForOutbound(ctx)
 		if !ok {
 			return dst
