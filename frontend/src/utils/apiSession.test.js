@@ -93,6 +93,18 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
+  parseSiteStatusFromSessionBody({
+    noticeMessage: "Back soon.",
+    maintenanceMode: "false",
+  }),
+  {
+    maintenanceMode: false,
+    maintenanceMessage: "",
+    noticeMessage: "Back soon.",
+  },
+);
+
+assert.deepEqual(
   await parseSiteStatusFromSession(
     new Response(
       JSON.stringify({
@@ -102,7 +114,7 @@ assert.deepEqual(
       {
         status: 200,
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "text/plain; charset=utf-8",
         },
       },
     ),

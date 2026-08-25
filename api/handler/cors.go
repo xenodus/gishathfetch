@@ -42,6 +42,8 @@ func jsonResponse(
 	}
 
 	apiResponse.Body = buf.String()
+	headers := ensureResponseHeaders(&apiResponse)
+	headers["Content-Type"] = "application/json; charset=utf-8"
 	return apiResponse, nil
 }
 
@@ -67,6 +69,8 @@ func errorResponse(
 	}
 
 	apiResponse.Body = buf.String()
+	headers := ensureResponseHeaders(&apiResponse)
+	headers["Content-Type"] = "application/json; charset=utf-8"
 	return apiResponse, nil
 }
 
