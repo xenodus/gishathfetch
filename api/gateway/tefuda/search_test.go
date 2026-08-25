@@ -252,6 +252,9 @@ func Test_SearchUsesGraphQLWhenHealthy(t *testing.T) {
 		switch {
 		case strings.Contains(r.URL.Path, "graphql"):
 			require.Equal(t, storefrontAccessToken, r.Header.Get("X-Shopify-Storefront-Access-Token"))
+			var req graphQLRequest
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+			require.Equal(t, mtgSinglesSearchQuery("Polluted Delta"), req.Variables["q"])
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(body)
 		case strings.Contains(r.URL.Path, "search"):
