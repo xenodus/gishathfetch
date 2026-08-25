@@ -112,7 +112,7 @@ func (s Store) searchGraphQL(ctx context.Context, searchStr string) ([]gateway.C
 
 	payload, err := json.Marshal(graphQLRequest{
 		Query:     storefrontSearchQuery,
-		Variables: map[string]any{"q": strings.TrimSpace(searchStr)},
+		Variables: map[string]any{"q": mtgSinglesSearchQuery(searchStr)},
 	})
 	if err != nil {
 		return nil, err
