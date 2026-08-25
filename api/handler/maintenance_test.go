@@ -47,9 +47,14 @@ func TestSession_AdvertisesMaintenanceHeaders(t *testing.T) {
 
 	result, err := Session(context.Background(), req)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNoContent, result.StatusCode)
+	require.Equal(t, http.StatusOK, result.StatusCode)
 	require.Equal(t, "1", result.Headers[maintenanceModeHeader])
 	require.Equal(t, "Back soon.", result.Headers[maintenanceMessageHeader])
+
+	var body SiteStatusResponse
+	require.NoError(t, json.Unmarshal([]byte(result.Body), &body))
+	require.True(t, body.MaintenanceMode)
+	require.Equal(t, "Back soon.", body.MaintenanceMessage)
 }
 
 func TestSession_AdvertisesNoticeHeader(t *testing.T) {
@@ -65,7 +70,12 @@ func TestSession_AdvertisesNoticeHeader(t *testing.T) {
 
 	result, err := Session(context.Background(), req)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNoContent, result.StatusCode)
+	require.Equal(t, http.StatusOK, result.StatusCode)
 	require.Equal(t, "Card Kingdom prices may be delayed today.", result.Headers[noticeMessageHeader])
 	require.Empty(t, result.Headers[maintenanceModeHeader])
+
+	var body SiteStatusResponse
+	require.NoError(t, json.Unmarshal([]byte(result.Body), &body))
+	require.False(t, body.MaintenanceMode)
+	require.Equal(t, "Card Kingdom prices may be delayed today.", body.NoticeMessage)
 }

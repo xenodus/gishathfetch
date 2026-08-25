@@ -35,7 +35,8 @@ func TestSession_SameOriginWithoutOriginHeader(t *testing.T) {
 
 	res, err := Session(context.Background(), req)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusNoContent, res.StatusCode)
+	require.Equal(t, http.StatusOK, res.StatusCode)
 	require.NotEmpty(t, res.Headers["Set-Cookie"])
 	require.Contains(t, res.Headers["Set-Cookie"], "gf_api_session=")
+	require.Contains(t, res.Body, `"maintenanceMode":false`)
 }

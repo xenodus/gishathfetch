@@ -16,15 +16,13 @@ const NOTICE_MESSAGE_HEADER = "X-Notice-Message";
  * }} SessionBootstrapTiming
  */
 
-/** @type {SessionBootstrapTiming} */
-function noSessionWork() {
-  return {
-    sessionMintDurationMs: 0,
-    maintenanceMode: false,
-    maintenanceMessage: "",
-    noticeMessage: "",
-  };
-}
+/** Refresh before default API session TTL (15m) so idle tabs stay authorized. */
+export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+
+/** Network blips are common in private browsing; retry session mint. */
+const SESSION_MINT_MAX_ATTEMPTS = 3;
+
+let sessionBootstrapPromise = null;
 
 export function parseMaintenanceFromSessionResponse(res) {
   if (res.headers.get(MAINTENANCE_MODE_HEADER) !== "1") {
@@ -61,20 +59,54 @@ export function parseSiteStatusFromSessionResponse(res) {
   };
 }
 
-function attributeJoinedBootstrapWait(totalWaitMs, bootstrapTiming) {
-  const mintMs = bootstrapTiming.sessionMintDurationMs ?? 0;
+export function parseSiteStatusFromSessionBody(body) {
+  const maintenanceMode = Boolean(body?.maintenanceMode);
+  const maintenanceMessage =
+    typeof body?.maintenanceMessage === "string" &&
+    body.maintenanceMessage.trim() !== ""
+      ? body.maintenanceMessage.trim()
+      : maintenanceMode
+        ? DEFAULT_MAINTENANCE_MESSAGE
+        : "";
+  const noticeMessage =
+    typeof body?.noticeMessage === "string" && body.noticeMessage.trim() !== ""
+      ? body.noticeMessage.trim()
+      : "";
+
   return {
-    sessionMintDurationMs: mintMs > 0 ? mintMs : totalWaitMs,
+    maintenanceMode,
+    maintenanceMessage,
+    noticeMessage,
   };
 }
 
-/** Refresh before default API session TTL (15m) so idle tabs stay authorized. */
-export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+export async function parseSiteStatusFromSession(res) {
+  const fromHeaders = parseSiteStatusFromSessionResponse(res);
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return fromHeaders;
+  }
 
-/** Network blips are common in private browsing; retry session mint. */
-const SESSION_MINT_MAX_ATTEMPTS = 3;
+  try {
+    const body = await res.json();
+    const fromBody = parseSiteStatusFromSessionBody(body);
+    return {
+      maintenanceMode: fromBody.maintenanceMode || fromHeaders.maintenanceMode,
+      maintenanceMessage:
+        fromBody.maintenanceMessage || fromHeaders.maintenanceMessage,
+      noticeMessage: fromBody.noticeMessage || fromHeaders.noticeMessage,
+    };
+  } catch {
+    return fromHeaders;
+  }
+}
 
-let sessionBootstrapPromise = null;
+function joinedBootstrapTiming(bootstrapTiming) {
+  return {
+    ...bootstrapTiming,
+    sessionMintDurationMs: 0,
+  };
+}
 
 /**
  * Ensures the browser holds a valid HttpOnly API session cookie (minted by GET /session on the API host).
@@ -83,7 +115,6 @@ let sessionBootstrapPromise = null;
  * @returns {Promise<SessionBootstrapTiming>} Time spent in this call. Cached sessions return zeros.
  */
 export async function ensureApiSession(options = {}) {
-  const waitStart = performance.now();
   const { forceRefresh = false } = options;
 
   if (forceRefresh) {
@@ -97,16 +128,9 @@ export async function ensureApiSession(options = {}) {
 
   try {
     const bootstrapTiming = await sessionBootstrapPromise;
-    const totalWaitMs = Math.round(performance.now() - waitStart);
-
-    if (!initiatedBootstrap && totalWaitMs > 0) {
-      return attributeJoinedBootstrapWait(totalWaitMs, bootstrapTiming);
-    }
-
     if (!initiatedBootstrap) {
-      return noSessionWork();
+      return joinedBootstrapTiming(bootstrapTiming);
     }
-
     return bootstrapTiming;
   } catch (err) {
     sessionBootstrapPromise = null;
@@ -157,7 +181,7 @@ async function mintApiSession() {
     throw new Error(`API session failed (${res.status})`);
   }
 
-  const siteStatus = parseSiteStatusFromSessionResponse(res);
+  const siteStatus = await parseSiteStatusFromSession(res);
   return {
     sessionMintDurationMs,
     ...siteStatus,
