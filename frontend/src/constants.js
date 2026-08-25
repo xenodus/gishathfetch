@@ -177,9 +177,9 @@ export const LGS_MAP = [
   {
     id: "tefuda-map",
     name: "Tefuda",
-    address: "B1-02 Macpherson Mall, 10-12 Upper Weld Rd, Singapore 368125",
+    address: "401 MacPherson Rd, #B1-02 Macpherson Mall, Singapore 368125",
     iframe:
-      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.768!2d103.884!3d1.326!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19a8e8f8f8f9%3A0xtefuda!2sMacPherson%20Mall!5e0!3m2!1sen!2ssg!4v1785000000000!5m2!1sen!2ssg",
+      "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.740634996764!2d103.8765490749657!3d1.3317319986556433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da178ea031acdb%3A0xac7ea94397d6a870!2sTefuda!5e0!3m2!1sen!2ssg!4v1743179304416!5m2!1sen!2ssg",
     website: "https://tefudagames.com/",
   },
 ];
