@@ -223,9 +223,34 @@ body {
   color: var(--bs-white);
 }
 
-.map-item iframe {
-  float: left;
-  min-height: 450px;
+.singapore-lgs-map {
+  height: 320px;
+  overflow: hidden;
+}
+
+.singapore-lgs-map .map-container,
+.singapore-lgs-map > div {
+  height: 100%;
+  width: 100%;
+}
+
+.singapore-lgs-map--unavailable {
+  min-height: 320px;
+  padding: 1rem;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .singapore-lgs-map,
+  .singapore-lgs-map--unavailable {
+    height: 450px;
+    min-height: 450px;
+  }
+}
+
+.map-item--selected {
+  border-left: 4px solid var(--bs-primary);
+  padding-left: 0.75rem;
 }
 
 .addCartBtn,

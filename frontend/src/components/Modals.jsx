@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import {
   TELEGRAM_BOT_HANDLE_URL,
   TELEGRAM_BOT_PRIVACY_URL,
 } from "../constants";
-import LazyMapIframe from "./LazyMapIframe";
+import SingaporeLgsMap from "./SingaporeLgsMap";
 
 const Modals = ({
   showMap,
@@ -15,29 +16,62 @@ const Modals = ({
   onShowPrivacy,
   lgsMapData,
 }) => {
+  const [selectedStoreId, setSelectedStoreId] = useState(null);
+
+  const handleHideMap = () => {
+    setSelectedStoreId(null);
+    onHideMap();
+  };
+
+  const handleStoreLinkClick = (storeId) => {
+    setSelectedStoreId(storeId);
+  };
+
+  const handleMarkerClick = (storeId) => {
+    setSelectedStoreId(storeId);
+    document.getElementById(storeId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <>
       {/* Map Modal */}
-      <Modal show={showMap} onHide={onHideMap} size="xl">
+      <Modal show={showMap} onHide={handleHideMap} size="xl">
         <Modal.Header closeButton>
           <Modal.Title id="map-list">Where are the shops?</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="mb-4">
+            <SingaporeLgsMap
+              stores={lgsMapData}
+              selectedStoreId={selectedStoreId}
+              onMarkerClick={handleMarkerClick}
+              isActive={showMap}
+            />
+          </div>
+          <div className="mb-4">
             <ul style={{ paddingLeft: "1rem" }}>
-              {lgsMapData.map((shop, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: Static map data
-                <li key={i}>
-                  <a href={`#${shop.id}`} className="link-offset-2">
+              {lgsMapData.map((shop) => (
+                <li key={shop.id}>
+                  <a
+                    href={`#${shop.id}`}
+                    className="link-offset-2"
+                    onClick={() => handleStoreLinkClick(shop.id)}
+                  >
                     {shop.name}
                   </a>
                 </li>
               ))}
             </ul>
           </div>
-          {lgsMapData.map((shop, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: Static map data
-            <div id={shop.id} key={i} className="mb-4 map-item">
+          {lgsMapData.map((shop) => (
+            <div
+              id={shop.id}
+              key={shop.id}
+              className={`mb-4 map-item${selectedStoreId === shop.id ? " map-item--selected" : ""}`}
+            >
               <h5>{shop.name}</h5>
               <div className="mb-2">{shop.address}</div>
               <div className="mb-2">
@@ -45,11 +79,6 @@ const Modals = ({
                   {shop.website}
                 </a>
               </div>
-              <LazyMapIframe
-                src={shop.iframe}
-                title={shop.name}
-                isActive={showMap}
-              />
               <div>
                 <Button
                   variant="primary"
@@ -62,7 +91,7 @@ const Modals = ({
                 <Button
                   variant="secondary"
                   className="ms-2"
-                  onClick={onHideMap}
+                  onClick={handleHideMap}
                 >
                   Close
                 </Button>
