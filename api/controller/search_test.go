@@ -889,6 +889,66 @@ func TestFetchCardsConcurrently_RecoversPanicForDiacriticDualQuery(t *testing.T)
 	}
 }
 
+func TestFetchCardsConcurrently_DiacriticDualQueryOmitsErrorWhenSiblingReturnsEmpty(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"PartialShop": &MockLGS{
+			SearchFunc: func(_ context.Context, searchStr string) ([]gateway.Card, error) {
+				if searchStr == "Kíli" {
+					return nil, fmt.Errorf("upstream rejected unicode query")
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	alertSent := make(chan struct{}, 1)
+	originalSendAlert := sendAlert
+	sendAlert = func(message string) {
+		select {
+		case alertSent <- struct{}{}:
+		default:
+		}
+	}
+	t.Cleanup(func() {
+		sendAlert = originalSendAlert
+	})
+
+	cards, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Kíli", shops)
+	if len(siteErrors) != 0 {
+		t.Fatalf("expected no site errors when a dual-query variant completed successfully, got %v", siteErrors)
+	}
+	if len(cards) != 0 {
+		t.Fatalf("expected no cards, got %d", len(cards))
+	}
+
+	select {
+	case <-alertSent:
+		t.Fatal("did not expect Slack alert when a dual-query variant completed successfully")
+	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+func TestFetchCardsConcurrently_DiacriticDualQueryReportsErrorWhenAllVariantsFail(t *testing.T) {
+	shops := map[string]gateway.LGS{
+		"PartialShop": &MockLGS{
+			SearchFunc: func(_ context.Context, searchStr string) ([]gateway.Card, error) {
+				return nil, fmt.Errorf("%s query failed", searchStr)
+			},
+		},
+	}
+
+	cards, siteErrors, _ := fetchCardsConcurrently(context.Background(), "Kíli", shops)
+	if len(cards) != 0 {
+		t.Fatalf("expected no cards, got %d", len(cards))
+	}
+	if len(siteErrors) != 1 {
+		t.Fatalf("expected 1 site error when every dual-query variant failed, got %d", len(siteErrors))
+	}
+	if siteErrors["PartialShop"] == nil {
+		t.Fatal("expected PartialShop site error")
+	}
+}
+
 func TestFetchCardsConcurrently_DiacriticDualQueryOmitsErrorWhenPartialSuccess(t *testing.T) {
 	shops := map[string]gateway.LGS{
 		"PartialShop": &MockLGS{

@@ -328,10 +328,11 @@ func searchShop(
 	}
 
 	var (
-		wg       sync.WaitGroup
-		mu       sync.Mutex
-		allCards []gateway.Card
-		errs     []error
+		wg                sync.WaitGroup
+		mu                sync.Mutex
+		allCards          []gateway.Card
+		errs              []error
+		anyQueryCompleted bool
 	)
 
 	for _, query := range queries {
@@ -339,11 +340,15 @@ func searchShop(
 		go func(query string) {
 			defer wg.Done()
 
-			var queryCards []gateway.Card
-			var queryErr error
+			var (
+				queryCards    []gateway.Card
+				queryErr      error
+				queryFinished bool
+			)
 			func() {
 				defer recoverShopPanic(shopName, aggregator)
 				queryCards, queryErr = lgs.Search(shopCtx, query)
+				queryFinished = true
 			}()
 
 			mu.Lock()
@@ -352,15 +357,18 @@ func searchShop(
 				errs = append(errs, queryErr)
 				return
 			}
+			if queryFinished {
+				anyQueryCompleted = true
+			}
 			allCards = append(allCards, queryCards...)
 		}(query)
 	}
 	wg.Wait()
 
 	allCards = dedupeStoreCards(allCards)
-	if len(allCards) > 0 {
+	if len(allCards) > 0 || anyQueryCompleted {
 		// A sibling query may have panicked or errored while another variant still
-		// returned inventory; partial success should not surface a store failure.
+		// completed successfully (with or without inventory).
 		aggregator.clearShopFailure(shopName)
 	} else if len(errs) > 0 {
 		recordShopSearchError(searchString, shopName, errors.Join(errs...), aggregator)
