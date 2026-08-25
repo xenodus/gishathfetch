@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/gateway/scryfall"
 	"mtg-price-checker-sg/pkg/config"
@@ -84,6 +85,8 @@ type RefreshResult struct {
 
 // RefreshPrices downloads Card Kingdom retail prices from the CK pricelist API and upserts the DynamoDB index.
 func RefreshPrices(ctx context.Context, store ckprices.Store) (*RefreshResult, error) {
+	defer gateway.CloseTrackedProxyIdleConnections()
+
 	logger.From(ctx).InfoContext(ctx, "ck price refresh: fetching card kingdom pricelist")
 	fetchStarted := time.Now()
 

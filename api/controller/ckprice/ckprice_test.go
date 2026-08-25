@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/cardkingdom"
 	"mtg-price-checker-sg/store/ckprices"
 
@@ -261,4 +262,37 @@ func TestListingIsFresh_PrefersSyncedAt(t *testing.T) {
 		UpdatedAt: "2026-06-29T03:00:00Z",
 		SyncedAt:  "2026-06-27T03:00:00Z",
 	}, now))
+}
+
+func TestRefreshPrices_ClosesTrackedProxyConnections(t *testing.T) {
+	originalFetch := fetchCheapestFunc
+	defer func() { fetchCheapestFunc = originalFetch }()
+
+	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	fetchCheapestFunc = func(ctx context.Context) (map[string]cardkingdom.Listing, error) {
+		if gateway.TrackedProxyOutboundClientCount() != 0 {
+			t.Fatal("expected no tracked proxy clients before outbound fetch")
+		}
+		_, err := gateway.DoOutboundGET(
+			ctx,
+			"http://example.invalid/",
+			gateway.OutboundRequestOptions{},
+			time.Second,
+		)
+		if err == nil {
+			t.Fatal("expected outbound GET to fail against invalid host")
+		}
+		if gateway.TrackedProxyOutboundClientCount() == 0 {
+			t.Fatal("expected tracked proxy clients after outbound fetch")
+		}
+		return map[string]cardkingdom.Listing{"bolt": {CardName: "Lightning Bolt"}}, nil
+	}
+
+	store := &mockStore{}
+	result, err := RefreshPrices(context.Background(), store)
+	require.NoError(t, err)
+	require.Equal(t, 1, result.ListingCount)
+	require.Equal(t, 0, gateway.TrackedProxyOutboundClientCount())
 }
