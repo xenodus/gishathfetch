@@ -32,6 +32,7 @@ const SearchForm = ({
   storesWarning,
   maintenanceMode,
   maintenanceMessage,
+  noticeMessage,
   onCancelSearch,
   popularSearchesSlot,
 }) => {
@@ -163,6 +164,12 @@ const SearchForm = ({
 
   return (
     <div ref={wrapperRef}>
+      {noticeMessage && (
+        <div className="alert alert-info mb-3" role="status">
+          {noticeMessage}
+        </div>
+      )}
+
       {maintenanceMode && (
         <div className="alert alert-warning mb-3" role="alert">
           {maintenanceMessage}

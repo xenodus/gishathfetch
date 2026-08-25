@@ -116,6 +116,9 @@ const (
 	// APIMaintenanceMessageEnv overrides the user-visible maintenance message when
 	// API_MAINTENANCE_MODE is enabled. Ignored when maintenance mode is off.
 	APIMaintenanceMessageEnv = "API_MAINTENANCE_MESSAGE"
+	// APINoticeMessageEnv is optional site-wide notice text advertised via /session
+	// whenever non-empty. Unlike maintenance mode, search remains available.
+	APINoticeMessageEnv = "API_NOTICE_MESSAGE"
 	// DefaultAPIMaintenanceMessage is shown when maintenance mode is on but no
 	// custom message is configured.
 	DefaultAPIMaintenanceMessage = "Search is temporarily unavailable. Please try again later."
@@ -273,6 +276,11 @@ func APIMaintenanceMessage() string {
 		return message
 	}
 	return DefaultAPIMaintenanceMessage
+}
+
+// APINoticeMessage returns optional site-wide notice text when configured.
+func APINoticeMessage() string {
+	return strings.TrimSpace(os.Getenv(APINoticeMessageEnv))
 }
 
 // APIAccessControlEnabled is true when origin verification or session enforcement is configured.
