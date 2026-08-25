@@ -3,6 +3,8 @@ import {
   DEFAULT_MAINTENANCE_MESSAGE,
   parseMaintenanceFromSessionResponse,
   parseNoticeFromSessionResponse,
+  parseSiteStatusFromSession,
+  parseSiteStatusFromSessionBody,
   parseSiteStatusFromSessionResponse,
 } from "./apiSession.js";
 
@@ -75,5 +77,39 @@ assert.deepEqual(
     maintenanceMode: true,
     maintenanceMessage: "Back soon.",
     noticeMessage: "Welcome to the new season.",
+  },
+);
+
+assert.deepEqual(
+  parseSiteStatusFromSessionBody({
+    noticeMessage: "  Prices may be delayed.  ",
+    maintenanceMode: false,
+  }),
+  {
+    maintenanceMode: false,
+    maintenanceMessage: "",
+    noticeMessage: "Prices may be delayed.",
+  },
+);
+
+assert.deepEqual(
+  await parseSiteStatusFromSession(
+    new Response(
+      JSON.stringify({
+        noticeMessage: "Mirroring update listings.",
+        maintenanceMode: false,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    ),
+  ),
+  {
+    maintenanceMode: false,
+    maintenanceMessage: "",
+    noticeMessage: "Mirroring update listings.",
   },
 );
