@@ -6,6 +6,14 @@ import {
 } from "../constants";
 import SingaporeLgsMap from "./SingaporeLgsMap";
 
+function formatStoreWebsite(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 const Modals = ({
   showMap,
   onHideMap,
@@ -23,8 +31,20 @@ const Modals = ({
     onHideMap();
   };
 
-  const handleStoreLinkClick = (storeId) => {
+  const handleStoreLinkClick = (event, storeId) => {
+    event.preventDefault();
     setSelectedStoreId(storeId);
+    document.getElementById(storeId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+  };
+
+  const scrollMapToTop = () => {
+    document.getElementById("map-list")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
   const handleMarkerClick = (storeId) => {
@@ -51,53 +71,54 @@ const Modals = ({
               isActive={showMap}
             />
           </div>
-          <div className="mb-4">
-            <ul style={{ paddingLeft: "1rem" }}>
-              {lgsMapData.map((shop) => (
-                <li key={shop.id}>
-                  <a
-                    href={`#${shop.id}`}
-                    className="link-offset-2"
-                    onClick={() => handleStoreLinkClick(shop.id)}
-                  >
-                    {shop.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {lgsMapData.map((shop) => (
-            <div
-              id={shop.id}
-              key={shop.id}
-              className={`mb-4 map-item${selectedStoreId === shop.id ? " map-item--selected" : ""}`}
-            >
-              <h5>{shop.name}</h5>
-              <div className="mb-2">{shop.address}</div>
-              <div className="mb-2">
-                <a href={shop.website} target="_blank" rel="noreferrer">
-                  {shop.website}
-                </a>
-              </div>
-              <div>
-                <Button
-                  variant="primary"
-                  onClick={() =>
-                    document.getElementById("map-list").scrollIntoView()
-                  }
-                >
-                  Back to top
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="ms-2"
-                  onClick={handleHideMap}
-                >
-                  Close
-                </Button>
-              </div>
+          <div className="map-store-nav mb-3">
+            <div className="map-store-nav__header">
+              <span className="map-store-nav__label">Jump to store</span>
+              <button
+                type="button"
+                className="btn btn-link btn-sm map-store-nav__top p-0"
+                onClick={scrollMapToTop}
+              >
+                Back to top
+              </button>
             </div>
-          ))}
+            <div className="map-store-pills">
+              {lgsMapData.map((shop) => (
+                <a
+                  key={shop.id}
+                  href={`#${shop.id}`}
+                  className={`btn btn-sm map-store-pill${
+                    selectedStoreId === shop.id ? " is-selected" : ""
+                  }`}
+                  onClick={(event) => handleStoreLinkClick(event, shop.id)}
+                >
+                  {shop.name}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div className="map-store-grid">
+            {lgsMapData.map((shop) => (
+              <article
+                id={shop.id}
+                key={shop.id}
+                className={`map-store-card${
+                  selectedStoreId === shop.id ? " is-selected" : ""
+                }`}
+              >
+                <h3 className="map-store-card__name">{shop.name}</h3>
+                <p className="map-store-card__address mb-0">{shop.address}</p>
+                <a
+                  href={shop.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="map-store-card__website"
+                >
+                  {formatStoreWebsite(shop.website)}
+                </a>
+              </article>
+            ))}
+          </div>
         </Modal.Body>
         <Modal.Footer className="justify-content-start">
           &copy; 2023 gishathfetch.com by{" "}
