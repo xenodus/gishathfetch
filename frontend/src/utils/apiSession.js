@@ -60,7 +60,12 @@ export function parseSiteStatusFromSessionResponse(res) {
 }
 
 export function parseSiteStatusFromSessionBody(body) {
-  const maintenanceMode = Boolean(body?.maintenanceMode);
+  const maintenanceMode =
+    typeof body?.maintenanceMode === "boolean"
+      ? body.maintenanceMode
+      : typeof body?.maintenanceMode === "string"
+        ? body.maintenanceMode.toLowerCase() === "true"
+        : Boolean(body?.maintenanceMode);
   const maintenanceMessage =
     typeof body?.maintenanceMessage === "string" &&
     body.maintenanceMessage.trim() !== ""
@@ -82,13 +87,13 @@ export function parseSiteStatusFromSessionBody(body) {
 
 export async function parseSiteStatusFromSession(res) {
   const fromHeaders = parseSiteStatusFromSessionResponse(res);
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
+  const bodyText = await res.text();
+  if (bodyText.trim() === "") {
     return fromHeaders;
   }
 
   try {
-    const body = await res.json();
+    const body = JSON.parse(bodyText);
     const fromBody = parseSiteStatusFromSessionBody(body);
     return {
       maintenanceMode: fromBody.maintenanceMode || fromHeaders.maintenanceMode,

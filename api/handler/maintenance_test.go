@@ -73,6 +73,7 @@ func TestSession_AdvertisesNoticeHeader(t *testing.T) {
 	require.Equal(t, http.StatusOK, result.StatusCode)
 	require.Equal(t, "Card Kingdom prices may be delayed today.", result.Headers[noticeMessageHeader])
 	require.Empty(t, result.Headers[maintenanceModeHeader])
+	require.Equal(t, "application/json; charset=utf-8", result.Headers["Content-Type"])
 
 	var body SiteStatusResponse
 	require.NoError(t, json.Unmarshal([]byte(result.Body), &body))
