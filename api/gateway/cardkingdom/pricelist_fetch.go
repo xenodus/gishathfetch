@@ -197,6 +197,7 @@ func ckPricelistOutboundOptions() gateway.OutboundRequestOptions {
 	return gateway.OutboundRequestOptions{
 		Accept:         "application/json",
 		SkipWebBotAuth: true,
+		SkipDynamic:    true,
 	}
 }
 

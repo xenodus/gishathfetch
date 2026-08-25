@@ -190,6 +190,9 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 	}
 
 	appendDynamic := func(dst []outboundAttempt) []outboundAttempt {
+		if opts.SkipDynamic {
+			return dst
+		}
 		client, ok := dynamicProxyHTTPClient(timeout, profile)
 		if !ok {
 			return dst

@@ -122,6 +122,18 @@ func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	require.True(t, strings.HasPrefix(attempts[0].strategy, "dedicated-"))
 }
 
+func TestBuildOutboundGETAttempts_SkipDynamic(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DYNAMIC_PROXY", "9.9.9.9|8080|dyn|pass")
+	t.Setenv("USE_DYNAMIC_PROXY", "true")
+
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
+		SkipDynamic: true,
+	})
+	require.Len(t, attempts, 1)
+	require.Equal(t, "direct", attempts[0].strategy)
+}
+
 func TestBuildOutboundGETAttempts_PreferDedicatedFirst(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
