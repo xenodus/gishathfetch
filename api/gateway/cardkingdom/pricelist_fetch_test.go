@@ -258,9 +258,9 @@ func TestDownloadCKPricelist_FallsBackToProxyAfterDirectFailure(t *testing.T) {
 
 	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
 
-	payload, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
+	result, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
 	require.NoError(t, err)
-	require.NotEmpty(t, payload.Data)
+	require.NotEmpty(t, result.payload.Data)
 	require.Equal(t, 1, directCalls)
 	require.Equal(t, 1, proxyCalls)
 }
@@ -277,8 +277,9 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 
 	cheapest, err := fetchCheapestFromCKPricelist(context.Background())
 	require.NoError(t, err)
-	require.InDelta(t, 1.49, cheapest["lightning bolt"].PriceUsd, 0.001)
-	require.InDelta(t, 0.35, cheapest["spectacular spider-man"].PriceUsd, 0.001)
+	require.InDelta(t, 1.49, cheapest.Listings["lightning bolt"].PriceUsd, 0.001)
+	require.InDelta(t, 0.35, cheapest.Listings["spectacular spider-man"].PriceUsd, 0.001)
+	require.Equal(t, "direct", cheapest.TransportOrder)
 }
 
 func TestProgressLogReader_PassesThroughAllBytes(t *testing.T) {

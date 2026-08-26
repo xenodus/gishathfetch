@@ -47,6 +47,9 @@ func DoOutboundRoundTrip(
 	attempts := buildOutboundGETAttempts(ctx, timeout, opts)
 	var failures []string
 	for i, attempt := range attempts {
+		if opts.TransportTrace != nil {
+			opts.TransportTrace.record(attempt.strategy)
+		}
 		resp, failure, ok, err := doOutboundAttempt(ctx, attempt, opts, buildReq)
 		if err != nil {
 			closeOutboundAttemptClient(attempt)
@@ -245,6 +248,33 @@ func outboundStatusFailure(strategy string, resp *http.Response) string {
 
 func outboundProxyDescription(attempt outboundAttempt) string {
 	return formatProxyContext(outboundProxyMode(attempt.strategy), attempt.proxyURL)
+}
+
+// FormatTransportOrder renders recorded strategies as a human-readable chain.
+func FormatTransportOrder(trace *OutboundTransportTrace) string {
+	if trace == nil || len(trace.strategies) == 0 {
+		return ""
+	}
+	modes := make([]string, len(trace.strategies))
+	for i, strategy := range trace.strategies {
+		modes[i] = outboundProxyMode(strategy)
+	}
+	return strings.Join(modes, " → ")
+}
+
+// JoinTransportOrders joins non-empty transport order fragments.
+func JoinTransportOrders(parts ...string) string {
+	nonEmpty := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			nonEmpty = append(nonEmpty, part)
+		}
+	}
+	if len(nonEmpty) == 0 {
+		return "unknown"
+	}
+	return strings.Join(nonEmpty, " → ")
 }
 
 func outboundProxyMode(strategy string) string {

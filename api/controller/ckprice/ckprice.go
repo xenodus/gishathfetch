@@ -79,8 +79,9 @@ func listingIsFresh(listing *cardkingdom.Listing, now time.Time) bool {
 
 // RefreshResult is the outcome of a Card Kingdom pricelist download and DynamoDB upsert.
 type RefreshResult struct {
-	ListingCount int
-	Listings     map[string]cardkingdom.Listing
+	ListingCount   int
+	Listings       map[string]cardkingdom.Listing
+	TransportOrder string
 }
 
 // RefreshPrices downloads Card Kingdom retail prices from the CK pricelist API and upserts the DynamoDB index.
@@ -90,13 +91,15 @@ func RefreshPrices(ctx context.Context, store ckprices.Store) (*RefreshResult, e
 	logger.From(ctx).InfoContext(ctx, "ck price refresh: fetching card kingdom pricelist")
 	fetchStarted := time.Now()
 
-	listings, err := fetchCheapestFunc(ctx)
+	fetchResult, err := fetchCheapestFunc(ctx)
 	if err != nil {
 		return nil, err
 	}
+	listings := fetchResult.Listings
 
 	logger.From(ctx).InfoContext(ctx, "ck price refresh: fetched card kingdom pricelist",
 		"listings", len(listings),
+		"transportOrder", fetchResult.TransportOrder,
 		"duration", time.Since(fetchStarted).Round(time.Millisecond),
 	)
 
@@ -123,7 +126,8 @@ func RefreshPrices(ctx context.Context, store ckprices.Store) (*RefreshResult, e
 	)
 
 	return &RefreshResult{
-		ListingCount: len(listings),
-		Listings:     listings,
+		ListingCount:   len(listings),
+		Listings:       listings,
+		TransportOrder: fetchResult.TransportOrder,
 	}, nil
 }

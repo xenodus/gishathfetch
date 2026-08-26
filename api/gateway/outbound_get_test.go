@@ -261,6 +261,61 @@ func TestDoOutboundGET_DirectForbiddenWithoutProxy(t *testing.T) {
 	require.Contains(t, err.Error(), "direct: status 403")
 }
 
+func TestDoOutboundGET_RecordsTransportTrace(t *testing.T) {
+	clearProxyEnv(t)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	trace := &OutboundTransportTrace{}
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{
+			Accept:         "application/json",
+			SkipWebBotAuth: true,
+			TransportTrace: trace,
+		},
+		2*time.Second,
+	)
+	require.NoError(t, err)
+	require.Equal(t, []string{"direct"}, trace.Strategies())
+	require.Equal(t, "direct", FormatTransportOrder(trace))
+}
+
+func TestJoinTransportOrders(t *testing.T) {
+	require.Equal(t, "unknown", JoinTransportOrders())
+	require.Equal(t, "direct", JoinTransportOrders("direct"))
+	require.Equal(t, "direct → dedicated", JoinTransportOrders("direct", "dedicated"))
+	require.Equal(t, "direct → residential", JoinTransportOrders("direct", "", "residential"))
+}
+
+func TestDoOutboundGET_RecordsTransportTraceThroughDedicatedFallback(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "127.0.0.1|9|u|p")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	trace := &OutboundTransportTrace{}
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{
+			SkipWebBotAuth: true,
+			TransportTrace: trace,
+		},
+		2*time.Second,
+	)
+	require.Error(t, err)
+	require.Equal(t, []string{"direct", "dedicated-1"}, trace.Strategies())
+	require.Equal(t, "direct → dedicated", FormatTransportOrder(trace))
+}
+
 func TestDoOutboundGET_ContinuesAfterDirectTimeout(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "127.0.0.1|9|u|p")

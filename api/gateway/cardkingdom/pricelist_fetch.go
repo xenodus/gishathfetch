@@ -160,7 +160,7 @@ func bytesTrimSpace(data []byte) []byte {
 	return []byte(strings.TrimSpace(string(data)))
 }
 
-func fetchCheapestFromCKPricelist(ctx context.Context) (map[string]Listing, error) {
+func fetchCheapestFromCKPricelist(ctx context.Context) (PricelistFetchResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, ckPricelistFetchTimeout)
 	defer cancel()
 
@@ -168,22 +168,26 @@ func fetchCheapestFromCKPricelist(ctx context.Context) (map[string]Listing, erro
 	logger.From(ctx).InfoContext(ctx, "ck price refresh: downloading pricelist", "url", downloadURL)
 
 	downloadStarted := time.Now()
-	payload, err := downloadCKPricelist(ctx, downloadURL)
+	downloadResult, err := downloadCKPricelist(ctx, downloadURL)
 	if err != nil {
-		return nil, err
+		return PricelistFetchResult{}, err
 	}
 	logger.From(ctx).InfoContext(ctx, "ck price refresh: downloaded pricelist",
-		"products", len(payload.Data),
-		"created_at", payload.Meta.CreatedAt,
+		"products", len(downloadResult.payload.Data),
+		"created_at", downloadResult.payload.Meta.CreatedAt,
+		"transportOrder", downloadResult.transportOrder,
 		"duration", time.Since(downloadStarted).Round(time.Millisecond),
 	)
 
-	updatedAt, err := pricelistUpdatedAt(payload.Meta.CreatedAt)
+	updatedAt, err := pricelistUpdatedAt(downloadResult.payload.Meta.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("%s: meta created_at: %w", ckPricelistErrorPrefix, err)
+		return PricelistFetchResult{}, fmt.Errorf("%s: meta created_at: %w", ckPricelistErrorPrefix, err)
 	}
 
-	return cheapestListingsFromPricelist(payload, updatedAt), nil
+	return PricelistFetchResult{
+		Listings:       cheapestListingsFromPricelist(downloadResult.payload, updatedAt),
+		TransportOrder: downloadResult.transportOrder,
+	}, nil
 }
 
 func ckPricelistURL() string {
@@ -209,10 +213,22 @@ func ckPricelistResidentialProxyURL() (string, bool) {
 
 var downloadCKPricelistOnceFunc = downloadCKPricelistOnce
 
-func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistPayload, error) {
-	payload, err := downloadCKPricelistOnceFunc(ctx, downloadURL, ckPricelistOutboundOptions())
+type ckPricelistDownloadResult struct {
+	payload        *ckPricelistPayload
+	transportOrder string
+}
+
+func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistDownloadResult, error) {
+	primaryTrace := &gateway.OutboundTransportTrace{}
+	primaryOpts := ckPricelistOutboundOptions()
+	primaryOpts.TransportTrace = primaryTrace
+
+	payload, err := downloadCKPricelistOnceFunc(ctx, downloadURL, primaryOpts)
 	if err == nil {
-		return payload, nil
+		return &ckPricelistDownloadResult{
+			payload:        payload,
+			transportOrder: gateway.FormatTransportOrder(primaryTrace),
+		}, nil
 	}
 
 	proxyURL, ok := ckPricelistResidentialProxyURL()
@@ -221,9 +237,22 @@ func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistP
 	}
 
 	logger.From(ctx).InfoContext(ctx, "ck price refresh: direct pricelist download failed, retrying via residential proxy")
+	proxyTrace := &gateway.OutboundTransportTrace{}
 	proxyOpts := ckPricelistOutboundOptions()
 	proxyOpts.OnlyProxyURL = proxyURL
-	return downloadCKPricelistOnceFunc(ctx, downloadURL, proxyOpts)
+	proxyOpts.TransportTrace = proxyTrace
+	payload, err = downloadCKPricelistOnceFunc(ctx, downloadURL, proxyOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ckPricelistDownloadResult{
+		payload: payload,
+		transportOrder: gateway.JoinTransportOrders(
+			gateway.FormatTransportOrder(primaryTrace),
+			gateway.FormatTransportOrder(proxyTrace),
+		),
+	}, nil
 }
 
 func downloadCKPricelistOnce(ctx context.Context, downloadURL string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
