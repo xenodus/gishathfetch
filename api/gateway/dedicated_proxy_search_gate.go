@@ -6,7 +6,7 @@ import "context"
 // dedicated-proxy lease at once. The controller runs more workers than this,
 // but proxy-backed searches queue here so datacenter egress does not burst
 // every configured DEDICATED_PROXY_* slot at once.
-const DedicatedProxySearchMaxConcurrent = 5
+const DedicatedProxySearchMaxConcurrent = 3
 
 // dedicatedProxySearchGate bounds in-flight store searches that use dedicated proxies.
 var dedicatedProxySearchGate = make(chan struct{}, DedicatedProxySearchMaxConcurrent)

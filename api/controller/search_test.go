@@ -1127,11 +1127,11 @@ func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
 		}
 	}()
 
-	for i := range 6 {
+	for i := range maxConcurrentStoreSearches {
 		select {
 		case <-started:
 		case <-done:
-			t.Fatal("fetch finished before 6 shops started")
+			t.Fatalf("fetch finished before %d shops started", maxConcurrentStoreSearches)
 		case <-time.After(2 * time.Second):
 			t.Fatalf("timed out waiting for shop %d to start; max in flight was %d", i, maxInFlight.Load())
 		}

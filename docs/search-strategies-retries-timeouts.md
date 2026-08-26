@@ -14,11 +14,11 @@ This document records **where** the app configures search behavior, **timeouts**
 | Agora per-attempt timeout | 20s | `config.AgoraSearchAttemptTimeout` in `api/gateway/agora/search.go` via `DirectAttemptTimeout` / `DedicatedAttemptTimeout` | Same as per-store deadline (`PerSiteTimeout`). |
 | Mox & Lotus per-attempt timeout | 10s | `config.MoxAndLotusSearchAttemptTimeout` in `api/gateway/moxandlotus/search.go` via `DirectAttemptTimeout` / `DedicatedAttemptTimeout` | Longer than the default direct/dedicated attempt timeouts. |
 | Colly request timeout (default scrapers) | 3s direct / 5s dedicated | `applyCollectorDefaults` and `applyCollectorHTTPClient` in `api/gateway/collector.go` | Direct collectors use `DirectSearchAttemptTimeout`; proxy-backed collectors use `DedicatedSearchAttemptTimeout`. BinderPOS scrap steps override explicitly in `scrap.go`. |
-| Max concurrent store searches | 9 | `maxConcurrentStoreSearches` in `api/controller/search.go` | Worker pool size when fanning out to selected stores. |
+| Max concurrent store searches | 5 | `maxConcurrentStoreSearches` in `api/controller/search.go` | Worker pool size when fanning out to selected stores. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Card Kingdom enrichment on `/search` | parallel, **2s** cap | See [CK price on search](#backend-ck-price-on-search-apihandlersearchgo-and-refresh-apigatewaycardkingdom) below | Store fan-out and CK lookup run together; CK cannot delay the response past its timeout. |
 | Colly HTTP retries | None | `api/gateway/collector.go` (`configureRequestOptimizations`, `registerNoRetryErrorHandler`) | **Single HTTP attempt** per colly request path; no automatic colly/gateway retry of failed visits. |
-| Dedicated proxy per store search | 1 lease | `searchShop` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When dedicated proxies are configured, each store search acquires **one** dedicated-proxy lease for its own goroutine. Up to nine concurrent store searches share the worker pool, but at most **five** proxy-backed searches may hold a dedicated lease at once (`DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go`). Additional proxy-backed stores wait for a slot before leasing. |
+| Dedicated proxy per store search | 1 lease | `searchShop` in `api/controller/search.go` + `WithRequestDedicatedProxy` in `api/gateway/request_dedicated_proxy.go` | When dedicated proxies are configured, each store search acquires **one** dedicated-proxy lease for its own goroutine. Up to five concurrent store searches share the worker pool, but at most **three** proxy-backed searches may hold a dedicated lease at once (`DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go`). Additional proxy-backed stores wait for a slot before leasing. |
 
 ---
 
@@ -34,7 +34,7 @@ This document records **where** the app configures search behavior, **timeouts**
 |------|--------|--------|
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
 | Dedicated proxy toggle | **`USE_DEDICATED_PROXY`** | When `false`, dedicated proxy transports are skipped even if `DEDICATED_PROXY_*` are set. Defaults to **enabled** when unset or invalid. |
-| Dedicated proxy search concurrency | 5 in-flight | `DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go` | Caps how many store searches may hold a dedicated-proxy lease at once so datacenter egress does not burst every configured slot. |
+| Dedicated proxy search concurrency | 3 in-flight | `DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go` | Caps how many store searches may hold a dedicated-proxy lease at once so datacenter egress does not burst every configured slot. |
 | Residential proxy | **`RESIDENTIAL_PROXY_1`** | Optional residential proxy for stores that block datacenter IPs behind Cloudflare. Uses the same `host\|port\|username\|password` format. |
 
 ---
