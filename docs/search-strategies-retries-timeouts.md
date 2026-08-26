@@ -34,10 +34,7 @@ This document records **where** the app configures search behavior, **timeouts**
 | Configured slots | **`DEDICATED_PROXY_1`** … **`DEDICATED_PROXY_7`** | Each value is `host\|port\|username\|password` (pipe-separated). Empty or incomplete entries are ignored when building URLs. |
 | Dedicated proxy toggle | **`USE_DEDICATED_PROXY`** | When `false`, dedicated proxy transports are skipped even if `DEDICATED_PROXY_*` are set. Defaults to **enabled** when unset or invalid. |
 | Dedicated proxy search concurrency | 3 in-flight | `DedicatedProxySearchMaxConcurrent` in `api/gateway/dedicated_proxy_search_gate.go` | Caps how many store searches may hold a dedicated-proxy lease at once so datacenter egress does not burst every configured slot. |
-| Dynamic fallback proxy | **`DYNAMIC_PROXY`** | Uses the same `host\|port\|username\|password` format as `DEDICATED_PROXY_*` (full proxy URLs are also accepted). BinderPOS reserves it for the final two fallback attempts (`scrap-dynamic` and `decklist-dynamic`) after dedicated and direct/no-proxy scrap and decklist tries. Disabled by default via `USE_DYNAMIC_PROXY`. |
-| Dynamic proxy concurrency | 3 in-flight | `dynamicProxyMaxConcurrent` in `api/gateway/dynamic_proxy_gate.go` | Caps concurrent requests through `DYNAMIC_PROXY` across all stores and strategies so the final BinderPOS fallbacks do not burst the proxy endpoint and trigger 429. |
 | Residential proxy | **`RESIDENTIAL_PROXY_1`** | Optional residential proxy for stores that block datacenter IPs behind Cloudflare. Uses the same `host\|port\|username\|password` format. |
-| Dynamic proxy toggle | **`USE_DYNAMIC_PROXY`** | When `true`, dynamic proxy fallback is enabled if `DYNAMIC_PROXY` is set. Defaults to **disabled** when unset or invalid. |
 
 ---
 
@@ -55,35 +52,34 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| BinderPOS stores **with** Storefront access token | **graphql-dedicated** → **graphql-direct** → **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** → **scrap-dynamic** → **decklist-dynamic** | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. GraphQL uses dedicated then direct only (no dynamic GraphQL). Dynamic proxy remains reserved for the final scrap/decklist attempts. |
-| BinderPOS stores **without** token | **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** → **scrap-dynamic** → **decklist-dynamic** | Same as above without the GraphQL steps. |
+| BinderPOS stores **with** Storefront access token | **graphql-dedicated** → **graphql-direct** → **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. GraphQL uses dedicated then direct only. |
+| BinderPOS stores **without** token | **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** | Same as above without the GraphQL steps. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
-| Colly proxy selection (scrap steps) | Request-scoped dedicated → per-collector lease → random dedicated → dynamic → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Each colly collector makes **one** outbound attempt using the first available mode. When `searchShop` pins a request-scoped dedicated lease, scrap steps reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
+| Colly proxy selection (scrap steps) | Request-scoped dedicated → per-collector lease → random dedicated → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Each colly collector makes **one** outbound attempt using the first available mode. When `searchShop` pins a request-scoped dedicated lease, scrap steps reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
 | Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
 | Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` across stores in one search. |
 | Decklist requests | Single send | `doDecklistRequestWithRetry` in `api/gateway/binderpos/storefront_decklist_retry.go` | No automatic retries on 429/5xx or network errors. |
 | “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **GraphQL**, **scrape**, or **decklist** attempt without error is **final** and later strategies are not tried. HTTP **5xx** on scrape or GraphQL is **final**. Other GraphQL errors fall through to HTML scrap. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
 | Storefront GraphQL | Public per-store `accessToken` | `api/gateway/binderpos/storefront_graphql.go`; tokens in each store package (`StoreStorefrontAccessToken`) | Shopify Storefront `search` with `available: true`. MTG filtered client-side via product type/tags. Variant deep-links include `?variant=`. Enabled only when the store configures a token. |
-| scrap-dynamic | Single send | `scrapDynamic` in `api/gateway/binderpos/scrap_dynamic.go` | No automatic 429 retries; each attempt uses one dynamic-proxy collector. |
 
 ### BinderPOS stores (registry in `api/controller/search.go`)
 
 | Store | GraphQL token | HTML scrap variant | Max strategy steps |
 |-------|---------------|--------------------|--------------------|
-| Arcane Sanctum | Yes | 2 | 8 |
-| Card Affinity | No | 2 | 6 |
-| Cards Citadel | Yes | 1 | 8 |
-| Flagship | Yes | 2 | 8 |
-| Fyendal Hobby | Yes | 4 | 8 |
-| Games Haven | Yes | 3 | 8 |
-| GOG | Yes | 3 | 8 |
-| Hideout | Yes | 3 | 8 |
-| Hideyoshi | Yes | 2 | 8 |
-| Mana Pro | Yes | 2 | 8 |
-| MTG Asia | Yes | 2 | 8 |
-| One MTG | Yes | 2 | 8 |
+| Arcane Sanctum | Yes | 2 | 6 |
+| Card Affinity | No | 2 | 4 |
+| Cards Citadel | Yes | 1 | 6 |
+| Flagship | Yes | 2 | 6 |
+| Fyendal Hobby | Yes | 4 | 6 |
+| Games Haven | Yes | 3 | 6 |
+| GOG | Yes | 3 | 6 |
+| Hideout | Yes | 3 | 6 |
+| Hideyoshi | Yes | 2 | 6 |
+| Mana Pro | Yes | 2 | 6 |
+| MTG Asia | Yes | 2 | 6 |
+| One MTG | Yes | 2 | 6 |
 
 All BinderPOS stores configure a Shopify domain for decklist steps. Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
 
@@ -91,17 +87,17 @@ All BinderPOS stores configure a Shopify domain for decklist steps. Card Affinit
 
 ## Backend: non-BinderPOS stores
 
-Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip` (`api/gateway/outbound_get.go`): **direct → dedicated (request-scoped lease or one random slot) → dynamic**. Callers can reorder with `PreferDedicatedFirst` (**dedicated → direct → dynamic**) or omit direct with `SkipDirect`. Each transport is tried once; client errors (4xx) and connection errors advance immediately to the next transport. No automatic retry of the same transport.
+Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip` (`api/gateway/outbound_get.go`): **direct → dedicated (request-scoped lease or one random slot)**. Callers can reorder with `PreferDedicatedFirst` (**dedicated → direct**) or omit direct with `SkipDirect`. Each transport is tried once; client errors (4xx) and connection errors advance immediately to the next transport. No automatic retry of the same transport.
 
 | Store | Strategy | Per-attempt timeout | Proxy / transport order | Retries |
 |-------|----------|----------------------|-------------------------|---------|
-| Agora Hobby | HTML search page (`/store/search`) | 20s | **Dedicated → direct → dynamic** (`PreferDedicatedFirst`; browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
-| 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → dynamic**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
-| Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 5s per path | **Dedicated → direct → dynamic** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
-| Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
-| Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
-| Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated → dynamic**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
-| Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
+| Agora Hobby | HTML search page (`/store/search`) | 20s | **Dedicated → direct** (`PreferDedicatedFirst`; browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
+| 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → direct**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
+| Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 5s per path | **Dedicated → direct** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
+| Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated | Transport fallback only |
+| Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated | Transport fallback only |
+| Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
+| Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 5s | Direct → dedicated | Transport fallback only |
 | The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.

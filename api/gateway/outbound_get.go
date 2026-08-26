@@ -18,8 +18,8 @@ type outboundAttempt struct {
 	client   *http.Client
 }
 
-// DoOutboundGET performs a GET with direct, dedicated-proxy, and dynamic-proxy
-// fallback. Client errors (4xx) advance to the next transport without retrying.
+// DoOutboundGET performs a GET with direct and dedicated-proxy fallback.
+// Client errors (4xx) advance to the next transport without retrying.
 func DoOutboundGET(
 	ctx context.Context,
 	requestURL string,
@@ -31,10 +31,8 @@ func DoOutboundGET(
 	})
 }
 
-// DoOutboundRoundTrip performs an HTTP round trip with direct, dedicated-proxy,
-// and dynamic-proxy fallback. Client errors (4xx) advance to the next transport
-// without retrying. buildReq is called for each send so callers can supply a
-// fresh request body when needed.
+// DoOutboundRoundTrip performs an HTTP round trip with direct and dedicated-proxy
+// fallback. Client errors (4xx) advance to the next transport without retrying.
 func DoOutboundRoundTrip(
 	ctx context.Context,
 	opts OutboundRequestOptions,
@@ -71,18 +69,6 @@ func doOutboundAttempt(
 	buildReq func() (*http.Request, error),
 ) (*http.Response, string, bool, error) {
 	proxyDesc := outboundProxyDescription(attempt)
-
-	var releaseDynamicProxy func()
-	if attempt.strategy == "dynamic" {
-		release, err := AcquireDynamicProxySlot(ctx)
-		if err != nil {
-			return nil, "", false, err
-		}
-		releaseDynamicProxy = release
-	}
-	if releaseDynamicProxy != nil {
-		defer releaseDynamicProxy()
-	}
 
 	req, err := buildReq()
 	if err != nil {
@@ -189,34 +175,17 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		})
 	}
 
-	appendDynamic := func(dst []outboundAttempt) []outboundAttempt {
-		if opts.SkipDynamic {
-			return dst
-		}
-		client, ok := dynamicProxyHTTPClient(timeout, profile)
-		if !ok {
-			return dst
-		}
-		return append(dst, outboundAttempt{
-			strategy: "dynamic",
-			proxyURL: DynamicProxyURL(),
-			client:   client,
-		})
-	}
-
 	var attempts []outboundAttempt
 	if opts.PreferDedicatedFirst {
 		attempts = appendDedicated(attempts)
 		attempts = appendDirect(attempts)
 		attempts = appendResidential(attempts)
-		attempts = appendDynamic(attempts)
 		return attempts
 	}
 
 	attempts = appendDirect(attempts)
 	attempts = appendResidential(attempts)
 	attempts = appendDedicated(attempts)
-	attempts = appendDynamic(attempts)
 	return attempts
 }
 
@@ -234,19 +203,6 @@ func dedicatedProxyStrategyName(proxyURL string) string {
 		}
 	}
 	return "dedicated"
-}
-
-func dynamicProxyHTTPClient(timeout time.Duration, profile BrowserEmulationProfile) (*http.Client, bool) {
-	proxyURL := DynamicProxyURL()
-	if proxyURL == "" {
-		return nil, false
-	}
-
-	client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
-	if err != nil {
-		return nil, false
-	}
-	return client, true
 }
 
 func outboundStatusFailure(strategy string, resp *http.Response) string {
@@ -282,8 +238,6 @@ func outboundProxyMode(strategy string) string {
 	switch {
 	case strategy == "direct":
 		return "direct"
-	case strategy == "dynamic":
-		return "dynamic"
 	case strings.HasPrefix(strategy, "residential-"):
 		return "residential"
 	case strings.HasPrefix(strategy, "dedicated-"):
@@ -303,8 +257,8 @@ func outboundRequestURL(req *http.Request) string {
 }
 
 // NewOutboundHTTPClient returns an HTTP client that routes through a random dedicated
-// proxy when configured, otherwise dynamic proxy, otherwise direct. The policy matches
-// optimized colly collectors used by non-BinderPOS scrapers.
+// proxy when configured, otherwise direct. The policy matches optimized colly
+// collectors used by non-BinderPOS scrapers.
 func NewOutboundHTTPClient(timeout time.Duration) (*http.Client, error) {
 	_, proxyURL := selectOutboundProxy("", "")
 	profile := BrowserEmulationProfile{}

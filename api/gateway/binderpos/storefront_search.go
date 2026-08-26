@@ -15,7 +15,7 @@ type storefrontStrategy struct {
 }
 
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr, storefrontAccessToken string) ([]gateway.Card, error) {
-	scrap := [3]storefrontStrategy{
+	scrap := [2]storefrontStrategy{
 		{
 			name: "scrap-dedicated",
 			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
@@ -26,12 +26,6 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 			name: "scrap-direct",
 			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
 				return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
-			},
-		},
-		{
-			name: "scrap-dynamic",
-			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return i.scrapDynamic(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			},
 		},
 	}
@@ -55,34 +49,21 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 	}
 
 	strategies = append(strategies, scrap[0], scrap[1])
-	var decklistDynamic storefrontStrategy
 	if strings.TrimSpace(shopifyDomain) != "" {
-		decklist := [3]storefrontStrategy{
-			{
+		strategies = append(strategies,
+			storefrontStrategy{
 				name: "decklist-dedicated",
 				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
 					return searchByStorefrontAPI(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 				},
 			},
-			{
+			storefrontStrategy{
 				name: "decklist-direct",
 				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
 					return searchByStorefrontAPIDirect(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 				},
 			},
-			{
-				name: "decklist-dynamic",
-				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return searchByStorefrontAPIDynamic(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-				},
-			},
-		}
-		strategies = append(strategies, decklist[0], decklist[1])
-		decklistDynamic = decklist[2]
-	}
-	strategies = append(strategies, scrap[2])
-	if strings.TrimSpace(shopifyDomain) != "" {
-		strategies = append(strategies, decklistDynamic)
+		)
 	}
 
 	return runStorefrontStrategies(ctx, omitDedicatedStorefrontStrategies(strategies)...)
@@ -146,10 +127,6 @@ func storefrontStrategyNamesUnfiltered(storefrontAccessToken, shopifyDomain stri
 	names = append(names, "scrap-dedicated", "scrap-direct")
 	if strings.TrimSpace(shopifyDomain) != "" {
 		names = append(names, "decklist-dedicated", "decklist-direct")
-	}
-	names = append(names, "scrap-dynamic")
-	if strings.TrimSpace(shopifyDomain) != "" {
-		names = append(names, "decklist-dynamic")
 	}
 	return names
 }

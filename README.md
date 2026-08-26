@@ -90,11 +90,9 @@ BinderPOS decklist strategies.
 
 When a store has a Storefront access token:
 
-`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic`
+`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct`
 
-Without a token, the chain starts at `scrap-dedicated` (same as before). Dynamic
-proxy remains reserved for the final scrap/decklist attempts; GraphQL uses
-dedicated then direct only.
+Without a token, the chain starts at `scrap-dedicated`. GraphQL uses dedicated then direct only.
 
 ```mermaid
 flowchart TD
@@ -104,16 +102,12 @@ flowchart TD
     B -- error --> C[scrap-direct]
     C -- error --> F[decklist-dedicated]
     F -- error --> G[decklist-direct]
-    G -- error --> D[scrap-dynamic]
-    D -- error --> H[decklist-dynamic]
     G1 -- cards or empty success --> E[Return result]
     G2 -- cards or empty success --> E
     B -- cards or empty success --> E
     C -- cards or empty success --> E
     F -- cards or empty decklist --> E
-    G -- cards or empty decklist --> E
-    D -- cards or empty success --> E
-    H -- cards, empty, or error --> E
+    G -- cards, empty decklist, or error --> E
 ```
 
 ### Fallback rules

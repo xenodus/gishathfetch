@@ -14,8 +14,6 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 			"scrap-direct",
 			"decklist-dedicated",
 			"decklist-direct",
-			"scrap-dynamic",
-			"decklist-dynamic",
 		}
 		require.Equal(t, want, got)
 	})
@@ -29,8 +27,6 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 			"scrap-direct",
 			"decklist-dedicated",
 			"decklist-direct",
-			"scrap-dynamic",
-			"decklist-dynamic",
 		}
 		require.Equal(t, want, got)
 	})
@@ -42,8 +38,6 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 			"graphql-direct",
 			"scrap-direct",
 			"decklist-direct",
-			"scrap-dynamic",
-			"decklist-dynamic",
 		}
 		require.Equal(t, want, got)
 	})

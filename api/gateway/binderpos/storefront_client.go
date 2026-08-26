@@ -54,26 +54,6 @@ func searchByStorefrontAPI(ctx context.Context, scrapVariant int, storeName, bas
 	return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
 }
 
-func searchByStorefrontAPIDynamic(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
-	proxyURL := gateway.DynamicProxyURL()
-	if proxyURL == "" {
-		return nil, fmt.Errorf("no dynamic proxy configured for binderpos storefront api")
-	}
-
-	releaseDynamicProxy, err := gateway.AcquireDynamicProxySlot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer releaseDynamicProxy()
-
-	client, err := newHTTPClientWithProxyURL(proxyURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid dynamic proxy configured for binderpos storefront api: %w", err)
-	}
-
-	return searchByBinderposDecklistAPI(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-}
-
 func searchByStorefrontAPIDirect(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchStr string) ([]gateway.Card, error) {
 	profile := gateway.PickBrowserProfile()
 	if !gateway.ShouldUseBrowserTLSEmulationForScraping() {

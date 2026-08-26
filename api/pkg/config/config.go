@@ -27,14 +27,6 @@ const (
 	AgoraSearchAttemptTimeout = PerSiteTimeout
 	// MoxAndLotusSearchAttemptTimeout is the per-attempt cap for Mox & Lotus.
 	MoxAndLotusSearchAttemptTimeout = 10 * time.Second
-	// DynamicProxyEnv contains an authenticated proxy URL used for explicit
-	// dynamic-proxy fallback attempts, which BinderPOS reserves for the final
-	// two attempts after dedicated and direct/no-proxy scrap and decklist tries.
-	DynamicProxyEnv = "DYNAMIC_PROXY"
-	// UseDynamicProxyEnv toggles whether DYNAMIC_PROXY may be used for fallback
-	// attempts. When false, dynamic proxy is skipped even if configured.
-	// Defaults to disabled when unset or invalid.
-	UseDynamicProxyEnv = "USE_DYNAMIC_PROXY"
 	// UseDedicatedProxyEnv toggles whether DEDICATED_PROXY_* may be used for outbound
 	// scrapes and API calls. When false, dedicated proxy transports are skipped even
 	// if configured. Defaults to enabled when unset or invalid.
@@ -134,20 +126,6 @@ const UseLeasedDedicatedProxy = false
 
 // AgoraSearchEnabled toggles Agora Hobby search in the search Lambda.
 const AgoraSearchEnabled = true
-
-func UseDynamicProxy() bool {
-	rawValue := strings.TrimSpace(os.Getenv(UseDynamicProxyEnv))
-	if rawValue == "" {
-		return false
-	}
-
-	enabled, err := strconv.ParseBool(rawValue)
-	if err != nil {
-		return false
-	}
-
-	return enabled
-}
 
 // UseDedicatedProxy reports whether DEDICATED_PROXY_* env vars may be used.
 // Defaults to enabled when unset or invalid.

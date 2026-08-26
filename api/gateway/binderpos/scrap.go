@@ -50,16 +50,6 @@ func newBinderposCollector(ctx context.Context) (*colly.Collector, error) {
 	return c, nil
 }
 
-func newDynamicNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
-	c, err := gateway.NewOptimizedCollectorNoRetryDynamic(ctx)
-	if err != nil {
-		return nil, err
-	}
-	c.SetRequestTimeout(binderposAttemptTimeout)
-	configureShopifyStorefrontCollector(c)
-	return c, nil
-}
-
 func newDirectNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
 	c.SetRequestTimeout(binderposAttemptTimeout)
