@@ -166,7 +166,7 @@ func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured b
 		requestContext = append(requestContext, "access_token_configured=false")
 	}
 
-	resp, err := gateway.DoOutboundRoundTrip(ctx, gateway.OutboundRequestOptions{}, config.SearchAttemptTimeout, func() (*http.Request, error) {
+	resp, err := gateway.DoOutboundRoundTrip(ctx, gateway.OutboundRequestOptions{}, config.DedicatedSearchAttemptTimeout, func() (*http.Request, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
 		if err != nil {
 			return nil, err

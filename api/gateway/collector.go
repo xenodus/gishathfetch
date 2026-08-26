@@ -205,7 +205,7 @@ func forceCollectorProxy(c *colly.Collector, mode, proxyURL string) error {
 	if !ShouldUseBrowserTLSEmulationForScraping() {
 		profile = BrowserEmulationProfile{}
 	}
-	client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+	client, err := newOutboundHTTPClient(proxyURL, config.DedicatedSearchAttemptTimeout, profile)
 	if err != nil {
 		if setErr := c.SetProxy(proxyURL); setErr != nil {
 			return setErr
@@ -245,7 +245,7 @@ func applyCollectorHTTPClient(
 	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL)
 	attemptTimeout := config.DirectSearchAttemptTimeout
 	if proxyURL != "" {
-		attemptTimeout = config.SearchAttemptTimeout
+		attemptTimeout = config.DedicatedSearchAttemptTimeout
 	}
 	client, err := newOutboundHTTPClient(proxyURL, attemptTimeout, profile)
 	if err != nil {
@@ -263,7 +263,7 @@ func applyCollectorHTTPClient(
 // Base collector defaults used by all optimized collectors.
 func applyCollectorDefaults(c *colly.Collector) {
 	c.DisableCookies()
-	c.SetRequestTimeout(config.SearchAttemptTimeout)
+	c.SetRequestTimeout(config.DedicatedSearchAttemptTimeout)
 }
 
 // Dedicated proxy lease lifecycle helpers.

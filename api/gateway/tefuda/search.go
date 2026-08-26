@@ -68,7 +68,7 @@ func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), tefudaOutboundOpts(storeBase, apiURL, gateway.OutboundStyleHTML), config.SearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), tefudaOutboundOpts(storeBase, apiURL, gateway.OutboundStyleHTML), config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}

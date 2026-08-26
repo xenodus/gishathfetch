@@ -126,11 +126,13 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		}}
 	}
 
+	directTimeout, dedicatedTimeout := outboundAttemptTimeouts(opts)
+
 	appendDirect := func(dst []outboundAttempt) []outboundAttempt {
 		if opts.SkipDirect {
 			return dst
 		}
-		client, err := newOutboundHTTPClient("", config.DirectSearchAttemptTimeout, profile)
+		client, err := newOutboundHTTPClient("", directTimeout, profile)
 		if err != nil {
 			return dst
 		}
@@ -148,7 +150,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		if !ok {
 			return dst
 		}
-		client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+		client, err := newOutboundHTTPClient(proxyURL, dedicatedTimeout, profile)
 		if err != nil {
 			return dst
 		}
@@ -170,7 +172,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		if !ok {
 			return dst
 		}
-		client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+		client, err := newOutboundHTTPClient(proxyURL, dedicatedTimeout, profile)
 		if err != nil {
 			return dst
 		}
@@ -186,6 +188,18 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 	attempts = appendResidential(attempts)
 	attempts = appendDedicated(attempts)
 	return attempts
+}
+
+func outboundAttemptTimeouts(opts OutboundRequestOptions) (direct, dedicated time.Duration) {
+	direct = config.DirectSearchAttemptTimeout
+	dedicated = config.DedicatedSearchAttemptTimeout
+	if opts.DirectAttemptTimeout > 0 {
+		direct = opts.DirectAttemptTimeout
+	}
+	if opts.DedicatedAttemptTimeout > 0 {
+		dedicated = opts.DedicatedAttemptTimeout
+	}
+	return direct, dedicated
 }
 
 func dedicatedProxyURLForOutbound(ctx context.Context) (string, bool) {

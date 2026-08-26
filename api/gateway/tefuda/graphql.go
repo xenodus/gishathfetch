@@ -120,7 +120,7 @@ func (s Store) searchGraphQL(ctx context.Context, searchStr string) ([]gateway.C
 
 	opts := tefudaOutboundOpts(storeBase, storeBase, gateway.OutboundStyleJSON)
 
-	resp, err := gateway.DoOutboundRoundTrip(ctx, opts, config.SearchAttemptTimeout, func() (*http.Request, error) {
+	resp, err := gateway.DoOutboundRoundTrip(ctx, opts, config.DedicatedSearchAttemptTimeout, func() (*http.Request, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL.String(), bytes.NewReader(payload))
 		if err != nil {
 			return nil, err

@@ -41,7 +41,7 @@ func ProbeScrapeStructure(ctx context.Context, scrapVariant int, baseURL, search
 		Style:              gateway.OutboundStyleHTML,
 		PageURL:            pageURL,
 		ShopifySGDCurrency: true,
-	}, config.SearchAttemptTimeout)
+	}, config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return err
 	}

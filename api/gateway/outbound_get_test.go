@@ -129,7 +129,22 @@ func TestBuildOutboundGETAttempts_UsesTransportSpecificTimeouts(t *testing.T) {
 	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{})
 	require.Len(t, attempts, 2)
 	require.Equal(t, config.DirectSearchAttemptTimeout, attempts[0].client.Timeout)
-	require.Equal(t, config.SearchAttemptTimeout, attempts[1].client.Timeout)
+	require.Equal(t, config.DedicatedSearchAttemptTimeout, attempts[1].client.Timeout)
+}
+
+func TestBuildOutboundGETAttempts_UsesCustomAttemptTimeouts(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	customDirect := 11 * time.Second
+	customDedicated := 13 * time.Second
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
+		DirectAttemptTimeout:    customDirect,
+		DedicatedAttemptTimeout: customDedicated,
+	})
+	require.Len(t, attempts, 2)
+	require.Equal(t, customDirect, attempts[0].client.Timeout)
+	require.Equal(t, customDedicated, attempts[1].client.Timeout)
 }
 
 func TestBuildOutboundGETAttempts_PreferDedicatedFirst(t *testing.T) {

@@ -8,7 +8,7 @@ const (
 	binderposDecklistAPIURL = "https://portal.binderpos.com/external/shopify/decklist"
 	binderposDecklistType   = "mtg"
 	binderposDirectAttemptTimeout    = config.DirectSearchAttemptTimeout
-	binderposDedicatedAttemptTimeout = config.SearchAttemptTimeout
+	binderposDedicatedAttemptTimeout = config.DedicatedSearchAttemptTimeout
 )
 
 type storefrontDecklistRequestItem struct {

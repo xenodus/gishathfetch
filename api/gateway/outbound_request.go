@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // OutboundRequestStyle selects which browser-like headers to apply before signing.
@@ -24,6 +25,10 @@ type OutboundRequestOptions struct {
 	Accept string
 	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
 	SkipDirect bool
+	// DirectAttemptTimeout overrides config.DirectSearchAttemptTimeout when > 0.
+	DirectAttemptTimeout time.Duration
+	// DedicatedAttemptTimeout overrides config.DedicatedSearchAttemptTimeout when > 0.
+	DedicatedAttemptTimeout time.Duration
 	// PreferDedicatedFirst is deprecated and ignored; outbound fallback always tries
 	// direct before dedicated when both are enabled.
 	PreferDedicatedFirst bool

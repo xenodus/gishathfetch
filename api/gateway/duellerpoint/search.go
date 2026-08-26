@@ -63,7 +63,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
 		PageURL: apiURL,
 		Accept:  "application/json",
-	}, config.SearchAttemptTimeout)
+	}, config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return nil, err
 	}

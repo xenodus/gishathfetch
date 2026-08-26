@@ -576,6 +576,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 		"Shop2": makeShop("Shop2"),
 		"Shop3": makeShop("Shop3"),
 	}
+	shopCount := len(shops)
 
 	done := make(chan struct{})
 	go func() {
@@ -586,7 +587,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 		}
 	}()
 
-	for range gateway.DedicatedProxySearchMaxConcurrent {
+	for range shopCount {
 		select {
 		case <-started:
 		case <-time.After(2 * time.Second):
@@ -598,10 +599,10 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 
 	mu.Lock()
 	defer mu.Unlock()
-	if len(pinned) != gateway.DedicatedProxySearchMaxConcurrent {
-		t.Fatalf("expected %d pinned proxies, got %d (%v)", gateway.DedicatedProxySearchMaxConcurrent, len(pinned), pinned)
+	if len(pinned) != shopCount {
+		t.Fatalf("expected %d pinned proxies, got %d (%v)", shopCount, len(pinned), pinned)
 	}
-	seen := make(map[string]struct{}, gateway.DedicatedProxySearchMaxConcurrent)
+	seen := make(map[string]struct{}, shopCount)
 	for shop, proxyURL := range pinned {
 		if proxyURL == "" {
 			t.Fatalf("shop %s pinned empty proxy", shop)

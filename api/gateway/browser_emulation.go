@@ -271,7 +271,7 @@ func newBrowserEmulatedHTTPClient(proxyURL string, timeout time.Duration, profil
 func NewBinderposHTTPClient(proxyURL string, profile BrowserEmulationProfile) (*http.Client, error) {
 	timeout := config.DirectSearchAttemptTimeout
 	if strings.TrimSpace(proxyURL) != "" {
-		timeout = config.SearchAttemptTimeout
+		timeout = config.DedicatedSearchAttemptTimeout
 	}
 	return newOutboundHTTPClient(proxyURL, timeout, profile)
 }
