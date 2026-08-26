@@ -45,3 +45,9 @@ export PATH="/usr/local/go/bin:$PATH"
 
 cd "${repo_root}/frontend"
 npm ci
+
+# Warm the Go build cache so the first `make test` / `go build` / `go fix`
+# starts from a hot cache instead of recompiling every vendored package.
+echo "Warming Go build cache (vendored)"
+cd "${repo_root}/api"
+"${go_root}/bin/go" build -mod=vendor ./...
