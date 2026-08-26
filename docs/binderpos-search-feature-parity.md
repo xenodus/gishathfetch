@@ -8,7 +8,7 @@ For **strategy order, timeouts, proxy config, and fallback rules**, see [`search
 
 ## Overview
 
-All 11 BinderPOS-backed stores share one orchestrator: `binderpos.impl.Search` in `api/gateway/binderpos/storefront_search.go`. It runs an **ordered list of strategy steps** (not retries of a single request). Each step is one HTTP interaction bounded by `binderposAttemptTimeout` (5s).
+All 11 BinderPOS-backed stores share one orchestrator: `binderpos.impl.Search` in `api/gateway/binderpos/storefront_search.go`. It runs an **ordered list of strategy steps** (not retries of a single request). Each step is one HTTP interaction bounded by **3s** (direct) or **5s** (dedicated).
 
 | Data source | Implementation | Named strategies |
 |-------------|----------------|------------------|
@@ -27,11 +27,11 @@ but `storefront_search.go` no longer appends decklist steps to the live fallback
 
 ### With Storefront access token (4 steps)
 
-`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct`
+`graphql-direct` → `graphql-dedicated` → `scrap-direct` → `scrap-dedicated`
 
 ### Without Storefront access token (2 steps)
 
-`scrap-dedicated` → `scrap-direct`
+`scrap-direct` → `scrap-dedicated`
 
 Only **Card Affinity** omits GraphQL (no token configured).
 

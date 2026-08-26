@@ -3,6 +3,7 @@ package binderpos
 import (
 	"context"
 	"strings"
+	"time"
 
 	"mtg-price-checker-sg/gateway"
 )
@@ -17,15 +18,15 @@ type storefrontStrategy struct {
 func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, searchURL, searchStr, storefrontAccessToken string) ([]gateway.Card, error) {
 	scrap := [2]storefrontStrategy{
 		{
-			name: "scrap-dedicated",
-			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-				return i.Scrap(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
-			},
-		},
-		{
 			name: "scrap-direct",
 			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
 				return i.scrapDirect(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
+			},
+		},
+		{
+			name: "scrap-dedicated",
+			run: func(attemptCtx context.Context) ([]gateway.Card, error) {
+				return i.Scrap(attemptCtx, scrapVariant, storeName, baseURL, searchURL, searchStr)
 			},
 		},
 	}
@@ -34,15 +35,15 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 	if token := strings.TrimSpace(storefrontAccessToken); token != "" {
 		strategies = append(strategies,
 			storefrontStrategy{
-				name: "graphql-dedicated",
-				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return searchByStorefrontGraphQLDedicated(attemptCtx, scrapVariant, storeName, baseURL, token, searchStr)
-				},
-			},
-			storefrontStrategy{
 				name: "graphql-direct",
 				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
 					return searchByStorefrontGraphQLDirect(attemptCtx, scrapVariant, storeName, baseURL, token, searchStr)
+				},
+			},
+			storefrontStrategy{
+				name: "graphql-dedicated",
+				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
+					return searchByStorefrontGraphQLDedicated(attemptCtx, scrapVariant, storeName, baseURL, token, searchStr)
 				},
 			},
 		)
@@ -69,7 +70,7 @@ func omitDedicatedStorefrontStrategies(strategies []storefrontStrategy) []storef
 
 // runStorefrontStrategies runs the ordered strategies through the shared
 // fallback runner. The first attempt starts immediately; later attempts honor
-// per-domain request pacing. Each attempt is bounded by binderposAttemptTimeout.
+// per-domain request pacing. Each attempt is bounded by a transport-specific timeout.
 func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrategy) ([]gateway.Card, error) {
 	attempts := make([]fallbackAttempt, len(strategies))
 	for idx := range strategies {
@@ -79,7 +80,7 @@ func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrate
 			strategy: strategy.name,
 			family:   strategyFamilyFromName(strategy.name),
 			fn: func() ([]gateway.Card, error) {
-				return runWithAttemptTimeout(ctx, applyRequestPacing, strategy.run)
+				return runWithAttemptTimeout(ctx, applyRequestPacing, attemptTimeoutForStrategy(strategy.name), strategy.run)
 			},
 		}
 	}
@@ -87,12 +88,19 @@ func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrate
 	return runFallbackAttempts(attempts...)
 }
 
-func runWithAttemptTimeout(ctx context.Context, applyRequestPacing bool, fn func(context.Context) ([]gateway.Card, error)) ([]gateway.Card, error) {
+func attemptTimeoutForStrategy(name string) time.Duration {
+	if strings.HasSuffix(name, "-direct") {
+		return binderposDirectAttemptTimeout
+	}
+	return binderposDedicatedAttemptTimeout
+}
+
+func runWithAttemptTimeout(ctx context.Context, applyRequestPacing bool, attemptTimeout time.Duration, fn func(context.Context) ([]gateway.Card, error)) ([]gateway.Card, error) {
 	if !applyRequestPacing {
 		// Let the first BinderPOS attempt start immediately; fallbacks still share pacing.
 		ctx = gateway.WithDomainRequestPacingDisabled(ctx)
 	}
-	attemptCtx, cancel := context.WithTimeout(ctx, binderposAttemptTimeout)
+	attemptCtx, cancel := context.WithTimeout(ctx, attemptTimeout)
 	defer cancel()
 	return fn(attemptCtx)
 }
@@ -106,9 +114,9 @@ func storefrontStrategyNames(storefrontAccessToken string) []string {
 func storefrontStrategyNamesUnfiltered(storefrontAccessToken string) []string {
 	var names []string
 	if strings.TrimSpace(storefrontAccessToken) != "" {
-		names = append(names, "graphql-dedicated", "graphql-direct")
+		names = append(names, "graphql-direct", "graphql-dedicated")
 	}
-	names = append(names, "scrap-dedicated", "scrap-direct")
+	names = append(names, "scrap-direct", "scrap-dedicated")
 	return names
 }
 

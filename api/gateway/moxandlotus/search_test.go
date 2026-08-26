@@ -25,6 +25,8 @@ func TestMoxSearchLimit(t *testing.T) {
 }
 
 func Test_Search(t *testing.T) {
+	skipLiveMoxSearchUnlessDedicatedProxy(t)
+
 	s := NewLGS()
 	result, err := s.Search(context.Background(), "Abrade")
 	gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
@@ -32,6 +34,14 @@ func Test_Search(t *testing.T) {
 	}, func(t *testing.T, ctx context.Context) {
 		gatewaytest.RequireMoxAndLotusAPIStructure(t, ctx, "Abrade")
 	})
+}
+
+func skipLiveMoxSearchUnlessDedicatedProxy(t *testing.T) {
+	t.Helper()
+	if gateway.DedicatedProxiesEnabled() {
+		return
+	}
+	t.Skip("set USE_DEDICATED_PROXY=true and DEDICATED_PROXY_* to run live Mox & Lotus search checks")
 }
 
 func Test_resolveCardImageURL(t *testing.T) {

@@ -20,8 +20,10 @@ const (
 	EnvLocal = "local"
 	UseProxy         = true
 	PerSiteTimeout   = 20 * time.Second
-	// SearchAttemptTimeout bounds a single search strategy attempt (BinderPOS step
-	// or default colly scrape).
+	// DirectSearchAttemptTimeout bounds a single direct-egress search attempt.
+	DirectSearchAttemptTimeout = 3 * time.Second
+	// SearchAttemptTimeout bounds a single dedicated-proxy search attempt (BinderPOS
+	// dedicated step or default colly scrape via proxy).
 	SearchAttemptTimeout = 5 * time.Second
 	// AgoraSearchAttemptTimeout is the per-attempt cap for Agora Hobby only (matches per-store deadline).
 	AgoraSearchAttemptTimeout = PerSiteTimeout

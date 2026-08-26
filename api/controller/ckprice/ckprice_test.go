@@ -272,6 +272,7 @@ func TestRefreshPrices_ClosesTrackedProxyConnections(t *testing.T) {
 	defer func() { fetchCheapestFunc = originalFetch }()
 
 	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
 	fetchCheapestFunc = func(ctx context.Context) (map[string]cardkingdom.Listing, error) {

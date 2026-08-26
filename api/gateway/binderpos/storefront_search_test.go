@@ -11,8 +11,8 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 		t.Setenv("USE_DEDICATED_PROXY", "true")
 		got := storefrontStrategyNames("")
 		want := []string{
-			"scrap-dedicated",
 			"scrap-direct",
+			"scrap-dedicated",
 		}
 		require.Equal(t, want, got)
 	})
@@ -21,10 +21,10 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 		t.Setenv("USE_DEDICATED_PROXY", "true")
 		got := storefrontStrategyNames("token")
 		want := []string{
-			"graphql-dedicated",
 			"graphql-direct",
-			"scrap-dedicated",
+			"graphql-dedicated",
 			"scrap-direct",
+			"scrap-dedicated",
 		}
 		require.Equal(t, want, got)
 	})

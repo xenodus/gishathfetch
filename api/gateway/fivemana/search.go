@@ -101,11 +101,10 @@ func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card
 
 func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.OutboundRequestStyle) gateway.OutboundRequestOptions {
 	return gateway.OutboundRequestOptions{
-		Style:                style,
-		PageURL:              pageURL,
-		StoreBase:            storeBase,
-		ShopifySGDCurrency:   true,
-		PreferDedicatedFirst: true,
+		Style:              style,
+		PageURL:            pageURL,
+		StoreBase:          storeBase,
+		ShopifySGDCurrency: true,
 	}
 }
 

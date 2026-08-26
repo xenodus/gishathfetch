@@ -45,14 +45,14 @@ func (i impl) scrapWithCollectorFactory(
 
 func newBinderposCollector(ctx context.Context) (*colly.Collector, error) {
 	c := gateway.NewOptimizedCollectorForBinderpos(ctx)
-	c.SetRequestTimeout(binderposAttemptTimeout)
+	c.SetRequestTimeout(binderposDedicatedAttemptTimeout)
 	configureShopifyStorefrontCollector(c)
 	return c, nil
 }
 
 func newDirectNoRetryCollector(ctx context.Context) (*colly.Collector, error) {
 	c := gateway.NewOptimizedCollectorNoRetryDirect(ctx)
-	c.SetRequestTimeout(binderposAttemptTimeout)
+	c.SetRequestTimeout(binderposDirectAttemptTimeout)
 	configureShopifyStorefrontCollector(c)
 	return c, nil
 }

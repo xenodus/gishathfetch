@@ -83,15 +83,15 @@ then falls back to a `main-search` HTML section scrape when GraphQL fails.
 **BinderPOS stores** (e.g. Arcane Sanctum, Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro, MTG Asia,
 OneMTG) share one gateway. Stores with a configured Storefront access token try
-**GraphQL first** (dedicated → direct), then fall back to HTML scrape.
+**GraphQL first** (direct → dedicated), then fall back to HTML scrape.
 
 ### BinderPOS GraphQL and scrape fallback chain
 
 When a store has a Storefront access token:
 
-`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct`
+`graphql-direct` → `graphql-dedicated` → `scrap-direct` → `scrap-dedicated`
 
-Without a token, the chain starts at `scrap-dedicated`. GraphQL uses dedicated then direct only.
+Without a token, the chain starts at `scrap-direct`.
 
 The BinderPOS Decklist API remains implemented under `api/gateway/binderpos/` for
 reference and Postman collections, but it is not part of the live search fallback
@@ -99,10 +99,10 @@ chain.
 
 ```mermaid
 flowchart TD
-    A[BinderPOS store search] --> G1[graphql-dedicated]
-    G1 -- error --> G2[graphql-direct]
-    G2 -- error --> B[scrap-dedicated]
-    B -- error --> C[scrap-direct]
+    A[BinderPOS store search] --> G1[graphql-direct]
+    G1 -- error --> G2[graphql-dedicated]
+    G2 -- error --> B[scrap-direct]
+    B -- error --> C[scrap-dedicated]
     G1 -- cards or empty success --> E[Return result]
     G2 -- cards or empty success --> E
     B -- cards or empty success --> E
@@ -116,7 +116,7 @@ flowchart TD
   chain.
 - HTTP **5xx** errors on scrape or GraphQL attempts are final. Other GraphQL
   failures fall through to HTML scrap.
-- Each attempt is bounded by a 5s timeout (`binderposAttemptTimeout`). The first
+- Each attempt is bounded by a **3s** direct or **5s** dedicated timeout. The first
   attempt starts immediately; later attempts honor per-domain request pacing.
 
 ## 🗂️ Repository layout

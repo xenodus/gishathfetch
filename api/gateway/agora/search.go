@@ -79,10 +79,9 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 
 func agoraOutboundOpts(pageURL *url.URL) gateway.OutboundRequestOptions {
 	return gateway.OutboundRequestOptions{
-		Style:                gateway.OutboundStyleHTML,
-		PageURL:              pageURL,
-		SkipWebBotAuth:       true,
-		PreferDedicatedFirst: true,
+		Style:          gateway.OutboundStyleHTML,
+		PageURL:        pageURL,
+		SkipWebBotAuth: true,
 	}
 }
 

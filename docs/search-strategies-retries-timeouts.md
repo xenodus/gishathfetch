@@ -9,10 +9,11 @@ This document records **where** the app configures search behavior, **timeouts**
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Per-store deadline | 20s | `config.PerSiteTimeout` in `api/pkg/config/config.go`; used in `searchShop` as `context.WithTimeout` in `api/controller/search.go` | One goroutine per selected store; each `LGS.Search` runs under this cap. When the query contains diacritics, the original and ASCII-stripped forms are searched **in parallel** under the same per-store deadline, then merged and deduped. |
-| Per-attempt timeout (default) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each BinderPOS strategy step, default colly scrape request, and most `DoOutboundGET` / `DoOutboundRoundTrip` calls. |
-| Agora per-attempt timeout | 20s | `config.AgoraSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/agora/search.go` | Same as per-store deadline (`PerSiteTimeout`). |
-| Mox & Lotus per-attempt timeout | 10s | `config.MoxAndLotusSearchAttemptTimeout` in `api/pkg/config/config.go`; applied in `api/gateway/moxandlotus/search.go` | Longer than the default 5s attempt timeout. |
-| Colly request timeout (default scrapers) | 5s | `applyCollectorDefaults` → `c.SetRequestTimeout(config.SearchAttemptTimeout)` in `api/gateway/collector.go` | Overrides gocolly’s default 10s for optimized collectors. |
+| Per-attempt timeout (direct) | 3s | `config.DirectSearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each direct-egress search attempt across BinderPOS steps, colly scrapes, and `DoOutboundGET` / `DoOutboundRoundTrip` direct transports. |
+| Per-attempt timeout (dedicated) | 5s | `config.SearchAttemptTimeout` in `api/pkg/config/config.go` | Bounds each dedicated-proxy search attempt across BinderPOS steps, colly scrapes, and `DoOutboundGET` / `DoOutboundRoundTrip` dedicated transports. |
+| Agora per-attempt timeout | 3s direct / 5s dedicated | Same as default direct/dedicated attempt timeouts via `DoOutboundGET` in `api/gateway/agora/search.go` | Agora uses the shared outbound transport fallback chain. |
+| Mox & Lotus per-attempt timeout | 3s direct / 5s dedicated | Same as default direct/dedicated attempt timeouts via `DoOutboundGET` in `api/gateway/moxandlotus/search.go` | Uses the shared outbound transport fallback chain. |
+| Colly request timeout (default scrapers) | 3s direct / 5s dedicated | `applyCollectorDefaults` and `applyCollectorHTTPClient` in `api/gateway/collector.go` | Direct collectors use `DirectSearchAttemptTimeout`; proxy-backed collectors use `SearchAttemptTimeout`. BinderPOS scrap steps override explicitly in `scrap.go`. |
 | Max concurrent store searches | 9 | `maxConcurrentStoreSearches` in `api/controller/search.go` | Worker pool size when fanning out to selected stores. |
 | Minimum end-to-end response time | 1s | `responseThreshold` in `searchShops` in `api/controller/search.go` | If all stores finish in under 1s, the handler **sleeps** the remainder so the API “feels” less instant. |
 | Card Kingdom enrichment on `/search` | parallel, **2s** cap | See [CK price on search](#backend-ck-price-on-search-apihandlersearchgo-and-refresh-apigatewaycardkingdom) below | Store fan-out and CK lookup run together; CK cannot delay the response past its timeout. |
@@ -52,13 +53,13 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| BinderPOS stores **with** Storefront access token | **graphql-dedicated** → **graphql-direct** → **scrap-dedicated** → **scrap-direct** | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. GraphQL uses dedicated then direct only. |
-| BinderPOS stores **without** token | **scrap-dedicated** → **scrap-direct** | Same as above without the GraphQL steps. |
+| BinderPOS stores **with** Storefront access token | **graphql-direct** → **graphql-dedicated** → **scrap-direct** → **scrap-dedicated** | **3s** direct / **5s** dedicated per step: `binderposDirectAttemptTimeout` / `binderposDedicatedAttemptTimeout` in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. |
+| BinderPOS stores **without** token | **scrap-direct** → **scrap-dedicated** | Same as above without the GraphQL steps. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Colly proxy selection (scrap steps) | Request-scoped dedicated → per-collector lease → random dedicated → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Each colly collector makes **one** outbound attempt using the first available mode. When `searchShop` pins a request-scoped dedicated lease, scrap steps reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
-| Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
+| Colly for BinderPOS scrapes | 3s direct / 5s dedicated | `SetRequestTimeout` in `api/gateway/binderpos/scrap.go` | Direct scrap steps use `binderposDirectAttemptTimeout`; dedicated scrap steps use `binderposDedicatedAttemptTimeout`. |
 | Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` when decklist helpers are called directly (not used in the live search chain). |
 | Decklist requests | Single send | `doDecklistRequestWithRetry` in `api/gateway/binderpos/storefront_decklist_retry.go` | No automatic retries on 429/5xx or network errors. Decklist is implemented but not wired into `storefront_search.go`. |
 | “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **GraphQL** or **scrape** attempt without error is **final** and later strategies are not tried. HTTP **5xx** on scrape or GraphQL is **final**. Other GraphQL errors fall through to HTML scrap. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
@@ -87,22 +88,22 @@ Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
 
 ## Backend: non-BinderPOS stores
 
-Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip` (`api/gateway/outbound_get.go`): **direct → dedicated (request-scoped lease or one random slot)**. Callers can reorder with `PreferDedicatedFirst` (**dedicated → direct**) or omit direct with `SkipDirect`. Each transport is tried once; client errors (4xx) and connection errors advance immediately to the next transport. No automatic retry of the same transport.
+Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip` (`api/gateway/outbound_get.go`): **direct (3s) → dedicated (5s, request-scoped lease or one random slot)** when dedicated proxies are enabled. Callers can omit direct with `SkipDirect`. Each transport is tried once; client errors (4xx) and connection errors advance immediately to the next transport. No automatic retry of the same transport.
 
 | Store | Strategy | Per-attempt timeout | Proxy / transport order | Retries |
 |-------|----------|----------------------|-------------------------|---------|
-| Agora Hobby | HTML search page (`/store/search`) | 20s | **Dedicated → direct** (`PreferDedicatedFirst`; browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
-| 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 5s per path | **Dedicated → direct**; skips direct on `5-mana.sg` | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
-| Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 5s per path | **Dedicated → direct** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
-| Cards Central | JSON API (`/api/lgs/search?q=…`) | 5s | Direct → dedicated | Transport fallback only |
-| Dueller's Point | HTML search page (`/products/search`) | 5s | Direct → dedicated | Transport fallback only |
-| Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
-| Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 5s | Direct → dedicated | Transport fallback only |
-| The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 5s | Direct → dedicated → dynamic | Transport fallback only |
+| Agora Hobby | HTML search page (`/store/search`) | 3s direct / 5s dedicated | **Direct → dedicated** (browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
+| 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 3s direct / 5s dedicated per path | **Direct → dedicated** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
+| Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 3s direct / 5s dedicated per path | **Direct → dedicated** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
+| Cards Central | JSON API (`/api/lgs/search?q=…`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
+| Dueller's Point | HTML search page (`/products/search`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
+| Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 3s direct / 5s dedicated | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
+| Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
+| The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 3s direct / 5s dedicated | Direct → dedicated → dynamic | Transport fallback only |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 
-For 5 Mana, `SkipDirect` is cleared when the host is not the production domain so httptest unit tests can use the direct transport. Agora uses `PreferDedicatedFirst` (dedicated before direct). Mox & Lotus use the default direct-first order with dedicated as fallback.
+All stores with dedicated proxy configured use **direct before dedicated** transport fallback when dedicated proxies are enabled.
 
 ---
 

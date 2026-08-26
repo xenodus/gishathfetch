@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"mtg-price-checker-sg/pkg/config"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -120,6 +122,16 @@ func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	require.True(t, strings.HasPrefix(attempts[0].strategy, "dedicated-"))
 }
 
+func TestBuildOutboundGETAttempts_UsesTransportSpecificTimeouts(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{})
+	require.Len(t, attempts, 2)
+	require.Equal(t, config.DirectSearchAttemptTimeout, attempts[0].client.Timeout)
+	require.Equal(t, config.SearchAttemptTimeout, attempts[1].client.Timeout)
+}
+
 func TestBuildOutboundGETAttempts_PreferDedicatedFirst(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
@@ -128,8 +140,8 @@ func TestBuildOutboundGETAttempts_PreferDedicatedFirst(t *testing.T) {
 		PreferDedicatedFirst: true,
 	})
 	require.Len(t, attempts, 2)
-	require.Equal(t, "dedicated-1", attempts[0].strategy)
-	require.Equal(t, "direct", attempts[1].strategy)
+	require.Equal(t, "direct", attempts[0].strategy)
+	require.Equal(t, "dedicated-1", attempts[1].strategy)
 }
 
 func TestBuildOutboundGETAttempts_PreferDedicatedFirstWithoutDedicated(t *testing.T) {
@@ -239,7 +251,7 @@ func TestDoOutboundGET_ContinuesAfterDirectTimeout(t *testing.T) {
 	t.Setenv("DEDICATED_PROXY_1", "127.0.0.1|9|u|p")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(config.DirectSearchAttemptTimeout + 100*time.Millisecond)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()

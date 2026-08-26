@@ -51,8 +51,8 @@ func TestNewHTTPClientWithProxyURL(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected valid proxy URL, got error %v", err)
 		}
-		if client.Timeout != binderposAttemptTimeout {
-			t.Fatalf("expected timeout %s, got %s", binderposAttemptTimeout, client.Timeout)
+		if client.Timeout != binderposDedicatedAttemptTimeout {
+			t.Fatalf("expected timeout %s, got %s", binderposDedicatedAttemptTimeout, client.Timeout)
 		}
 
 		transport, ok := client.Transport.(*http.Transport)
@@ -79,7 +79,7 @@ func TestNewHTTPClientWithProxyURL(t *testing.T) {
 
 func TestRunWithAttemptTimeout(t *testing.T) {
 	t.Run("returns callback result when callback succeeds", func(t *testing.T) {
-		got, err := runWithAttemptTimeout(context.Background(), false, func(attemptCtx context.Context) ([]gateway.Card, error) {
+		got, err := runWithAttemptTimeout(context.Background(), false, binderposDirectAttemptTimeout, func(attemptCtx context.Context) ([]gateway.Card, error) {
 			if _, hasDeadline := attemptCtx.Deadline(); !hasDeadline {
 				t.Fatalf("expected attempt context to have deadline")
 			}
@@ -95,7 +95,7 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 
 	t.Run("propagates callback error", func(t *testing.T) {
 		wantErr := errors.New("boom")
-		_, err := runWithAttemptTimeout(context.Background(), true, func(_ context.Context) ([]gateway.Card, error) {
+		_, err := runWithAttemptTimeout(context.Background(), true, binderposDedicatedAttemptTimeout, func(_ context.Context) ([]gateway.Card, error) {
 			return nil, wantErr
 		})
 		if !errors.Is(err, wantErr) {
@@ -110,7 +110,7 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 		}
 
 		start := time.Now()
-		_, err = runWithAttemptTimeout(context.Background(), false, func(attemptCtx context.Context) ([]gateway.Card, error) {
+		_, err = runWithAttemptTimeout(context.Background(), false, binderposDirectAttemptTimeout, func(attemptCtx context.Context) ([]gateway.Card, error) {
 			if err := gateway.WaitForDomainRequestSlot(attemptCtx, targetURL); err != nil {
 				return nil, err
 			}
@@ -134,7 +134,7 @@ func TestRunWithAttemptTimeout(t *testing.T) {
 		}
 
 		start := time.Now()
-		_, err = runWithAttemptTimeout(context.Background(), true, func(attemptCtx context.Context) ([]gateway.Card, error) {
+		_, err = runWithAttemptTimeout(context.Background(), true, binderposDedicatedAttemptTimeout, func(attemptCtx context.Context) ([]gateway.Card, error) {
 			if err := gateway.WaitForDomainRequestSlot(attemptCtx, targetURL); err != nil {
 				return nil, err
 			}

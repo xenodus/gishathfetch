@@ -544,6 +544,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	for i := 1; i <= 3; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), fmt.Sprintf("10.0.0.%d|8080|user|pass", i))
 	}
@@ -669,6 +670,7 @@ func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t 
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_3", "9.10.11.12|8080|user|pass")
@@ -1202,6 +1204,7 @@ func TestFetchCardsConcurrently_ClosesTrackedProxyConnections(t *testing.T) {
 	defer func() { sendAlert = originalSendAlert }()
 
 	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
 	shops := map[string]gateway.LGS{

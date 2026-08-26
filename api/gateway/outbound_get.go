@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/gateway/util"
+	"mtg-price-checker-sg/pkg/config"
 	"mtg-price-checker-sg/pkg/logger"
 )
 
@@ -129,7 +130,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		if opts.SkipDirect {
 			return dst
 		}
-		client, err := newOutboundHTTPClient("", timeout, profile)
+		client, err := newOutboundHTTPClient("", config.DirectSearchAttemptTimeout, profile)
 		if err != nil {
 			return dst
 		}
@@ -147,7 +148,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		if !ok {
 			return dst
 		}
-		client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
+		client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
 		if err != nil {
 			return dst
 		}
@@ -169,7 +170,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		if !ok {
 			return dst
 		}
-		client, err := newOutboundHTTPClient(proxyURL, timeout, profile)
+		client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
 		if err != nil {
 			return dst
 		}
@@ -181,13 +182,6 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 	}
 
 	var attempts []outboundAttempt
-	if opts.PreferDedicatedFirst {
-		attempts = appendDedicated(attempts)
-		attempts = appendDirect(attempts)
-		attempts = appendResidential(attempts)
-		return attempts
-	}
-
 	attempts = appendDirect(attempts)
 	attempts = appendResidential(attempts)
 	attempts = appendDedicated(attempts)

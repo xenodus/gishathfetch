@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/gatewaytest"
-	"mtg-price-checker-sg/gateway/util"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/require"
@@ -76,8 +76,8 @@ func Test_Search_FiltersMTGCategory(t *testing.T) {
 
 func skipLiveAgoraSearchUnlessDedicatedProxy(t *testing.T) {
 	t.Helper()
-	if len(util.GetDedicatedProxyURLs()) > 0 {
+	if gateway.DedicatedProxiesEnabled() {
 		return
 	}
-	t.Skipf("set DEDICATED_PROXY_* to run live Agora search checks (direct egress is blocked by Cloudflare)")
+	t.Skip("set USE_DEDICATED_PROXY=true and DEDICATED_PROXY_* to run live Agora search checks (direct egress is blocked by Cloudflare)")
 }
