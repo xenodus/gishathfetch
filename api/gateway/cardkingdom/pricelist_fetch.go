@@ -238,21 +238,6 @@ func ckPricelistTransportSteps() []ckPricelistTransportStep {
 				return opts, true
 			},
 		},
-		{
-			label: "dedicated",
-			opts: func() (gateway.OutboundRequestOptions, bool) {
-				if !gateway.DedicatedProxiesEnabled() {
-					return gateway.OutboundRequestOptions{}, false
-				}
-				proxyURL, ok := gateway.RandomDedicatedProxyURL()
-				if !ok {
-					return gateway.OutboundRequestOptions{}, false
-				}
-				opts := ckPricelistOutboundOptions()
-				opts.OnlyProxyURL = proxyURL
-				return opts, true
-			},
-		},
 	}
 }
 
