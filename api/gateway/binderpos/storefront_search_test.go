@@ -8,6 +8,7 @@ import (
 
 func TestStorefrontStrategyOrder(t *testing.T) {
 	t.Run("without graphql token", func(t *testing.T) {
+		t.Setenv("USE_DEDICATED_PROXY", "true")
 		got := storefrontStrategyNames("")
 		want := []string{
 			"scrap-dedicated",
@@ -17,6 +18,7 @@ func TestStorefrontStrategyOrder(t *testing.T) {
 	})
 
 	t.Run("with graphql token", func(t *testing.T) {
+		t.Setenv("USE_DEDICATED_PROXY", "true")
 		got := storefrontStrategyNames("token")
 		want := []string{
 			"graphql-dedicated",
