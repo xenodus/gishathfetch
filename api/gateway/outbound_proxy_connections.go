@@ -29,10 +29,17 @@ func TrackedProxyOutboundClientCount() int {
 // HTTP clients that routed through a proxy during outbound scraping work.
 func CloseTrackedProxyIdleConnections() {
 	trackedProxyOutboundClients.Range(func(key, _ any) bool {
-		CloseHTTPClientIdleConnections(key.(*http.Client))
-		trackedProxyOutboundClients.Delete(key)
+		closeProxyOutboundClient(key.(*http.Client))
 		return true
 	})
+}
+
+func closeProxyOutboundClient(client *http.Client) {
+	if client == nil {
+		return
+	}
+	CloseHTTPClientIdleConnections(client)
+	trackedProxyOutboundClients.Delete(client)
 }
 
 // CloseHTTPClientIdleConnections drops idle pooled connections for an HTTP client.

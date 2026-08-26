@@ -1192,3 +1192,44 @@ func TestFormatAlertErrorSummary(t *testing.T) {
 		t.Fatalf("expected fallback line for non-search error, got: %s", got)
 	}
 }
+
+func TestFetchCardsConcurrently_ClosesTrackedProxyConnections(t *testing.T) {
+	gateway.CloseTrackedProxyIdleConnections()
+	t.Cleanup(gateway.CloseTrackedProxyIdleConnections)
+
+	originalSendAlert := sendAlert
+	sendAlert = func(string) {}
+	defer func() { sendAlert = originalSendAlert }()
+
+	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	shops := map[string]gateway.LGS{
+		"ProxyShop": &MockLGS{
+			SearchFunc: func(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+				if gateway.TrackedProxyOutboundClientCount() != 0 {
+					t.Fatal("expected no tracked proxy clients at start of shop search")
+				}
+				client, err := gateway.NewOutboundHTTPClient(time.Second)
+				if err != nil {
+					return nil, err
+				}
+				if client == nil {
+					t.Fatal("expected proxy-backed outbound client")
+				}
+				if gateway.TrackedProxyOutboundClientCount() == 0 {
+					t.Fatal("expected tracked proxy clients during shop search")
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	if gateway.TrackedProxyOutboundClientCount() != 0 {
+		t.Fatal("expected no tracked proxy clients before search fan-out")
+	}
+	_, _, _ = fetchCardsConcurrently(context.Background(), "Opt", shops)
+	if gateway.TrackedProxyOutboundClientCount() != 0 {
+		t.Fatalf("expected tracked proxy clients to be cleared after search fan-out, got %d", gateway.TrackedProxyOutboundClientCount())
+	}
+}

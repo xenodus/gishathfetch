@@ -149,6 +149,8 @@ type shopSearchJob struct {
 }
 
 func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[string]gateway.LGS) ([]gateway.Card, map[string]error, []shopSearchDuration) {
+	defer gateway.CloseTrackedProxyIdleConnections()
+
 	var wg sync.WaitGroup
 	aggregator := newFetchResultAggregator(len(shops))
 
@@ -171,7 +173,6 @@ func fetchCardsConcurrently(ctx context.Context, searchString string, shops map[
 	}
 
 	wg.Wait()
-	gateway.CloseTrackedProxyIdleConnections()
 	cards, siteErrors, alertErrorMessages := aggregator.snapshot()
 	shopDurations := aggregator.shopDurationSnapshot()
 	if len(alertErrorMessages) > 0 {

@@ -45,15 +45,20 @@ func DoOutboundRoundTrip(
 		ctx = ContextWithBrowserProfile(ctx, PickBrowserProfile())
 	}
 
+	attempts := buildOutboundGETAttempts(ctx, timeout, opts)
 	var failures []string
-	for _, attempt := range buildOutboundGETAttempts(ctx, timeout, opts) {
+	for i, attempt := range attempts {
 		resp, failure, ok, err := doOutboundAttempt(ctx, attempt, opts, buildReq)
 		if err != nil {
+			closeOutboundAttemptClient(attempt)
+			closeOutboundAttemptClients(attempts[i+1:])
 			return nil, err
 		}
 		if ok {
+			closeOutboundAttemptClients(attempts[i+1:])
 			return resp, nil
 		}
+		closeOutboundAttemptClient(attempt)
 		if failure != "" {
 			failures = append(failures, failure)
 		}
@@ -300,6 +305,19 @@ func outboundRequestURL(req *http.Request) string {
 		return ""
 	}
 	return req.URL.Redacted()
+}
+
+func closeOutboundAttemptClient(attempt outboundAttempt) {
+	if attempt.proxyURL == "" || attempt.client == nil {
+		return
+	}
+	closeProxyOutboundClient(attempt.client)
+}
+
+func closeOutboundAttemptClients(attempts []outboundAttempt) {
+	for _, attempt := range attempts {
+		closeOutboundAttemptClient(attempt)
+	}
 }
 
 // NewOutboundHTTPClient returns an HTTP client that routes through a random dedicated
