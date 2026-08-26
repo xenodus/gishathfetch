@@ -83,16 +83,19 @@ then falls back to a `main-search` HTML section scrape when GraphQL fails.
 **BinderPOS stores** (e.g. Arcane Sanctum, Card Affinity, Cards Citadel, Flagship, Game's Haven,
 Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro, MTG Asia,
 OneMTG) share one gateway. Stores with a configured Storefront access token try
-**GraphQL first** (dedicated → direct), then fall back to HTML scrape and
-BinderPOS decklist strategies.
+**GraphQL first** (dedicated → direct), then fall back to HTML scrape.
 
-### BinderPOS GraphQL, scrape, and decklist fallback chain
+### BinderPOS GraphQL and scrape fallback chain
 
 When a store has a Storefront access token:
 
-`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct`
+`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct`
 
 Without a token, the chain starts at `scrap-dedicated`. GraphQL uses dedicated then direct only.
+
+The BinderPOS Decklist API remains implemented under `api/gateway/binderpos/` for
+reference and Postman collections, but it is not part of the live search fallback
+chain.
 
 ```mermaid
 flowchart TD
@@ -100,28 +103,21 @@ flowchart TD
     G1 -- error --> G2[graphql-direct]
     G2 -- error --> B[scrap-dedicated]
     B -- error --> C[scrap-direct]
-    C -- error --> F[decklist-dedicated]
-    F -- error --> G[decklist-direct]
     G1 -- cards or empty success --> E[Return result]
     G2 -- cards or empty success --> E
     B -- cards or empty success --> E
-    C -- cards or empty success --> E
-    F -- cards or empty decklist --> E
-    G -- cards, empty decklist, or error --> E
+    C -- cards, empty success, or error --> E
 ```
 
 ### Fallback rules
 
 - The chain advances to the next attempt **on error only**. An empty but
   error-free **GraphQL** or **scrape** result counts as success and stops the
-  chain. An empty decklist response skips the remaining decklist attempts.
-- HTTP **5xx** errors on scrape attempts are final; decklist is not tried when
-  the storefront itself is failing. GraphQL failures fall through to HTML scrap.
+  chain.
+- HTTP **5xx** errors on scrape or GraphQL attempts are final. Other GraphQL
+  failures fall through to HTML scrap.
 - Each attempt is bounded by a 5s timeout (`binderposAttemptTimeout`). The first
   attempt starts immediately; later attempts honor per-domain request pacing.
-- Decklist calls to `portal.binderpos.com` are a **single HTTP attempt** per
-  strategy step (no automatic 429/5xx retries). A small concurrency gate caps
-  in-flight decklist requests across stores.
 
 ## 🗂️ Repository layout
 
