@@ -544,6 +544,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	for i := 1; i <= 3; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), fmt.Sprintf("10.0.0.%d|8080|user|pass", i))
 	}
@@ -575,6 +576,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 		"Shop2": makeShop("Shop2"),
 		"Shop3": makeShop("Shop3"),
 	}
+	shopCount := len(shops)
 
 	done := make(chan struct{})
 	go func() {
@@ -585,7 +587,7 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 		}
 	}()
 
-	for range gateway.DedicatedProxySearchMaxConcurrent {
+	for range shopCount {
 		select {
 		case <-started:
 		case <-time.After(2 * time.Second):
@@ -597,10 +599,10 @@ func TestFetchCardsConcurrently_ConcurrentStoresGetDistinctDedicatedProxies(t *t
 
 	mu.Lock()
 	defer mu.Unlock()
-	if len(pinned) != gateway.DedicatedProxySearchMaxConcurrent {
-		t.Fatalf("expected %d pinned proxies, got %d (%v)", gateway.DedicatedProxySearchMaxConcurrent, len(pinned), pinned)
+	if len(pinned) != shopCount {
+		t.Fatalf("expected %d pinned proxies, got %d (%v)", shopCount, len(pinned), pinned)
 	}
-	seen := make(map[string]struct{}, gateway.DedicatedProxySearchMaxConcurrent)
+	seen := make(map[string]struct{}, shopCount)
 	for shop, proxyURL := range pinned {
 		if proxyURL == "" {
 			t.Fatalf("shop %s pinned empty proxy", shop)
@@ -669,6 +671,7 @@ func TestFetchCardsConcurrently_ConcurrentSearchesGetDistinctDedicatedProxies(t 
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
 	t.Setenv("DEDICATED_PROXY_3", "9.10.11.12|8080|user|pass")
@@ -1124,11 +1127,11 @@ func TestFetchCardsConcurrently_LimitsConcurrentWorkers(t *testing.T) {
 		}
 	}()
 
-	for i := range 6 {
+	for i := range maxConcurrentStoreSearches {
 		select {
 		case <-started:
 		case <-done:
-			t.Fatal("fetch finished before 6 shops started")
+			t.Fatalf("fetch finished before %d shops started", maxConcurrentStoreSearches)
 		case <-time.After(2 * time.Second):
 			t.Fatalf("timed out waiting for shop %d to start; max in flight was %d", i, maxInFlight.Load())
 		}
@@ -1202,6 +1205,7 @@ func TestFetchCardsConcurrently_ClosesTrackedProxyConnections(t *testing.T) {
 	defer func() { sendAlert = originalSendAlert }()
 
 	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("USE_DEDICATED_PROXY", "true")
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
 
 	shops := map[string]gateway.LGS{

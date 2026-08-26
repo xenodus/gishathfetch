@@ -141,7 +141,7 @@ func searchShops(ctx context.Context, input SearchInput, shopNameToLGSMap map[st
 	return inStockCards, buildStoreErrors(siteErrors), buildStoreStats(shopDurations, inStockCards), nil
 }
 
-const maxConcurrentStoreSearches = 9
+const maxConcurrentStoreSearches = 5
 
 type shopSearchJob struct {
 	name string

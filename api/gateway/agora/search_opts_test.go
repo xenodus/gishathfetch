@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"testing"
 
+	"mtg-price-checker-sg/pkg/config"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,8 +16,10 @@ func TestAgoraOutboundOpts_ProductionHost(t *testing.T) {
 	opts := agoraOutboundOpts(pageURL)
 	require.True(t, opts.SkipWebBotAuth)
 	require.False(t, opts.SkipDirect)
-	require.True(t, opts.PreferDedicatedFirst)
+	require.False(t, opts.PreferDedicatedFirst)
 	require.False(t, opts.PreferResidentialProxy)
+	require.Equal(t, config.AgoraSearchAttemptTimeout, opts.DirectAttemptTimeout)
+	require.Equal(t, config.AgoraSearchAttemptTimeout, opts.DedicatedAttemptTimeout)
 }
 
 func TestAgoraOutboundOpts_NonProductionHostAllowsDirect(t *testing.T) {
@@ -25,6 +29,8 @@ func TestAgoraOutboundOpts_NonProductionHostAllowsDirect(t *testing.T) {
 	opts := agoraOutboundOpts(pageURL)
 	require.True(t, opts.SkipWebBotAuth)
 	require.False(t, opts.SkipDirect)
-	require.True(t, opts.PreferDedicatedFirst)
+	require.False(t, opts.PreferDedicatedFirst)
 	require.False(t, opts.PreferResidentialProxy)
+	require.Equal(t, config.AgoraSearchAttemptTimeout, opts.DirectAttemptTimeout)
+	require.Equal(t, config.AgoraSearchAttemptTimeout, opts.DedicatedAttemptTimeout)
 }

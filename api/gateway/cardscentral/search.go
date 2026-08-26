@@ -66,7 +66,7 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		ctx,
 		apiURL.String(),
 		cardsCentralOutboundOpts(),
-		config.SearchAttemptTimeout,
+		config.DedicatedSearchAttemptTimeout,
 	)
 	if err != nil {
 		return cards, err

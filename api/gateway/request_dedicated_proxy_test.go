@@ -32,6 +32,9 @@ func TestRequestDedicatedProxyURL(t *testing.T) {
 }
 
 func TestSelectOutboundProxyUsesRequestDedicatedProxy(t *testing.T) {
+	t.Setenv("USE_DEDICATED_PROXY", "true")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
 	const requestProxy = "http://user:pass@10.0.0.9:8080"
 	mode, proxyURL := selectOutboundProxy("http://lease:1", requestProxy)
 	if mode != "dedicated" || proxyURL != requestProxy {
@@ -40,6 +43,9 @@ func TestSelectOutboundProxyUsesRequestDedicatedProxy(t *testing.T) {
 }
 
 func TestApplyInitialProxyUsesRequestDedicatedProxy(t *testing.T) {
+	t.Setenv("USE_DEDICATED_PROXY", "true")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
 	c := colly.NewCollector()
 	const requestProxy = "http://user:pass@10.0.0.9:8080"
 	mode, proxyURL := applyInitialProxy(c, "http://lease:1", requestProxy)

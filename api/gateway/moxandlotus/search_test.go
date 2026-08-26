@@ -6,6 +6,7 @@ import (
 
 	"mtg-price-checker-sg/gateway"
 	"mtg-price-checker-sg/gateway/gatewaytest"
+	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/stretchr/testify/require"
 )
@@ -18,6 +19,8 @@ func TestMoxOutboundOpts(t *testing.T) {
 	require.False(t, opts.PreferDedicatedFirst)
 	require.False(t, opts.SkipDirect)
 	require.False(t, opts.PreferResidentialProxy)
+	require.Equal(t, config.MoxAndLotusSearchAttemptTimeout, opts.DirectAttemptTimeout)
+	require.Equal(t, config.MoxAndLotusSearchAttemptTimeout, opts.DedicatedAttemptTimeout)
 }
 
 func TestMoxSearchLimit(t *testing.T) {

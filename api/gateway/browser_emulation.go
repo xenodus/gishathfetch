@@ -269,5 +269,9 @@ func newBrowserEmulatedHTTPClient(proxyURL string, timeout time.Duration, profil
 
 // NewBinderposHTTPClient returns an HTTP client for BinderPOS storefront API calls.
 func NewBinderposHTTPClient(proxyURL string, profile BrowserEmulationProfile) (*http.Client, error) {
-	return newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+	timeout := config.DirectSearchAttemptTimeout
+	if strings.TrimSpace(proxyURL) != "" {
+		timeout = config.DedicatedSearchAttemptTimeout
+	}
+	return newOutboundHTTPClient(proxyURL, timeout, profile)
 }

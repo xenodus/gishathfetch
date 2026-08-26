@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"mtg-price-checker-sg/gateway"
+	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func ProbeScrapeStructure(ctx context.Context, scrapVariant int, baseURL, search
 		Style:              gateway.OutboundStyleHTML,
 		PageURL:            pageURL,
 		ShopifySGDCurrency: true,
-	}, binderposAttemptTimeout)
+	}, config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return err
 	}

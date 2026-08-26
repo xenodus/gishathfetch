@@ -73,7 +73,7 @@ func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), fiveManaOutboundOpts(storeBase, apiURL, gateway.OutboundStyleHTML), config.SearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), fiveManaOutboundOpts(storeBase, apiURL, gateway.OutboundStyleHTML), config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return cards, err
 	}
@@ -101,11 +101,10 @@ func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card
 
 func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.OutboundRequestStyle) gateway.OutboundRequestOptions {
 	return gateway.OutboundRequestOptions{
-		Style:                style,
-		PageURL:              pageURL,
-		StoreBase:            storeBase,
-		ShopifySGDCurrency:   true,
-		PreferDedicatedFirst: true,
+		Style:              style,
+		PageURL:            pageURL,
+		StoreBase:          storeBase,
+		ShopifySGDCurrency: true,
 	}
 }
 

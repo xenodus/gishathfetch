@@ -214,9 +214,11 @@ func moxOutboundOpts() gateway.OutboundRequestOptions {
 		storeBase = nil
 	}
 	return gateway.OutboundRequestOptions{
-		Style:          gateway.OutboundStyleJSON,
-		StoreBase:      storeBase,
-		SkipWebBotAuth: true,
+		Style:                   gateway.OutboundStyleJSON,
+		StoreBase:               storeBase,
+		SkipWebBotAuth:          true,
+		DirectAttemptTimeout:    config.MoxAndLotusSearchAttemptTimeout,
+		DedicatedAttemptTimeout: config.MoxAndLotusSearchAttemptTimeout,
 	}
 }
 

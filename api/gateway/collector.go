@@ -185,7 +185,7 @@ func forceCollectorDirectProxy(c *colly.Collector) {
 	if !ShouldUseBrowserTLSEmulationForScraping() {
 		profile = BrowserEmulationProfile{}
 	}
-	client, err := newOutboundHTTPClient("", config.SearchAttemptTimeout, profile)
+	client, err := newOutboundHTTPClient("", config.DirectSearchAttemptTimeout, profile)
 	if err == nil {
 		c.SetClient(client)
 	} else {
@@ -205,7 +205,7 @@ func forceCollectorProxy(c *colly.Collector, mode, proxyURL string) error {
 	if !ShouldUseBrowserTLSEmulationForScraping() {
 		profile = BrowserEmulationProfile{}
 	}
-	client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+	client, err := newOutboundHTTPClient(proxyURL, config.DedicatedSearchAttemptTimeout, profile)
 	if err != nil {
 		if setErr := c.SetProxy(proxyURL); setErr != nil {
 			return setErr
@@ -243,7 +243,11 @@ func applyCollectorHTTPClient(
 	profile BrowserEmulationProfile,
 ) {
 	mode, proxyURL := selectOutboundProxy(leasedDedicatedProxyURL, requestDedicatedProxyURL)
-	client, err := newOutboundHTTPClient(proxyURL, config.SearchAttemptTimeout, profile)
+	attemptTimeout := config.DirectSearchAttemptTimeout
+	if proxyURL != "" {
+		attemptTimeout = config.DedicatedSearchAttemptTimeout
+	}
+	client, err := newOutboundHTTPClient(proxyURL, attemptTimeout, profile)
 	if err != nil {
 		slog.Warn("browser TLS client setup failed for colly", "mode", mode, "err", err)
 		if proxyURL != "" {
@@ -259,7 +263,7 @@ func applyCollectorHTTPClient(
 // Base collector defaults used by all optimized collectors.
 func applyCollectorDefaults(c *colly.Collector) {
 	c.DisableCookies()
-	c.SetRequestTimeout(config.SearchAttemptTimeout)
+	c.SetRequestTimeout(config.DedicatedSearchAttemptTimeout)
 }
 
 // Dedicated proxy lease lifecycle helpers.
