@@ -44,7 +44,7 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 ---
 
-## Backend: BinderPOS (storefront scraper and decklist fallbacks)
+## Backend: BinderPOS (storefront scraper fallbacks)
 
 For **field-level feature parity** between HTML scrape, Storefront GraphQL, Decklist API, scrap variants, and transport modes, see [`binderpos-search-feature-parity.md`](binderpos-search-feature-parity.md).
 
@@ -52,36 +52,36 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 
 | Scenario | Order of strategies (each step is one attempt) | Per-step attempt timeout / HTTP client |
 |----------|--------------------------------------------------|----------------------------------------|
-| BinderPOS stores **with** Storefront access token | **graphql-dedicated** → **graphql-direct** → **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. GraphQL uses dedicated then direct only. |
-| BinderPOS stores **without** token | **scrap-dedicated** → **scrap-direct** → **decklist-dedicated** → **decklist-direct** | Same as above without the GraphQL steps. |
+| BinderPOS stores **with** Storefront access token | **graphql-dedicated** → **graphql-direct** → **scrap-dedicated** → **scrap-direct** | **5s** per step: `binderposAttemptTimeout` (`config.SearchAttemptTimeout`) in `api/gateway/binderpos/storefront.go`; `runWithAttemptTimeout` in `storefront_search.go`. GraphQL uses dedicated then direct only. |
+| BinderPOS stores **without** token | **scrap-dedicated** → **scrap-direct** | Same as above without the GraphQL steps. |
 
 | Item | Value | Source | Notes |
 |------|--------|--------|--------|
 | Colly proxy selection (scrap steps) | Request-scoped dedicated → per-collector lease → random dedicated → direct | `selectOutboundProxy` in `api/gateway/collector.go` | Each colly collector makes **one** outbound attempt using the first available mode. When `searchShop` pins a request-scoped dedicated lease, scrap steps reuse that URL. When `UseLeasedDedicatedProxy` is **true**, per-collector leases apply only when no request-scoped proxy is set. |
 | Colly for BinderPOS scrapes | 5s | `SetRequestTimeout(binderposAttemptTimeout)` in `api/gateway/binderpos/scrap.go` | Same as `config.SearchAttemptTimeout`. |
-| Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` across stores in one search. |
-| Decklist requests | Single send | `doDecklistRequestWithRetry` in `api/gateway/binderpos/storefront_decklist_retry.go` | No automatic retries on 429/5xx or network errors. |
-| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **GraphQL**, **scrape**, or **decklist** attempt without error is **final** and later strategies are not tried. HTTP **5xx** on scrape or GraphQL is **final**. Other GraphQL errors fall through to HTML scrap. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
+| Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` when decklist helpers are called directly (not used in the live search chain). |
+| Decklist requests | Single send | `doDecklistRequestWithRetry` in `api/gateway/binderpos/storefront_decklist_retry.go` | No automatic retries on 429/5xx or network errors. Decklist is implemented but not wired into `storefront_search.go`. |
+| “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **GraphQL** or **scrape** attempt without error is **final** and later strategies are not tried. HTTP **5xx** on scrape or GraphQL is **final**. Other GraphQL errors fall through to HTML scrap. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
 | Storefront GraphQL | Public per-store `accessToken` | `api/gateway/binderpos/storefront_graphql.go`; tokens in each store package (`StoreStorefrontAccessToken`) | Shopify Storefront `search` with `available: true`. MTG filtered client-side via product type/tags. Variant deep-links include `?variant=`. Enabled only when the store configures a token. |
 
 ### BinderPOS stores (registry in `api/controller/search.go`)
 
 | Store | GraphQL token | HTML scrap variant | Max strategy steps |
 |-------|---------------|--------------------|--------------------|
-| Arcane Sanctum | Yes | 2 | 6 |
-| Card Affinity | No | 2 | 4 |
-| Cards Citadel | Yes | 1 | 6 |
-| Flagship | Yes | 2 | 6 |
-| Fyendal Hobby | Yes | 4 | 6 |
-| Games Haven | Yes | 3 | 6 |
-| GOG | Yes | 3 | 6 |
-| Hideout | Yes | 3 | 6 |
-| Hideyoshi | Yes | 2 | 6 |
-| Mana Pro | Yes | 2 | 6 |
-| MTG Asia | Yes | 2 | 6 |
-| One MTG | Yes | 2 | 6 |
+| Arcane Sanctum | Yes | 2 | 4 |
+| Card Affinity | No | 2 | 2 |
+| Cards Citadel | Yes | 1 | 4 |
+| Flagship | Yes | 2 | 4 |
+| Fyendal Hobby | Yes | 4 | 4 |
+| Games Haven | Yes | 3 | 4 |
+| GOG | Yes | 3 | 4 |
+| Hideout | Yes | 3 | 4 |
+| Hideyoshi | Yes | 2 | 4 |
+| Mana Pro | Yes | 2 | 4 |
+| MTG Asia | Yes | 2 | 4 |
+| One MTG | Yes | 2 | 4 |
 
-All BinderPOS stores configure a Shopify domain for decklist steps. Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
+Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
 
 ---
 
@@ -137,5 +137,5 @@ Constants live in `frontend/src/hooks/useSearch.js` (and related).
 
 1. When adding or changing **timeouts, intervals, concurrency, or strategy order**, update the relevant table and cite the file (paths above are stable).
 2. Prefer a single **named constant** in code (e.g. `config.PerSiteTimeout`, `config.SearchAttemptTimeout`) and reference that name here. When a store hardcodes a timeout, document the literal and source file.
-3. Distinguish **per-request colly policy** (no retry) from **BinderPOS multi-strategy fallback** (up to **eight** strategies when GraphQL token and decklist are configured, **six** without GraphQL; one try each per strategy step).
+3. Distinguish **per-request colly policy** (no retry) from **BinderPOS multi-strategy fallback** (up to **four** strategies when a GraphQL token is configured, **two** without GraphQL; one try each per strategy step).
 4. When adding a store, update the per-store tables in the BinderPOS or non-BinderPOS section and register it in `api/controller/search.go`.

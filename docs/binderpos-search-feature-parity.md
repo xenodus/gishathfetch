@@ -14,21 +14,24 @@ All 11 BinderPOS-backed stores share one orchestrator: `binderpos.impl.Search` i
 |-------------|----------------|------------------|
 | **Shopify Storefront GraphQL** | `storefront_graphql.go` | `graphql-dedicated`, `graphql-direct` |
 | **HTML scrape** | `scrap.go` | `scrap-dedicated`, `scrap-direct` |
-| **BinderPOS Decklist API** | `storefront_decklist.go`, `storefront_client.go` | `decklist-dedicated`, `decklist-direct` |
+| **BinderPOS Decklist API** | `storefront_decklist.go`, `storefront_client.go` | `decklist-dedicated`, `decklist-direct` (implemented, not in live search chain) |
 
 **Transport modes** (dedicated proxy, direct) are orthogonal to the data source.
+
+The Decklist API helpers remain in the gateway for reference and Postman collections,
+but `storefront_search.go` no longer appends decklist steps to the live fallback chain.
 
 ---
 
 ## Strategy order and selection
 
-### With Storefront access token (6 steps)
+### With Storefront access token (4 steps)
 
-`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct`
+`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct`
 
-### Without Storefront access token (4 steps)
+### Without Storefront access token (2 steps)
 
-`scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct`
+`scrap-dedicated` → `scrap-direct`
 
 Only **Card Affinity** omits GraphQL (no token configured).
 
@@ -37,11 +40,9 @@ Only **Card Affinity** omits GraphQL (no token configured).
 | Outcome | Next step |
 |---------|-----------|
 | Returns **cards** | Stop — success |
-| **Scrap or GraphQL**: empty, no error | **Final** — return empty (decklist not tried) |
-| **Decklist**: empty, no error | Skip remaining **decklist** steps only |
+| **Scrap or GraphQL**: empty, no error | **Final** — return empty |
 | **Scrap or GraphQL**: HTTP **5xx** | **Final** — return error |
 | **Scrap or GraphQL**: other error (403, 429, network) | Try next strategy |
-| **Decklist**: error | Try next strategy (unless decklist family abandoned) |
 | All attempts fail | Return last annotated error: `attempt N (strategy-name): …` |
 
 The first strategy skips per-domain pacing; later steps honor the 200ms minimum interval per host.
@@ -184,12 +185,11 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 ## Known gaps and intentional differences
 
 1. **Result breadth differs** — GraphQL caps at 25 products × 20 variants; decklist is a single-card portal lookup; scrape is one HTML results page with no pagination.
-2. **Empty scrap/GraphQL is final** — a successful empty HTML or GraphQL response prevents decklist from running, even though decklist might have found stock.
-3. **Quality normalization inconsistency** — scrap variant 2 skips `MapQuality`; variant 4 omits `Quality` entirely.
-4. **Set metadata** — only scrap variant 3 (and API methods when `scrapVariant == 3`) populate `ExtraInfo` with set name.
-5. **Decklist deduplication only** — other methods may return duplicate `url|price|instock` combinations.
-6. **Quantity not exposed** — decklist has per-variant stock counts but they are not mapped to `gateway.Card`.
-7. **Language not supported** — no method extracts or returns card language.
+2. **Quality normalization inconsistency** — scrap variant 2 skips `MapQuality`; variant 4 omits `Quality` entirely.
+3. **Set metadata** — only scrap variant 3 (and API methods when `scrapVariant == 3`) populate `ExtraInfo` with set name.
+4. **Decklist deduplication only** — other methods may return duplicate `url|price|instock` combinations.
+5. **Quantity not exposed** — decklist has per-variant stock counts but they are not mapped to `gateway.Card`.
+6. **Language not supported** — no method extracts or returns card language.
 
 ---
 

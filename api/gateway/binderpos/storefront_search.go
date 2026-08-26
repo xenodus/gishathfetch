@@ -49,22 +49,6 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 	}
 
 	strategies = append(strategies, scrap[0], scrap[1])
-	if strings.TrimSpace(shopifyDomain) != "" {
-		strategies = append(strategies,
-			storefrontStrategy{
-				name: "decklist-dedicated",
-				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return searchByStorefrontAPI(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-				},
-			},
-			storefrontStrategy{
-				name: "decklist-direct",
-				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return searchByStorefrontAPIDirect(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, searchStr)
-				},
-			},
-		)
-	}
 
 	return runStorefrontStrategies(ctx, omitDedicatedStorefrontStrategies(strategies)...)
 }
@@ -115,19 +99,16 @@ func runWithAttemptTimeout(ctx context.Context, applyRequestPacing bool, fn func
 
 // storefrontStrategyNames returns the ordered strategy names for the given
 // storefront token and Shopify domain. Used by tests.
-func storefrontStrategyNames(storefrontAccessToken, shopifyDomain string) []string {
-	return omitDedicatedStrategyNames(storefrontStrategyNamesUnfiltered(storefrontAccessToken, shopifyDomain))
+func storefrontStrategyNames(storefrontAccessToken string) []string {
+	return omitDedicatedStrategyNames(storefrontStrategyNamesUnfiltered(storefrontAccessToken))
 }
 
-func storefrontStrategyNamesUnfiltered(storefrontAccessToken, shopifyDomain string) []string {
+func storefrontStrategyNamesUnfiltered(storefrontAccessToken string) []string {
 	var names []string
 	if strings.TrimSpace(storefrontAccessToken) != "" {
 		names = append(names, "graphql-dedicated", "graphql-direct")
 	}
 	names = append(names, "scrap-dedicated", "scrap-direct")
-	if strings.TrimSpace(shopifyDomain) != "" {
-		names = append(names, "decklist-dedicated", "decklist-direct")
-	}
 	return names
 }
 
