@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -272,7 +271,7 @@ func TestDownloadCKPricelist_FallsBackToResidentialAfterDirectFailure(t *testing
 	require.Equal(t, "direct → residential", result.transportOrder)
 }
 
-func TestDownloadCKPricelist_FallsBackToDedicatedAfterResidentialFailure(t *testing.T) {
+func TestDownloadCKPricelist_FailsWhenDirectAndResidentialFail(t *testing.T) {
 	origDownloadOnce := downloadCKPricelistOnceFunc
 	t.Cleanup(func() {
 		downloadCKPricelistOnceFunc = origDownloadOnce
@@ -280,33 +279,23 @@ func TestDownloadCKPricelist_FallsBackToDedicatedAfterResidentialFailure(t *test
 
 	var directCalls int
 	var residentialCalls int
-	var dedicatedCalls int
 	downloadCKPricelistOnceFunc = func(_ context.Context, _ string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
-		switch {
-		case opts.OnlyProxyURL == "":
+		if opts.OnlyProxyURL == "" {
 			directCalls++
 			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
-		case strings.Contains(opts.OnlyProxyURL, "res.proxy"):
-			residentialCalls++
-			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
-		default:
-			dedicatedCalls++
-			var payload ckPricelistPayload
-			require.NoError(t, json.Unmarshal([]byte(sampleCKPricelist), &payload))
-			return &payload, nil
 		}
+		residentialCalls++
+		return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
 	}
 
 	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
 	t.Setenv("USE_DEDICATED_PROXY", "true")
 	t.Setenv("DEDICATED_PROXY_1", "ded.proxy|8080|user|pass")
 
-	result, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
-	require.NoError(t, err)
+	_, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
+	require.Error(t, err)
 	require.Equal(t, 1, directCalls)
 	require.Equal(t, 1, residentialCalls)
-	require.Equal(t, 1, dedicatedCalls)
-	require.Equal(t, "direct → residential → dedicated", result.transportOrder)
 }
 
 func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {

@@ -74,7 +74,7 @@ Inbound API abuse mitigation (WAF, origin secret, session cookie) is documented 
 | Service | Used by | Purpose |
 |---------|---------|---------|
 | LGS store websites | Search Lambda | Live inventory listings |
-| Proxy tiers (direct / dedicated / dynamic / residential) | Search + CK refresh | Rate-limit and geo mitigation |
+| Proxy tiers (direct / dedicated / dynamic / residential) | Search (+ residential for CK refresh) | Rate-limit and geo mitigation |
 | [Scryfall API](https://scryfall.com/docs/api) | Search Lambda | Verify card names before CK lookup |
 | [Card Kingdom pricelist API](https://api.cardkingdom.com/api/v2/pricelist) | CK refresh Lambda | Daily retail price index |
 | Google Analytics (GA4) | Frontend (events), analytics Lambda (Data API) | Search telemetry and trending keywords |
@@ -123,7 +123,7 @@ flowchart TB
     SearchLambda -->|optional CK lookup| DDB
     SearchLambda -->|verify card name| Scryfall
     EB -->|action: ck-price-refresh-run| RefreshLambda
-    RefreshLambda -->|pricelist direct, residential, or dedicated proxy| CKAPI
+    RefreshLambda -->|pricelist direct or residential proxy| CKAPI
     RefreshLambda -->|batch write cheapest CK retail| DDB
     RefreshLambda -->|write latest.json| S3
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
@@ -209,8 +209,7 @@ Example report shape:
 
 CK prices are downloaded from Card Kingdom's public pricelist API
 (`https://api.cardkingdom.com/api/v2/pricelist`). The download tries direct egress
-first, then falls back to a residential proxy, and finally a dedicated proxy when
-configured. The refresh Lambda
+first, then falls back to a residential proxy when configured. The refresh Lambda
 picks the cheapest listed retail price per card name and batch-writes the index.
 Search verifies the query against Scryfall before looking up DynamoDB and omits
 stale entries older than 48 hours.
@@ -227,7 +226,7 @@ sequenceDiagram
     participant U as User
 
     EB->>R: daily ck-price-refresh-run
-    R->>CK: download api/v2/pricelist direct, residential, or dedicated
+    R->>CK: download api/v2/pricelist direct or residential
     R->>D: PutAll cheapest CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
