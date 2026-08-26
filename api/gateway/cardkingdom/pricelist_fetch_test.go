@@ -193,38 +193,41 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 }
 
 func TestCKPricelistOutboundOptions_UsesDirectFirst(t *testing.T) {
-	t.Setenv("CK_PRICELIST_PROXY", "res.proxy|8080|user|pass")
-
 	opts := ckPricelistOutboundOptions()
 	require.Empty(t, opts.OnlyProxyURL)
 	require.Equal(t, "application/json", opts.Accept)
 	require.True(t, opts.SkipWebBotAuth)
 }
 
-func TestCKPricelistResidentialProxyURL_PrefersResidential(t *testing.T) {
+func TestCKPricelistTransportSteps_ResidentialUsesResidentialProxyOnly(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "res1.proxy|8080|user|pass")
 	t.Setenv("CK_PRICELIST_PROXY", "res2.proxy|8080|user|pass")
 
-	got, ok := ckPricelistResidentialProxyURL()
-	require.True(t, ok)
-	require.Equal(t, "http://user:pass@res1.proxy:8080", got)
+	for _, step := range ckPricelistTransportSteps() {
+		if step.label != "residential" {
+			continue
+		}
+		opts, ok := step.opts()
+		require.True(t, ok)
+		require.Equal(t, "http://user:pass@res1.proxy:8080", opts.OnlyProxyURL)
+		return
+	}
+	t.Fatal("expected residential transport step")
 }
 
-func TestCKPricelistResidentialProxyURL_FallsBackToCKProxy(t *testing.T) {
+func TestCKPricelistTransportSteps_SkipsResidentialWhenUnset(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "")
 	t.Setenv("CK_PRICELIST_PROXY", "res2.proxy|8080|user|pass")
 
-	got, ok := ckPricelistResidentialProxyURL()
-	require.True(t, ok)
-	require.Equal(t, "http://user:pass@res2.proxy:8080", got)
-}
-
-func TestCKPricelistResidentialProxyURL_Unset(t *testing.T) {
-	t.Setenv("RESIDENTIAL_PROXY_1", "")
-	t.Setenv("CK_PRICELIST_PROXY", "")
-
-	_, ok := ckPricelistResidentialProxyURL()
-	require.False(t, ok)
+	for _, step := range ckPricelistTransportSteps() {
+		if step.label != "residential" {
+			continue
+		}
+		_, ok := step.opts()
+		require.False(t, ok)
+		return
+	}
+	t.Fatal("expected residential transport step")
 }
 
 func TestDownloadCKPricelistOnce_RejectsNonOKStatus(t *testing.T) {
@@ -314,7 +317,6 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("CK_PRICELIST_URL", server.URL)
-	t.Setenv("CK_PRICELIST_PROXY", "")
 
 	cheapest, err := fetchCheapestFromCKPricelist(context.Background())
 	require.NoError(t, err)

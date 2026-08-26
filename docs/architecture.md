@@ -317,7 +317,7 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | API origin-verify secret | Lambda | `API_ORIGIN_VERIFY_SECRET` |
 | Search session HMAC key | Lambda | `API_SESSION_SECRET` |
 | Web Bot Auth signing key | Lambda / deploy | `WEB_BOT_AUTH_PRIVATE_KEY` or `WEB_BOT_AUTH_PRIVATE_KEY_FILE` |
-| Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1`, `CK_PRICELIST_PROXY` |
+| Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1` |
 | TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |
 | Cards Central LGS API key | Lambda | `CARDS_CENTRAL_KEY` |
 | GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |

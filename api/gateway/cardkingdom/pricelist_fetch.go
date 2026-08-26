@@ -204,13 +204,6 @@ func ckPricelistOutboundOptions() gateway.OutboundRequestOptions {
 	}
 }
 
-func ckPricelistResidentialProxyURL() (string, bool) {
-	if proxyURL, ok := util.GetResidentialProxyURL(); ok {
-		return proxyURL, true
-	}
-	return util.GetCKPricelistProxyURL()
-}
-
 var downloadCKPricelistOnceFunc = downloadCKPricelistOnce
 
 type ckPricelistDownloadResult struct {
@@ -236,7 +229,7 @@ func ckPricelistTransportSteps() []ckPricelistTransportStep {
 		{
 			label: "residential",
 			opts: func() (gateway.OutboundRequestOptions, bool) {
-				proxyURL, ok := ckPricelistResidentialProxyURL()
+				proxyURL, ok := util.GetResidentialProxyURL()
 				if !ok {
 					return gateway.OutboundRequestOptions{}, false
 				}
