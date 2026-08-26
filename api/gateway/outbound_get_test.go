@@ -169,6 +169,17 @@ func TestBuildOutboundGETAttempts_PreferDedicatedFirstWithoutDedicated(t *testin
 	require.Equal(t, "direct", attempts[0].strategy)
 }
 
+func TestBuildOutboundGETAttempts_SkipDedicated(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
+		SkipDedicated: true,
+	})
+	require.Len(t, attempts, 1)
+	require.Equal(t, "direct", attempts[0].strategy)
+}
+
 func TestBuildOutboundGETAttempts_OnlyProxyURL(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")

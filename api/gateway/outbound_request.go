@@ -25,6 +25,8 @@ type OutboundRequestOptions struct {
 	Accept string
 	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
 	SkipDirect bool
+	// SkipDedicated omits dedicated proxy transports from DoOutboundGET fallback chains.
+	SkipDedicated bool
 	// DirectAttemptTimeout overrides config.DirectSearchAttemptTimeout when > 0.
 	DirectAttemptTimeout time.Duration
 	// DedicatedAttemptTimeout overrides config.DedicatedSearchAttemptTimeout when > 0.

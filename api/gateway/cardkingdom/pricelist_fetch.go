@@ -218,41 +218,81 @@ type ckPricelistDownloadResult struct {
 	transportOrder string
 }
 
+type ckPricelistTransportStep struct {
+	label string
+	opts  func() (gateway.OutboundRequestOptions, bool)
+}
+
+func ckPricelistTransportSteps() []ckPricelistTransportStep {
+	return []ckPricelistTransportStep{
+		{
+			label: "direct",
+			opts: func() (gateway.OutboundRequestOptions, bool) {
+				opts := ckPricelistOutboundOptions()
+				opts.SkipDedicated = true
+				return opts, true
+			},
+		},
+		{
+			label: "residential",
+			opts: func() (gateway.OutboundRequestOptions, bool) {
+				proxyURL, ok := ckPricelistResidentialProxyURL()
+				if !ok {
+					return gateway.OutboundRequestOptions{}, false
+				}
+				opts := ckPricelistOutboundOptions()
+				opts.OnlyProxyURL = proxyURL
+				return opts, true
+			},
+		},
+		{
+			label: "dedicated",
+			opts: func() (gateway.OutboundRequestOptions, bool) {
+				if !gateway.DedicatedProxiesEnabled() {
+					return gateway.OutboundRequestOptions{}, false
+				}
+				proxyURL, ok := gateway.RandomDedicatedProxyURL()
+				if !ok {
+					return gateway.OutboundRequestOptions{}, false
+				}
+				opts := ckPricelistOutboundOptions()
+				opts.OnlyProxyURL = proxyURL
+				return opts, true
+			},
+		},
+	}
+}
+
 func downloadCKPricelist(ctx context.Context, downloadURL string) (*ckPricelistDownloadResult, error) {
-	primaryTrace := &gateway.OutboundTransportTrace{}
-	primaryOpts := ckPricelistOutboundOptions()
-	primaryOpts.TransportTrace = primaryTrace
+	var attempted []string
+	var lastErr error
 
-	payload, err := downloadCKPricelistOnceFunc(ctx, downloadURL, primaryOpts)
-	if err == nil {
-		return &ckPricelistDownloadResult{
-			payload:        payload,
-			transportOrder: gateway.FormatTransportOrder(primaryTrace),
-		}, nil
+	for _, step := range ckPricelistTransportSteps() {
+		opts, ok := step.opts()
+		if !ok {
+			continue
+		}
+
+		attempted = append(attempted, step.label)
+		payload, err := downloadCKPricelistOnceFunc(ctx, downloadURL, opts)
+		if err == nil {
+			return &ckPricelistDownloadResult{
+				payload:        payload,
+				transportOrder: strings.Join(attempted, " → "),
+			}, nil
+		}
+
+		lastErr = err
+		logger.From(ctx).InfoContext(ctx, "ck price refresh: pricelist download failed, trying next transport",
+			"transport", step.label,
+			"err", err,
+		)
 	}
 
-	proxyURL, ok := ckPricelistResidentialProxyURL()
-	if !ok {
-		return nil, err
+	if lastErr == nil {
+		lastErr = fmt.Errorf("%s: download failed", ckPricelistErrorPrefix)
 	}
-
-	logger.From(ctx).InfoContext(ctx, "ck price refresh: direct pricelist download failed, retrying via residential proxy")
-	proxyTrace := &gateway.OutboundTransportTrace{}
-	proxyOpts := ckPricelistOutboundOptions()
-	proxyOpts.OnlyProxyURL = proxyURL
-	proxyOpts.TransportTrace = proxyTrace
-	payload, err = downloadCKPricelistOnceFunc(ctx, downloadURL, proxyOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ckPricelistDownloadResult{
-		payload: payload,
-		transportOrder: gateway.JoinTransportOrders(
-			gateway.FormatTransportOrder(primaryTrace),
-			gateway.FormatTransportOrder(proxyTrace),
-		),
-	}, nil
+	return nil, lastErr
 }
 
 func downloadCKPricelistOnce(ctx context.Context, downloadURL string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {

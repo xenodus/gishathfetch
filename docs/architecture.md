@@ -123,7 +123,7 @@ flowchart TB
     SearchLambda -->|optional CK lookup| DDB
     SearchLambda -->|verify card name| Scryfall
     EB -->|action: ck-price-refresh-run| RefreshLambda
-    RefreshLambda -->|pricelist direct or residential proxy| CKAPI
+    RefreshLambda -->|pricelist direct, residential, or dedicated proxy| CKAPI
     RefreshLambda -->|batch write cheapest CK retail| DDB
     RefreshLambda -->|write latest.json| S3
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
@@ -209,7 +209,8 @@ Example report shape:
 
 CK prices are downloaded from Card Kingdom's public pricelist API
 (`https://api.cardkingdom.com/api/v2/pricelist`). The download tries direct egress
-first, then falls back to a residential proxy when configured. The refresh Lambda
+first, then falls back to a residential proxy, and finally a dedicated proxy when
+configured. The refresh Lambda
 picks the cheapest listed retail price per card name and batch-writes the index.
 Search verifies the query against Scryfall before looking up DynamoDB and omits
 stale entries older than 48 hours.
@@ -226,7 +227,7 @@ sequenceDiagram
     participant U as User
 
     EB->>R: daily ck-price-refresh-run
-    R->>CK: download api/v2/pricelist direct or residential
+    R->>CK: download api/v2/pricelist direct, residential, or dedicated
     R->>D: PutAll cheapest CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
