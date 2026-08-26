@@ -123,7 +123,7 @@ flowchart TB
     SearchLambda -->|optional CK lookup| DDB
     SearchLambda -->|verify card name| Scryfall
     EB -->|action: ck-price-refresh-run| RefreshLambda
-    RefreshLambda -->|pricelist direct or residential proxy| CKAPI
+    RefreshLambda -->|pricelist direct, residential, or dedicated proxy| CKAPI
     RefreshLambda -->|batch write cheapest CK retail| DDB
     RefreshLambda -->|write latest.json| S3
     EB -->|action: analytics-keywords-export-run| AnalyticsLambda
@@ -209,7 +209,8 @@ Example report shape:
 
 CK prices are downloaded from Card Kingdom's public pricelist API
 (`https://api.cardkingdom.com/api/v2/pricelist`). The download tries direct egress
-first, then falls back to a residential proxy when configured. The refresh Lambda
+first, then falls back to a residential proxy, and finally a dedicated proxy when
+configured. The refresh Lambda
 picks the cheapest listed retail price per card name and batch-writes the index.
 Search verifies the query against Scryfall before looking up DynamoDB and omits
 stale entries older than 48 hours.
@@ -226,7 +227,7 @@ sequenceDiagram
     participant U as User
 
     EB->>R: daily ck-price-refresh-run
-    R->>CK: download api/v2/pricelist direct or residential
+    R->>CK: download api/v2/pricelist direct, residential, or dedicated
     R->>D: PutAll cheapest CK retail by name
     R->>D: query top/bottom 20 price changes
     R->>S3: analytics/ck-price-changes/latest.json
@@ -316,7 +317,7 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | API origin-verify secret | Lambda | `API_ORIGIN_VERIFY_SECRET` |
 | Search session HMAC key | Lambda | `API_SESSION_SECRET` |
 | Web Bot Auth signing key | Lambda / deploy | `WEB_BOT_AUTH_PRIVATE_KEY` or `WEB_BOT_AUTH_PRIVATE_KEY_FILE` |
-| Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1`, `CK_PRICELIST_PROXY` |
+| Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1` |
 | TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |
 | Cards Central LGS API key | Lambda | `CARDS_CENTRAL_KEY` |
 | GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |

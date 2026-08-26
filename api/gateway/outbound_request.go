@@ -25,6 +25,8 @@ type OutboundRequestOptions struct {
 	Accept string
 	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
 	SkipDirect bool
+	// SkipDedicated omits dedicated proxy transports from DoOutboundGET fallback chains.
+	SkipDedicated bool
 	// DirectAttemptTimeout overrides config.DirectSearchAttemptTimeout when > 0.
 	DirectAttemptTimeout time.Duration
 	// DedicatedAttemptTimeout overrides config.DedicatedSearchAttemptTimeout when > 0.
@@ -44,6 +46,28 @@ type OutboundRequestOptions struct {
 	ShopifySGDCurrency bool
 	// ExtraHeaders sets additional request headers after style-specific headers apply.
 	ExtraHeaders map[string]string
+	// TransportTrace records each outbound transport strategy as it is tried.
+	TransportTrace *OutboundTransportTrace
+}
+
+// OutboundTransportTrace records outbound transport strategies as they are tried.
+type OutboundTransportTrace struct {
+	strategies []string
+}
+
+func (t *OutboundTransportTrace) record(strategy string) {
+	if t == nil || strategy == "" {
+		return
+	}
+	t.strategies = append(t.strategies, strategy)
+}
+
+// Strategies returns the transport strategies recorded so far.
+func (t *OutboundTransportTrace) Strategies() []string {
+	if t == nil {
+		return nil
+	}
+	return append([]string(nil), t.strategies...)
 }
 
 // PrepareOutboundRequest applies per-domain pacing, browser-like headers, a

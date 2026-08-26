@@ -29,13 +29,14 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 	var topCount int
 	var bottomCount int
 	var generatedAt string
+	var transportOrder string
 
 	defer func() {
 		if err != nil {
 			sendJobAlert(formatCKPriceRefreshFailure(err))
 			return
 		}
-		sendJobAlert(formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount, generatedAt))
+		sendJobAlert(formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount, generatedAt, transportOrder))
 	}()
 
 	store, err := newCKRefreshStoreFunc(ctx)
@@ -50,8 +51,12 @@ func runCKPriceRefresh(ctx context.Context) (err error) {
 		return err
 	}
 	refreshedCount = refreshResult.ListingCount
+	transportOrder = refreshResult.TransportOrder
 
-	logger.From(ctx).InfoContext(ctx, "ck price refresh: finished", "refreshed", refreshedCount)
+	logger.From(ctx).InfoContext(ctx, "ck price refresh: finished",
+		"refreshed", refreshedCount,
+		"transportOrder", transportOrder,
+	)
 
 	changes, err := ckprices.TopBottomPriceChangesInPricelist(ctx, store, refreshResult.Listings)
 	if err != nil {

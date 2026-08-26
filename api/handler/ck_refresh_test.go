@@ -60,7 +60,11 @@ func TestRunCKPriceRefresh_SendsSuccessAlert(t *testing.T) {
 		}, nil
 	}
 	refreshCKPricesFunc = func(_ context.Context, _ ckprices.Store) (*ckprice.RefreshResult, error) {
-		return &ckprice.RefreshResult{ListingCount: 42, Listings: pricelist}, nil
+		return &ckprice.RefreshResult{
+			ListingCount:   42,
+			Listings:       pricelist,
+			TransportOrder: "direct",
+		}, nil
 	}
 	newCKPriceReportWriterFunc = func(_ context.Context) (ckpricereport.Writer, error) {
 		return writer, nil
@@ -76,7 +80,7 @@ func TestRunCKPriceRefresh_SendsSuccessAlert(t *testing.T) {
 		t.Fatal("expected ck price change report to be written")
 	}
 
-	want := "CK price refresh finished: refreshed=42, top=1, bottom=1, generatedAt=2026-07-11T12:00:00Z"
+	want := "CK price refresh finished: refreshed=42, top=1, bottom=1, generatedAt=2026-07-11T12:00:00Z, transportOrder=direct"
 	if gotAlert != want {
 		t.Fatalf("alert = %q, want %q", gotAlert, want)
 	}

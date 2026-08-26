@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -192,38 +193,41 @@ func TestCheapestListingsFromPricelist(t *testing.T) {
 }
 
 func TestCKPricelistOutboundOptions_UsesDirectFirst(t *testing.T) {
-	t.Setenv("CK_PRICELIST_PROXY", "res.proxy|8080|user|pass")
-
 	opts := ckPricelistOutboundOptions()
 	require.Empty(t, opts.OnlyProxyURL)
 	require.Equal(t, "application/json", opts.Accept)
 	require.True(t, opts.SkipWebBotAuth)
 }
 
-func TestCKPricelistResidentialProxyURL_PrefersResidential(t *testing.T) {
+func TestCKPricelistTransportSteps_ResidentialUsesResidentialProxyOnly(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "res1.proxy|8080|user|pass")
 	t.Setenv("CK_PRICELIST_PROXY", "res2.proxy|8080|user|pass")
 
-	got, ok := ckPricelistResidentialProxyURL()
-	require.True(t, ok)
-	require.Equal(t, "http://user:pass@res1.proxy:8080", got)
+	for _, step := range ckPricelistTransportSteps() {
+		if step.label != "residential" {
+			continue
+		}
+		opts, ok := step.opts()
+		require.True(t, ok)
+		require.Equal(t, "http://user:pass@res1.proxy:8080", opts.OnlyProxyURL)
+		return
+	}
+	t.Fatal("expected residential transport step")
 }
 
-func TestCKPricelistResidentialProxyURL_FallsBackToCKProxy(t *testing.T) {
+func TestCKPricelistTransportSteps_SkipsResidentialWhenUnset(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "")
 	t.Setenv("CK_PRICELIST_PROXY", "res2.proxy|8080|user|pass")
 
-	got, ok := ckPricelistResidentialProxyURL()
-	require.True(t, ok)
-	require.Equal(t, "http://user:pass@res2.proxy:8080", got)
-}
-
-func TestCKPricelistResidentialProxyURL_Unset(t *testing.T) {
-	t.Setenv("RESIDENTIAL_PROXY_1", "")
-	t.Setenv("CK_PRICELIST_PROXY", "")
-
-	_, ok := ckPricelistResidentialProxyURL()
-	require.False(t, ok)
+	for _, step := range ckPricelistTransportSteps() {
+		if step.label != "residential" {
+			continue
+		}
+		_, ok := step.opts()
+		require.False(t, ok)
+		return
+	}
+	t.Fatal("expected residential transport step")
 }
 
 func TestDownloadCKPricelistOnce_RejectsNonOKStatus(t *testing.T) {
@@ -237,7 +241,7 @@ func TestDownloadCKPricelistOnce_RejectsNonOKStatus(t *testing.T) {
 	require.Contains(t, err.Error(), "status 503")
 }
 
-func TestDownloadCKPricelist_FallsBackToProxyAfterDirectFailure(t *testing.T) {
+func TestDownloadCKPricelist_FallsBackToResidentialAfterDirectFailure(t *testing.T) {
 	origDownloadOnce := downloadCKPricelistOnceFunc
 	t.Cleanup(func() {
 		downloadCKPricelistOnceFunc = origDownloadOnce
@@ -248,6 +252,7 @@ func TestDownloadCKPricelist_FallsBackToProxyAfterDirectFailure(t *testing.T) {
 	downloadCKPricelistOnceFunc = func(_ context.Context, _ string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
 		if opts.OnlyProxyURL == "" {
 			directCalls++
+			require.True(t, opts.SkipDedicated)
 			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
 		}
 		proxyCalls++
@@ -257,12 +262,51 @@ func TestDownloadCKPricelist_FallsBackToProxyAfterDirectFailure(t *testing.T) {
 	}
 
 	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+	t.Setenv("USE_DEDICATED_PROXY", "false")
 
-	payload, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
+	result, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
 	require.NoError(t, err)
-	require.NotEmpty(t, payload.Data)
+	require.NotEmpty(t, result.payload.Data)
 	require.Equal(t, 1, directCalls)
 	require.Equal(t, 1, proxyCalls)
+	require.Equal(t, "direct → residential", result.transportOrder)
+}
+
+func TestDownloadCKPricelist_FallsBackToDedicatedAfterResidentialFailure(t *testing.T) {
+	origDownloadOnce := downloadCKPricelistOnceFunc
+	t.Cleanup(func() {
+		downloadCKPricelistOnceFunc = origDownloadOnce
+	})
+
+	var directCalls int
+	var residentialCalls int
+	var dedicatedCalls int
+	downloadCKPricelistOnceFunc = func(_ context.Context, _ string, opts gateway.OutboundRequestOptions) (*ckPricelistPayload, error) {
+		switch {
+		case opts.OnlyProxyURL == "":
+			directCalls++
+			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
+		case strings.Contains(opts.OnlyProxyURL, "res.proxy"):
+			residentialCalls++
+			return nil, fmt.Errorf("%s: status 503", ckPricelistErrorPrefix)
+		default:
+			dedicatedCalls++
+			var payload ckPricelistPayload
+			require.NoError(t, json.Unmarshal([]byte(sampleCKPricelist), &payload))
+			return &payload, nil
+		}
+	}
+
+	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
+	t.Setenv("USE_DEDICATED_PROXY", "true")
+	t.Setenv("DEDICATED_PROXY_1", "ded.proxy|8080|user|pass")
+
+	result, err := downloadCKPricelist(context.Background(), "https://example.test/pricelist")
+	require.NoError(t, err)
+	require.Equal(t, 1, directCalls)
+	require.Equal(t, 1, residentialCalls)
+	require.Equal(t, 1, dedicatedCalls)
+	require.Equal(t, "direct → residential → dedicated", result.transportOrder)
 }
 
 func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
@@ -273,12 +317,12 @@ func TestFetchCheapestFromCKPricelist_FromTestServer(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("CK_PRICELIST_URL", server.URL)
-	t.Setenv("CK_PRICELIST_PROXY", "")
 
 	cheapest, err := fetchCheapestFromCKPricelist(context.Background())
 	require.NoError(t, err)
-	require.InDelta(t, 1.49, cheapest["lightning bolt"].PriceUsd, 0.001)
-	require.InDelta(t, 0.35, cheapest["spectacular spider-man"].PriceUsd, 0.001)
+	require.InDelta(t, 1.49, cheapest.Listings["lightning bolt"].PriceUsd, 0.001)
+	require.InDelta(t, 0.35, cheapest.Listings["spectacular spider-man"].PriceUsd, 0.001)
+	require.Equal(t, "direct", cheapest.TransportOrder)
 }
 
 func TestProgressLogReader_PassesThroughAllBytes(t *testing.T) {

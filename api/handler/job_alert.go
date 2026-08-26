@@ -2,19 +2,24 @@ package handler
 
 import (
 	"fmt"
+	"strings"
 
 	"mtg-price-checker-sg/pkg/alert"
 )
 
 var sendJobAlert = alert.SendJobAlert
 
-func formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount int, generatedAt string) string {
+func formatCKPriceRefreshSuccess(refreshedCount, topCount, bottomCount int, generatedAt, transportOrder string) string {
+	if strings.TrimSpace(transportOrder) == "" {
+		transportOrder = "unknown"
+	}
 	return fmt.Sprintf(
-		"CK price refresh finished: refreshed=%d, top=%d, bottom=%d, generatedAt=%s",
+		"CK price refresh finished: refreshed=%d, top=%d, bottom=%d, generatedAt=%s, transportOrder=%s",
 		refreshedCount,
 		topCount,
 		bottomCount,
 		generatedAt,
+		transportOrder,
 	)
 }
 
