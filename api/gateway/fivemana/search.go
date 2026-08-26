@@ -100,18 +100,13 @@ func (s Store) searchHTML(ctx context.Context, searchStr string) ([]gateway.Card
 }
 
 func fiveManaOutboundOpts(storeBase *url.URL, pageURL *url.URL, style gateway.OutboundRequestStyle) gateway.OutboundRequestOptions {
-	opts := gateway.OutboundRequestOptions{
-		Style:              style,
-		PageURL:            pageURL,
-		StoreBase:          storeBase,
-		ShopifySGDCurrency: true,
-		SkipDirect:         true,
+	return gateway.OutboundRequestOptions{
+		Style:                style,
+		PageURL:              pageURL,
+		StoreBase:            storeBase,
+		ShopifySGDCurrency:   true,
+		PreferDedicatedFirst: true,
 	}
-	// Non-production hosts (httptest unit tests) must use the direct transport.
-	if storeBase == nil || storeBase.Host != "5-mana.sg" {
-		opts.SkipDirect = false
-	}
-	return opts
 }
 
 func (s Store) storeBaseURL() (*url.URL, error) {

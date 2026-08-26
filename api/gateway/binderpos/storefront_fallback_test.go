@@ -59,10 +59,6 @@ func TestRunFallbackAttempts(t *testing.T) {
 				sequence = append(sequence, "decklist-dedicated")
 				return []gateway.Card{{Name: "decklist-dedicated"}}, nil
 			}},
-			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
-				t.Fatal("scrap-dynamic should not run before decklist after scrap 429 errors")
-				return nil, nil
-			}},
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
@@ -138,10 +134,6 @@ func TestRunFallbackAttempts(t *testing.T) {
 				t.Fatal("decklist-direct should not run after empty decklist-dedicated")
 				return nil, nil
 			}},
-			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
-				t.Fatal("scrap-dynamic should not run after empty decklist-dedicated")
-				return nil, nil
-			}},
 		)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
@@ -167,24 +159,23 @@ func TestRunFallbackAttempts(t *testing.T) {
 			}
 		}
 
-		lastErr := errors.New("scrap-dynamic failed")
+		lastErr := errors.New("scrap-direct failed")
 		_, err := runFallbackAttempts(
 			fail("scrap-dedicated"),
-			fail("scrap-direct"),
-			fallbackAttempt{strategy: "scrap-dynamic", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
-				sequence = append(sequence, "scrap-dynamic")
+			fallbackAttempt{strategy: "scrap-direct", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
+				sequence = append(sequence, "scrap-direct")
 				return nil, lastErr
 			}},
 		)
 		if !errors.Is(err, lastErr) {
 			t.Fatalf("expected wrapped final error, got %v", err)
 		}
-		expectedError := "attempt 3 (scrap-dynamic): scrap-dynamic failed"
+		expectedError := "attempt 2 (scrap-direct): scrap-direct failed"
 		if err == nil || err.Error() != expectedError {
 			t.Fatalf("expected final error %q, got %v", expectedError, err)
 		}
 
-		expected := []string{"scrap-dedicated", "scrap-direct", "scrap-dynamic"}
+		expected := []string{"scrap-dedicated", "scrap-direct"}
 		if len(sequence) != len(expected) {
 			t.Fatalf("expected %d attempts, got %d (%v)", len(expected), len(sequence), sequence)
 		}

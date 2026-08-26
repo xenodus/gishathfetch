@@ -20,8 +20,6 @@ func clearProxyEnv(t *testing.T) {
 	for i := 1; i <= 7; i++ {
 		t.Setenv(fmt.Sprintf("DEDICATED_PROXY_%d", i), "")
 	}
-	t.Setenv("DYNAMIC_PROXY", "")
-	t.Setenv("USE_DYNAMIC_PROXY", "")
 	t.Setenv("USE_DEDICATED_PROXY", "")
 	t.Setenv("RESIDENTIAL_PROXY_1", "")
 }
@@ -122,44 +120,26 @@ func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	require.True(t, strings.HasPrefix(attempts[0].strategy, "dedicated-"))
 }
 
-func TestBuildOutboundGETAttempts_SkipDynamic(t *testing.T) {
-	clearProxyEnv(t)
-	t.Setenv("DYNAMIC_PROXY", "9.9.9.9|8080|dyn|pass")
-	t.Setenv("USE_DYNAMIC_PROXY", "true")
-
-	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
-		SkipDynamic: true,
-	})
-	require.Len(t, attempts, 1)
-	require.Equal(t, "direct", attempts[0].strategy)
-}
-
 func TestBuildOutboundGETAttempts_PreferDedicatedFirst(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
-	t.Setenv("DYNAMIC_PROXY", "9.9.9.9|8080|dyn|pass")
-	t.Setenv("USE_DYNAMIC_PROXY", "true")
-
-	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
-		PreferDedicatedFirst: true,
-	})
-	require.Len(t, attempts, 3)
-	require.Equal(t, "dedicated-1", attempts[0].strategy)
-	require.Equal(t, "direct", attempts[1].strategy)
-	require.Equal(t, "dynamic", attempts[2].strategy)
-}
-
-func TestBuildOutboundGETAttempts_PreferDedicatedFirstWithoutDedicated(t *testing.T) {
-	clearProxyEnv(t)
-	t.Setenv("DYNAMIC_PROXY", "9.9.9.9|8080|dyn|pass")
-	t.Setenv("USE_DYNAMIC_PROXY", "true")
 
 	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
 		PreferDedicatedFirst: true,
 	})
 	require.Len(t, attempts, 2)
+	require.Equal(t, "dedicated-1", attempts[0].strategy)
+	require.Equal(t, "direct", attempts[1].strategy)
+}
+
+func TestBuildOutboundGETAttempts_PreferDedicatedFirstWithoutDedicated(t *testing.T) {
+	clearProxyEnv(t)
+
+	attempts := buildOutboundGETAttempts(context.Background(), 2*time.Second, OutboundRequestOptions{
+		PreferDedicatedFirst: true,
+	})
+	require.Len(t, attempts, 1)
 	require.Equal(t, "direct", attempts[0].strategy)
-	require.Equal(t, "dynamic", attempts[1].strategy)
 }
 
 func TestBuildOutboundGETAttempts_OnlyProxyURL(t *testing.T) {

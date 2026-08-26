@@ -13,22 +13,22 @@ All 11 BinderPOS-backed stores share one orchestrator: `binderpos.impl.Search` i
 | Data source | Implementation | Named strategies |
 |-------------|----------------|------------------|
 | **Shopify Storefront GraphQL** | `storefront_graphql.go` | `graphql-dedicated`, `graphql-direct` |
-| **HTML scrape** | `scrap.go`, `scrap_dynamic.go` | `scrap-dedicated`, `scrap-direct`, `scrap-dynamic` |
-| **BinderPOS Decklist API** | `storefront_decklist.go`, `storefront_client.go` | `decklist-dedicated`, `decklist-direct`, `decklist-dynamic` |
+| **HTML scrape** | `scrap.go` | `scrap-dedicated`, `scrap-direct` |
+| **BinderPOS Decklist API** | `storefront_decklist.go`, `storefront_client.go` | `decklist-dedicated`, `decklist-direct` |
 
-**Transport modes** (dedicated proxy, direct, dynamic proxy) are orthogonal to the data source. GraphQL has **no dynamic-proxy step**; dynamic proxy is reserved for the final scrap and decklist fallbacks.
+**Transport modes** (dedicated proxy, direct) are orthogonal to the data source.
 
 ---
 
 ## Strategy order and selection
 
-### With Storefront access token (8 steps)
+### With Storefront access token (6 steps)
 
-`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic`
+`graphql-dedicated` → `graphql-direct` → `scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct`
 
-### Without Storefront access token (6 steps)
+### Without Storefront access token (4 steps)
 
-`scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct` → `scrap-dynamic` → `decklist-dynamic`
+`scrap-dedicated` → `scrap-direct` → `decklist-dedicated` → `decklist-direct`
 
 Only **Card Affinity** omits GraphQL (no token configured).
 
@@ -127,7 +127,6 @@ All methods map into the same struct (`api/gateway/spec.go`):
 | `MapQuality` on condition | Yes | Yes | Variant-dependent (see below) |
 | `ExtraInfo` (set) | Variant 3 only | Variant 3 only | Variant 3 HTML only |
 | SGD currency cookie | Yes | No | Yes (colly `OnRequest`) |
-| Dynamic proxy transport | **No** | Yes | Yes |
 | Portal concurrency gate | N/A | 4 in-flight | N/A |
 
 ### Per-field mapping
@@ -184,14 +183,13 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 
 ## Known gaps and intentional differences
 
-1. **GraphQL has no dynamic-proxy path** — only dedicated and direct transports.
-2. **Result breadth differs** — GraphQL caps at 25 products × 20 variants; decklist is a single-card portal lookup; scrape is one HTML results page with no pagination.
-3. **Empty scrap/GraphQL is final** — a successful empty HTML or GraphQL response prevents decklist from running, even though decklist might have found stock.
-4. **Quality normalization inconsistency** — scrap variant 2 skips `MapQuality`; variant 4 omits `Quality` entirely.
-5. **Set metadata** — only scrap variant 3 (and API methods when `scrapVariant == 3`) populate `ExtraInfo` with set name.
-6. **Decklist deduplication only** — other methods may return duplicate `url|price|instock` combinations.
-7. **Quantity not exposed** — decklist has per-variant stock counts but they are not mapped to `gateway.Card`.
-8. **Language not supported** — no method extracts or returns card language.
+1. **Result breadth differs** — GraphQL caps at 25 products × 20 variants; decklist is a single-card portal lookup; scrape is one HTML results page with no pagination.
+2. **Empty scrap/GraphQL is final** — a successful empty HTML or GraphQL response prevents decklist from running, even though decklist might have found stock.
+3. **Quality normalization inconsistency** — scrap variant 2 skips `MapQuality`; variant 4 omits `Quality` entirely.
+4. **Set metadata** — only scrap variant 3 (and API methods when `scrapVariant == 3`) populate `ExtraInfo` with set name.
+5. **Decklist deduplication only** — other methods may return duplicate `url|price|instock` combinations.
+6. **Quantity not exposed** — decklist has per-variant stock counts but they are not mapped to `gateway.Card`.
+7. **Language not supported** — no method extracts or returns card language.
 
 ---
 
@@ -204,7 +202,7 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 | `storefront_graphql_test.go` | Variant ID parsing, `mapGraphQLProduct`, GraphQL fallback |
 | `storefront_decklist_test.go` | JSON decode, `mapDecklistLinesToCards` |
 | `storefront_decklist_retry_test.go` | Single-send decklist HTTP |
-| `storefront_proxy_client_test.go` | Proxy round-robin, dynamic proxy env, timeout/pacing |
+| `storefront_proxy_client_test.go` | Proxy round-robin, timeout/pacing |
 | `storefront_portal_gate_test.go` | Portal concurrency gate |
 | `product_filter_test.go` | MTG product-type filtering |
 | `scrap_variant4_test.go` | Fyendal query/name/price helpers |
@@ -220,7 +218,7 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 | Public API | `api/gateway/binderpos/new.go` |
 | Orchestration | `api/gateway/binderpos/storefront_search.go` |
 | Fallback logic | `api/gateway/binderpos/storefront_fallback.go` |
-| HTML scrape | `api/gateway/binderpos/scrap.go`, `scrap_dynamic.go` |
+| HTML scrape | `api/gateway/binderpos/scrap.go` |
 | GraphQL | `api/gateway/binderpos/storefront_graphql.go` |
 | Decklist | `api/gateway/binderpos/storefront_decklist.go`, `storefront_decklist_retry.go` |
 | HTTP clients | `api/gateway/binderpos/storefront_client.go` |

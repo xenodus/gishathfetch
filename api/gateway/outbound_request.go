@@ -24,16 +24,14 @@ type OutboundRequestOptions struct {
 	Accept string
 	// SkipDirect omits the direct transport from DoOutboundGET fallback chains.
 	SkipDirect bool
-	// SkipDynamic omits the dynamic proxy transport from DoOutboundGET fallback chains.
-	SkipDynamic bool
 	// PreferDedicatedFirst places dedicated proxy attempts before direct when both
-	// are enabled, producing dedicated → direct → dynamic.
+	// are enabled, producing dedicated → direct.
 	PreferDedicatedFirst bool
 	// PreferResidentialProxy prepends RESIDENTIAL_PROXY_1 to DoOutboundGET fallback
-	// chains before dedicated and dynamic transports.
+	// chains before dedicated transports.
 	PreferResidentialProxy bool
 	// OnlyProxyURL restricts DoOutboundGET to a single proxy transport when set.
-	// Direct, dedicated, and dynamic fallbacks are skipped.
+	// Direct and dedicated fallbacks are skipped.
 	OnlyProxyURL string
 	// SkipWebBotAuth uses a browser User-Agent and omits Web Bot Auth signing.
 	SkipWebBotAuth bool
