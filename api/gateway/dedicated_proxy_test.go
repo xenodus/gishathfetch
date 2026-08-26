@@ -51,6 +51,8 @@ func TestCloseHTTPClientIdleConnections(t *testing.T) {
 }
 
 func TestCloseTrackedProxyIdleConnections(t *testing.T) {
+	t.Cleanup(CloseTrackedProxyIdleConnections)
+	CloseTrackedProxyIdleConnections()
 	clearProxyEnv(t)
 	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")

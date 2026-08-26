@@ -265,6 +265,9 @@ func TestListingIsFresh_PrefersSyncedAt(t *testing.T) {
 }
 
 func TestRefreshPrices_ClosesTrackedProxyConnections(t *testing.T) {
+	gateway.CloseTrackedProxyIdleConnections()
+	t.Cleanup(gateway.CloseTrackedProxyIdleConnections)
+
 	originalFetch := fetchCheapestFunc
 	defer func() { fetchCheapestFunc = originalFetch }()
 
@@ -275,17 +278,15 @@ func TestRefreshPrices_ClosesTrackedProxyConnections(t *testing.T) {
 		if gateway.TrackedProxyOutboundClientCount() != 0 {
 			t.Fatal("expected no tracked proxy clients before outbound fetch")
 		}
-		_, err := gateway.DoOutboundGET(
-			ctx,
-			"http://example.invalid/",
-			gateway.OutboundRequestOptions{},
-			time.Second,
-		)
-		if err == nil {
-			t.Fatal("expected outbound GET to fail against invalid host")
+		client, err := gateway.NewOutboundHTTPClient(time.Second)
+		if err != nil {
+			return nil, err
+		}
+		if client == nil {
+			t.Fatal("expected proxy-backed outbound client")
 		}
 		if gateway.TrackedProxyOutboundClientCount() == 0 {
-			t.Fatal("expected tracked proxy clients after outbound fetch")
+			t.Fatal("expected tracked proxy clients after creating proxy-backed client")
 		}
 		return map[string]cardkingdom.Listing{"bolt": {CardName: "Lightning Bolt"}}, nil
 	}

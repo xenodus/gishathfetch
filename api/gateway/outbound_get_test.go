@@ -371,3 +371,54 @@ func TestDoOutboundRoundTrip_RebuildsPOSTBodyPerAttempt(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.NoError(t, resp.Body.Close())
 }
+
+func TestDoOutboundGET_ClosesFailedAttemptProxyClients(t *testing.T) {
+	clearProxyEnv(t)
+	t.Cleanup(CloseTrackedProxyIdleConnections)
+	CloseTrackedProxyIdleConnections()
+	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	require.Equal(t, 0, TrackedProxyOutboundClientCount())
+
+	_, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		2*time.Second,
+	)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "direct: status 403")
+	require.Contains(t, err.Error(), "dedicated-1:")
+	require.Equal(t, 0, TrackedProxyOutboundClientCount())
+}
+
+func TestDoOutboundGET_ClosesUnusedAttemptProxyClientsOnSuccess(t *testing.T) {
+	clearProxyEnv(t)
+	t.Cleanup(CloseTrackedProxyIdleConnections)
+	CloseTrackedProxyIdleConnections()
+	t.Setenv("BROWSER_TLS_EMULATION_ENABLED", "false")
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	require.Equal(t, 0, TrackedProxyOutboundClientCount())
+
+	resp, err := DoOutboundGET(
+		context.Background(),
+		server.URL,
+		OutboundRequestOptions{SkipWebBotAuth: true},
+		2*time.Second,
+	)
+	require.NoError(t, err)
+	require.Equal(t, 0, TrackedProxyOutboundClientCount())
+	require.NoError(t, resp.Body.Close())
+}
