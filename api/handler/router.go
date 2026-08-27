@@ -22,7 +22,8 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 	}
 
 	var apiRequest events.APIGatewayProxyRequest
-	if err := json.Unmarshal(event, &apiRequest); err != nil {
+	apiRequest, err := parseAPIRequest(event)
+	if err != nil {
 		return events.APIGatewayProxyResponse{}, err
 	}
 
