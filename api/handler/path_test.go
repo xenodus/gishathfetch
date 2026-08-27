@@ -23,6 +23,8 @@ func Test_normalizeAPIPath(t *testing.T) {
 		{"/default/session", "session"},
 		{"/telegram/search", "telegram/search"},
 		{"/default/telegram/search", "telegram/search"},
+		{"/telegram/webhook", "telegram/webhook"},
+		{"/default/telegram/webhook", "telegram/webhook"},
 		{"/prod/api/search", "search"},
 		{"/prod/api", ""},
 		{"/", ""},

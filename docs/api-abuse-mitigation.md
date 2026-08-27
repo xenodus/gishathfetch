@@ -227,8 +227,13 @@ When `API_TELEGRAM_BOT_TOKEN` is set, `/telegram/search` requires a matching bea
 token. Browser session cookies are **not** used on this route. Origin verification
 (layer 1) still applies when `API_ORIGIN_VERIFY_SECRET` is configured.
 
-The webhook service (`api/cmd/telegram-bot`) validates Telegram's
-`X-Telegram-Bot-Api-Secret-Token` header using `TELEGRAM_WEBHOOK_SECRET`.
+The webhook Lambda (`mtg-telegram-bot`, route `POST /telegram/webhook`) validates
+Telegram's `X-Telegram-Bot-Api-Secret-Token` header using `TELEGRAM_WEBHOOK_SECRET`.
+Price lookups run **asynchronously** (Lambda self-invoke with action
+`telegram-price-run`) so the webhook returns before the Gishath search completes.
+
+For local development without Lambda async invoke, run `api/cmd/telegram-bot`
+(synchronous `/price` handling) or omit `AWS_LAMBDA_FUNCTION_NAME`.
 
 ---
 
@@ -254,7 +259,8 @@ GitHub Actions secrets, or a local `.env` file (gitignored). See also
 | `TELEGRAM_BOT_TOKEN` | Bot service only | unset = bot won't start | Telegram Bot API token |
 | `TELEGRAM_WEBHOOK_SECRET` | Bot service only | unset = bot won't start | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
 | `TELEGRAM_WEBHOOK_PUBLIC_URL` | Bot service only | unset = manual webhook setup | Full HTTPS webhook URL registered via `setWebhook` |
-| `GISHATH_API_BASE_URL` | Bot service only | `https://api.gishathfetch.com` | Base URL for `/telegram/search` |
+| `GISHATH_API_BASE_URL` | Bot Lambda / local bot | `https://api.gishathfetch.com` | Base URL for `/telegram/search` |
+| `TELEGRAM_BOT_LAMBDA_FUNCTION` | Bot Lambda | `AWS_LAMBDA_FUNCTION_NAME` | Override async self-invoke target (default: current function) |
 
 `config.APIAccessControlEnabled()` is true when origin verify **or** session
 secret is configured.
@@ -263,8 +269,8 @@ secret is configured.
 
 ## API Gateway routes
 
-Expose **`GET` + `OPTIONS`** for `/search`, `/session`, and `/telegram/search`
-(legacy `/`,
+Expose **`GET` + `OPTIONS`** for `/search`, `/session`, and `/telegram/search`, and
+**`POST` + `OPTIONS`** for `/telegram/webhook` on the bot Lambda API (legacy `/`,
 `/api`, and `/api/*` paths are still accepted by Lambda path routing for
 compatibility, but should be removed from the gateway once traffic has
 migrated).

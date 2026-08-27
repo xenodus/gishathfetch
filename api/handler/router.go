@@ -11,6 +11,8 @@ import (
 func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 	var internalEvent struct {
 		Action string `json:"action"`
+		ChatID int64  `json:"chatId"`
+		Query  string `json:"query"`
 	}
 	if err := json.Unmarshal(event, &internalEvent); err == nil && internalEvent.Action != "" {
 		switch internalEvent.Action {
@@ -18,11 +20,14 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 			return nil, runCKPriceRefresh(ctx)
 		case analyticsKeywordsExportRunAction:
 			return nil, runAnalyticsKeywordsExport(ctx)
+		case telegramPriceRunAction:
+			return nil, runTelegramPriceRun(ctx, internalEvent.ChatID, internalEvent.Query)
 		}
 	}
 
 	var apiRequest events.APIGatewayProxyRequest
-	if err := json.Unmarshal(event, &apiRequest); err != nil {
+	apiRequest, err := parseAPIRequest(event)
+	if err != nil {
 		return events.APIGatewayProxyResponse{}, err
 	}
 

@@ -38,15 +38,15 @@ func (t *TelegramAPI) SetWebhook(ctx context.Context, webhookURL, secretToken st
 
 // SendMessage sends a text message to a chat.
 func (t *TelegramAPI) SendMessage(ctx context.Context, chatID int64, text string) error {
-	payload := map[string]interface{}{
-		"chat_id": chatID,
-		"text":    text,
+	payload := map[string]any{
+		"chat_id":                  chatID,
+		"text":                     text,
 		"disable_web_page_preview": false,
 	}
 	return t.post(ctx, "sendMessage", payload)
 }
 
-func (t *TelegramAPI) post(ctx context.Context, method string, payload interface{}) error {
+func (t *TelegramAPI) post(ctx context.Context, method string, payload any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -75,8 +75,8 @@ func (t *TelegramAPI) post(ctx context.Context, method string, payload interface
 	}
 
 	var envelope struct {
-		OK          bool            `json:"ok"`
-		Description string          `json:"description"`
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
 	}
 	if err := json.Unmarshal(respBody, &envelope); err != nil {
 		return err
