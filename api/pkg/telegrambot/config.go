@@ -15,6 +15,7 @@ type Config struct {
 	GishathAPIBaseURL    string
 	GishathBotToken      string
 	GishathOriginSecret  string
+	LambdaFunctionName   string
 }
 
 const (
@@ -44,6 +45,11 @@ func LoadConfig() Config {
 		listenAddr = defaultListenAddr
 	}
 
+	lambdaFunctionName := strings.TrimSpace(os.Getenv("TELEGRAM_BOT_LAMBDA_FUNCTION"))
+	if lambdaFunctionName == "" {
+		lambdaFunctionName = strings.TrimSpace(os.Getenv("AWS_LAMBDA_FUNCTION_NAME"))
+	}
+
 	return Config{
 		TelegramBotToken:    strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN")),
 		WebhookSecret:       strings.TrimSpace(os.Getenv("TELEGRAM_WEBHOOK_SECRET")),
@@ -53,6 +59,7 @@ func LoadConfig() Config {
 		GishathAPIBaseURL:   apiBase,
 		GishathBotToken:     strings.TrimSpace(os.Getenv("API_TELEGRAM_BOT_TOKEN")),
 		GishathOriginSecret: strings.TrimSpace(os.Getenv("API_ORIGIN_VERIFY_SECRET")),
+		LambdaFunctionName:  lambdaFunctionName,
 	}
 }
 
