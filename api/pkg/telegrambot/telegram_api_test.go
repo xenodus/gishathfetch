@@ -67,6 +67,34 @@ func TestTelegramAPI_SendMessage_DefaultPreview(t *testing.T) {
 	require.False(t, hasOpts)
 }
 
+func TestTelegramAPI_SendPhoto(t *testing.T) {
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Contains(t, r.URL.Path, "/bottest-token/sendPhoto")
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(raw, &gotBody))
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	t.Cleanup(server.Close)
+
+	api := NewTelegramAPI("test-token")
+	api.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = server.Listener.Addr().String()
+		return http.DefaultTransport.RoundTrip(req)
+	})}
+
+	photoURL := "https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg"
+	caption := "Opt — S$1.25 @ Hideout"
+	require.NoError(t, api.SendPhoto(context.Background(), 42, photoURL, caption))
+
+	require.Equal(t, float64(42), gotBody["chat_id"])
+	require.Equal(t, photoURL, gotBody["photo"])
+	require.Equal(t, caption, gotBody["caption"])
+}
+
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {

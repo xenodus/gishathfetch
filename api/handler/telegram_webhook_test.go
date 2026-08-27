@@ -119,12 +119,20 @@ func (s *telegramWebhookStubGishath) Search(ctx context.Context, query string) (
 }
 
 type telegramWebhookStubTelegram struct {
-	send func(context.Context, int64, string, string) error
+	send      func(context.Context, int64, string, string) error
+	sendPhoto func(context.Context, int64, string, string) error
 }
 
 func (s *telegramWebhookStubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
 	if s.send != nil {
 		return s.send(ctx, chatID, text, linkPreviewURL)
+	}
+	return nil
+}
+
+func (s *telegramWebhookStubTelegram) SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error {
+	if s.sendPhoto != nil {
+		return s.sendPhoto(ctx, chatID, photoURL, caption)
 	}
 	return nil
 }
