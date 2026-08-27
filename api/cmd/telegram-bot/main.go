@@ -15,15 +15,13 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	cfg := telegrambot.LoadConfig()
-	if err := cfg.Valid(); err != nil {
+	svc, err := telegrambot.NewServiceFromConfig(context.Background(), cfg, logger)
+	if err != nil {
 		logger.Error("invalid configuration", "err", err)
 		os.Exit(1)
 	}
 
-	gishath := telegrambot.NewGishathClient(cfg.GishathAPIBaseURL, cfg.GishathBotToken, cfg.GishathOriginSecret)
 	telegram := telegrambot.NewTelegramAPI(cfg.TelegramBotToken)
-	handler := telegrambot.NewHandler(cfg.WebhookSecret, gishath, telegram, logger)
-
 	if cfg.WebhookPublicURL != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
@@ -35,7 +33,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(cfg.WebhookPath, handler)
+	mux.Handle(cfg.WebhookPath, telegrambot.NewHandler(svc))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))

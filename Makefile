@@ -3,7 +3,7 @@ AWS_REGION := ap-southeast-1
 ECR_REPO := mtg-price-scrapper
 ECR_IMAGE := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):latest
 LAMBDA_ROLE := arn:aws:iam::$(AWS_ACCOUNT_ID):role/lambda-mtg
-LAMBDA_FUNCTIONS := mtg-price-scrapper mtg-price-ck-refresh mtg-analytics-keywords-export
+LAMBDA_FUNCTIONS := mtg-price-scrapper mtg-price-ck-refresh mtg-analytics-keywords-export mtg-telegram-bot
 
 deploy: deploy-common docker-tag docker-push lambda-update frontend-update
 
