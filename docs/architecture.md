@@ -44,9 +44,13 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   `/.well-known/http-message-signatures-directory`.
 - Optional Card Kingdom price lookup from DynamoDB when `CK_PRICE_LOOKUP_ENABLED`
   is set; card names verified against Scryfall before lookup.
-- Two additional Lambda handlers share the same ECR image and IAM role:
-  `mtg-price-ck-refresh` (daily CK pricelist sync) and
-  `mtg-analytics-keywords-export` (daily GA4 keyword export).
+- Three additional Lambda handlers share the same ECR image and IAM role:
+  `mtg-price-ck-refresh` (daily CK pricelist sync),
+  `mtg-analytics-keywords-export` (daily GA4 keyword export), and
+  `mtg-telegram-bot` (Telegram webhook + async cheapest-card search).
+- **`GET /telegram/search`** on the search Lambda returns a minimal payload for the
+  bot (bearer token auth via `API_TELEGRAM_BOT_TOKEN`; see
+  [`api-abuse-mitigation.md`](api-abuse-mitigation.md) → *Telegram bot*).
 
 ### Infrastructure
 
@@ -55,8 +59,12 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
 - **API CDN:** WAF → CloudFront (`api.gishathfetch.com`) → API Gateway. CloudFront
   injects `X-Origin-Verify` on origin requests when
   `API_ORIGIN_VERIFY_SECRET` is configured.
-- **Compute:** Three container Lambdas from one ECR image (`mtg-price-scrapper:latest`);
-  handler selected by event shape.
+- **Compute:** Four container Lambdas from one ECR image (`mtg-price-scrapper:latest`);
+  handler selected by event shape (HTTP API request, internal action JSON, or
+  EventBridge schedule).
+- **Telegram bot API:** HTTP API Gateway → `mtg-telegram-bot` (`POST /telegram/webhook`).
+  Search API remains on `api.gishathfetch.com` → `mtg-price-scrapper`
+  (`GET /telegram/search` plus browser routes).
 - **Data:** DynamoDB table for CK retail prices (`CK_DYNAMODB_TABLE`, default
   `gishathfetch-ck-prices`).
 - **Scheduler:** EventBridge rules `ck-price-refresh-daily` and
@@ -78,13 +86,15 @@ Inbound API abuse mitigation (WAF, origin secret, session cookie) is documented 
 | [Scryfall API](https://scryfall.com/docs/api) | Search Lambda | Verify card names before CK lookup |
 | [Card Kingdom pricelist API](https://api.cardkingdom.com/api/v2/pricelist) | CK refresh Lambda | Daily retail price index |
 | Google Analytics (GA4) | Frontend (events), analytics Lambda (Data API) | Search telemetry and trending keywords |
+| [Telegram Bot API](https://core.telegram.org/bots/api) | `mtg-telegram-bot` | Webhook updates, outbound chat replies |
 
 ## System diagram
 
 ```mermaid
 flowchart TB
-    subgraph client["Client"]
+    subgraph client["Clients"]
         Browser[Browser]
+        TelegramUser[Telegram user]
     end
 
     subgraph aws["AWS ap-southeast-1"]
@@ -93,10 +103,12 @@ flowchart TB
         CF[CloudFront gishathfetch.com]
         APICF[CloudFront api.gishathfetch.com]
         S3[(S3 gishathfetch.com)]
-        AGW[API Gateway]
+        AGW[API Gateway search API]
+        BotAGW[API Gateway bot API]
         SearchLambda[Lambda mtg-price-scrapper]
         RefreshLambda[Lambda mtg-price-ck-refresh]
         AnalyticsLambda[Lambda mtg-analytics-keywords-export]
+        TelegramLambda[Lambda mtg-telegram-bot]
         EB[EventBridge daily schedule]
         DDB[(DynamoDB CK prices)]
         ECR[ECR mtg-price-scrapper image]
@@ -108,6 +120,7 @@ flowchart TB
         CKAPI[Card Kingdom pricelist API]
         Scryfall[Scryfall API]
         GA4[Google Analytics GA4]
+        TG[Telegram Bot API]
     end
 
     Browser -->|HTTPS| WAFSPA
@@ -118,6 +131,12 @@ flowchart TB
     WAFAPI --> APICF
     APICF -->|+ X-Origin-Verify| AGW
     AGW --> SearchLambda
+    TG -->|POST /telegram/webhook| BotAGW
+    BotAGW --> TelegramLambda
+    TelegramUser -->|/price, /help| TG
+    TelegramLambda -->|async self-invoke telegram-price-run| TelegramLambda
+    TelegramLambda -->|GET /telegram/search Bearer token| APICF
+    APICF --> AGW
     SearchLambda -->|optional Web Bot Auth signatures| Proxies
     Proxies --> LGS
     SearchLambda -->|optional CK lookup| DDB
@@ -132,6 +151,8 @@ flowchart TB
     ECR -.->|deploy| SearchLambda
     ECR -.->|deploy| RefreshLambda
     ECR -.->|deploy| AnalyticsLambda
+    ECR -.->|deploy| TelegramLambda
+    TelegramLambda -->|sendMessage| TG
     Deploy[Frontend deploy] -.->|http-message-signatures-directory| S3
 ```
 
@@ -141,14 +162,16 @@ flowchart TB
 |---------|-----------------|------|
 | Frontend CDN | WAF → CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`; origin-verify header; session cookie ([docs](api-abuse-mitigation.md)) |
-| Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth; optional CK price lookup |
+| Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`, `GET /telegram/search`; origin-verify header; session cookie on browser routes ([docs](api-abuse-mitigation.md)) |
+| Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth; optional CK price lookup; `/telegram/search` for bot |
+| Telegram bot API | HTTP API Gateway → `mtg-telegram-bot` | `POST /telegram/webhook` (Telegram updates). Optional custom domain (e.g. `bot.gishathfetch.com`). |
+| Telegram bot Lambda | `mtg-telegram-bot` | Webhook auth, `/help`, async `/price` via self-invoke → Gishath `/telegram/search` |
 | CK refresh Lambda | `mtg-price-ck-refresh` | Daily CK pricelist download, DynamoDB rebuild, price-change export to S3 |
 | Analytics keywords Lambda | `mtg-analytics-keywords-export` | Daily GA4 export of top search keywords to S3 |
 | Scheduler | EventBridge (`ck-price-refresh-daily`, `analytics-keywords-export-daily`) | Invokes refresh/export Lambdas with action payloads |
 | CK price store | DynamoDB (`CK_DYNAMODB_TABLE`) | Cheapest CK retail price per verified card name |
 | Container image | ECR `mtg-price-scrapper:latest` | Shared Go binary for all Lambdas (different handlers via event shape) |
-| IAM role | `lambda-mtg` | Shared execution role for all three Lambdas |
+| Execution IAM role | `lambda-mtg` | Shared runtime role for all four Lambdas |
 
 ## Analytics keywords export flow
 
@@ -296,6 +319,62 @@ Example inline policy (merge with existing permissions on the role, or attach as
 }
 ```
 
+## Telegram bot flow
+
+The Telegram integration is a separate client path from the browser SPA. Users message
+a bot; Telegram POSTs updates to **`mtg-telegram-bot`** (`POST /telegram/webhook` on a
+dedicated HTTP API Gateway). The bot Lambda shares the same ECR image and runtime role
+as the other handlers; routing is by event shape (webhook HTTP request vs internal
+`telegram-price-run` action vs browser/API Gateway requests on `mtg-price-scrapper`).
+
+**Commands**
+
+| Command | Behavior |
+|---------|----------|
+| `/help` | Usage instructions |
+| `/price <card name>` | Cheapest in-stock match across all stores (min 3 characters) |
+
+**Search path:** `/price` triggers the same concurrent LGS scrape as the website, but
+via **`GET /telegram/search`** on `mtg-price-scrapper`, which returns only the cheapest
+card, result count, store listing URL, and per-store errors — not the full card list.
+Auth uses a shared bearer token (`API_TELEGRAM_BOT_TOKEN`), not browser session cookies.
+
+**Async webhook:** Price searches can exceed Telegram's webhook timeout. The webhook
+handler acknowledges quickly: it sends a “Searching…” reply, then **asynchronously
+self-invokes** the same Lambda with `{action: "telegram-price-run", chatId, query}`.
+The follow-up invocation calls Gishath and sends the formatted result via Telegram
+`sendMessage`. Code: `api/pkg/telegrambot/`, `api/handler/telegram_webhook.go`,
+`api/handler/telegram_search.go`.
+
+The router accepts both REST API (payload 1.0) and HTTP API (payload 2.0) Gateway
+events (`api/handler/api_request.go`).
+
+```mermaid
+sequenceDiagram
+    participant U as Telegram user
+    participant TG as Telegram Bot API
+    participant W as mtg-telegram-bot
+    participant API as api.gishathfetch.com
+    participant S as mtg-price-scrapper
+
+    U->>TG: /price Opt
+    TG->>W: POST /telegram/webhook
+    Note over W: validate X-Telegram-Bot-Api-Secret-Token
+    W->>TG: sendMessage "Searching for Opt…"
+    W->>W: async invoke telegram-price-run
+    W-->>TG: 200 OK
+    W->>API: GET /telegram/search?s=Opt
+    Note over API: Bearer API_TELEGRAM_BOT_TOKEN
+    API->>S: scrape stores, pick cheapest
+    S-->>API: cheapest + resultCount + websiteUrl
+    API-->>W: JSON summary
+    W->>TG: sendMessage formatted reply + gishathfetch.com link
+    TG-->>U: chat message
+```
+
+For local development, `api/cmd/telegram-bot` runs the same webhook handler over
+HTTP with synchronous `/price` when Lambda self-invoke is unavailable.
+
 ## Related docs
 
 - [`api-abuse-mitigation.md`](api-abuse-mitigation.md) — WAF, origin secret, session cookie, env reference
@@ -320,6 +399,9 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |
 | Cards Central LGS API key | Lambda | `CARDS_CENTRAL_KEY` |
 | GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |
+| Telegram → Gishath API bearer token | Search Lambda + bot Lambda | `API_TELEGRAM_BOT_TOKEN` |
+| Telegram Bot API token | Bot Lambda | `TELEGRAM_BOT_TOKEN` |
+| Telegram webhook secret | Bot Lambda | `TELEGRAM_WEBHOOK_SECRET` |
 | Local dev origin secret | Vite only | `VITE_API_ORIGIN_VERIFY_SECRET` |
 | Deploy role | GitHub Actions | `AWS_DEPLOY_ROLE_ARN` |
 

@@ -212,28 +212,57 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
 
 ---
 
-## 3. Telegram bot search (`GET /telegram/search`)
+## 3. Telegram bot
 
-**Purpose:** Return only the cheapest in-stock match and total result count for the
-Telegram bot service, without shipping the full search payload.
+The Telegram bot is a third client of the search backend (alongside the browser SPA).
+It does **not** use session cookies. Access is split across two trust boundaries:
 
-| Item | Value |
-|------|--------|
-| Lambda env | `API_TELEGRAM_BOT_TOKEN` |
-| Auth header | `Authorization: Bearer <token>` |
-| Code | `api/handler/telegram_search.go`, `api/pkg/apiauth/bot.go` |
+1. **Telegram → webhook Lambda** — `X-Telegram-Bot-Api-Secret-Token` must match
+   `TELEGRAM_WEBHOOK_SECRET` on `mtg-telegram-bot`.
+2. **Bot Lambda → search API** — `Authorization: Bearer` must match
+   `API_TELEGRAM_BOT_TOKEN` on `GET /telegram/search` (same secret on both Lambdas).
 
-When `API_TELEGRAM_BOT_TOKEN` is set, `/telegram/search` requires a matching bearer
-token. Browser session cookies are **not** used on this route. Origin verification
-(layer 1) still applies when `API_ORIGIN_VERIFY_SECRET` is configured.
+Origin verification (layer 1 above) still applies when `API_ORIGIN_VERIFY_SECRET` is
+configured; the bot Lambda may pass `X-Origin-Verify` when calling the API directly.
 
-The webhook Lambda (`mtg-telegram-bot`, route `POST /telegram/webhook`) validates
-Telegram's `X-Telegram-Bot-Api-Secret-Token` header using `TELEGRAM_WEBHOOK_SECRET`.
-Price lookups run **asynchronously** (Lambda self-invoke with action
-`telegram-price-run`) so the webhook returns before the Gishath search completes.
+### `GET /telegram/search`
 
-For local development without Lambda async invoke, run `api/cmd/telegram-bot`
-(synchronous `/price` handling) or omit `AWS_LAMBDA_FUNCTION_NAME`.
+Returns a minimal payload for bot use — not the full search response:
+
+| Field | Meaning |
+|-------|---------|
+| `cheapest` | Lowest-price in-stock card (same shape as website results) |
+| `resultCount` | Total in-stock matches after filtering/sorting |
+| `websiteUrl` | Deep link to the full Gishath search for the query |
+| `errors` | Per-store scrape failures |
+| `totalDurationMs` | End-to-end search latency |
+
+Code: `api/handler/telegram_search.go`, `api/pkg/apiauth/bot.go`.
+
+When `API_TELEGRAM_BOT_TOKEN` is unset, the route returns **503**. Browser session
+cookies are rejected on this route.
+
+### Webhook Lambda (`POST /telegram/webhook`)
+
+Hosted on **`mtg-telegram-bot`** (separate HTTP API Gateway from the search API).
+
+| Command | Response |
+|---------|----------|
+| `/help` | Usage text |
+| `/price <name>` | “Searching…” then async cheapest-card reply with store link |
+
+Price lookups use **async self-invoke** (`action: telegram-price-run`) so the
+webhook returns before the multi-store scrape finishes. The follow-up invocation
+calls `/telegram/search` and replies via Telegram `sendMessage`.
+
+Code: `api/pkg/telegrambot/`, `api/handler/telegram_webhook.go`,
+`api/handler/telegram_price_run.go`.
+
+The shared Lambda router accepts HTTP API payload format 2.0 and REST API format 1.0
+(`api/handler/api_request.go`).
+
+For architecture diagrams and sequence flow, see
+[`docs/architecture.md`](architecture.md) → *Telegram bot flow*.
 
 ---
 
@@ -255,12 +284,11 @@ GitHub Actions secrets, or a local `.env` file (gitignored). See also
 | `VITE_API_ORIGIN_VERIFY_SECRET` | Vite only | unset | Proxy injects `X-Origin-Verify` |
 | `VITE_API_PROXY_TARGET` | Vite only | `https://api.gishathfetch.com` | Dev proxy target for `/search`, `/session` |
 | `VITE_API_BASE_URL` | Frontend | production API host in `constants.js` | Empty string → same-origin paths via Vite proxy |
-| `API_TELEGRAM_BOT_TOKEN` | Lambda + bot service | unset = `/telegram/search` 503 | Bearer token for Telegram bot searches |
-| `TELEGRAM_BOT_TOKEN` | Bot service only | unset = bot won't start | Telegram Bot API token |
-| `TELEGRAM_WEBHOOK_SECRET` | Bot service only | unset = bot won't start | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
-| `TELEGRAM_WEBHOOK_PUBLIC_URL` | Bot service only | unset = manual webhook setup | Full HTTPS webhook URL registered via `setWebhook` |
+| `API_TELEGRAM_BOT_TOKEN` | Search Lambda + bot Lambda | unset = `/telegram/search` 503 | Bearer token for bot → search API |
+| `TELEGRAM_BOT_TOKEN` | Bot Lambda | unset = bot won't start | Telegram Bot API token |
+| `TELEGRAM_WEBHOOK_SECRET` | Bot Lambda | unset = bot won't start | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
 | `GISHATH_API_BASE_URL` | Bot Lambda / local bot | `https://api.gishathfetch.com` | Base URL for `/telegram/search` |
-| `TELEGRAM_BOT_LAMBDA_FUNCTION` | Bot Lambda | `AWS_LAMBDA_FUNCTION_NAME` | Override async self-invoke target (default: current function) |
+| `TELEGRAM_BOT_LAMBDA_FUNCTION` | Bot Lambda | `AWS_LAMBDA_FUNCTION_NAME` | Async self-invoke target |
 
 `config.APIAccessControlEnabled()` is true when origin verify **or** session
 secret is configured.
@@ -269,11 +297,13 @@ secret is configured.
 
 ## API Gateway routes
 
-Expose **`GET` + `OPTIONS`** for `/search`, `/session`, and `/telegram/search`, and
-**`POST` + `OPTIONS`** for `/telegram/webhook` on the bot Lambda API (legacy `/`,
-`/api`, and `/api/*` paths are still accepted by Lambda path routing for
-compatibility, but should be removed from the gateway once traffic has
-migrated).
+**Search API** (`api.gishathfetch.com`): **`GET` + `OPTIONS`** for `/search`,
+`/session`, and `/telegram/search`.
+
+**Bot API** (`mtg-telegram-bot`): **`POST` + `OPTIONS`** for `/telegram/webhook`.
+
+Legacy `/`, `/api`, and `/api/*` paths are still accepted by Lambda path routing
+for compatibility on the search API.
 
 Lambda strips common API Gateway stage prefixes before routing (`/prod`,
 `/staging`, `/dev`, `/default`). CloudFront origins that target `execute-api`
