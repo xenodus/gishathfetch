@@ -37,11 +37,19 @@ func (t *TelegramAPI) SetWebhook(ctx context.Context, webhookURL, secretToken st
 }
 
 // SendMessage sends a text message to a chat.
-func (t *TelegramAPI) SendMessage(ctx context.Context, chatID int64, text string) error {
+// When linkPreviewURL is non-empty, Telegram previews that URL (it must appear
+// in text). Otherwise Telegram uses the first URL found in the message.
+func (t *TelegramAPI) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
 	payload := map[string]any{
-		"chat_id":                  chatID,
-		"text":                     text,
-		"disable_web_page_preview": false,
+		"chat_id": chatID,
+		"text":    text,
+	}
+	if preview := strings.TrimSpace(linkPreviewURL); preview != "" {
+		payload["link_preview_options"] = map[string]any{
+			"url": preview,
+		}
+	} else {
+		payload["disable_web_page_preview"] = false
 	}
 	return t.post(ctx, "sendMessage", payload)
 }

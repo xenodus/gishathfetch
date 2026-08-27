@@ -90,7 +90,7 @@ func TestRunTelegramPriceRun(t *testing.T) {
 				}, nil
 			},
 		},
-		&telegramWebhookStubTelegram{send: func(_ context.Context, _ int64, text string) error {
+		&telegramWebhookStubTelegram{send: func(_ context.Context, _ int64, text, _ string) error {
 			sent = text
 			return nil
 		}},
@@ -119,12 +119,12 @@ func (s *telegramWebhookStubGishath) Search(ctx context.Context, query string) (
 }
 
 type telegramWebhookStubTelegram struct {
-	send func(context.Context, int64, string) error
+	send func(context.Context, int64, string, string) error
 }
 
-func (s *telegramWebhookStubTelegram) SendMessage(ctx context.Context, chatID int64, text string) error {
+func (s *telegramWebhookStubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
 	if s.send != nil {
-		return s.send(ctx, chatID, text)
+		return s.send(ctx, chatID, text, linkPreviewURL)
 	}
 	return nil
 }

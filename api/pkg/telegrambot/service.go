@@ -29,7 +29,7 @@ type searchClient interface {
 }
 
 type messageClient interface {
-	SendMessage(ctx context.Context, chatID int64, text string) error
+	SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error
 }
 
 // NewService wires Telegram webhook handling. When async is nil, /price runs synchronously.
@@ -93,26 +93,26 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 
 	switch {
 	case strings.EqualFold(text, "/help"):
-		if err := s.telegram.SendMessage(ctx, message.Chat.ID, formatHelpMessage()); err != nil {
+		if err := s.telegram.SendMessage(ctx, message.Chat.ID, formatHelpMessage(), ""); err != nil {
 			return WebhookStatusInternalError, err
 		}
 		return WebhookStatusOK, nil
 	case strings.HasPrefix(text, "/price"):
 		query := strings.TrimSpace(strings.TrimPrefix(text, "/price"))
 		if query == "" {
-			if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Usage: /price <card name>"); err != nil {
+			if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Usage: /price <card name>", ""); err != nil {
 				return WebhookStatusInternalError, err
 			}
 			return WebhookStatusOK, nil
 		}
 		if len(query) < 3 {
-			if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Enter at least 3 characters to search."); err != nil {
+			if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Enter at least 3 characters to search.", ""); err != nil {
 				return WebhookStatusInternalError, err
 			}
 			return WebhookStatusOK, nil
 		}
 
-		if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Searching for "+query+"…"); err != nil {
+		if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Searching for "+query+"…", ""); err != nil {
 			return WebhookStatusInternalError, err
 		}
 
@@ -137,9 +137,15 @@ func (s *Service) RunPriceSearch(ctx context.Context, chatID int64, query string
 	summary, err := s.gishath.Search(ctx, query)
 	if err != nil {
 		s.logger.ErrorContext(ctx, "telegram price search failed", "query", query, "err", err)
-		return s.telegram.SendMessage(ctx, chatID, "Search failed. Please try again later.")
+		return s.telegram.SendMessage(ctx, chatID, "Search failed. Please try again later.", "")
 	}
-	return s.telegram.SendMessage(ctx, chatID, formatSearchReply(query, summary))
+	text := formatSearchReply(query, summary)
+	previewURL := ""
+	// Force Gishath Fetch preview when that URL is present in the reply (matches only).
+	if summary != nil && summary.ResultCount > 0 && summary.Cheapest != nil {
+		previewURL = strings.TrimSpace(summary.WebsiteURL)
+	}
+	return s.telegram.SendMessage(ctx, chatID, text, previewURL)
 }
 
 // Handler adapts Service to net/http for local development servers.
