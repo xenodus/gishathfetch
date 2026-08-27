@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -124,17 +125,45 @@ func Test_formatSearchReply(t *testing.T) {
 	reply := formatSearchReply("Opt", &SearchSummary{
 		ResultCount: 2,
 		Cheapest: &CardSummary{
-			Name:    "Opt",
-			Price:   1.25,
-			Source:  "Hideout",
-			Quality: "NM",
-			URL:     "https://shop.example/opt",
+			Name:      "Opt",
+			Price:     1.25,
+			Source:    "Hideout",
+			Quality:   "NM",
+			ExtraInfo: "[Marvel Universe]",
+			URL:       "https://shop.example/opt",
 		},
 		WebsiteURL: "https://gishathfetch.com/?s=Opt",
 	})
-	require.Contains(t, reply, "S$1.25")
-	require.Contains(t, reply, "2 results")
-	require.Contains(t, reply, "https://gishathfetch.com/?s=Opt")
+	require.Equal(t, strings.Join([]string{
+		"Opt — S$1.25 @ Hideout",
+		"NM · [Marvel Universe]",
+		"https://shop.example/opt",
+		"2 results — view all on Gishath Fetch:",
+		"https://gishathfetch.com/?s=Opt",
+	}, "\n"), reply)
+	require.NotContains(t, reply, "non-foil")
+	require.NotContains(t, reply, "Buy:")
+}
+
+func Test_formatSearchReply_Foil(t *testing.T) {
+	reply := formatSearchReply("Opt", &SearchSummary{
+		ResultCount: 1,
+		Cheapest: &CardSummary{
+			Name:   "Opt",
+			Price:  3.50,
+			Source: "Hideout",
+			IsFoil: true,
+			URL:    "https://shop.example/opt-foil",
+		},
+		WebsiteURL: "https://gishathfetch.com/?s=Opt",
+	})
+	require.Equal(t, strings.Join([]string{
+		"Opt — S$3.50 @ Hideout",
+		"foil",
+		"https://shop.example/opt-foil",
+		"View on Gishath Fetch:",
+		"https://gishathfetch.com/?s=Opt",
+	}, "\n"), reply)
 }
 
 func Test_formatSearchReply_NoMatches(t *testing.T) {
