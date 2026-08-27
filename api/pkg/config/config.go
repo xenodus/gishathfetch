@@ -116,6 +116,8 @@ const (
 	CardsCentralKeyEnv = "CARDS_CENTRAL_KEY"
 	// CardsCentralKeyHeader is the request header Cards Central expects for aggregator access.
 	CardsCentralKeyHeader = "x-gishath-key"
+	// APITelegramBotTokenEnv authorizes GET /telegram/search for the Telegram bot service.
+	APITelegramBotTokenEnv = "API_TELEGRAM_BOT_TOKEN"
 )
 
 // UseLeasedDedicatedProxy enables exclusive per-request leases from the dedicated proxy pool.
@@ -257,6 +259,11 @@ func APIMaintenanceMessage() string {
 // APINoticeMessage returns optional site-wide notice text when configured.
 func APINoticeMessage() string {
 	return strings.TrimSpace(os.Getenv(APINoticeMessageEnv))
+}
+
+// APITelegramBotToken returns the bearer token required for /telegram/search.
+func APITelegramBotToken() string {
+	return strings.TrimSpace(os.Getenv(APITelegramBotTokenEnv))
 }
 
 // APIAccessControlEnabled is true when origin verification or session enforcement is configured.

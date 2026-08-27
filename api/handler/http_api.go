@@ -19,6 +19,8 @@ func RouteHTTPAPI(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		return Session(ctx, request)
 	case "search":
 		return Search(ctx, request)
+	case "telegram/search":
+		return TelegramSearch(ctx, request)
 	default:
 		var apiRes events.APIGatewayProxyResponse
 		return errorResponse(apiRes, origin, "not found", http.StatusNotFound)

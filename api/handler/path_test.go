@@ -21,6 +21,8 @@ func Test_normalizeAPIPath(t *testing.T) {
 		{"/prod/search", "search"},
 		{"/default/search", "search"},
 		{"/default/session", "session"},
+		{"/telegram/search", "telegram/search"},
+		{"/default/telegram/search", "telegram/search"},
 		{"/prod/api/search", "search"},
 		{"/prod/api", ""},
 		{"/", ""},
