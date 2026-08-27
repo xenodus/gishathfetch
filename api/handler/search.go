@@ -4,11 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/url"
-	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -52,7 +48,6 @@ var lookupCKPriceFunc = func(ctx context.Context, query string) (*cardkingdom.Li
 func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var apiRes events.APIGatewayProxyResponse
 	var webRes WebResponse
-	var lgs []string
 
 	// Determine allowed origin for CORS.
 	// AWS Lambda proxy integration normalises all headers to lowercase,
@@ -74,46 +69,9 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		return maintenanceActiveResponse(apiRes, origin)
 	}
 
-	searchString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["s"]))
-	if err != nil {
-		searchString = ""
-	}
-	lgsString, err := url.QueryUnescape(strings.TrimSpace(request.QueryStringParameters["lgs"]))
-	if err != nil {
-		lgsString = ""
-	}
-
-	if os.Getenv("ENV") != config.EnvProd {
-		searchString = "Opt"
-		lgsString, _ = url.QueryUnescape("Flagship%20Games%2CGames%20Haven%2CGrey%20Ogre%20Games%2CHideout%2CMana%20Pro%2CMox%20%26%20Lotus%2COneMtg%2CSanctuary%20Gaming")
-	}
-
-	if searchString == "" || len(searchString) < config.MinSearchStringLength {
-		return errorResponse(
-			apiRes,
-			origin,
-			fmt.Sprintf(
-				"enter at least %d characters to search",
-				config.MinSearchStringLength,
-			),
-			http.StatusBadRequest,
-		)
-	}
-
-	if len(searchString) > config.MaxSearchStringLength {
-		return errorResponse(
-			apiRes,
-			origin,
-			fmt.Sprintf(
-				"card name is too long (maximum %d characters)",
-				config.MaxSearchStringLength,
-			),
-			http.StatusBadRequest,
-		)
-	}
-
-	if lgsString != "" {
-		lgs = strings.Split(lgsString, ",")
+	query := parseSearchQuery(request)
+	if message, statusCode := validateSearchString(query.searchString); statusCode != 0 {
+		return errorResponse(apiRes, origin, message, statusCode)
 	}
 
 	var (
@@ -129,8 +87,8 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 
 	wg.Go(func() {
 		inStockCards, storeErrors, storeStats, searchErr = searchFunc(ctx, controller.SearchInput{
-			SearchString: searchString,
-			Lgs:          lgs,
+			SearchString: query.searchString,
+			Lgs:          query.lgs,
 		})
 	})
 
@@ -139,9 +97,9 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 			ckCtx, cancel := context.WithTimeout(ctx, config.CKPriceLookupTimeout)
 			defer cancel()
 
-			price, err := lookupCKPriceFunc(ckCtx, searchString)
+			price, err := lookupCKPriceFunc(ckCtx, query.searchString)
 			if err != nil {
-				logger.From(ckCtx).WarnContext(ckCtx, "ck price lookup failed", "search", searchString, "err", err)
+				logger.From(ckCtx).WarnContext(ckCtx, "ck price lookup failed", "search", query.searchString, "err", err)
 				return
 			}
 			ckPrice = price

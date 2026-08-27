@@ -212,6 +212,26 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
 
 ---
 
+## 3. Telegram bot search (`GET /telegram/search`)
+
+**Purpose:** Return only the cheapest in-stock match and total result count for the
+Telegram bot service, without shipping the full search payload.
+
+| Item | Value |
+|------|--------|
+| Lambda env | `API_TELEGRAM_BOT_TOKEN` |
+| Auth header | `Authorization: Bearer <token>` |
+| Code | `api/handler/telegram_search.go`, `api/pkg/apiauth/bot.go` |
+
+When `API_TELEGRAM_BOT_TOKEN` is set, `/telegram/search` requires a matching bearer
+token. Browser session cookies are **not** used on this route. Origin verification
+(layer 1) still applies when `API_ORIGIN_VERIFY_SECRET` is configured.
+
+The webhook service (`api/cmd/telegram-bot`) validates Telegram's
+`X-Telegram-Bot-Api-Secret-Token` header using `TELEGRAM_WEBHOOK_SECRET`.
+
+---
+
 ## Environment reference
 
 Never commit real values for these variables. Set them in Lambda configuration,
@@ -230,6 +250,11 @@ GitHub Actions secrets, or a local `.env` file (gitignored). See also
 | `VITE_API_ORIGIN_VERIFY_SECRET` | Vite only | unset | Proxy injects `X-Origin-Verify` |
 | `VITE_API_PROXY_TARGET` | Vite only | `https://api.gishathfetch.com` | Dev proxy target for `/search`, `/session` |
 | `VITE_API_BASE_URL` | Frontend | production API host in `constants.js` | Empty string → same-origin paths via Vite proxy |
+| `API_TELEGRAM_BOT_TOKEN` | Lambda + bot service | unset = `/telegram/search` 503 | Bearer token for Telegram bot searches |
+| `TELEGRAM_BOT_TOKEN` | Bot service only | unset = bot won't start | Telegram Bot API token |
+| `TELEGRAM_WEBHOOK_SECRET` | Bot service only | unset = bot won't start | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
+| `TELEGRAM_WEBHOOK_PUBLIC_URL` | Bot service only | unset = manual webhook setup | Full HTTPS webhook URL registered via `setWebhook` |
+| `GISHATH_API_BASE_URL` | Bot service only | `https://api.gishathfetch.com` | Base URL for `/telegram/search` |
 
 `config.APIAccessControlEnabled()` is true when origin verify **or** session
 secret is configured.
@@ -238,7 +263,8 @@ secret is configured.
 
 ## API Gateway routes
 
-Expose **`GET` + `OPTIONS`** for `/search` and `/session` only (legacy `/`,
+Expose **`GET` + `OPTIONS`** for `/search`, `/session`, and `/telegram/search`
+(legacy `/`,
 `/api`, and `/api/*` paths are still accepted by Lambda path routing for
 compatibility, but should be removed from the gateway once traffic has
 migrated).
