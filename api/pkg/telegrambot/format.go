@@ -7,23 +7,16 @@ import (
 
 func formatSearchReply(query string, summary *SearchSummary) string {
 	if summary.ResultCount == 0 || summary.Cheapest == nil {
-		return fmt.Sprintf(
-			"No in-stock matches for %q.\n\nView on Gishath Fetch:\n%s",
-			query,
-			summary.WebsiteURL,
-		)
+		return fmt.Sprintf("No in-stock matches for %q.", query)
 	}
 
 	card := summary.Cheapest
-	finish := "non-foil"
+	finish := ""
 	if card.IsFoil {
 		finish = "foil"
 	}
 
 	details := strings.TrimSpace(strings.Join(filterNonEmpty([]string{card.Quality, finish, card.ExtraInfo}), " · "))
-	if details == "" {
-		details = finish
-	}
 
 	store := card.Source
 	if store == "" {
@@ -32,10 +25,12 @@ func formatSearchReply(query string, summary *SearchSummary) string {
 
 	lines := []string{
 		fmt.Sprintf("%s — S$%.2f @ %s", card.Name, card.Price, store),
-		details,
+	}
+	if details != "" {
+		lines = append(lines, details)
 	}
 	if card.URL != "" {
-		lines = append(lines, fmt.Sprintf("Buy: %s", card.URL))
+		lines = append(lines, card.URL)
 	}
 
 	if summary.ResultCount > 1 {

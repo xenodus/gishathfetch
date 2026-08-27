@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestService_HandleWebhook_SyncPrice(t *testing.T) {
 	}
 	var messages []string
 	telegram := &stubTelegram{
-		send: func(_ context.Context, _ int64, text string) error {
+		send: func(_ context.Context, _ int64, text, _ string) error {
 			messages = append(messages, text)
 			return nil
 		},
@@ -65,7 +66,7 @@ func TestService_HandleWebhook_AsyncPrice(t *testing.T) {
 	}
 	var messages []string
 	telegram := &stubTelegram{
-		send: func(_ context.Context, _ int64, text string) error {
+		send: func(_ context.Context, _ int64, text, _ string) error {
 			messages = append(messages, text)
 			return nil
 		},
@@ -106,9 +107,11 @@ func TestService_RunPriceSearch(t *testing.T) {
 		},
 	}
 	var sent string
+	var previewURL string
 	telegram := &stubTelegram{
-		send: func(_ context.Context, _ int64, text string) error {
+		send: func(_ context.Context, _ int64, text, linkPreviewURL string) error {
 			sent = text
+			previewURL = linkPreviewURL
 			return nil
 		},
 	}
@@ -116,23 +119,97 @@ func TestService_RunPriceSearch(t *testing.T) {
 	svc := NewService("secret", gishath, telegram, nil, slog.Default())
 	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "zzz"))
 	require.Contains(t, sent, "No in-stock matches")
+	require.NotContains(t, sent, "View on Gishath Fetch")
+	require.NotContains(t, sent, "gishathfetch.com")
+	require.Empty(t, previewURL)
+}
+
+func TestService_RunPriceSearch_ForcesGishathPreview(t *testing.T) {
+	websiteURL := "https://gishathfetch.com/?s=Opt"
+	gishath := &stubGishath{
+		search: func(_ context.Context, _ string) (*SearchSummary, error) {
+			return &SearchSummary{
+				ResultCount: 2,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.25,
+					Source: "Hideout",
+					URL:    "https://shop.example/opt",
+				},
+				WebsiteURL: websiteURL,
+			}, nil
+		},
+	}
+	var sent string
+	var previewURL string
+	telegram := &stubTelegram{
+		send: func(_ context.Context, _ int64, text, linkPreviewURL string) error {
+			sent = text
+			previewURL = linkPreviewURL
+			return nil
+		},
+	}
+
+	svc := NewService("secret", gishath, telegram, nil, slog.Default())
+	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
+	require.Contains(t, sent, "https://shop.example/opt")
+	require.Contains(t, sent, websiteURL)
+	require.Equal(t, websiteURL, previewURL)
 }
 
 func Test_formatSearchReply(t *testing.T) {
 	reply := formatSearchReply("Opt", &SearchSummary{
 		ResultCount: 2,
 		Cheapest: &CardSummary{
-			Name:    "Opt",
-			Price:   1.25,
-			Source:  "Hideout",
-			Quality: "NM",
-			URL:     "https://shop.example/opt",
+			Name:      "Opt",
+			Price:     1.25,
+			Source:    "Hideout",
+			Quality:   "NM",
+			ExtraInfo: "[Marvel Universe]",
+			URL:       "https://shop.example/opt",
 		},
 		WebsiteURL: "https://gishathfetch.com/?s=Opt",
 	})
-	require.Contains(t, reply, "S$1.25")
-	require.Contains(t, reply, "2 results")
-	require.Contains(t, reply, "https://gishathfetch.com/?s=Opt")
+	require.Equal(t, strings.Join([]string{
+		"Opt — S$1.25 @ Hideout",
+		"NM · [Marvel Universe]",
+		"https://shop.example/opt",
+		"2 results — view all on Gishath Fetch:",
+		"https://gishathfetch.com/?s=Opt",
+	}, "\n"), reply)
+	require.NotContains(t, reply, "non-foil")
+	require.NotContains(t, reply, "Buy:")
+}
+
+func Test_formatSearchReply_Foil(t *testing.T) {
+	reply := formatSearchReply("Opt", &SearchSummary{
+		ResultCount: 1,
+		Cheapest: &CardSummary{
+			Name:   "Opt",
+			Price:  3.50,
+			Source: "Hideout",
+			IsFoil: true,
+			URL:    "https://shop.example/opt-foil",
+		},
+		WebsiteURL: "https://gishathfetch.com/?s=Opt",
+	})
+	require.Equal(t, strings.Join([]string{
+		"Opt — S$3.50 @ Hideout",
+		"foil",
+		"https://shop.example/opt-foil",
+		"View on Gishath Fetch:",
+		"https://gishathfetch.com/?s=Opt",
+	}, "\n"), reply)
+}
+
+func Test_formatSearchReply_NoMatches(t *testing.T) {
+	reply := formatSearchReply("zzz", &SearchSummary{
+		ResultCount: 0,
+		WebsiteURL:  "https://gishathfetch.com/?s=zzz",
+	})
+	require.Equal(t, `No in-stock matches for "zzz".`, reply)
+	require.NotContains(t, reply, "View on Gishath Fetch")
+	require.NotContains(t, reply, "gishathfetch.com")
 }
 
 type stubGishath struct {
@@ -147,12 +224,12 @@ func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary,
 }
 
 type stubTelegram struct {
-	send func(context.Context, int64, string) error
+	send func(context.Context, int64, string, string) error
 }
 
-func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text string) error {
+func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
 	if s.send != nil {
-		return s.send(ctx, chatID, text)
+		return s.send(ctx, chatID, text, linkPreviewURL)
 	}
 	return nil
 }

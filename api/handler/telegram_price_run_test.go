@@ -25,7 +25,7 @@ func TestHandle_TelegramPriceRunAction(t *testing.T) {
 				}, nil
 			},
 		},
-		&telegramWebhookStubTelegram{send: func(_ context.Context, _ int64, text string) error {
+		&telegramWebhookStubTelegram{send: func(_ context.Context, _ int64, text, _ string) error {
 			sent = text
 			return nil
 		}},
