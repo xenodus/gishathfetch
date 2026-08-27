@@ -69,12 +69,6 @@ func BuildProxyURL(raw string) (string, bool) {
 	return BuildDedicatedProxyURL(parseDedicatedProxy(raw))
 }
 
-// GetCKPricelistProxyURL returns the optional CK pricelist-only proxy URL from
-// CK_PRICELIST_PROXY when configured.
-func GetCKPricelistProxyURL() (string, bool) {
-	return BuildProxyURL(os.Getenv("CK_PRICELIST_PROXY"))
-}
-
 // GetResidentialProxyURL returns the optional residential proxy URL from
 // RESIDENTIAL_PROXY_1 when configured.
 func GetResidentialProxyURL() (string, bool) {

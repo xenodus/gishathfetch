@@ -57,10 +57,6 @@ const (
 	CKPriceMaxAge = 48 * time.Hour
 	// CKPricelistURLEnv overrides the Card Kingdom singles pricelist download URL.
 	CKPricelistURLEnv = "CK_PRICELIST_URL"
-	// CKPricelistProxyEnv is an optional residential/ISP proxy used only for the
-	// Card Kingdom pricelist API download. Format matches DEDICATED_PROXY_*:
-	// host|port|username|password (full proxy URLs are also accepted).
-	CKPricelistProxyEnv = "CK_PRICELIST_PROXY"
 	// ResidentialProxyEnv is an optional residential proxy used by stores that
 	// rate-limit datacenter IPs. Format matches DEDICATED_PROXY_*.
 	ResidentialProxyEnv = "RESIDENTIAL_PROXY_1"

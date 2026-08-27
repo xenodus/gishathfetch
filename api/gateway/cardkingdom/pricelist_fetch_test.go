@@ -200,7 +200,6 @@ func TestCKPricelistOutboundOptions_UsesDirectFirst(t *testing.T) {
 
 func TestCKPricelistTransportSteps_ResidentialUsesResidentialProxyOnly(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "res1.proxy|8080|user|pass")
-	t.Setenv("CK_PRICELIST_PROXY", "res2.proxy|8080|user|pass")
 
 	for _, step := range ckPricelistTransportSteps() {
 		if step.label != "residential" {
@@ -216,7 +215,6 @@ func TestCKPricelistTransportSteps_ResidentialUsesResidentialProxyOnly(t *testin
 
 func TestCKPricelistTransportSteps_SkipsResidentialWhenUnset(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "")
-	t.Setenv("CK_PRICELIST_PROXY", "res2.proxy|8080|user|pass")
 
 	for _, step := range ckPricelistTransportSteps() {
 		if step.label != "residential" {
