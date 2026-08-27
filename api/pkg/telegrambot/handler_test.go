@@ -116,6 +116,8 @@ func TestService_RunPriceSearch(t *testing.T) {
 	svc := NewService("secret", gishath, telegram, nil, slog.Default())
 	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "zzz"))
 	require.Contains(t, sent, "No in-stock matches")
+	require.NotContains(t, sent, "View on Gishath Fetch")
+	require.NotContains(t, sent, "gishathfetch.com")
 }
 
 func Test_formatSearchReply(t *testing.T) {
@@ -133,6 +135,16 @@ func Test_formatSearchReply(t *testing.T) {
 	require.Contains(t, reply, "S$1.25")
 	require.Contains(t, reply, "2 results")
 	require.Contains(t, reply, "https://gishathfetch.com/?s=Opt")
+}
+
+func Test_formatSearchReply_NoMatches(t *testing.T) {
+	reply := formatSearchReply("zzz", &SearchSummary{
+		ResultCount: 0,
+		WebsiteURL:  "https://gishathfetch.com/?s=zzz",
+	})
+	require.Equal(t, `No in-stock matches for "zzz".`, reply)
+	require.NotContains(t, reply, "View on Gishath Fetch")
+	require.NotContains(t, reply, "gishathfetch.com")
 }
 
 type stubGishath struct {

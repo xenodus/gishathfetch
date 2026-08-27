@@ -7,11 +7,7 @@ import (
 
 func formatSearchReply(query string, summary *SearchSummary) string {
 	if summary.ResultCount == 0 || summary.Cheapest == nil {
-		return fmt.Sprintf(
-			"No in-stock matches for %q.\n\nView on Gishath Fetch:\n%s",
-			query,
-			summary.WebsiteURL,
-		)
+		return fmt.Sprintf("No in-stock matches for %q.", query)
 	}
 
 	card := summary.Cheapest
