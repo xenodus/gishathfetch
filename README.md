@@ -12,7 +12,7 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 - 🧭 Store filtering (query specific LGS only)
 - 🛒 Persistent cart in the frontend UI, sharable across devices via export/import code
 - 📈 Trending searches — popular card names by time range (24 hours to 1 year), plus top Card Kingdom price risers and drops (24h)
-- 🏷️ Card Kingdom price reference on search results (USD retail from a daily-updated index)
+- 🤖 Telegram bot — `/price` for cheapest in-stock match across stores, with link to full Gishath search
 
 ## 🏗️ Architecture
 
@@ -28,9 +28,11 @@ service tables, batch-job flows, and IAM notes:
 
 The browser loads the SPA from **S3 via CloudFront** (`gishathfetch.com`). Search
 and session call **`api.gishathfetch.com`** (separate CloudFront → API Gateway →
-Lambda path). Daily EventBridge jobs refresh Card Kingdom prices in DynamoDB and
-export GA4 trending keywords to S3. Both CloudFront distributions sit behind **AWS
-WAF**; inbound API abuse mitigation is documented in
+Lambda path). A **Telegram bot** (`mtg-telegram-bot`) receives webhook updates on
+a dedicated HTTP API and calls **`GET /telegram/search`** on the search API for
+minimal cheapest-card payloads. Daily EventBridge jobs refresh Card Kingdom prices
+in DynamoDB and export GA4 trending keywords to S3. Both CloudFront distributions
+sit behind **AWS WAF**; inbound API abuse mitigation is documented in
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
 ## 🛡️ API abuse mitigation
