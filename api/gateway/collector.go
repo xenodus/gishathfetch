@@ -503,11 +503,6 @@ func resolveProxyLabel(mode, proxyURL string) string {
 			return config.ResidentialProxyEnv
 		}
 		return "residential-configured"
-	case "ck-pricelist":
-		if configuredURL, ok := util.GetCKPricelistProxyURL(); ok && configuredURL == proxyURL {
-			return config.CKPricelistProxyEnv
-		}
-		return "ck-pricelist-configured"
 	default:
 		return "configured"
 	}

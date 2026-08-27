@@ -91,13 +91,6 @@ func TestGetDedicatedProxyRejectsPartialSegments(t *testing.T) {
 	}
 }
 
-func TestGetCKPricelistProxyURL(t *testing.T) {
-	t.Setenv("CK_PRICELIST_PROXY", "res.proxy|8080|user|pass")
-	got, ok := GetCKPricelistProxyURL()
-	require.True(t, ok)
-	require.Equal(t, "http://user:pass@res.proxy:8080", got)
-}
-
 func TestGetResidentialProxyURL(t *testing.T) {
 	t.Setenv("RESIDENTIAL_PROXY_1", "res.proxy|8080|user|pass")
 	got, ok := GetResidentialProxyURL()

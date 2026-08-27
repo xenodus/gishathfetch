@@ -123,7 +123,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 			return nil
 		}
 		return []outboundAttempt{{
-			strategy: "ck-pricelist-proxy",
+			strategy: "only-proxy",
 			proxyURL: opts.OnlyProxyURL,
 			client:   client,
 		}}
@@ -285,8 +285,8 @@ func outboundProxyMode(strategy string) string {
 		return "residential"
 	case strings.HasPrefix(strategy, "dedicated-"):
 		return "dedicated"
-	case strategy == "ck-pricelist-proxy":
-		return "ck-pricelist"
+	case strategy == "only-proxy":
+		return "only-proxy"
 	default:
 		return strategy
 	}

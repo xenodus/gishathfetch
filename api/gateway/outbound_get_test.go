@@ -188,7 +188,7 @@ func TestBuildOutboundGETAttempts_OnlyProxyURL(t *testing.T) {
 		OnlyProxyURL: "http://user:pass@res.proxy:8080",
 	})
 	require.Len(t, attempts, 1)
-	require.Equal(t, "ck-pricelist-proxy", attempts[0].strategy)
+	require.Equal(t, "only-proxy", attempts[0].strategy)
 	require.Equal(t, "http://user:pass@res.proxy:8080", attempts[0].proxyURL)
 }
 
@@ -239,7 +239,7 @@ func TestDoOutboundGET_OnlyProxyURLSkipsDirect(t *testing.T) {
 		50*time.Millisecond,
 	)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "ck-pricelist-proxy:")
+	require.Contains(t, err.Error(), "only-proxy:")
 	require.NotContains(t, err.Error(), "direct:")
 }
 
