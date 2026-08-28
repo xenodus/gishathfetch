@@ -141,14 +141,25 @@ func (s *Service) RunPriceSearch(ctx context.Context, chatID int64, query string
 		return s.telegram.SendMessage(ctx, chatID, "Search failed. Please try again later.", "")
 	}
 	caption := formatSearchReply(query, summary)
-	if summary != nil && summary.ResultCount > 0 && summary.Cheapest != nil {
-		if imgURL := strings.TrimSpace(summary.Cheapest.Img); imgURL != "" {
-			return s.telegram.SendPhoto(ctx, chatID, imgURL, caption)
-		}
-		previewURL := strings.TrimSpace(summary.WebsiteURL)
-		return s.telegram.SendMessage(ctx, chatID, caption, previewURL)
+	return s.sendPriceSearchReply(ctx, chatID, summary, caption)
+}
+
+func (s *Service) sendPriceSearchReply(ctx context.Context, chatID int64, summary *SearchSummary, caption string) error {
+	if summary == nil || summary.ResultCount == 0 || summary.Cheapest == nil {
+		return s.telegram.SendMessage(ctx, chatID, caption, "")
 	}
-	return s.telegram.SendMessage(ctx, chatID, caption, "")
+
+	previewURL := strings.TrimSpace(summary.WebsiteURL)
+	photoURL := normalizePhotoURL(summary.Cheapest.Img)
+	if isSendableTelegramPhotoURL(photoURL) {
+		if err := s.telegram.SendPhoto(ctx, chatID, photoURL, caption); err != nil {
+			s.logger.WarnContext(ctx, "telegram sendPhoto failed, falling back to sendMessage",
+				"photoURL", photoURL, "err", err)
+			return s.telegram.SendMessage(ctx, chatID, caption, previewURL)
+		}
+		return nil
+	}
+	return s.telegram.SendMessage(ctx, chatID, caption, previewURL)
 }
 
 // Handler adapts Service to net/http for local development servers.
