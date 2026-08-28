@@ -157,6 +157,44 @@ func TestService_RunPriceSearch_ForcesGishathPreviewWithoutImage(t *testing.T) {
 	require.Equal(t, websiteURL, previewURL)
 }
 
+func TestService_RunPriceSearch_SkipsMissingImage(t *testing.T) {
+	websiteURL := "https://gishathfetch.com/?s=Opt"
+	gishath := &stubGishath{
+		search: func(_ context.Context, _ string) (*SearchSummary, error) {
+			return &SearchSummary{
+				ResultCount: 1,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.25,
+					Source: "Arcane Sanctum",
+					Img:    "",
+				},
+				WebsiteURL: websiteURL,
+			}, nil
+		},
+	}
+	var sent string
+	var previewURL string
+	var photoSent bool
+	telegram := &stubTelegram{
+		send: func(_ context.Context, _ int64, text, linkPreviewURL string) error {
+			sent = text
+			previewURL = linkPreviewURL
+			return nil
+		},
+		sendPhoto: func(_ context.Context, _ int64, _, _ string) error {
+			photoSent = true
+			return nil
+		},
+	}
+
+	svc := NewService("secret", gishath, telegram, nil, slog.Default())
+	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
+	require.False(t, photoSent)
+	require.Contains(t, sent, "S$1.25")
+	require.Equal(t, websiteURL, previewURL)
+}
+
 func TestService_RunPriceSearch_SkipsPlaceholderImage(t *testing.T) {
 	websiteURL := "https://gishathfetch.com/?s=Opt"
 	gishath := &stubGishath{

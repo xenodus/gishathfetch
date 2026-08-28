@@ -28,7 +28,7 @@ func isSendableTelegramPhotoURL(photoURL string) bool {
 	}
 	lower := strings.ToLower(photoURL)
 	if strings.Contains(lower, "placehold.co/") {
-		// Default placehold.co URLs are SVG; placeholders are not real card art anyway.
+		// Web search uses placehold.co fallbacks; Telegram sendPhoto rejects their SVG responses.
 		return false
 	}
 	if strings.HasSuffix(lower, ".svg") {

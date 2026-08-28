@@ -45,3 +45,10 @@ func TestResolveCardQualityPrefersVariantTitle(t *testing.T) {
 	require.Equal(t, "Near Mint", resolveCardQuality("Reanimate — NM [Breaking News]", "Near Mint"))
 	require.Equal(t, "NM", resolveCardQuality("Reanimate — NM [Breaking News]", "Default Title"))
 }
+
+func TestBuildCardImageURL(t *testing.T) {
+	require.Equal(t, "https://cdn.shop/card.jpg", buildCardImageURL("//cdn.shop/card.jpg", "Opt"))
+	require.Equal(t, "https://cdn.shop/card.jpg", buildCardImageURL("https://cdn.shop/card.jpg", "Opt"))
+	require.Contains(t, buildCardImageURL("", "Opt"), "placehold.co")
+	require.Contains(t, buildCardImageURL("", "Opt"), "text=Opt")
+}
