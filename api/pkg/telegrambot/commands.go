@@ -35,7 +35,7 @@ func formatHelpMessage() string {
 		"Commands:",
 	}
 	for _, cmd := range DefaultBotCommands() {
-		lines = append(lines, fmt.Sprintf("/%s — %s", cmd.Command, cmd.Description))
+		lines = append(lines, fmt.Sprintf("/%s -> %s", cmd.Command, cmd.Description))
 	}
 	lines = append(lines, "", "Example: /price Lightning Bolt")
 	return strings.Join(lines, "\n")
