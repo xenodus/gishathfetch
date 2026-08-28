@@ -124,7 +124,7 @@ func TestService_RunPriceSearch(t *testing.T) {
 	require.Empty(t, previewURL)
 }
 
-func TestService_RunPriceSearch_ForcesGishathPreview(t *testing.T) {
+func TestService_RunPriceSearch_ForcesGishathPreviewWithoutImage(t *testing.T) {
 	websiteURL := "https://gishathfetch.com/?s=Opt"
 	gishath := &stubGishath{
 		search: func(_ context.Context, _ string) (*SearchSummary, error) {
@@ -155,6 +155,41 @@ func TestService_RunPriceSearch_ForcesGishathPreview(t *testing.T) {
 	require.Contains(t, sent, "https://shop.example/opt")
 	require.Contains(t, sent, websiteURL)
 	require.Equal(t, websiteURL, previewURL)
+}
+
+func TestService_RunPriceSearch_SendsPhotoWithCaption(t *testing.T) {
+	websiteURL := "https://gishathfetch.com/?s=Opt"
+	imageURL := "https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg"
+	gishath := &stubGishath{
+		search: func(_ context.Context, _ string) (*SearchSummary, error) {
+			return &SearchSummary{
+				ResultCount: 2,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.25,
+					Source: "Hideout",
+					URL:    "https://shop.example/opt",
+					Img:    imageURL,
+				},
+				WebsiteURL: websiteURL,
+			}, nil
+		},
+	}
+	var photoURL string
+	var caption string
+	telegram := &stubTelegram{
+		sendPhoto: func(_ context.Context, _ int64, gotPhotoURL, gotCaption string) error {
+			photoURL = gotPhotoURL
+			caption = gotCaption
+			return nil
+		},
+	}
+
+	svc := NewService("secret", gishath, telegram, nil, slog.Default())
+	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
+	require.Equal(t, imageURL, photoURL)
+	require.Contains(t, caption, "S$1.25")
+	require.Contains(t, caption, websiteURL)
 }
 
 func Test_formatSearchReply(t *testing.T) {
@@ -224,12 +259,20 @@ func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary,
 }
 
 type stubTelegram struct {
-	send func(context.Context, int64, string, string) error
+	send      func(context.Context, int64, string, string) error
+	sendPhoto func(context.Context, int64, string, string) error
 }
 
 func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
 	if s.send != nil {
 		return s.send(ctx, chatID, text, linkPreviewURL)
+	}
+	return nil
+}
+
+func (s *stubTelegram) SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error {
+	if s.sendPhoto != nil {
+		return s.sendPhoto(ctx, chatID, photoURL, caption)
 	}
 	return nil
 }

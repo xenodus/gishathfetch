@@ -54,6 +54,18 @@ func (t *TelegramAPI) SendMessage(ctx context.Context, chatID int64, text, linkP
 	return t.post(ctx, "sendMessage", payload)
 }
 
+// SendPhoto sends a photo to a chat. photoURL must be a Telegram-supported file_id or HTTP URL.
+func (t *TelegramAPI) SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error {
+	payload := map[string]any{
+		"chat_id": chatID,
+		"photo":   strings.TrimSpace(photoURL),
+	}
+	if caption = strings.TrimSpace(caption); caption != "" {
+		payload["caption"] = caption
+	}
+	return t.post(ctx, "sendPhoto", payload)
+}
+
 func (t *TelegramAPI) post(ctx context.Context, method string, payload any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {

@@ -23,6 +23,7 @@ type SearchSummary struct {
 type CardSummary struct {
 	Name      string  `json:"name"`
 	URL       string  `json:"url"`
+	Img       string  `json:"img"`
 	Price     float64 `json:"price"`
 	InStock   bool    `json:"inStock"`
 	IsFoil    bool    `json:"isFoil"`

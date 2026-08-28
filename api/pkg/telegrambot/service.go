@@ -30,6 +30,7 @@ type searchClient interface {
 
 type messageClient interface {
 	SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error
+	SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error
 }
 
 // NewService wires Telegram webhook handling. When async is nil, /price runs synchronously.
@@ -139,13 +140,15 @@ func (s *Service) RunPriceSearch(ctx context.Context, chatID int64, query string
 		s.logger.ErrorContext(ctx, "telegram price search failed", "query", query, "err", err)
 		return s.telegram.SendMessage(ctx, chatID, "Search failed. Please try again later.", "")
 	}
-	text := formatSearchReply(query, summary)
-	previewURL := ""
-	// Force Gishath Fetch preview when that URL is present in the reply (matches only).
+	caption := formatSearchReply(query, summary)
 	if summary != nil && summary.ResultCount > 0 && summary.Cheapest != nil {
-		previewURL = strings.TrimSpace(summary.WebsiteURL)
+		if imgURL := strings.TrimSpace(summary.Cheapest.Img); imgURL != "" {
+			return s.telegram.SendPhoto(ctx, chatID, imgURL, caption)
+		}
+		previewURL := strings.TrimSpace(summary.WebsiteURL)
+		return s.telegram.SendMessage(ctx, chatID, caption, previewURL)
 	}
-	return s.telegram.SendMessage(ctx, chatID, text, previewURL)
+	return s.telegram.SendMessage(ctx, chatID, caption, "")
 }
 
 // Handler adapts Service to net/http for local development servers.
