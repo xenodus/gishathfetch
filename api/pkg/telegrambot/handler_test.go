@@ -124,7 +124,7 @@ func TestService_RunPriceSearch(t *testing.T) {
 	require.Empty(t, previewURL)
 }
 
-func TestService_RunPriceSearch_ForcesGishathPreviewWithoutImage(t *testing.T) {
+func TestService_RunPriceSearch_SkipsGishathPreviewWithoutImage(t *testing.T) {
 	websiteURL := "https://gishathfetch.com/?s=Opt"
 	gishath := &stubGishath{
 		search: func(_ context.Context, _ string) (*SearchSummary, error) {
@@ -154,7 +154,7 @@ func TestService_RunPriceSearch_ForcesGishathPreviewWithoutImage(t *testing.T) {
 	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
 	require.Contains(t, sent, "https://shop.example/opt")
 	require.Contains(t, sent, websiteURL)
-	require.Equal(t, websiteURL, previewURL)
+	require.Empty(t, previewURL)
 }
 
 func TestService_RunPriceSearch_SkipsMissingImage(t *testing.T) {
@@ -192,7 +192,7 @@ func TestService_RunPriceSearch_SkipsMissingImage(t *testing.T) {
 	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
 	require.False(t, photoSent)
 	require.Contains(t, sent, "S$1.25")
-	require.Equal(t, websiteURL, previewURL)
+	require.Empty(t, previewURL)
 }
 
 func TestService_RunPriceSearch_SkipsPlaceholderImage(t *testing.T) {
@@ -230,7 +230,7 @@ func TestService_RunPriceSearch_SkipsPlaceholderImage(t *testing.T) {
 	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
 	require.False(t, photoSent)
 	require.Contains(t, sent, "S$1.25")
-	require.Equal(t, websiteURL, previewURL)
+	require.Empty(t, previewURL)
 }
 
 var errStubTelegramPhoto = &telegramPhotoError{msg: "wrong type of the web page content"}
@@ -274,7 +274,7 @@ func TestService_sendPriceSearchReply_FallsBackWhenSendPhotoFails(t *testing.T) 
 	svc := NewService("secret", &stubGishath{}, telegram, nil, slog.Default())
 	require.NoError(t, svc.sendPriceSearchReply(context.Background(), 1, summary, caption))
 	require.Equal(t, caption, sent)
-	require.Equal(t, websiteURL, previewURL)
+	require.Empty(t, previewURL)
 }
 
 func TestService_RunPriceSearch_SendsPhotoWithCaption(t *testing.T) {

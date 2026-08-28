@@ -151,7 +151,6 @@ func (s *Service) sendPriceSearchReply(ctx context.Context, chatID int64, summar
 		return s.telegram.SendMessage(ctx, chatID, caption, "")
 	}
 
-	previewURL := strings.TrimSpace(summary.WebsiteURL)
 	photoURL := strings.TrimSpace(summary.PhotoURL)
 	if photoURL == "" && summary.Cheapest != nil {
 		photoURL = telegramphoto.Normalize(summary.Cheapest.Img)
@@ -160,11 +159,11 @@ func (s *Service) sendPriceSearchReply(ctx context.Context, chatID int64, summar
 		if err := s.telegram.SendPhoto(ctx, chatID, photoURL, caption); err != nil {
 			s.logger.WarnContext(ctx, "telegram sendPhoto failed, falling back to sendMessage",
 				"photoURL", photoURL, "err", err)
-			return s.telegram.SendMessage(ctx, chatID, caption, previewURL)
+			return s.telegram.SendMessage(ctx, chatID, caption, "")
 		}
 		return nil
 	}
-	return s.telegram.SendMessage(ctx, chatID, caption, previewURL)
+	return s.telegram.SendMessage(ctx, chatID, caption, "")
 }
 
 // Handler adapts Service to net/http for local development servers.
