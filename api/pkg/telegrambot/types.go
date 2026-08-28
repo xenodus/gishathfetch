@@ -16,7 +16,9 @@ type Message struct {
 
 // User identifies a Telegram user.
 type User struct {
-	ID int64 `json:"id"`
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	FirstName string `json:"first_name"`
 }
 
 // SenderID returns the Telegram user ID for the message sender.

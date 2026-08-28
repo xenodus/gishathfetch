@@ -15,7 +15,6 @@ import (
 
 const (
 	telegramSecretHeader   = "X-Telegram-Bot-Api-Secret-Token"
-	pricePromptMessage     = "Enter a card name to search:"
 	pricePromptPlaceholder = "Lightning Bolt"
 )
 
@@ -50,7 +49,7 @@ type searchClient interface {
 type messageClient interface {
 	SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error
 	SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error
-	SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error)
+	SendForceReply(ctx context.Context, chatID int64, text, placeholder, parseMode string) (int64, error)
 }
 
 // NewService wires Telegram webhook handling. When async is nil, /price runs synchronously.
@@ -125,7 +124,7 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 	case strings.HasPrefix(text, "/price"):
 		query := strings.TrimSpace(strings.TrimPrefix(text, "/price"))
 		if query == "" {
-			return s.promptPriceQuery(ctx, chatID, userID)
+			return s.promptPriceQuery(ctx, chatID, message.From)
 		}
 		s.clearPendingPrice(chatID, userID)
 		return s.handlePriceQuery(ctx, chatID, userID, query)
@@ -139,13 +138,21 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 	return WebhookStatusOK, nil
 }
 
-func (s *Service) promptPriceQuery(ctx context.Context, chatID, userID int64) (int, error) {
-	messageID, err := s.telegram.SendForceReply(ctx, chatID, pricePromptMessage, pricePromptPlaceholder)
+func (s *Service) promptPriceQuery(ctx context.Context, chatID int64, user *User) (int, error) {
+	text, parseMode := formatPricePrompt(user)
+	messageID, err := s.telegram.SendForceReply(ctx, chatID, text, pricePromptPlaceholder, parseMode)
 	if err != nil {
 		return WebhookStatusInternalError, err
 	}
-	s.setPendingPrice(chatID, userID, messageID)
+	s.setPendingPrice(chatID, senderID(user), messageID)
 	return WebhookStatusOK, nil
+}
+
+func senderID(user *User) int64 {
+	if user == nil {
+		return 0
+	}
+	return user.ID
 }
 
 func (s *Service) pendingPriceKey(chatID, userID int64) pendingPriceKey {
@@ -195,14 +202,10 @@ func (s *Service) replyTargetsPricePrompt(message *Message) bool {
 	return pending.(pendingPricePrompt).messageID == reply.MessageID
 }
 
-func isPricePrompt(text string) bool {
-	return strings.TrimSpace(text) == pricePromptMessage
-}
-
 func (s *Service) handlePriceQuery(ctx context.Context, chatID, userID int64, query string) (int, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return s.promptPriceQuery(ctx, chatID, userID)
+		return s.promptPriceQuery(ctx, chatID, &User{ID: userID})
 	}
 	if len(query) < 3 {
 		s.setPendingPrice(chatID, userID, 0)
