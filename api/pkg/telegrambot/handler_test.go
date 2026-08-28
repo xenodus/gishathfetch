@@ -712,7 +712,6 @@ func Test_formatCKReply(t *testing.T) {
 	require.Equal(t, strings.Join([]string{
 		"Lightning Bolt -> US$0.49 @ Card Kingdom",
 		"Fourth Edition · in stock",
-		"US$-0.10 from US$0.59 (-17%)",
 		"https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
 	}, "\n"), reply)
 }
@@ -720,6 +719,30 @@ func Test_formatCKReply(t *testing.T) {
 func Test_formatCKReply_NoListing(t *testing.T) {
 	reply := formatCKReply("zzz", &CKSummary{})
 	require.Equal(t, `No Card Kingdom listing for "zzz".`, reply)
+}
+
+func Test_formatCKReply_OmitsOutOfStockAndPriceChange(t *testing.T) {
+	outOfStock := false
+	previous := 2.99
+	change := -0.20
+	percent := -7
+	reply := formatCKReply("Sol Ring", &CKSummary{
+		Listing: &CKListingSummary{
+			CardName:           "Sol Ring",
+			Edition:            "Commander Deck",
+			PriceUsd:           2.79,
+			PreviousPriceUsd:   &previous,
+			PriceChangeUsd:     &change,
+			PriceChangePercent: &percent,
+			URL:                "https://www.cardkingdom.com/mtg/commander-legends/sol-ring-commander-deck",
+			InStock:            &outOfStock,
+		},
+	})
+	require.Equal(t, strings.Join([]string{
+		"Sol Ring -> US$2.79 @ Card Kingdom",
+		"Commander Deck",
+		"https://www.cardkingdom.com/mtg/commander-legends/sol-ring-commander-deck",
+	}, "\n"), reply)
 }
 
 type stubGishath struct {

@@ -36,7 +36,11 @@ func formatHelpMessage() string {
 		"Commands:",
 	}
 	for _, cmd := range DefaultBotCommands() {
-		lines = append(lines, fmt.Sprintf("/%s -> %s", cmd.Command, cmd.Description))
+		command := "/" + cmd.Command
+		if cmd.Command == "price" || cmd.Command == "ck" {
+			command += " <card name>"
+		}
+		lines = append(lines, fmt.Sprintf("%s -> %s", command, cmd.Description))
 	}
 	lines = append(lines,
 		"",
