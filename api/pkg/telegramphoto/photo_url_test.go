@@ -28,6 +28,7 @@ func TestIsSendable(t *testing.T) {
 	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.jpeg"))
 	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.gif"))
 	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.JPG?v=123"))
+	require.True(t, IsSendable("https://cards.scryfall.io/normal/front/a/b/c.jpg"))
 }
 
 func TestSelect_SkipsUnsupportedFormatForNextCandidate(t *testing.T) {

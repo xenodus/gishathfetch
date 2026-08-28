@@ -16,8 +16,10 @@ import (
 
 func TestTelegramSearch_Success(t *testing.T) {
 	originalSearchFunc := searchFunc
+	originalLookup := lookupScryfallImageURLFunc
 	defer func() {
 		searchFunc = originalSearchFunc
+		lookupScryfallImageURLFunc = originalLookup
 	}()
 	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
 		require.Equal(t, "abrade", input.SearchString)
@@ -27,6 +29,10 @@ func TestTelegramSearch_Success(t *testing.T) {
 		}, []controller.StoreError{}, []controller.StoreStat{
 			{Store: "Flagship Games", ItemCount: 1, DurationMs: 100},
 		}, nil
+	}
+	lookupScryfallImageURLFunc = func(_ context.Context, cardName string) (string, error) {
+		require.Equal(t, "Abrade", cardName)
+		return "https://cards.scryfall.io/normal/front/a/b/abrade.jpg", nil
 	}
 
 	require.NoError(t, os.Setenv("ENV", config.EnvProd))
@@ -54,7 +60,7 @@ func TestTelegramSearch_Success(t *testing.T) {
 	require.Equal(t, "Abrade", body.Cheapest.Name)
 	require.Equal(t, 1.5, body.Cheapest.Price)
 	require.Equal(t, "Flagship Games", body.Cheapest.Source)
-	require.Equal(t, "https://cdn.shopify.com/s/files/abrade.jpg", body.PhotoURL)
+	require.Equal(t, "https://cards.scryfall.io/normal/front/a/b/abrade.jpg", body.PhotoURL)
 	require.Contains(t, body.WebsiteURL, "s=abrade")
 	require.Contains(t, body.WebsiteURL, "utm_source=telegram")
 	require.GreaterOrEqual(t, body.TotalDurationMs, int64(0))

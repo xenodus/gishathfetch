@@ -1,14 +1,33 @@
 package handler
 
 import (
+	"context"
+	"strings"
+
 	"mtg-price-checker-sg/controller"
+	"mtg-price-checker-sg/gateway/scryfall"
 	"mtg-price-checker-sg/pkg/telegramphoto"
 )
 
-func selectTelegramPhotoURL(cards []controller.Card) string {
-	candidates := make([]string, 0, len(cards))
-	for _, card := range cards {
-		candidates = append(candidates, card.Img)
+var lookupScryfallImageURLFunc = scryfall.LookupImageURL
+
+func selectTelegramPhotoURL(ctx context.Context, cards []controller.Card) string {
+	if len(cards) == 0 {
+		return ""
 	}
-	return telegramphoto.Select(candidates...)
+
+	cardName := strings.TrimSpace(cards[0].Name)
+	if cardName == "" {
+		return ""
+	}
+
+	imageURL, err := lookupScryfallImageURLFunc(ctx, cardName)
+	if err != nil || imageURL == "" {
+		return ""
+	}
+	imageURL = telegramphoto.Normalize(imageURL)
+	if !telegramphoto.IsSendable(imageURL) {
+		return ""
+	}
+	return imageURL
 }
