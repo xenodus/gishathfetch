@@ -14,11 +14,21 @@ import (
 )
 
 const testUserID int64 = 1001
+const testUsername = "alice"
+
+func testUser() *User {
+	return &User{ID: testUserID, Username: testUsername}
+}
+
+func testUserPricePrompt() string {
+	text, _ := formatPricePrompt(testUser())
+	return text
+}
 
 func testUserMessage(chatID int64, text string) *Message {
 	return &Message{
 		Chat: Chat{ID: chatID},
-		From: &User{ID: testUserID},
+		From: testUser(),
 		Text: text,
 	}
 }
@@ -26,9 +36,10 @@ func testUserMessage(chatID int64, text string) *Message {
 func TestService_HandleWebhook_BarePricePromptsForCardName(t *testing.T) {
 	var forceReplyText string
 	telegram := &stubTelegram{
-		forceReply: func(_ context.Context, _ int64, text, placeholder string) (int64, error) {
+		forceReply: func(_ context.Context, _ int64, text, placeholder, parseMode string) (int64, error) {
 			forceReplyText = text
 			require.Equal(t, pricePromptPlaceholder, placeholder)
+			require.Empty(t, parseMode)
 			return 100, nil
 		},
 	}
@@ -41,7 +52,7 @@ func TestService_HandleWebhook_BarePricePromptsForCardName(t *testing.T) {
 
 	status := svc.HandleWebhook(context.Background(), "webhook-secret", body)
 	require.Equal(t, WebhookStatusOK, status)
-	require.Equal(t, pricePromptMessage, forceReplyText)
+	require.Equal(t, testUserPricePrompt(), forceReplyText)
 }
 
 func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
@@ -62,8 +73,9 @@ func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
 	}
 	var messages []string
 	telegram := &stubTelegram{
-		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
-			require.Equal(t, pricePromptMessage, text)
+		forceReply: func(_ context.Context, _ int64, text, _, parseMode string) (int64, error) {
+			require.Equal(t, testUserPricePrompt(), text)
+			require.Empty(t, parseMode)
 			return 100, nil
 		},
 		send: func(_ context.Context, _ int64, text, _ string) error {
@@ -83,11 +95,11 @@ func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
 	body, err := json.Marshal(Update{
 		Message: &Message{
 			Chat: Chat{ID: 42},
-			From: &User{ID: testUserID},
+			From: testUser(),
 			Text: "Opt",
 			ReplyToMessage: &Message{
 				MessageID: 100,
-				Text:      pricePromptMessage,
+				Text:      testUserPricePrompt(),
 			},
 		},
 	})
@@ -118,8 +130,9 @@ func TestService_HandleWebhook_PendingPricePlainText(t *testing.T) {
 	}
 	var messages []string
 	telegram := &stubTelegram{
-		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
-			require.Equal(t, pricePromptMessage, text)
+		forceReply: func(_ context.Context, _ int64, text, _, parseMode string) (int64, error) {
+			require.Equal(t, testUserPricePrompt(), text)
+			require.Empty(t, parseMode)
 			return 100, nil
 		},
 		send: func(_ context.Context, _ int64, text, _ string) error {
@@ -157,8 +170,9 @@ func TestService_HandleWebhook_PendingPriceIgnoresOtherUserInGroup(t *testing.T)
 		},
 	}
 	telegram := &stubTelegram{
-		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
-			require.Equal(t, pricePromptMessage, text)
+		forceReply: func(_ context.Context, _ int64, text, _, parseMode string) (int64, error) {
+			require.Equal(t, testUserPricePrompt(), text)
+			require.Empty(t, parseMode)
 			return 100, nil
 		},
 		send: func(_ context.Context, _ int64, text, _ string) error {
@@ -181,7 +195,7 @@ func TestService_HandleWebhook_PendingPriceIgnoresOtherUserInGroup(t *testing.T)
 			Text: "Sol Ring",
 			ReplyToMessage: &Message{
 				MessageID: 100,
-				Text:      pricePromptMessage,
+				Text:      testUserPricePrompt(),
 			},
 		},
 	})
@@ -596,7 +610,7 @@ func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary,
 type stubTelegram struct {
 	send       func(context.Context, int64, string, string) error
 	sendPhoto  func(context.Context, int64, string, string) error
-	forceReply func(context.Context, int64, string, string) (int64, error)
+	forceReply func(context.Context, int64, string, string, string) (int64, error)
 }
 
 func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
@@ -613,9 +627,9 @@ func (s *stubTelegram) SendPhoto(ctx context.Context, chatID int64, photoURL, ca
 	return nil
 }
 
-func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error) {
+func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder, parseMode string) (int64, error) {
 	if s.forceReply != nil {
-		return s.forceReply(ctx, chatID, text, placeholder)
+		return s.forceReply(ctx, chatID, text, placeholder, parseMode)
 	}
 	return 100, nil
 }
