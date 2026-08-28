@@ -3,14 +3,18 @@ package handler
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"mtg-price-checker-sg/controller"
+	"mtg-price-checker-sg/gateway/ga4"
 	"mtg-price-checker-sg/pkg/apiauth"
 	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/aws/aws-lambda-go/events"
 )
+
+var trackTelegramSearchEventFunc = ga4.TrySendSearchEvent
 
 // TelegramSearchResponse is the minimal payload for Telegram bot searches.
 type TelegramSearchResponse struct {
@@ -52,10 +56,22 @@ func TelegramSearch(ctx context.Context, request events.APIGatewayProxyRequest) 
 	}
 
 	requestStart := time.Now()
-	inStockCards, storeErrors, _, searchErr := searchFunc(ctx, controller.SearchInput{
-		SearchString: query.searchString,
-		Lgs:          query.lgs,
+	var (
+		inStockCards []controller.Card
+		storeErrors  []controller.StoreError
+		searchErr    error
+	)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		trackTelegramSearchEventFunc(ctx, query.searchString)
 	})
+	wg.Go(func() {
+		inStockCards, storeErrors, _, searchErr = searchFunc(ctx, controller.SearchInput{
+			SearchString: query.searchString,
+			Lgs:          query.lgs,
+		})
+	})
+	wg.Wait()
 	totalDurationMs := time.Since(requestStart).Milliseconds()
 
 	if searchErr != nil {

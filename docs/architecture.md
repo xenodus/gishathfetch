@@ -177,7 +177,9 @@ flowchart TB
 ## Analytics keywords export flow
 
 The frontend sends GA4 `search` events with a `search_term` parameter whenever a
-user starts a valid card-name search. The analytics Lambda queries the GA4 Data API
+user starts a valid card-name search. Telegram searches on `GET /telegram/search`
+send the same event from the search Lambda via GA4 Measurement Protocol when
+`GA4_MEASUREMENT_API_SECRET` is configured. The analytics Lambda queries the GA4 Data API
 for the `search` event and `searchTerm` dimension, ranks the top 20 keywords for
 the last 24 hours, 7 days, 30 days, 6 months, and 1 year, and writes JSON to S3.
 
@@ -410,6 +412,7 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |
 | Cards Central LGS API key | Lambda | `CARDS_CENTRAL_KEY` |
 | GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |
+| GA4 Measurement Protocol API secret | Search Lambda | `GA4_MEASUREMENT_API_SECRET` (optional `GA4_MEASUREMENT_ID`) |
 | Telegram → Gishath API bearer token | Search Lambda + bot Lambda | `API_TELEGRAM_BOT_TOKEN` |
 | Telegram Bot API token | Bot Lambda | `TELEGRAM_BOT_TOKEN` |
 | Telegram webhook secret | Bot Lambda | `TELEGRAM_WEBHOOK_SECRET` |
