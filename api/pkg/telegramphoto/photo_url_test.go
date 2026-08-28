@@ -18,8 +18,23 @@ func TestIsSendable(t *testing.T) {
 	require.False(t, IsSendable("https://placehold.co/304x424?text=Opt"))
 	require.False(t, IsSendable("https://placehold.co/304x424/png?text=Opt"))
 	require.False(t, IsSendable("https://cdn.example/card.svg"))
+	require.False(t, IsSendable("https://thetcgmarketplace.com:3500/uploads/products/sol-ring.webp"))
+	require.False(t, IsSendable("https://cdn.example/card.webp?size=large"))
+	require.False(t, IsSendable("https://cdn.example/card"))
+	require.False(t, IsSendable("https://cdn.example/card.bin"))
+
 	require.True(t, IsSendable("https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg"))
 	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.png"))
+	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.jpeg"))
+	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.gif"))
+	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.JPG?v=123"))
+	require.True(t, IsSendable("https://cards.scryfall.io/normal/front/a/b/c.jpg"))
+}
+
+func TestSelect_SkipsUnsupportedFormatForNextCandidate(t *testing.T) {
+	webp := "https://thetcgmarketplace.com:3500/uploads/products/sol-ring.webp"
+	jpg := "https://cdn.shopify.com/s/files/sol-ring.jpg"
+	require.Equal(t, jpg, Select(webp, jpg))
 }
 
 func TestSelect(t *testing.T) {
