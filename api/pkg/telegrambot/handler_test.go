@@ -555,11 +555,11 @@ func Test_formatSearchReply(t *testing.T) {
 		WebsiteURL: "https://gishathfetch.com/?s=Opt",
 	})
 	require.Equal(t, strings.Join([]string{
-		"Opt -> S$1.25 @ Hideout",
+		"Opt - S$1.25 @ Hideout",
 		"NM · [Marvel Universe]",
 		"https://shop.example/opt",
 		"",
-		"2 results -> view all on Gishath Fetch:",
+		"2 results - view all on Gishath Fetch:",
 		"https://gishathfetch.com/?s=Opt",
 	}, "\n"), reply)
 	require.NotContains(t, reply, "non-foil")
@@ -579,7 +579,7 @@ func Test_formatSearchReply_Foil(t *testing.T) {
 		WebsiteURL: "https://gishathfetch.com/?s=Opt",
 	})
 	require.Equal(t, strings.Join([]string{
-		"Opt -> S$3.50 @ Hideout",
+		"Opt - S$3.50 @ Hideout",
 		"foil",
 		"https://shop.example/opt-foil",
 		"",
@@ -710,7 +710,7 @@ func Test_formatCKReply(t *testing.T) {
 		},
 	})
 	require.Equal(t, strings.Join([]string{
-		"Lightning Bolt -> US$0.49 @ Card Kingdom",
+		"Lightning Bolt - US$0.49 @ Card Kingdom",
 		"Fourth Edition",
 		"https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
 	}, "\n"), reply)
@@ -739,7 +739,7 @@ func Test_formatCKReply_OmitsOutOfStockAndPriceChange(t *testing.T) {
 		},
 	})
 	require.Equal(t, strings.Join([]string{
-		"Sol Ring -> US$2.79 @ Card Kingdom",
+		"Sol Ring - US$2.79 @ Card Kingdom",
 		"Commander Deck",
 		"https://www.cardkingdom.com/mtg/commander-legends/sol-ring-commander-deck",
 	}, "\n"), reply)

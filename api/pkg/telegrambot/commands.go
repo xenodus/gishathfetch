@@ -40,7 +40,7 @@ func formatHelpMessage() string {
 		if cmd.Command == "price" || cmd.Command == "ck" {
 			command += " <card name>"
 		}
-		lines = append(lines, fmt.Sprintf("%s -> %s", command, cmd.Description))
+		lines = append(lines, fmt.Sprintf("%s - %s", command, cmd.Description))
 	}
 	lines = append(lines,
 		"",
