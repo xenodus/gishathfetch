@@ -19,7 +19,7 @@ func TestTelegramAPI_SendForceReply(t *testing.T) {
 		raw, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 		require.NoError(t, json.Unmarshal(raw, &gotBody))
-		_, _ = w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true,"result":{"message_id":100}}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -30,7 +30,9 @@ func TestTelegramAPI_SendForceReply(t *testing.T) {
 		return http.DefaultTransport.RoundTrip(req)
 	})}
 
-	require.NoError(t, api.SendForceReply(context.Background(), 42, pricePromptMessage, pricePromptPlaceholder))
+	messageID, err := api.SendForceReply(context.Background(), 42, pricePromptMessage, pricePromptPlaceholder)
+	require.NoError(t, err)
+	require.Equal(t, int64(100), messageID)
 
 	require.Equal(t, float64(42), gotBody["chat_id"])
 	require.Equal(t, pricePromptMessage, gotBody["text"])
@@ -38,6 +40,8 @@ func TestTelegramAPI_SendForceReply(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, true, markup["force_reply"])
 	require.Equal(t, pricePromptPlaceholder, markup["input_field_placeholder"])
+	_, hasSelective := markup["selective"]
+	require.False(t, hasSelective)
 }
 
 func TestTelegramAPI_SendMessage_LinkPreviewOptions(t *testing.T) {

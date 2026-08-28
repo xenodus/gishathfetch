@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 
 	"mtg-price-checker-sg/pkg/telegramphoto"
 )
@@ -29,6 +30,17 @@ type Service struct {
 	telegram messageClient
 	async    PriceSearchAsync
 	logger   *slog.Logger
+
+	pendingPriceChats sync.Map // pendingPriceKey -> pendingPricePrompt
+}
+
+type pendingPriceKey struct {
+	chatID int64
+	userID int64
+}
+
+type pendingPricePrompt struct {
+	messageID int64
 }
 
 type searchClient interface {
@@ -38,7 +50,7 @@ type searchClient interface {
 type messageClient interface {
 	SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error
 	SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error
-	SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error
+	SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error)
 }
 
 // NewService wires Telegram webhook handling. When async is nil, /price runs synchronously.
@@ -100,43 +112,100 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 		return WebhookStatusOK, nil
 	}
 
-	if message.ReplyToMessage != nil && isPricePrompt(message.ReplyToMessage.Text) {
-		return s.handlePriceQuery(ctx, message.Chat.ID, text)
-	}
+	chatID := message.Chat.ID
+	userID := message.SenderID()
 
 	switch {
 	case strings.EqualFold(text, "/help"):
-		if err := s.telegram.SendMessage(ctx, message.Chat.ID, formatHelpMessage(), ""); err != nil {
+		s.clearPendingPrice(chatID, userID)
+		if err := s.telegram.SendMessage(ctx, chatID, formatHelpMessage(), ""); err != nil {
 			return WebhookStatusInternalError, err
 		}
 		return WebhookStatusOK, nil
 	case strings.HasPrefix(text, "/price"):
 		query := strings.TrimSpace(strings.TrimPrefix(text, "/price"))
 		if query == "" {
-			if err := s.telegram.SendForceReply(ctx, message.Chat.ID, pricePromptMessage, pricePromptPlaceholder); err != nil {
-				return WebhookStatusInternalError, err
-			}
-			return WebhookStatusOK, nil
+			return s.promptPriceQuery(ctx, chatID, userID)
 		}
-		return s.handlePriceQuery(ctx, message.Chat.ID, query)
-	default:
-		return WebhookStatusOK, nil
+		s.clearPendingPrice(chatID, userID)
+		return s.handlePriceQuery(ctx, chatID, userID, query)
 	}
+
+	if s.isFollowUpToPricePrompt(message) {
+		s.clearPendingPrice(chatID, userID)
+		return s.handlePriceQuery(ctx, chatID, userID, text)
+	}
+
+	return WebhookStatusOK, nil
+}
+
+func (s *Service) promptPriceQuery(ctx context.Context, chatID, userID int64) (int, error) {
+	messageID, err := s.telegram.SendForceReply(ctx, chatID, pricePromptMessage, pricePromptPlaceholder)
+	if err != nil {
+		return WebhookStatusInternalError, err
+	}
+	s.setPendingPrice(chatID, userID, messageID)
+	return WebhookStatusOK, nil
+}
+
+func (s *Service) pendingPriceKey(chatID, userID int64) pendingPriceKey {
+	return pendingPriceKey{chatID: chatID, userID: userID}
+}
+
+func (s *Service) setPendingPrice(chatID, userID, messageID int64) {
+	s.pendingPriceChats.Store(s.pendingPriceKey(chatID, userID), pendingPricePrompt{messageID: messageID})
+}
+
+func (s *Service) clearPendingPrice(chatID, userID int64) {
+	s.pendingPriceChats.Delete(s.pendingPriceKey(chatID, userID))
+}
+
+func (s *Service) hasPendingPrice(chatID, userID int64) bool {
+	_, ok := s.pendingPriceChats.Load(s.pendingPriceKey(chatID, userID))
+	return ok
+}
+
+func (s *Service) isFollowUpToPricePrompt(message *Message) bool {
+	chatID := message.Chat.ID
+	userID := message.SenderID()
+	if !s.hasPendingPrice(chatID, userID) {
+		return false
+	}
+	if message.ReplyToMessage != nil {
+		return s.replyTargetsPricePrompt(message)
+	}
+	return true
+}
+
+func (s *Service) replyTargetsPricePrompt(message *Message) bool {
+	reply := message.ReplyToMessage
+	if reply == nil {
+		return false
+	}
+	if isPricePrompt(reply.Text) {
+		return true
+	}
+	if reply.MessageID == 0 {
+		return false
+	}
+	pending, ok := s.pendingPriceChats.Load(s.pendingPriceKey(message.Chat.ID, message.SenderID()))
+	if !ok {
+		return false
+	}
+	return pending.(pendingPricePrompt).messageID == reply.MessageID
 }
 
 func isPricePrompt(text string) bool {
 	return strings.TrimSpace(text) == pricePromptMessage
 }
 
-func (s *Service) handlePriceQuery(ctx context.Context, chatID int64, query string) (int, error) {
+func (s *Service) handlePriceQuery(ctx context.Context, chatID, userID int64, query string) (int, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		if err := s.telegram.SendForceReply(ctx, chatID, pricePromptMessage, pricePromptPlaceholder); err != nil {
-			return WebhookStatusInternalError, err
-		}
-		return WebhookStatusOK, nil
+		return s.promptPriceQuery(ctx, chatID, userID)
 	}
 	if len(query) < 3 {
+		s.setPendingPrice(chatID, userID, 0)
 		if err := s.telegram.SendMessage(ctx, chatID, "Enter at least 3 characters to search.", ""); err != nil {
 			return WebhookStatusInternalError, err
 		}

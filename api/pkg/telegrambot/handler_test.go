@@ -13,22 +13,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testUserID int64 = 1001
+
+func testUserMessage(chatID int64, text string) *Message {
+	return &Message{
+		Chat: Chat{ID: chatID},
+		From: &User{ID: testUserID},
+		Text: text,
+	}
+}
+
 func TestService_HandleWebhook_BarePricePromptsForCardName(t *testing.T) {
 	var forceReplyText string
 	telegram := &stubTelegram{
-		forceReply: func(_ context.Context, _ int64, text, placeholder string) error {
+		forceReply: func(_ context.Context, _ int64, text, placeholder string) (int64, error) {
 			forceReplyText = text
 			require.Equal(t, pricePromptPlaceholder, placeholder)
-			return nil
+			return 100, nil
 		},
 	}
 
 	svc := NewService("webhook-secret", &stubGishath{}, telegram, nil, slog.Default())
 	body, err := json.Marshal(Update{
-		Message: &Message{
-			Chat: Chat{ID: 42},
-			Text: "/price",
-		},
+		Message: testUserMessage(42, "/price"),
 	})
 	require.NoError(t, err)
 
@@ -55,6 +62,10 @@ func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
 	}
 	var messages []string
 	telegram := &stubTelegram{
+		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
+			require.Equal(t, pricePromptMessage, text)
+			return 100, nil
+		},
 		send: func(_ context.Context, _ int64, text, _ string) error {
 			messages = append(messages, text)
 			return nil
@@ -62,12 +73,21 @@ func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
 	}
 
 	svc := NewService("webhook-secret", gishath, telegram, nil, slog.Default())
+
+	priceBody, err := json.Marshal(Update{
+		Message: testUserMessage(42, "/price"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, WebhookStatusOK, svc.HandleWebhook(context.Background(), "webhook-secret", priceBody))
+
 	body, err := json.Marshal(Update{
 		Message: &Message{
 			Chat: Chat{ID: 42},
+			From: &User{ID: testUserID},
 			Text: "Opt",
 			ReplyToMessage: &Message{
-				Text: pricePromptMessage,
+				MessageID: 100,
+				Text:      pricePromptMessage,
 			},
 		},
 	})
@@ -78,6 +98,103 @@ func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
 	require.Equal(t, "Opt", searched)
 	require.GreaterOrEqual(t, len(messages), 2)
 	require.Contains(t, messages[0], "Searching")
+}
+
+func TestService_HandleWebhook_PendingPricePlainText(t *testing.T) {
+	var searched string
+	gishath := &stubGishath{
+		search: func(_ context.Context, query string) (*SearchSummary, error) {
+			searched = query
+			return &SearchSummary{
+				ResultCount: 1,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.0,
+					Source: "Flagship Games",
+				},
+				WebsiteURL: "https://gishathfetch.com/?s=Opt",
+			}, nil
+		},
+	}
+	var messages []string
+	telegram := &stubTelegram{
+		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
+			require.Equal(t, pricePromptMessage, text)
+			return 100, nil
+		},
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			messages = append(messages, text)
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", gishath, telegram, nil, slog.Default())
+
+	priceBody, err := json.Marshal(Update{
+		Message: testUserMessage(42, "/price"),
+	})
+	require.NoError(t, err)
+	status := svc.HandleWebhook(context.Background(), "webhook-secret", priceBody)
+	require.Equal(t, WebhookStatusOK, status)
+
+	queryBody, err := json.Marshal(Update{
+		Message: testUserMessage(42, "Opt"),
+	})
+	require.NoError(t, err)
+	status = svc.HandleWebhook(context.Background(), "webhook-secret", queryBody)
+	require.Equal(t, WebhookStatusOK, status)
+	require.Equal(t, "Opt", searched)
+	require.GreaterOrEqual(t, len(messages), 2)
+	require.Contains(t, messages[0], "Searching")
+}
+
+func TestService_HandleWebhook_PendingPriceIgnoresOtherUserInGroup(t *testing.T) {
+	var searched string
+	gishath := &stubGishath{
+		search: func(_ context.Context, query string) (*SearchSummary, error) {
+			searched = query
+			return &SearchSummary{ResultCount: 1, Cheapest: &CardSummary{Name: query}}, nil
+		},
+	}
+	telegram := &stubTelegram{
+		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
+			require.Equal(t, pricePromptMessage, text)
+			return 100, nil
+		},
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", gishath, telegram, nil, slog.Default())
+
+	priceBody, err := json.Marshal(Update{
+		Message: testUserMessage(-99, "/price"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, WebhookStatusOK, svc.HandleWebhook(context.Background(), "webhook-secret", priceBody))
+
+	otherUserBody, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: -99},
+			From: &User{ID: 2002},
+			Text: "Sol Ring",
+			ReplyToMessage: &Message{
+				MessageID: 100,
+				Text:      pricePromptMessage,
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, WebhookStatusOK, svc.HandleWebhook(context.Background(), "webhook-secret", otherUserBody))
+	require.Empty(t, searched)
+
+	ownerBody, err := json.Marshal(Update{
+		Message: testUserMessage(-99, "Opt"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, WebhookStatusOK, svc.HandleWebhook(context.Background(), "webhook-secret", ownerBody))
+	require.Equal(t, "Opt", searched)
 }
 
 func TestService_HandleWebhook_SyncPrice(t *testing.T) {
@@ -479,7 +596,7 @@ func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary,
 type stubTelegram struct {
 	send       func(context.Context, int64, string, string) error
 	sendPhoto  func(context.Context, int64, string, string) error
-	forceReply func(context.Context, int64, string, string) error
+	forceReply func(context.Context, int64, string, string) (int64, error)
 }
 
 func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
@@ -496,11 +613,11 @@ func (s *stubTelegram) SendPhoto(ctx context.Context, chatID int64, photoURL, ca
 	return nil
 }
 
-func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error {
+func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error) {
 	if s.forceReply != nil {
 		return s.forceReply(ctx, chatID, text, placeholder)
 	}
-	return nil
+	return 100, nil
 }
 
 type stubAsync struct {

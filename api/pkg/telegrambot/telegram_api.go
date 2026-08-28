@@ -46,7 +46,7 @@ func (t *TelegramAPI) SetWebhook(ctx context.Context, webhookURL, secretToken st
 
 // SendForceReply asks the user to reply with text. Telegram opens the input
 // field focused on this chat so the user can type their answer.
-func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error {
+func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error) {
 	payload := map[string]any{
 		"chat_id":                  chatID,
 		"text":                     text,
@@ -54,10 +54,9 @@ func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, pl
 		"reply_markup": map[string]any{
 			"force_reply":             true,
 			"input_field_placeholder": strings.TrimSpace(placeholder),
-			"selective":               true,
 		},
 	}
-	return t.post(ctx, "sendMessage", payload)
+	return t.sendMessage(ctx, payload)
 }
 
 // SendMessage sends a text message to a chat.
@@ -75,7 +74,8 @@ func (t *TelegramAPI) SendMessage(ctx context.Context, chatID int64, text, linkP
 	} else {
 		payload["disable_web_page_preview"] = true
 	}
-	return t.post(ctx, "sendMessage", payload)
+	_, err := t.sendMessage(ctx, payload)
+	return err
 }
 
 // SendPhoto sends a photo to a chat. photoURL must be a Telegram-supported file_id or HTTP URL.
@@ -88,6 +88,53 @@ func (t *TelegramAPI) SendPhoto(ctx context.Context, chatID int64, photoURL, cap
 		payload["caption"] = caption
 	}
 	return t.post(ctx, "sendPhoto", payload)
+}
+
+func (t *TelegramAPI) sendMessage(ctx context.Context, payload map[string]any) (int64, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return 0, err
+	}
+
+	endpoint := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", t.token)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := t.httpClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer res.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if err != nil {
+		return 0, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("telegram sendMessage failed: status %d: %s", res.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	var envelope struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+		Result      struct {
+			MessageID int64 `json:"message_id"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(respBody, &envelope); err != nil {
+		return 0, err
+	}
+	if !envelope.OK {
+		if envelope.Description == "" {
+			envelope.Description = "telegram api error"
+		}
+		return 0, fmt.Errorf("telegram sendMessage failed: %s", envelope.Description)
+	}
+	return envelope.Result.MessageID, nil
 }
 
 func (t *TelegramAPI) post(ctx context.Context, method string, payload any) error {
