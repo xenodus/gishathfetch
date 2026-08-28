@@ -376,10 +376,12 @@ sequenceDiagram
 For local development, `api/cmd/telegram-bot` runs the same webhook handler over
 HTTP with synchronous `/price` when Lambda self-invoke is unavailable.
 
-**Slash command menu:** `DefaultBotCommands()` in `api/pkg/telegrambot/commands.go`
-is the single source of truth for `/help` text and Telegram's command menu. Deploy
-runs `api/cmd/telegram-sync` (`make telegram-sync`) to call Telegram
-`setMyCommands`; when `TELEGRAM_WEBHOOK_PUBLIC_URL` and `TELEGRAM_WEBHOOK_SECRET`
+**Slash command menu:** `TelegramMenuCommands()` in `api/pkg/telegrambot/commands.go`
+registers commands with Telegram `setMyCommands`. `/price` is documented in `/help`
+but omitted from the menu because Telegram sends menu selections immediately,
+before the user can type a card name. Bare `/price` prompts for a card name via
+ForceReply. Deploy runs `api/cmd/telegram-sync` (`make telegram-sync`) to call
+Telegram `setMyCommands`; when `TELEGRAM_WEBHOOK_PUBLIC_URL` and `TELEGRAM_WEBHOOK_SECRET`
 are also set, it re-registers the webhook. GitHub Actions passes those env vars from
 repository secrets.
 

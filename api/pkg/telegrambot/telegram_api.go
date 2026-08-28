@@ -44,6 +44,22 @@ func (t *TelegramAPI) SetWebhook(ctx context.Context, webhookURL, secretToken st
 	return t.post(ctx, "setWebhook", payload)
 }
 
+// SendForceReply asks the user to reply with text. Telegram opens the input
+// field focused on this chat so the user can type their answer.
+func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error {
+	payload := map[string]any{
+		"chat_id":                  chatID,
+		"text":                     text,
+		"disable_web_page_preview": true,
+		"reply_markup": map[string]any{
+			"force_reply":             true,
+			"input_field_placeholder": strings.TrimSpace(placeholder),
+			"selective":               true,
+		},
+	}
+	return t.post(ctx, "sendMessage", payload)
+}
+
 // SendMessage sends a text message to a chat.
 // When linkPreviewURL is non-empty, Telegram previews that URL (it must appear
 // in text). Otherwise Telegram uses the first URL found in the message.

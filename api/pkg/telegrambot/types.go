@@ -7,8 +7,9 @@ type Update struct {
 
 // Message is a subset of a Telegram message.
 type Message struct {
-	Chat Chat   `json:"chat"`
-	Text string `json:"text"`
+	Chat           Chat     `json:"chat"`
+	Text           string   `json:"text"`
+	ReplyToMessage *Message `json:"reply_to_message"`
 }
 
 // Chat identifies a Telegram chat.

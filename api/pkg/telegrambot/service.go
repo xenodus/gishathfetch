@@ -12,7 +12,12 @@ import (
 	"mtg-price-checker-sg/pkg/telegramphoto"
 )
 
-const telegramSecretHeader = "X-Telegram-Bot-Api-Secret-Token"
+const (
+	telegramSecretHeader   = "X-Telegram-Bot-Api-Secret-Token"
+	pricePromptMessage     = "Enter a card name to search:"
+	pricePromptPlaceholder = "Lightning Bolt"
+)
+
 
 // SecretHeader is the Telegram webhook secret header name.
 const SecretHeader = telegramSecretHeader
@@ -33,6 +38,7 @@ type searchClient interface {
 type messageClient interface {
 	SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error
 	SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error
+	SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error
 }
 
 // NewService wires Telegram webhook handling. When async is nil, /price runs synchronously.
@@ -94,6 +100,10 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 		return WebhookStatusOK, nil
 	}
 
+	if message.ReplyToMessage != nil && isPricePrompt(message.ReplyToMessage.Text) {
+		return s.handlePriceQuery(ctx, message.Chat.ID, text)
+	}
+
 	switch {
 	case strings.EqualFold(text, "/help"):
 		if err := s.telegram.SendMessage(ctx, message.Chat.ID, formatHelpMessage(), ""); err != nil {
@@ -103,36 +113,51 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 	case strings.HasPrefix(text, "/price"):
 		query := strings.TrimSpace(strings.TrimPrefix(text, "/price"))
 		if query == "" {
-			if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Usage: /price <card name>", ""); err != nil {
+			if err := s.telegram.SendForceReply(ctx, message.Chat.ID, pricePromptMessage, pricePromptPlaceholder); err != nil {
 				return WebhookStatusInternalError, err
 			}
 			return WebhookStatusOK, nil
 		}
-		if len(query) < 3 {
-			if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Enter at least 3 characters to search.", ""); err != nil {
-				return WebhookStatusInternalError, err
-			}
-			return WebhookStatusOK, nil
-		}
-
-		if err := s.telegram.SendMessage(ctx, message.Chat.ID, "Searching for "+query+"…", ""); err != nil {
-			return WebhookStatusInternalError, err
-		}
-
-		if s.async != nil {
-			if err := s.async.EnqueuePriceSearch(ctx, message.Chat.ID, query); err != nil {
-				return WebhookStatusInternalError, err
-			}
-			return WebhookStatusOK, nil
-		}
-
-		if err := s.RunPriceSearch(ctx, message.Chat.ID, query); err != nil {
-			return WebhookStatusInternalError, err
-		}
-		return WebhookStatusOK, nil
+		return s.handlePriceQuery(ctx, message.Chat.ID, query)
 	default:
 		return WebhookStatusOK, nil
 	}
+}
+
+func isPricePrompt(text string) bool {
+	return strings.TrimSpace(text) == pricePromptMessage
+}
+
+func (s *Service) handlePriceQuery(ctx context.Context, chatID int64, query string) (int, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		if err := s.telegram.SendForceReply(ctx, chatID, pricePromptMessage, pricePromptPlaceholder); err != nil {
+			return WebhookStatusInternalError, err
+		}
+		return WebhookStatusOK, nil
+	}
+	if len(query) < 3 {
+		if err := s.telegram.SendMessage(ctx, chatID, "Enter at least 3 characters to search.", ""); err != nil {
+			return WebhookStatusInternalError, err
+		}
+		return WebhookStatusOK, nil
+	}
+
+	if err := s.telegram.SendMessage(ctx, chatID, "Searching for "+query+"…", ""); err != nil {
+		return WebhookStatusInternalError, err
+	}
+
+	if s.async != nil {
+		if err := s.async.EnqueuePriceSearch(ctx, chatID, query); err != nil {
+			return WebhookStatusInternalError, err
+		}
+		return WebhookStatusOK, nil
+	}
+
+	if err := s.RunPriceSearch(ctx, chatID, query); err != nil {
+		return WebhookStatusInternalError, err
+	}
+	return WebhookStatusOK, nil
 }
 
 // RunPriceSearch performs the Gishath lookup and sends the Telegram reply.

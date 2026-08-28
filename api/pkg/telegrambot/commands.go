@@ -11,10 +11,19 @@ type BotCommand struct {
 	Description string `json:"description"`
 }
 
-// DefaultBotCommands returns the bot's slash commands for Telegram registration.
+// DefaultBotCommands returns slash commands documented in /help.
 func DefaultBotCommands() []BotCommand {
 	return []BotCommand{
 		{Command: "price", Description: "Cheapest in-stock match"},
+		{Command: "help", Description: "Show available commands"},
+	}
+}
+
+// TelegramMenuCommands returns commands registered with setMyCommands.
+// Commands that require arguments are omitted because Telegram sends the
+// selected menu command immediately without waiting for user input.
+func TelegramMenuCommands() []BotCommand {
+	return []BotCommand{
 		{Command: "help", Description: "Show available commands"},
 	}
 }

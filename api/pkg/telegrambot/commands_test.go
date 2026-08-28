@@ -14,6 +14,12 @@ func TestDefaultBotCommands(t *testing.T) {
 	require.Equal(t, "help", commands[1].Command)
 }
 
+func TestTelegramMenuCommands_OmitsRequiredArgCommands(t *testing.T) {
+	commands := TelegramMenuCommands()
+	require.Len(t, commands, 1)
+	require.Equal(t, "help", commands[0].Command)
+}
+
 func TestFormatHelpMessage_IncludesCommands(t *testing.T) {
 	msg := formatHelpMessage()
 	for _, cmd := range DefaultBotCommands() {

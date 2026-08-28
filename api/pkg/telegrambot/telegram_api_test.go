@@ -11,6 +11,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestTelegramAPI_SendForceReply(t *testing.T) {
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Contains(t, r.URL.Path, "/bottest-token/sendMessage")
+		raw, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(raw, &gotBody))
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	t.Cleanup(server.Close)
+
+	api := NewTelegramAPI("test-token")
+	api.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		req.URL.Scheme = "http"
+		req.URL.Host = server.Listener.Addr().String()
+		return http.DefaultTransport.RoundTrip(req)
+	})}
+
+	require.NoError(t, api.SendForceReply(context.Background(), 42, pricePromptMessage, pricePromptPlaceholder))
+
+	require.Equal(t, float64(42), gotBody["chat_id"])
+	require.Equal(t, pricePromptMessage, gotBody["text"])
+	markup, ok := gotBody["reply_markup"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, true, markup["force_reply"])
+	require.Equal(t, pricePromptPlaceholder, markup["input_field_placeholder"])
+}
+
 func TestTelegramAPI_SendMessage_LinkPreviewOptions(t *testing.T) {
 	var gotBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

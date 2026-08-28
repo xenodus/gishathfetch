@@ -30,7 +30,7 @@ func TestTelegramAPI_SetMyCommands(t *testing.T) {
 		return http.DefaultTransport.RoundTrip(req)
 	})}
 
-	commands := DefaultBotCommands()
+	commands := TelegramMenuCommands()
 	require.NoError(t, api.SetMyCommands(context.Background(), commands))
 
 	rawCommands, ok := gotBody["commands"].([]any)
