@@ -380,7 +380,8 @@ HTTP with synchronous `/price` when Lambda self-invoke is unavailable.
 registers commands with Telegram `setMyCommands`. `/price` is documented in `/help`
 but omitted from the menu because Telegram sends menu selections immediately,
 before the user can type a card name. Bare `/price` prompts for a card name via
-ForceReply. Deploy runs `api/cmd/telegram-sync` (`make telegram-sync`) to call
+ForceReply; only the user who sent `/price` can complete that prompt in a group.
+Deploy runs `api/cmd/telegram-sync` (`make telegram-sync`) to call
 Telegram `setMyCommands`; when `TELEGRAM_WEBHOOK_PUBLIC_URL` and `TELEGRAM_WEBHOOK_SECRET`
 are also set, it re-registers the webhook. GitHub Actions passes those env vars from
 repository secrets.
