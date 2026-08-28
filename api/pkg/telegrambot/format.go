@@ -61,14 +61,9 @@ func formatCKReply(query string, summary *CKSummary) string {
 	details := strings.TrimSpace(strings.Join(filterNonEmpty([]string{
 		listing.Edition,
 		ckFinishLabel(listing.IsFoil),
-		ckStockLabel(listing.InStock),
 	}), " · "))
 	if details != "" {
 		lines = append(lines, details)
-	}
-
-	if change := ckPriceChangeLabel(listing); change != "" {
-		lines = append(lines, change)
 	}
 
 	if listing.URL != "" {
@@ -83,32 +78,6 @@ func ckFinishLabel(isFoil bool) string {
 		return "foil"
 	}
 	return ""
-}
-
-func ckStockLabel(inStock *bool) string {
-	if inStock == nil {
-		return ""
-	}
-	if *inStock {
-		return "in stock"
-	}
-	return "out of stock"
-}
-
-func ckPriceChangeLabel(listing *CKListingSummary) string {
-	if listing == nil || listing.PriceChangeUsd == nil || listing.PreviousPriceUsd == nil {
-		return ""
-	}
-	change := *listing.PriceChangeUsd
-	sign := "+"
-	if change < 0 {
-		sign = ""
-	}
-	label := fmt.Sprintf("%sUS$%.2f from US$%.2f", sign, change, *listing.PreviousPriceUsd)
-	if listing.PriceChangePercent != nil {
-		label = fmt.Sprintf("%s (%d%%)", label, *listing.PriceChangePercent)
-	}
-	return label
 }
 
 const ckPromptBody = "Enter a card name for Card Kingdom price"

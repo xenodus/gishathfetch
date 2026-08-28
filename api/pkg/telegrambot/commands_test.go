@@ -24,7 +24,11 @@ func TestTelegramMenuCommands_OmitsRequiredArgCommands(t *testing.T) {
 func TestFormatHelpMessage_IncludesCommands(t *testing.T) {
 	msg := formatHelpMessage()
 	for _, cmd := range DefaultBotCommands() {
-		require.Contains(t, msg, "/"+cmd.Command)
+		command := "/" + cmd.Command
+		if cmd.Command == "price" || cmd.Command == "ck" {
+			command += " <card name>"
+		}
+		require.Contains(t, msg, command)
 		require.Contains(t, msg, cmd.Description)
 	}
 	require.Contains(t, msg, "/price Lightning Bolt")
