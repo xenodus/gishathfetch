@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader, X } from "react-feather";
+import { Info, Loader, X } from "react-feather";
 import { MAX_SEARCH_LENGTH, MIN_SEARCH_LENGTH } from "../constants";
 import LinkifiedText from "./LinkifiedText";
 import StoreSelector from "./StoreSelector";
@@ -166,8 +166,14 @@ const SearchForm = ({
   return (
     <div ref={wrapperRef}>
       {noticeMessage && (
-        <div className="alert alert-info mb-3" role="status">
-          <LinkifiedText text={noticeMessage} />
+        <div
+          className="alert alert-info mb-3 d-flex align-items-start gap-2"
+          role="status"
+        >
+          <Info size={18} className="flex-shrink-0 mt-1" aria-hidden="true" />
+          <div className="flex-grow-1">
+            <LinkifiedText text={noticeMessage} />
+          </div>
         </div>
       )}
 
