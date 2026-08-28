@@ -16,9 +16,16 @@ import (
 
 func TestTelegramSearch_Success(t *testing.T) {
 	originalSearchFunc := searchFunc
+	originalTrackFunc := trackTelegramSearchEventFunc
 	defer func() {
 		searchFunc = originalSearchFunc
+		trackTelegramSearchEventFunc = originalTrackFunc
 	}()
+
+	var trackedTerm string
+	trackTelegramSearchEventFunc = func(_ context.Context, searchTerm string) {
+		trackedTerm = searchTerm
+	}
 	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
 		require.Equal(t, "abrade", input.SearchString)
 		return []controller.Card{
@@ -58,6 +65,7 @@ func TestTelegramSearch_Success(t *testing.T) {
 	require.Contains(t, body.WebsiteURL, "s=abrade")
 	require.Contains(t, body.WebsiteURL, "utm_source=telegram")
 	require.GreaterOrEqual(t, body.TotalDurationMs, int64(0))
+	require.Equal(t, "abrade", trackedTerm)
 }
 
 func TestTelegramSearch_NoResults(t *testing.T) {

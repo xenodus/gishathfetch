@@ -67,6 +67,10 @@ const (
 	GA4PropertyIDEnv = "GA4_PROPERTY_ID"
 	// GA4CredentialsJSONEnv holds a Google service account JSON key with Analytics read access.
 	GA4CredentialsJSONEnv = "GA4_CREDENTIALS_JSON"
+	// GA4MeasurementIDEnv overrides the GA4 web measurement ID for Measurement Protocol events.
+	GA4MeasurementIDEnv = "GA4_MEASUREMENT_ID"
+	// GA4MeasurementAPISecretEnv is the GA4 Measurement Protocol API secret for server-side events.
+	GA4MeasurementAPISecretEnv = "GA4_MEASUREMENT_API_SECRET"
 	// AnalyticsS3BucketEnv overrides the destination bucket for exported analytics reports.
 	AnalyticsS3BucketEnv = "ANALYTICS_S3_BUCKET"
 	// AnalyticsS3DefaultBucket is the frontend S3 bucket served by CloudFront.
@@ -264,6 +268,21 @@ func APINoticeMessage() string {
 // APITelegramBotToken returns the bearer token required for /telegram/search.
 func APITelegramBotToken() string {
 	return strings.TrimSpace(os.Getenv(APITelegramBotTokenEnv))
+}
+
+// GA4MeasurementID returns the GA4 web measurement ID for Measurement Protocol events.
+func GA4MeasurementID() string {
+	return strings.TrimSpace(os.Getenv(GA4MeasurementIDEnv))
+}
+
+// GA4MeasurementAPISecret returns the GA4 Measurement Protocol API secret.
+func GA4MeasurementAPISecret() string {
+	return strings.TrimSpace(os.Getenv(GA4MeasurementAPISecretEnv))
+}
+
+// GA4MeasurementConfigured reports whether server-side GA4 search events may be sent.
+func GA4MeasurementConfigured() bool {
+	return GA4MeasurementAPISecret() != ""
 }
 
 // APIAccessControlEnabled is true when origin verification or session enforcement is configured.
