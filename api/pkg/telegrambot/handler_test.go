@@ -541,10 +541,10 @@ func Test_formatSearchReply(t *testing.T) {
 		WebsiteURL: "https://gishathfetch.com/?s=Opt",
 	})
 	require.Equal(t, strings.Join([]string{
-		"Opt — S$1.25 @ Hideout",
+		"Opt -> S$1.25 @ Hideout",
 		"NM · [Marvel Universe]",
 		"https://shop.example/opt",
-		"2 results — view all on Gishath Fetch:",
+		"2 results -> view all on Gishath Fetch:",
 		"https://gishathfetch.com/?s=Opt",
 	}, "\n"), reply)
 	require.NotContains(t, reply, "non-foil")
@@ -564,7 +564,7 @@ func Test_formatSearchReply_Foil(t *testing.T) {
 		WebsiteURL: "https://gishathfetch.com/?s=Opt",
 	})
 	require.Equal(t, strings.Join([]string{
-		"Opt — S$3.50 @ Hideout",
+		"Opt -> S$3.50 @ Hideout",
 		"foil",
 		"https://shop.example/opt-foil",
 		"View on Gishath Fetch:",

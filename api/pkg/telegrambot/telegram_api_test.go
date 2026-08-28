@@ -120,7 +120,7 @@ func TestTelegramAPI_SendPhoto(t *testing.T) {
 	})}
 
 	photoURL := "https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg"
-	caption := "Opt — S$1.25 @ Hideout"
+	caption := "Opt -> S$1.25 @ Hideout"
 	require.NoError(t, api.SendPhoto(context.Background(), 42, photoURL, caption))
 
 	require.Equal(t, float64(42), gotBody["chat_id"])
