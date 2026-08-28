@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"mtg-price-checker-sg/pkg/telegramphoto"
 )
 
 const telegramSecretHeader = "X-Telegram-Bot-Api-Secret-Token"
@@ -150,8 +152,11 @@ func (s *Service) sendPriceSearchReply(ctx context.Context, chatID int64, summar
 	}
 
 	previewURL := strings.TrimSpace(summary.WebsiteURL)
-	photoURL := normalizePhotoURL(summary.Cheapest.Img)
-	if isSendableTelegramPhotoURL(photoURL) {
+	photoURL := strings.TrimSpace(summary.PhotoURL)
+	if photoURL == "" && summary.Cheapest != nil {
+		photoURL = telegramphoto.Normalize(summary.Cheapest.Img)
+	}
+	if telegramphoto.IsSendable(photoURL) {
 		if err := s.telegram.SendPhoto(ctx, chatID, photoURL, caption); err != nil {
 			s.logger.WarnContext(ctx, "telegram sendPhoto failed, falling back to sendMessage",
 				"photoURL", photoURL, "err", err)

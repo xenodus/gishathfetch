@@ -289,8 +289,8 @@ func TestService_RunPriceSearch_SendsPhotoWithCaption(t *testing.T) {
 					Price:  1.25,
 					Source: "Hideout",
 					URL:    "https://shop.example/opt",
-					Img:    imageURL,
 				},
+				PhotoURL:   imageURL,
 				WebsiteURL: websiteURL,
 			}, nil
 		},
@@ -310,6 +310,37 @@ func TestService_RunPriceSearch_SendsPhotoWithCaption(t *testing.T) {
 	require.Equal(t, imageURL, photoURL)
 	require.Contains(t, caption, "S$1.25")
 	require.Contains(t, caption, websiteURL)
+}
+
+func TestService_RunPriceSearch_UsesPhotoURLWhenCheapestHasPlaceholder(t *testing.T) {
+	websiteURL := "https://gishathfetch.com/?s=Opt"
+	imageURL := "https://cdn.shopify.com/s/files/card.jpg"
+	gishath := &stubGishath{
+		search: func(_ context.Context, _ string) (*SearchSummary, error) {
+			return &SearchSummary{
+				ResultCount: 2,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.0,
+					Source: "Arcane Sanctum",
+					Img:    "https://placehold.co/304x424?text=Opt",
+				},
+				PhotoURL:   imageURL,
+				WebsiteURL: websiteURL,
+			}, nil
+		},
+	}
+	var photoURL string
+	telegram := &stubTelegram{
+		sendPhoto: func(_ context.Context, _ int64, gotPhotoURL, _ string) error {
+			photoURL = gotPhotoURL
+			return nil
+		},
+	}
+
+	svc := NewService("secret", gishath, telegram, nil, slog.Default())
+	require.NoError(t, svc.RunPriceSearch(context.Background(), 1, "Opt"))
+	require.Equal(t, imageURL, photoURL)
 }
 
 func Test_formatSearchReply(t *testing.T) {

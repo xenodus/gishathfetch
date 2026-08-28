@@ -15,6 +15,7 @@ import (
 // TelegramSearchResponse is the minimal payload for Telegram bot searches.
 type TelegramSearchResponse struct {
 	Cheapest        *controller.Card        `json:"cheapest"`
+	PhotoURL        string                  `json:"photoUrl,omitempty"`
 	ResultCount     int                     `json:"resultCount"`
 	WebsiteURL      string                  `json:"websiteUrl"`
 	Errors          []controller.StoreError `json:"errors"`
@@ -72,6 +73,7 @@ func TelegramSearch(ctx context.Context, request events.APIGatewayProxyRequest) 
 
 	body := TelegramSearchResponse{
 		Cheapest:        cheapest,
+		PhotoURL:        selectTelegramPhotoURL(ctx, inStockCards, query.searchString),
 		ResultCount:     len(inStockCards),
 		WebsiteURL:      buildWebsiteSearchURL(query.searchString, query.lgs),
 		Errors:          storeErrors,
