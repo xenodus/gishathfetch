@@ -11,6 +11,7 @@ import (
 	"mtg-price-checker-sg/gateway/cardaffinity"
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/hideout"
+	"mtg-price-checker-sg/gateway/tcgmarketplace"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -226,6 +227,40 @@ func TestDedupeStoreCards_RemovesDuplicateListings(t *testing.T) {
 		{Name: "Kili the Resourceful", Url: "https://shop.example/card", Price: 1.5, InStock: true},
 		{Name: "Kíli the Resourceful", Url: "https://shop.example/card", Price: 1.5, InStock: true},
 		{Name: "Other Card", Url: "https://shop.example/other", Price: 1.0, InStock: true},
+	}
+
+	deduped := dedupeStoreCards(cards)
+	if len(deduped) != 2 {
+		t.Fatalf("expected 2 deduped cards, got %d", len(deduped))
+	}
+}
+
+func TestDedupeStoreCards_RemovesDualQueryDuplicatesWithDifferentURLs(t *testing.T) {
+	cards := []gateway.Card{
+		{
+			Name:      "Mjölnir, Hammer of Thor (V1)",
+			Url:       "https://thetcgmarketplace.com/product/B/encoded-from-accented-query",
+			Price:     41.0,
+			InStock:   true,
+			Source:    tcgmarketplace.StoreName,
+			ExtraInfo: []string{"[Marvel Super Heroes]"},
+		},
+		{
+			Name:      "Mjölnir, Hammer of Thor (V1)",
+			Url:       "https://thetcgmarketplace.com/product/B/encoded-from-ascii-query",
+			Price:     41.0,
+			InStock:   true,
+			Source:    tcgmarketplace.StoreName,
+			ExtraInfo: []string{"[Marvel Super Heroes]"},
+		},
+		{
+			Name:      "Mjölnir, Hammer of Thor (V2)",
+			Url:       "https://thetcgmarketplace.com/product/B/v2-listing",
+			Price:     42.88,
+			InStock:   true,
+			Source:    tcgmarketplace.StoreName,
+			ExtraInfo: []string{"[Marvel Super Heroes]"},
+		},
 	}
 
 	deduped := dedupeStoreCards(cards)
