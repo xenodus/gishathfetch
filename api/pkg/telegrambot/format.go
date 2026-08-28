@@ -24,7 +24,7 @@ func formatSearchReply(query string, summary *SearchSummary) string {
 	}
 
 	lines := []string{
-		fmt.Sprintf("%s -> S$%.2f @ %s", card.Name, card.Price, store),
+		fmt.Sprintf("%s - S$%.2f @ %s", card.Name, card.Price, store),
 	}
 	if details != "" {
 		lines = append(lines, details)
@@ -34,7 +34,7 @@ func formatSearchReply(query string, summary *SearchSummary) string {
 	}
 
 	if summary.ResultCount > 1 {
-		lines = append(lines, fmt.Sprintf("%d results -> view all on Gishath Fetch:", summary.ResultCount))
+		lines = append(lines, fmt.Sprintf("%d results - view all on Gishath Fetch:", summary.ResultCount))
 	} else {
 		lines = append(lines, "View on Gishath Fetch:")
 	}
@@ -55,7 +55,7 @@ func formatCKReply(query string, summary *CKSummary) string {
 	}
 
 	lines := []string{
-		fmt.Sprintf("%s -> US$%.2f @ Card Kingdom", name, listing.PriceUsd),
+		fmt.Sprintf("%s - US$%.2f @ Card Kingdom", name, listing.PriceUsd),
 	}
 
 	details := strings.TrimSpace(strings.Join(filterNonEmpty([]string{
