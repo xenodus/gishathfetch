@@ -52,3 +52,38 @@ func filterNonEmpty(values []string) []string {
 	}
 	return out
 }
+
+const pricePromptBody = "Enter a card name to search"
+
+func formatPricePrompt(user *User) (text, parseMode string) {
+	if user == nil {
+		return pricePromptBody, ""
+	}
+	if username := strings.TrimPrefix(strings.TrimSpace(user.Username), "@"); username != "" {
+		return fmt.Sprintf("@%s, %s", username, pricePromptBody), ""
+	}
+	name := strings.TrimSpace(user.FirstName)
+	if name == "" {
+		name = "there"
+	}
+	if user.ID != 0 {
+		return fmt.Sprintf(
+			`<a href="tg://user?id=%d">%s</a>, %s`,
+			user.ID,
+			htmlEscape(name),
+			pricePromptBody,
+		), "HTML"
+	}
+	return pricePromptBody, ""
+}
+
+func isPricePrompt(text string) bool {
+	return strings.Contains(strings.TrimSpace(text), pricePromptBody)
+}
+
+func htmlEscape(value string) string {
+	value = strings.ReplaceAll(value, "&", "&amp;")
+	value = strings.ReplaceAll(value, "<", "&lt;")
+	value = strings.ReplaceAll(value, ">", "&gt;")
+	return value
+}

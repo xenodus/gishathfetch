@@ -121,7 +121,7 @@ func (s *telegramWebhookStubGishath) Search(ctx context.Context, query string) (
 type telegramWebhookStubTelegram struct {
 	send       func(context.Context, int64, string, string) error
 	sendPhoto  func(context.Context, int64, string, string) error
-	forceReply func(context.Context, int64, string, string) (int64, error)
+	forceReply func(context.Context, int64, string, string, string) (int64, error)
 }
 
 func (s *telegramWebhookStubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
@@ -138,9 +138,9 @@ func (s *telegramWebhookStubTelegram) SendPhoto(ctx context.Context, chatID int6
 	return nil
 }
 
-func (s *telegramWebhookStubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error) {
+func (s *telegramWebhookStubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder, parseMode string) (int64, error) {
 	if s.forceReply != nil {
-		return s.forceReply(ctx, chatID, text, placeholder)
+		return s.forceReply(ctx, chatID, text, placeholder, parseMode)
 	}
 	return 100, nil
 }

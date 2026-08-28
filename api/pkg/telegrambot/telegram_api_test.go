@@ -30,12 +30,12 @@ func TestTelegramAPI_SendForceReply(t *testing.T) {
 		return http.DefaultTransport.RoundTrip(req)
 	})}
 
-	messageID, err := api.SendForceReply(context.Background(), 42, pricePromptMessage, pricePromptPlaceholder)
+	messageID, err := api.SendForceReply(context.Background(), 42, testUserPricePrompt(), pricePromptPlaceholder, "")
 	require.NoError(t, err)
 	require.Equal(t, int64(100), messageID)
 
 	require.Equal(t, float64(42), gotBody["chat_id"])
-	require.Equal(t, pricePromptMessage, gotBody["text"])
+	require.Equal(t, testUserPricePrompt(), gotBody["text"])
 	markup, ok := gotBody["reply_markup"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, true, markup["force_reply"])

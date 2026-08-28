@@ -46,7 +46,7 @@ func (t *TelegramAPI) SetWebhook(ctx context.Context, webhookURL, secretToken st
 
 // SendForceReply asks the user to reply with text. Telegram opens the input
 // field focused on this chat so the user can type their answer.
-func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error) {
+func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, placeholder, parseMode string) (int64, error) {
 	payload := map[string]any{
 		"chat_id":                  chatID,
 		"text":                     text,
@@ -55,6 +55,9 @@ func (t *TelegramAPI) SendForceReply(ctx context.Context, chatID int64, text, pl
 			"force_reply":             true,
 			"input_field_placeholder": strings.TrimSpace(placeholder),
 		},
+	}
+	if mode := strings.TrimSpace(parseMode); mode != "" {
+		payload["parse_mode"] = mode
 	}
 	return t.sendMessage(ctx, payload)
 }
