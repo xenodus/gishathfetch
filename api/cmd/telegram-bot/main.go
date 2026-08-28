@@ -22,14 +22,17 @@ func main() {
 	}
 
 	telegram := telegrambot.NewTelegramAPI(cfg.TelegramBotToken)
-	if cfg.WebhookPublicURL != "" {
+	{
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		if err := telegram.SetWebhook(ctx, cfg.WebhookPublicURL, cfg.WebhookSecret); err != nil {
-			logger.Error("failed to set telegram webhook", "err", err)
+		if err := telegrambot.RegisterBot(ctx, cfg, telegram); err != nil {
+			logger.Error("failed to register telegram bot", "err", err)
 			os.Exit(1)
 		}
-		logger.Info("telegram webhook registered", "url", cfg.WebhookPublicURL)
+		logger.Info("telegram bot commands registered", "count", len(telegrambot.DefaultBotCommands()))
+		if cfg.WebhookPublicURL != "" && cfg.WebhookSecret != "" {
+			logger.Info("telegram webhook registered", "url", cfg.WebhookPublicURL)
+		}
 	}
 
 	mux := http.NewServeMux()

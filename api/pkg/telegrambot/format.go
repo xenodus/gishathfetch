@@ -43,14 +43,6 @@ func formatSearchReply(query string, summary *SearchSummary) string {
 	return strings.Join(lines, "\n")
 }
 
-func formatHelpMessage() string {
-	return "Search Singapore MTG singles prices.\n\n" +
-		"Commands:\n" +
-		"/price <card name> — cheapest in-stock match\n" +
-		"/help — show this message\n\n" +
-		"Example: /price Lightning Bolt"
-}
-
 func filterNonEmpty(values []string) []string {
 	out := make([]string, 0, len(values))
 	for _, value := range values {

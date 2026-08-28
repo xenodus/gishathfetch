@@ -27,6 +27,14 @@ func NewTelegramAPI(token string) *TelegramAPI {
 	}
 }
 
+// SetMyCommands registers slash commands shown in the Telegram command menu.
+func (t *TelegramAPI) SetMyCommands(ctx context.Context, commands []BotCommand) error {
+	payload := map[string]any{
+		"commands": commands,
+	}
+	return t.post(ctx, "setMyCommands", payload)
+}
+
 // SetWebhook registers the bot webhook URL and secret token with Telegram.
 func (t *TelegramAPI) SetWebhook(ctx context.Context, webhookURL, secretToken string) error {
 	payload := map[string]string{

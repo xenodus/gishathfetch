@@ -285,8 +285,9 @@ GitHub Actions secrets, or a local `.env` file (gitignored). See also
 | `VITE_API_PROXY_TARGET` | Vite only | `https://api.gishathfetch.com` | Dev proxy target for `/search`, `/session` |
 | `VITE_API_BASE_URL` | Frontend | production API host in `constants.js` | Empty string → same-origin paths via Vite proxy |
 | `API_TELEGRAM_BOT_TOKEN` | Search Lambda + bot Lambda | unset = `/telegram/search` 503 | Bearer token for bot → search API |
-| `TELEGRAM_BOT_TOKEN` | Bot Lambda | unset = bot won't start | Telegram Bot API token |
-| `TELEGRAM_WEBHOOK_SECRET` | Bot Lambda | unset = bot won't start | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
+| `TELEGRAM_BOT_TOKEN` | Bot Lambda + deploy (`telegram-sync`) | unset = bot won't start; deploy skips command sync | Telegram Bot API token |
+| `TELEGRAM_WEBHOOK_SECRET` | Bot Lambda + deploy (`telegram-sync`) | unset = bot won't start | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
+| `TELEGRAM_WEBHOOK_PUBLIC_URL` | Bot Lambda + deploy (`telegram-sync`) | unset = webhook not re-registered on deploy | Public webhook URL for `setWebhook` |
 | `GISHATH_API_BASE_URL` | Bot Lambda / local bot | `https://api.gishathfetch.com` | Base URL for `/telegram/search` |
 | `TELEGRAM_BOT_LAMBDA_FUNCTION` | Bot Lambda | `AWS_LAMBDA_FUNCTION_NAME` | Async self-invoke target |
 

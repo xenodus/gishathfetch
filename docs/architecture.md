@@ -70,9 +70,10 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
 - **Scheduler:** EventBridge rules `ck-price-refresh-daily` and
   `analytics-keywords-export-daily` invoke the refresh/export Lambdas.
 - **Deploy:** `make deploy` builds the Docker image, pushes to ECR, updates all
-  Lambdas, and syncs the frontend build to S3 (with CloudFront invalidation). WAF
-  rules, API Gateway route wiring, and Lambda env secrets are managed outside
-  `make deploy`.
+  Lambdas, registers Telegram slash commands when `TELEGRAM_BOT_TOKEN` is set
+  (`make telegram-sync`), and syncs the frontend build to S3 (with CloudFront
+  invalidation). WAF rules, API Gateway route wiring, and Lambda env secrets are
+  managed outside `make deploy`.
 
 Inbound API abuse mitigation (WAF, origin secret, session cookie) is documented in
 [`api-abuse-mitigation.md`](api-abuse-mitigation.md).
@@ -374,6 +375,13 @@ sequenceDiagram
 
 For local development, `api/cmd/telegram-bot` runs the same webhook handler over
 HTTP with synchronous `/price` when Lambda self-invoke is unavailable.
+
+**Slash command menu:** `DefaultBotCommands()` in `api/pkg/telegrambot/commands.go`
+is the single source of truth for `/help` text and Telegram's command menu. Deploy
+runs `api/cmd/telegram-sync` (`make telegram-sync`) to call Telegram
+`setMyCommands`; when `TELEGRAM_WEBHOOK_PUBLIC_URL` and `TELEGRAM_WEBHOOK_SECRET`
+are also set, it re-registers the webhook. GitHub Actions passes those env vars from
+repository secrets.
 
 ## Related docs
 
