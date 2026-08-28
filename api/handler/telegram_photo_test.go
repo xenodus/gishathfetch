@@ -9,36 +9,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSelectTelegramPhotoURL_UsesScryfallForCardName(t *testing.T) {
-	originalLookup := lookupScryfallImageURLFunc
-	defer func() {
-		lookupScryfallImageURLFunc = originalLookup
-	}()
-	lookupScryfallImageURLFunc = func(_ context.Context, cardName string) (string, error) {
-		require.Equal(t, "Sol Ring", cardName)
-		return "https://cards.scryfall.io/normal/front/a/b/sol-ring.jpg", nil
-	}
-
+func TestSelectTelegramPhotoURL_UsesStoreImageWhenSendable(t *testing.T) {
 	photoURL := selectTelegramPhotoURL(context.Background(), []controller.Card{
-		{Name: "Sol Ring", Img: "https://thetcgmarketplace.com:3500/uploads/products/sol-ring.webp"},
+		{
+			Name: "Sol Ring",
+			Img:  "https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg",
+		},
 	})
-	require.Equal(t, "https://cards.scryfall.io/normal/front/a/b/sol-ring.jpg", photoURL)
+	require.Equal(t, "https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg", photoURL)
 }
 
 func TestSelectTelegramPhotoURL_ReturnsEmptyWithoutCandidates(t *testing.T) {
 	require.Empty(t, selectTelegramPhotoURL(context.Background(), nil))
 }
 
-func TestSelectTelegramPhotoURL_ReturnsEmptyWhenScryfallHasNoImage(t *testing.T) {
-	originalLookup := lookupScryfallImageURLFunc
-	defer func() {
-		lookupScryfallImageURLFunc = originalLookup
-	}()
-	lookupScryfallImageURLFunc = func(context.Context, string) (string, error) {
-		return "", nil
-	}
-
+func TestSelectTelegramPhotoURL_ReturnsEmptyWhenStoreImageInvalid(t *testing.T) {
 	require.Empty(t, selectTelegramPhotoURL(context.Background(), []controller.Card{
-		{Name: "Opt", Img: "https://cdn.shopify.com/s/files/card.jpg"},
+		{Name: "Opt", Img: "https://thetcgmarketplace.com:3500/uploads/products/opt.webp"},
+	}))
+	require.Empty(t, selectTelegramPhotoURL(context.Background(), []controller.Card{
+		{Name: "Opt", Img: "https://placehold.co/304x424?text=Opt"},
 	}))
 }
