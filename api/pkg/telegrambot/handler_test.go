@@ -544,6 +544,7 @@ func Test_formatSearchReply(t *testing.T) {
 		"Opt -> S$1.25 @ Hideout",
 		"NM · [Marvel Universe]",
 		"https://shop.example/opt",
+		"",
 		"2 results -> view all on Gishath Fetch:",
 		"https://gishathfetch.com/?s=Opt",
 	}, "\n"), reply)
@@ -567,6 +568,7 @@ func Test_formatSearchReply_Foil(t *testing.T) {
 		"Opt -> S$3.50 @ Hideout",
 		"foil",
 		"https://shop.example/opt-foil",
+		"",
 		"View on Gishath Fetch:",
 		"https://gishathfetch.com/?s=Opt",
 	}, "\n"), reply)

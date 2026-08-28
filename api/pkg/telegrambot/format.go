@@ -30,7 +30,7 @@ func formatSearchReply(query string, summary *SearchSummary) string {
 		lines = append(lines, details)
 	}
 	if card.URL != "" {
-		lines = append(lines, card.URL)
+		lines = append(lines, card.URL, "")
 	}
 
 	if summary.ResultCount > 1 {
