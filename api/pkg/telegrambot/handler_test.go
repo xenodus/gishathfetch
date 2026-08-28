@@ -711,7 +711,7 @@ func Test_formatCKReply(t *testing.T) {
 	})
 	require.Equal(t, strings.Join([]string{
 		"Lightning Bolt -> US$0.49 @ Card Kingdom",
-		"Fourth Edition · in stock",
+		"Fourth Edition",
 		"https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
 	}, "\n"), reply)
 }

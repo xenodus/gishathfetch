@@ -61,7 +61,6 @@ func formatCKReply(query string, summary *CKSummary) string {
 	details := strings.TrimSpace(strings.Join(filterNonEmpty([]string{
 		listing.Edition,
 		ckFinishLabel(listing.IsFoil),
-		ckInStockLabel(listing.InStock),
 	}), " · "))
 	if details != "" {
 		lines = append(lines, details)
@@ -79,13 +78,6 @@ func ckFinishLabel(isFoil bool) string {
 		return "foil"
 	}
 	return ""
-}
-
-func ckInStockLabel(inStock *bool) string {
-	if inStock == nil || !*inStock {
-		return ""
-	}
-	return "in stock"
 }
 
 const ckPromptBody = "Enter a card name for Card Kingdom price"
