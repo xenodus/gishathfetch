@@ -43,6 +43,102 @@ func formatSearchReply(query string, summary *SearchSummary) string {
 	return strings.Join(lines, "\n")
 }
 
+func formatCKReply(query string, summary *CKSummary) string {
+	if summary == nil || summary.Listing == nil {
+		return fmt.Sprintf("No Card Kingdom listing for %q.", query)
+	}
+
+	listing := summary.Listing
+	name := listing.CardName
+	if name == "" {
+		name = query
+	}
+
+	lines := []string{
+		fmt.Sprintf("%s -> US$%.2f @ Card Kingdom", name, listing.PriceUsd),
+	}
+
+	details := strings.TrimSpace(strings.Join(filterNonEmpty([]string{
+		listing.Edition,
+		ckFinishLabel(listing.IsFoil),
+		ckStockLabel(listing.InStock),
+	}), " · "))
+	if details != "" {
+		lines = append(lines, details)
+	}
+
+	if change := ckPriceChangeLabel(listing); change != "" {
+		lines = append(lines, change)
+	}
+
+	if listing.URL != "" {
+		lines = append(lines, listing.URL)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func ckFinishLabel(isFoil bool) string {
+	if isFoil {
+		return "foil"
+	}
+	return ""
+}
+
+func ckStockLabel(inStock *bool) string {
+	if inStock == nil {
+		return ""
+	}
+	if *inStock {
+		return "in stock"
+	}
+	return "out of stock"
+}
+
+func ckPriceChangeLabel(listing *CKListingSummary) string {
+	if listing == nil || listing.PriceChangeUsd == nil || listing.PreviousPriceUsd == nil {
+		return ""
+	}
+	change := *listing.PriceChangeUsd
+	sign := "+"
+	if change < 0 {
+		sign = ""
+	}
+	label := fmt.Sprintf("%sUS$%.2f from US$%.2f", sign, change, *listing.PreviousPriceUsd)
+	if listing.PriceChangePercent != nil {
+		label = fmt.Sprintf("%s (%d%%)", label, *listing.PriceChangePercent)
+	}
+	return label
+}
+
+const ckPromptBody = "Enter a card name for Card Kingdom price"
+
+func formatCKPrompt(user *User) (text, parseMode string) {
+	if user == nil {
+		return ckPromptBody, ""
+	}
+	if username := strings.TrimPrefix(strings.TrimSpace(user.Username), "@"); username != "" {
+		return fmt.Sprintf("@%s, %s", username, ckPromptBody), ""
+	}
+	name := strings.TrimSpace(user.FirstName)
+	if name == "" {
+		name = "there"
+	}
+	if user.ID != 0 {
+		return fmt.Sprintf(
+			`<a href="tg://user?id=%d">%s</a>, %s`,
+			user.ID,
+			htmlEscape(name),
+			ckPromptBody,
+		), "HTML"
+	}
+	return ckPromptBody, ""
+}
+
+func isCKPrompt(text string) bool {
+	return strings.Contains(strings.TrimSpace(text), ckPromptBody)
+}
+
 func filterNonEmpty(values []string) []string {
 	out := make([]string, 0, len(values))
 	for _, value := range values {

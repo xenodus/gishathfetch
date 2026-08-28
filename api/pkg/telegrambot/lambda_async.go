@@ -40,8 +40,17 @@ func NewLambdaAsyncInvoker(ctx context.Context, functionName string) (*LambdaAsy
 
 // EnqueuePriceSearch invokes the Lambda asynchronously with a price-run payload.
 func (i *LambdaAsyncInvoker) EnqueuePriceSearch(ctx context.Context, chatID int64, query string) error {
+	return i.enqueue(ctx, PriceRunAction, chatID, query)
+}
+
+// EnqueueCKSearch invokes the Lambda asynchronously with a ck-run payload.
+func (i *LambdaAsyncInvoker) EnqueueCKSearch(ctx context.Context, chatID int64, query string) error {
+	return i.enqueue(ctx, CKRunAction, chatID, query)
+}
+
+func (i *LambdaAsyncInvoker) enqueue(ctx context.Context, action string, chatID int64, query string) error {
 	payload, err := json.Marshal(PriceRunEvent{
-		Action: PriceRunAction,
+		Action: action,
 		ChatID: chatID,
 		Query:  query,
 	})

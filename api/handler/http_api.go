@@ -21,6 +21,8 @@ func RouteHTTPAPI(ctx context.Context, request events.APIGatewayProxyRequest) (e
 		return Search(ctx, request)
 	case "telegram/search":
 		return TelegramSearch(ctx, request)
+	case "telegram/ck":
+		return TelegramCK(ctx, request)
 	case "telegram/webhook":
 		return TelegramWebhook(ctx, request)
 	default:

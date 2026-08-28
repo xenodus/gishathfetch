@@ -104,8 +104,9 @@ func TestRunTelegramPriceRun(t *testing.T) {
 }
 
 type telegramWebhookStubGishath struct {
-	t      *testing.T
-	search func(context.Context, string) (*telegrambot.SearchSummary, error)
+	t        *testing.T
+	search   func(context.Context, string) (*telegrambot.SearchSummary, error)
+	ckSearch func(context.Context, string) (*telegrambot.CKSummary, error)
 }
 
 func (s *telegramWebhookStubGishath) Search(ctx context.Context, query string) (*telegrambot.SearchSummary, error) {
@@ -114,6 +115,16 @@ func (s *telegramWebhookStubGishath) Search(ctx context.Context, query string) (
 	}
 	if s.t != nil {
 		s.t.Fatal("unexpected gishath search during webhook")
+	}
+	return nil, nil
+}
+
+func (s *telegramWebhookStubGishath) CKSearch(ctx context.Context, query string) (*telegrambot.CKSummary, error) {
+	if s.ckSearch != nil {
+		return s.ckSearch(ctx, query)
+	}
+	if s.t != nil {
+		s.t.Fatal("unexpected gishath ck search during webhook")
 	}
 	return nil, nil
 }
@@ -153,5 +164,9 @@ func (s *telegramWebhookStubAsync) EnqueuePriceSearch(ctx context.Context, chatI
 	if s.enqueue != nil {
 		s.enqueue()
 	}
+	return nil
+}
+
+func (s *telegramWebhookStubAsync) EnqueueCKSearch(context.Context, int64, string) error {
 	return nil
 }

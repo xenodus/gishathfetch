@@ -15,6 +15,7 @@ type BotCommand struct {
 func DefaultBotCommands() []BotCommand {
 	return []BotCommand{
 		{Command: "price", Description: "Cheapest in-stock match"},
+		{Command: "ck", Description: "Card Kingdom price from database"},
 		{Command: "help", Description: "Show available commands"},
 	}
 }
@@ -37,6 +38,11 @@ func formatHelpMessage() string {
 	for _, cmd := range DefaultBotCommands() {
 		lines = append(lines, fmt.Sprintf("/%s -> %s", cmd.Command, cmd.Description))
 	}
-	lines = append(lines, "", "Example: /price Lightning Bolt")
+	lines = append(lines,
+		"",
+		"Examples:",
+		"/price Lightning Bolt",
+		"/ck Lightning Bolt",
+	)
 	return strings.Join(lines, "\n")
 }

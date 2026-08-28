@@ -45,3 +45,42 @@ func TestHandle_TelegramPriceRunAction(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, sent, "S$2.00")
 }
+
+func TestHandle_TelegramCKRunAction(t *testing.T) {
+	t.Cleanup(resetTelegramServiceForTest)
+
+	inStock := true
+	var sent string
+	svc := telegrambot.NewService(
+		"webhook-secret",
+		&telegramWebhookStubGishath{
+			ckSearch: func(_ context.Context, _ string) (*telegrambot.CKSummary, error) {
+				return &telegrambot.CKSummary{
+					Listing: &telegrambot.CKListingSummary{
+						CardName: "Lightning Bolt",
+						PriceUsd: 0.49,
+						InStock:  &inStock,
+					},
+				}, nil
+			},
+		},
+		&telegramWebhookStubTelegram{send: func(_ context.Context, _ int64, text, _ string) error {
+			sent = text
+			return nil
+		}},
+		nil,
+		nil,
+	)
+	setTelegramServiceForTest(svc, nil)
+
+	payload, err := json.Marshal(telegrambot.PriceRunEvent{
+		Action: telegrambot.CKRunAction,
+		ChatID: 5,
+		Query:  "Lightning Bolt",
+	})
+	require.NoError(t, err)
+
+	_, err = Handle(context.Background(), payload)
+	require.NoError(t, err)
+	require.Contains(t, sent, "US$0.49")
+}

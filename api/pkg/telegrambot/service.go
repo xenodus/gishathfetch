@@ -15,7 +15,8 @@ import (
 
 const (
 	telegramSecretHeader   = "X-Telegram-Bot-Api-Secret-Token"
-	pricePromptPlaceholder = "Lightning Bolt"
+	pricePromptPlaceholder   = "Lightning Bolt"
+	ckPromptPlaceholder      = "Lightning Bolt"
 )
 
 
@@ -25,12 +26,13 @@ const SecretHeader = telegramSecretHeader
 // Service processes Telegram webhook updates.
 type Service struct {
 	secret   string
-	gishath  searchClient
+	gishath  apiClient
 	telegram messageClient
-	async    PriceSearchAsync
+	async    CommandAsync
 	logger   *slog.Logger
 
 	pendingPriceChats sync.Map // pendingPriceKey -> pendingPricePrompt
+	pendingCKChats    sync.Map // pendingCKKey -> pendingCKPrompt
 }
 
 type pendingPriceKey struct {
@@ -42,8 +44,18 @@ type pendingPricePrompt struct {
 	messageID int64
 }
 
-type searchClient interface {
+type pendingCKKey struct {
+	chatID int64
+	userID int64
+}
+
+type pendingCKPrompt struct {
+	messageID int64
+}
+
+type apiClient interface {
 	Search(ctx context.Context, query string) (*SearchSummary, error)
+	CKSearch(ctx context.Context, query string) (*CKSummary, error)
 }
 
 type messageClient interface {
@@ -55,9 +67,9 @@ type messageClient interface {
 // NewService wires Telegram webhook handling. When async is nil, /price runs synchronously.
 func NewService(
 	secret string,
-	gishath searchClient,
+	gishath apiClient,
 	telegram messageClient,
-	async PriceSearchAsync,
+	async CommandAsync,
 	logger *slog.Logger,
 ) *Service {
 	if logger == nil {
@@ -117,6 +129,7 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 	switch {
 	case strings.EqualFold(text, "/help"):
 		s.clearPendingPrice(chatID, userID)
+		s.clearPendingCK(chatID, userID)
 		if err := s.telegram.SendMessage(ctx, chatID, formatHelpMessage(), ""); err != nil {
 			return WebhookStatusInternalError, err
 		}
@@ -124,15 +137,33 @@ func (s *Service) handleMessage(ctx context.Context, message *Message) (int, err
 	case strings.HasPrefix(text, "/price"):
 		query := strings.TrimSpace(strings.TrimPrefix(text, "/price"))
 		if query == "" {
+			s.clearPendingCK(chatID, userID)
 			return s.promptPriceQuery(ctx, chatID, message.From)
 		}
 		s.clearPendingPrice(chatID, userID)
+		s.clearPendingCK(chatID, userID)
 		return s.handlePriceQuery(ctx, chatID, userID, query)
+	case strings.HasPrefix(text, "/ck"):
+		query := strings.TrimSpace(strings.TrimPrefix(text, "/ck"))
+		if query == "" {
+			s.clearPendingPrice(chatID, userID)
+			return s.promptCKQuery(ctx, chatID, message.From)
+		}
+		s.clearPendingPrice(chatID, userID)
+		s.clearPendingCK(chatID, userID)
+		return s.handleCKQuery(ctx, chatID, userID, query)
 	}
 
 	if s.isFollowUpToPricePrompt(message) {
 		s.clearPendingPrice(chatID, userID)
+		s.clearPendingCK(chatID, userID)
 		return s.handlePriceQuery(ctx, chatID, userID, text)
+	}
+
+	if s.isFollowUpToCKPrompt(message) {
+		s.clearPendingCK(chatID, userID)
+		s.clearPendingPrice(chatID, userID)
+		return s.handleCKQuery(ctx, chatID, userID, text)
 	}
 
 	return WebhookStatusOK, nil
@@ -241,6 +272,103 @@ func (s *Service) RunPriceSearch(ctx context.Context, chatID int64, query string
 	}
 	caption := formatSearchReply(query, summary)
 	return s.sendPriceSearchReply(ctx, chatID, summary, caption)
+}
+
+func (s *Service) promptCKQuery(ctx context.Context, chatID int64, user *User) (int, error) {
+	text, parseMode := formatCKPrompt(user)
+	messageID, err := s.telegram.SendForceReply(ctx, chatID, text, ckPromptPlaceholder, parseMode)
+	if err != nil {
+		return WebhookStatusInternalError, err
+	}
+	s.setPendingCK(chatID, senderID(user), messageID)
+	return WebhookStatusOK, nil
+}
+
+func (s *Service) pendingCKKey(chatID, userID int64) pendingCKKey {
+	return pendingCKKey{chatID: chatID, userID: userID}
+}
+
+func (s *Service) setPendingCK(chatID, userID, messageID int64) {
+	s.pendingCKChats.Store(s.pendingCKKey(chatID, userID), pendingCKPrompt{messageID: messageID})
+}
+
+func (s *Service) clearPendingCK(chatID, userID int64) {
+	s.pendingCKChats.Delete(s.pendingCKKey(chatID, userID))
+}
+
+func (s *Service) hasPendingCK(chatID, userID int64) bool {
+	_, ok := s.pendingCKChats.Load(s.pendingCKKey(chatID, userID))
+	return ok
+}
+
+func (s *Service) isFollowUpToCKPrompt(message *Message) bool {
+	chatID := message.Chat.ID
+	userID := message.SenderID()
+	if !s.hasPendingCK(chatID, userID) {
+		return false
+	}
+	if message.ReplyToMessage != nil {
+		return s.replyTargetsCKPrompt(message)
+	}
+	return true
+}
+
+func (s *Service) replyTargetsCKPrompt(message *Message) bool {
+	reply := message.ReplyToMessage
+	if reply == nil {
+		return false
+	}
+	if isCKPrompt(reply.Text) {
+		return true
+	}
+	if reply.MessageID == 0 {
+		return false
+	}
+	pending, ok := s.pendingCKChats.Load(s.pendingCKKey(message.Chat.ID, message.SenderID()))
+	if !ok {
+		return false
+	}
+	return pending.(pendingCKPrompt).messageID == reply.MessageID
+}
+
+func (s *Service) handleCKQuery(ctx context.Context, chatID, userID int64, query string) (int, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return s.promptCKQuery(ctx, chatID, &User{ID: userID})
+	}
+	if len(query) < 3 {
+		s.setPendingCK(chatID, userID, 0)
+		if err := s.telegram.SendMessage(ctx, chatID, "Enter at least 3 characters to search.", ""); err != nil {
+			return WebhookStatusInternalError, err
+		}
+		return WebhookStatusOK, nil
+	}
+
+	if err := s.telegram.SendMessage(ctx, chatID, "Looking up Card Kingdom price for "+query+"…", ""); err != nil {
+		return WebhookStatusInternalError, err
+	}
+
+	if s.async != nil {
+		if err := s.async.EnqueueCKSearch(ctx, chatID, query); err != nil {
+			return WebhookStatusInternalError, err
+		}
+		return WebhookStatusOK, nil
+	}
+
+	if err := s.RunCKSearch(ctx, chatID, query); err != nil {
+		return WebhookStatusInternalError, err
+	}
+	return WebhookStatusOK, nil
+}
+
+// RunCKSearch performs the Card Kingdom lookup and sends the Telegram reply.
+func (s *Service) RunCKSearch(ctx context.Context, chatID int64, query string) error {
+	summary, err := s.gishath.CKSearch(ctx, query)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "telegram ck search failed", "query", query, "err", err)
+		return s.telegram.SendMessage(ctx, chatID, "Lookup failed. Please try again later.", "")
+	}
+	return s.telegram.SendMessage(ctx, chatID, formatCKReply(query, summary), "")
 }
 
 func (s *Service) sendPriceSearchReply(ctx context.Context, chatID int64, summary *SearchSummary, caption string) error {

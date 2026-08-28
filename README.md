@@ -12,7 +12,7 @@ It aggregates listings from supported stores, normalizes results, and sorts by p
 - 🧭 Store filtering (query specific LGS only)
 - 🛒 Persistent cart in the frontend UI, sharable across devices via export/import code
 - 📈 Trending searches — popular card names by time range (24 hours to 1 year), plus top Card Kingdom price risers and drops (24h)
-- 🤖 Telegram bot — `/price` for cheapest in-stock match across stores, with link to full Gishath search
+- 🤖 Telegram bot — `/price` for cheapest in-stock match across stores, with link to full Gishath search; `/ck` for Card Kingdom price from the database
 
 ## 🏗️ Architecture
 
@@ -139,11 +139,12 @@ Architecture diagrams and sequence flow:
 |---------|----------|
 | `/help` | Usage instructions |
 | `/price <card name>` | Cheapest in-stock match across all stores (minimum 3 characters) |
+| `/ck <card name>` | Card Kingdom price from the database (minimum 3 characters) |
 
-Sending bare `/price` prompts for a card name via ForceReply. In group chats,
-only the user who sent `/price` can complete that prompt.
+Sending bare `/price` or `/ck` prompts for a card name via ForceReply. In group chats,
+only the user who sent the command can complete that prompt.
 
-The Telegram command menu registers `/help` only. `/price` is documented in
+The Telegram command menu registers `/help` only. `/price` and `/ck` are documented in
 `/help` but omitted from the menu because Telegram sends menu selections
 immediately, before the user can type a card name.
 
@@ -156,11 +157,16 @@ immediately, before the user can type a card name.
 3. For `/price`, the handler replies with “Searching…”, then **asynchronously
    self-invokes** the same Lambda (`action: telegram-price-run`) so the webhook
    returns before the multi-store scrape finishes.
-4. The follow-up invocation calls **`GET /telegram/search?s=<query>`** on
+4. For `/ck`, the handler replies with “Looking up Card Kingdom price…”, then
+   **asynchronously self-invokes** the same Lambda (`action: telegram-ck-run`).
+5. The follow-up invocation for `/price` calls **`GET /telegram/search?s=<query>`** on
    `api.gishathfetch.com`, which runs the same concurrent LGS scrape as the
    website but returns only the cheapest card, result count, store link, and
    per-store errors — not the full card list.
-5. The bot sends the formatted reply (photo when available) via Telegram
+6. The follow-up invocation for `/ck` calls **`GET /telegram/ck?s=<query>`** on
+   the search API, which looks up the cheapest fresh Card Kingdom listing from
+   DynamoDB (with Scryfall name verification).
+7. The bot sends the formatted reply (photo when available for `/price`) via Telegram
    `sendMessage` / `sendPhoto`.
 
 Auth uses a shared bearer token (`API_TELEGRAM_BOT_TOKEN`), not browser session
@@ -180,7 +186,7 @@ Set these in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | `TELEGRAM_BOT_TOKEN` | Bot Lambda, deploy | Telegram Bot API token |
 | `TELEGRAM_WEBHOOK_SECRET` | Bot Lambda, deploy | Webhook `X-Telegram-Bot-Api-Secret-Token` value |
 | `TELEGRAM_WEBHOOK_PUBLIC_URL` | Bot Lambda, deploy | Public webhook URL for Telegram `setWebhook` |
-| `API_TELEGRAM_BOT_TOKEN` | Search Lambda + bot Lambda | Bearer token for `GET /telegram/search` |
+| `API_TELEGRAM_BOT_TOKEN` | Search Lambda + bot Lambda | Bearer token for `GET /telegram/search` and `GET /telegram/ck` |
 | `GISHATH_API_BASE_URL` | Bot Lambda / local bot | Search API base URL (default `https://api.gishathfetch.com`) |
 | `API_ORIGIN_VERIFY_SECRET` | Bot Lambda (when API uses it) | Outbound `X-Origin-Verify` header to the search API |
 
@@ -205,7 +211,7 @@ Defaults: listen on `:8080` (`TELEGRAM_LISTEN_ADDR`), webhook path
 On startup it registers slash commands and the webhook when
 `TELEGRAM_WEBHOOK_PUBLIC_URL` is configured.
 
-Local mode runs `/price` **synchronously** (no Lambda self-invoke). Expose
+Local mode runs `/price` and `/ck` **synchronously** (no Lambda self-invoke). Expose
 `:8080` via a tunnel (for example ngrok) and set `TELEGRAM_WEBHOOK_PUBLIC_URL`
 to `https://<tunnel-host>/telegram/webhook` so Telegram can deliver updates.
 
