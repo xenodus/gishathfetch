@@ -57,7 +57,7 @@ func (t *TelegramAPI) SendMessage(ctx context.Context, chatID int64, text, linkP
 			"url": preview,
 		}
 	} else {
-		payload["disable_web_page_preview"] = false
+		payload["disable_web_page_preview"] = true
 	}
 	return t.post(ctx, "sendMessage", payload)
 }

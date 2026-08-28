@@ -62,7 +62,7 @@ func TestTelegramAPI_SendMessage_DefaultPreview(t *testing.T) {
 	})}
 
 	require.NoError(t, api.SendMessage(context.Background(), 1, "Searching…", ""))
-	require.Equal(t, false, gotBody["disable_web_page_preview"])
+	require.Equal(t, true, gotBody["disable_web_page_preview"])
 	_, hasOpts := gotBody["link_preview_options"]
 	require.False(t, hasOpts)
 }
