@@ -22,6 +22,8 @@ func Handle(ctx context.Context, event json.RawMessage) (any, error) {
 			return nil, runAnalyticsKeywordsExport(ctx)
 		case telegramPriceRunAction:
 			return nil, runTelegramPriceRun(ctx, internalEvent.ChatID, internalEvent.Query)
+		case telegramCKRunAction:
+			return nil, runTelegramCKRun(ctx, internalEvent.ChatID, internalEvent.Query)
 		}
 	}
 

@@ -598,13 +598,145 @@ func Test_formatSearchReply_NoMatches(t *testing.T) {
 	require.NotContains(t, reply, "gishathfetch.com")
 }
 
+func TestService_HandleWebhook_SyncCK(t *testing.T) {
+	inStock := true
+	gishath := &stubGishath{
+		ckSearch: func(_ context.Context, query string) (*CKSummary, error) {
+			require.Equal(t, "Lightning Bolt", query)
+			return &CKSummary{
+				Listing: &CKListingSummary{
+					CardName: "Lightning Bolt",
+					Edition:  "Fourth Edition",
+					PriceUsd: 0.49,
+					URL:      "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
+					InStock:  &inStock,
+				},
+			}, nil
+		},
+	}
+	var messages []string
+	telegram := &stubTelegram{
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			messages = append(messages, text)
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", gishath, telegram, nil, slog.Default())
+	body, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: 42},
+			Text: "/ck Lightning Bolt",
+		},
+	})
+	require.NoError(t, err)
+
+	status := svc.HandleWebhook(context.Background(), "webhook-secret", body)
+	require.Equal(t, WebhookStatusOK, status)
+	require.GreaterOrEqual(t, len(messages), 2)
+	require.Contains(t, messages[0], "Looking up Card Kingdom")
+	require.Contains(t, messages[len(messages)-1], "US$0.49")
+	require.Contains(t, messages[len(messages)-1], "cardkingdom.com")
+}
+
+func TestService_HandleWebhook_AsyncCK(t *testing.T) {
+	var enqueued bool
+	async := &stubAsync{
+		enqueueCK: func(_ context.Context, chatID int64, query string) error {
+			require.Equal(t, int64(42), chatID)
+			require.Equal(t, "Lightning Bolt", query)
+			enqueued = true
+			return nil
+		},
+	}
+	var messages []string
+	telegram := &stubTelegram{
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			messages = append(messages, text)
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", &stubGishath{}, telegram, async, slog.Default())
+	body, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: 42},
+			Text: "/ck Lightning Bolt",
+		},
+	})
+	require.NoError(t, err)
+
+	status := svc.HandleWebhook(context.Background(), "webhook-secret", body)
+	require.Equal(t, WebhookStatusOK, status)
+	require.True(t, enqueued)
+	require.Len(t, messages, 1)
+	require.Contains(t, messages[0], "Looking up Card Kingdom")
+}
+
+func TestService_RunCKSearch(t *testing.T) {
+	gishath := &stubGishath{
+		ckSearch: func(_ context.Context, _ string) (*CKSummary, error) {
+			return &CKSummary{}, nil
+		},
+	}
+	var sent string
+	telegram := &stubTelegram{
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			sent = text
+			return nil
+		},
+	}
+
+	svc := NewService("secret", gishath, telegram, nil, slog.Default())
+	require.NoError(t, svc.RunCKSearch(context.Background(), 1, "zzz"))
+	require.Contains(t, sent, `No Card Kingdom listing for "zzz".`)
+}
+
+func Test_formatCKReply(t *testing.T) {
+	inStock := true
+	previous := 0.59
+	change := -0.10
+	percent := -17
+	reply := formatCKReply("Lightning Bolt", &CKSummary{
+		Listing: &CKListingSummary{
+			CardName:           "Lightning Bolt",
+			Edition:            "Fourth Edition",
+			PriceUsd:           0.49,
+			PreviousPriceUsd:   &previous,
+			PriceChangeUsd:     &change,
+			PriceChangePercent: &percent,
+			URL:                "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
+			InStock:            &inStock,
+		},
+	})
+	require.Equal(t, strings.Join([]string{
+		"Lightning Bolt -> US$0.49 @ Card Kingdom",
+		"Fourth Edition · in stock",
+		"US$-0.10 from US$0.59 (-17%)",
+		"https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
+	}, "\n"), reply)
+}
+
+func Test_formatCKReply_NoListing(t *testing.T) {
+	reply := formatCKReply("zzz", &CKSummary{})
+	require.Equal(t, `No Card Kingdom listing for "zzz".`, reply)
+}
+
 type stubGishath struct {
-	search func(context.Context, string) (*SearchSummary, error)
+	search   func(context.Context, string) (*SearchSummary, error)
+	ckSearch func(context.Context, string) (*CKSummary, error)
 }
 
 func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary, error) {
 	if s.search != nil {
 		return s.search(ctx, query)
+	}
+	return nil, nil
+}
+
+func (s *stubGishath) CKSearch(ctx context.Context, query string) (*CKSummary, error) {
+	if s.ckSearch != nil {
+		return s.ckSearch(ctx, query)
 	}
 	return nil, nil
 }
@@ -637,12 +769,20 @@ func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, p
 }
 
 type stubAsync struct {
-	enqueue func(context.Context, int64, string) error
+	enqueue   func(context.Context, int64, string) error
+	enqueueCK func(context.Context, int64, string) error
 }
 
 func (s *stubAsync) EnqueuePriceSearch(ctx context.Context, chatID int64, query string) error {
 	if s.enqueue != nil {
 		return s.enqueue(ctx, chatID, query)
+	}
+	return nil
+}
+
+func (s *stubAsync) EnqueueCKSearch(ctx context.Context, chatID int64, query string) error {
+	if s.enqueueCK != nil {
+		return s.enqueueCK(ctx, chatID, query)
 	}
 	return nil
 }

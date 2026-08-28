@@ -20,6 +20,27 @@ type SearchSummary struct {
 	TotalDurationMs int64        `json:"totalDurationMs"`
 }
 
+// CKSummary is the Telegram Card Kingdom API response payload.
+type CKSummary struct {
+	Listing    *CKListingSummary `json:"listing"`
+	DurationMs int64             `json:"durationMs"`
+}
+
+// CKListingSummary is a Card Kingdom listing returned by /telegram/ck.
+type CKListingSummary struct {
+	CardName           string   `json:"cardName"`
+	Edition            string   `json:"edition"`
+	PriceUsd           float64  `json:"priceUsd"`
+	PreviousPriceUsd   *float64 `json:"previousPriceUsd,omitempty"`
+	PriceChangePercent *int     `json:"priceChangePercent,omitempty"`
+	PriceChangeUsd     *float64 `json:"priceChangeUsd,omitempty"`
+	URL                string   `json:"url"`
+	IsFoil             bool     `json:"isFoil"`
+	InStock            *bool    `json:"inStock,omitempty"`
+	UpdatedAt          string   `json:"updatedAt,omitempty"`
+	SyncedAt           string   `json:"syncedAt,omitempty"`
+}
+
 // CardSummary is the cheapest card returned by /telegram/search.
 type CardSummary struct {
 	Name      string  `json:"name"`
@@ -82,6 +103,41 @@ func (c *GishathClient) Search(ctx context.Context, query string) (*SearchSummar
 	}
 
 	var summary SearchSummary
+	if err := json.Unmarshal(body, &summary); err != nil {
+		return nil, err
+	}
+	return &summary, nil
+}
+
+// CKSearch looks up the cheapest Card Kingdom listing for a card name.
+func (c *GishathClient) CKSearch(ctx context.Context, query string) (*CKSummary, error) {
+	endpoint := c.baseURL + "/telegram/ck?" + url.Values{"s": {query}}.Encode()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.botToken)
+	if c.originSecret != "" {
+		req.Header.Set("X-Origin-Verify", c.originSecret)
+	}
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("gishath ck search failed: status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var summary CKSummary
 	if err := json.Unmarshal(body, &summary); err != nil {
 		return nil, err
 	}
