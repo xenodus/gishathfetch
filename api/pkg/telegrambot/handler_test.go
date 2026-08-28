@@ -16,10 +16,10 @@ import (
 func TestService_HandleWebhook_BarePricePromptsForCardName(t *testing.T) {
 	var forceReplyText string
 	telegram := &stubTelegram{
-		forceReply: func(_ context.Context, _ int64, text, placeholder string) error {
+		forceReply: func(_ context.Context, _ int64, text, placeholder string) (int64, error) {
 			forceReplyText = text
 			require.Equal(t, pricePromptPlaceholder, placeholder)
-			return nil
+			return 100, nil
 		},
 	}
 
@@ -74,6 +74,60 @@ func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
 	require.NoError(t, err)
 
 	status := svc.HandleWebhook(context.Background(), "webhook-secret", body)
+	require.Equal(t, WebhookStatusOK, status)
+	require.Equal(t, "Opt", searched)
+	require.GreaterOrEqual(t, len(messages), 2)
+	require.Contains(t, messages[0], "Searching")
+}
+
+func TestService_HandleWebhook_PendingPricePlainText(t *testing.T) {
+	var searched string
+	gishath := &stubGishath{
+		search: func(_ context.Context, query string) (*SearchSummary, error) {
+			searched = query
+			return &SearchSummary{
+				ResultCount: 1,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.0,
+					Source: "Flagship Games",
+				},
+				WebsiteURL: "https://gishathfetch.com/?s=Opt",
+			}, nil
+		},
+	}
+	var messages []string
+	telegram := &stubTelegram{
+		forceReply: func(_ context.Context, _ int64, text, _ string) (int64, error) {
+			require.Equal(t, pricePromptMessage, text)
+			return 100, nil
+		},
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			messages = append(messages, text)
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", gishath, telegram, nil, slog.Default())
+
+	priceBody, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: 42},
+			Text: "/price",
+		},
+	})
+	require.NoError(t, err)
+	status := svc.HandleWebhook(context.Background(), "webhook-secret", priceBody)
+	require.Equal(t, WebhookStatusOK, status)
+
+	queryBody, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: 42},
+			Text: "Opt",
+		},
+	})
+	require.NoError(t, err)
+	status = svc.HandleWebhook(context.Background(), "webhook-secret", queryBody)
 	require.Equal(t, WebhookStatusOK, status)
 	require.Equal(t, "Opt", searched)
 	require.GreaterOrEqual(t, len(messages), 2)
@@ -479,7 +533,7 @@ func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary,
 type stubTelegram struct {
 	send       func(context.Context, int64, string, string) error
 	sendPhoto  func(context.Context, int64, string, string) error
-	forceReply func(context.Context, int64, string, string) error
+	forceReply func(context.Context, int64, string, string) (int64, error)
 }
 
 func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
@@ -496,11 +550,11 @@ func (s *stubTelegram) SendPhoto(ctx context.Context, chatID int64, photoURL, ca
 	return nil
 }
 
-func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error {
+func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) (int64, error) {
 	if s.forceReply != nil {
 		return s.forceReply(ctx, chatID, text, placeholder)
 	}
-	return nil
+	return 100, nil
 }
 
 type stubAsync struct {
