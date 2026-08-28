@@ -26,7 +26,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("telegram bot commands registered", "count", len(telegrambot.DefaultBotCommands()))
+	logger.Info("telegram bot commands registered", "count", len(telegrambot.TelegramMenuCommands()))
 	if cfg.WebhookPublicURL != "" && cfg.WebhookSecret != "" {
 		logger.Info("telegram webhook registered", "url", cfg.WebhookPublicURL)
 	}

@@ -13,6 +13,73 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestService_HandleWebhook_BarePricePromptsForCardName(t *testing.T) {
+	var forceReplyText string
+	telegram := &stubTelegram{
+		forceReply: func(_ context.Context, _ int64, text, placeholder string) error {
+			forceReplyText = text
+			require.Equal(t, pricePromptPlaceholder, placeholder)
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", &stubGishath{}, telegram, nil, slog.Default())
+	body, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: 42},
+			Text: "/price",
+		},
+	})
+	require.NoError(t, err)
+
+	status := svc.HandleWebhook(context.Background(), "webhook-secret", body)
+	require.Equal(t, WebhookStatusOK, status)
+	require.Equal(t, pricePromptMessage, forceReplyText)
+}
+
+func TestService_HandleWebhook_PricePromptReply(t *testing.T) {
+	var searched string
+	gishath := &stubGishath{
+		search: func(_ context.Context, query string) (*SearchSummary, error) {
+			searched = query
+			return &SearchSummary{
+				ResultCount: 1,
+				Cheapest: &CardSummary{
+					Name:   "Opt",
+					Price:  1.0,
+					Source: "Flagship Games",
+				},
+				WebsiteURL: "https://gishathfetch.com/?s=Opt",
+			}, nil
+		},
+	}
+	var messages []string
+	telegram := &stubTelegram{
+		send: func(_ context.Context, _ int64, text, _ string) error {
+			messages = append(messages, text)
+			return nil
+		},
+	}
+
+	svc := NewService("webhook-secret", gishath, telegram, nil, slog.Default())
+	body, err := json.Marshal(Update{
+		Message: &Message{
+			Chat: Chat{ID: 42},
+			Text: "Opt",
+			ReplyToMessage: &Message{
+				Text: pricePromptMessage,
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	status := svc.HandleWebhook(context.Background(), "webhook-secret", body)
+	require.Equal(t, WebhookStatusOK, status)
+	require.Equal(t, "Opt", searched)
+	require.GreaterOrEqual(t, len(messages), 2)
+	require.Contains(t, messages[0], "Searching")
+}
+
 func TestService_HandleWebhook_SyncPrice(t *testing.T) {
 	var searched string
 	gishath := &stubGishath{
@@ -410,8 +477,9 @@ func (s *stubGishath) Search(ctx context.Context, query string) (*SearchSummary,
 }
 
 type stubTelegram struct {
-	send      func(context.Context, int64, string, string) error
-	sendPhoto func(context.Context, int64, string, string) error
+	send       func(context.Context, int64, string, string) error
+	sendPhoto  func(context.Context, int64, string, string) error
+	forceReply func(context.Context, int64, string, string) error
 }
 
 func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, linkPreviewURL string) error {
@@ -424,6 +492,13 @@ func (s *stubTelegram) SendMessage(ctx context.Context, chatID int64, text, link
 func (s *stubTelegram) SendPhoto(ctx context.Context, chatID int64, photoURL, caption string) error {
 	if s.sendPhoto != nil {
 		return s.sendPhoto(ctx, chatID, photoURL, caption)
+	}
+	return nil
+}
+
+func (s *stubTelegram) SendForceReply(ctx context.Context, chatID int64, text, placeholder string) error {
+	if s.forceReply != nil {
+		return s.forceReply(ctx, chatID, text, placeholder)
 	}
 	return nil
 }
