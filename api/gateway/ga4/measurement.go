@@ -126,5 +126,8 @@ func TrySendSearchEvent(ctx context.Context, searchTerm string) {
 
 	if err := sender.SendSearchEvent(ctx, searchTerm); err != nil {
 		logger.From(ctx).WarnContext(ctx, "ga4 search event failed", "searchTerm", searchTerm, "err", err)
+		return
 	}
+
+	logger.From(ctx).InfoContext(ctx, "ga4 telegram search event sent", "searchTerm", searchTerm)
 }
