@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader, X } from "react-feather";
 import { MAX_SEARCH_LENGTH, MIN_SEARCH_LENGTH } from "../constants";
+import LinkifiedText from "./LinkifiedText";
 import StoreSelector from "./StoreSelector";
 
 const TIP_DISMISSED_STORAGE_KEY = "search-form-tip-dismissed";
@@ -166,13 +167,13 @@ const SearchForm = ({
     <div ref={wrapperRef}>
       {noticeMessage && (
         <div className="alert alert-info mb-3" role="status">
-          {noticeMessage}
+          <LinkifiedText text={noticeMessage} />
         </div>
       )}
 
       {maintenanceMode && (
         <div className="alert alert-warning mb-3" role="alert">
-          {maintenanceMessage}
+          <LinkifiedText text={maintenanceMessage} />
         </div>
       )}
 
