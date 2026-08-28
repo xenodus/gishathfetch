@@ -1,11 +1,11 @@
-package telegrambot
+package telegramphoto
 
 import (
 	"strings"
 )
 
-// normalizePhotoURL returns an absolute http(s) URL when the scraper value is usable.
-func normalizePhotoURL(raw string) string {
+// Normalize returns an absolute http(s) URL when the scraper value is usable.
+func Normalize(raw string) string {
 	img := strings.TrimSpace(raw)
 	if img == "" {
 		return ""
@@ -16,9 +16,9 @@ func normalizePhotoURL(raw string) string {
 	return img
 }
 
-// isSendableTelegramPhotoURL reports whether Telegram sendPhoto is likely to accept the URL.
+// IsSendable reports whether Telegram sendPhoto is likely to accept the URL.
 // Telegram fetches the URL server-side and rejects HTML/SVG and other non-raster types.
-func isSendableTelegramPhotoURL(photoURL string) bool {
+func IsSendable(photoURL string) bool {
 	photoURL = strings.TrimSpace(photoURL)
 	if photoURL == "" {
 		return false
@@ -35,4 +35,14 @@ func isSendableTelegramPhotoURL(photoURL string) bool {
 		return false
 	}
 	return true
+}
+
+// Select returns the first sendable photo URL from the provided candidates.
+func Select(candidates ...string) string {
+	for _, candidate := range candidates {
+		if url := Normalize(candidate); IsSendable(url) {
+			return url
+		}
+	}
+	return ""
 }

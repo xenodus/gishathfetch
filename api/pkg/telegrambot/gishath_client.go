@@ -14,6 +14,7 @@ import (
 // SearchSummary is the Telegram search API response payload.
 type SearchSummary struct {
 	Cheapest        *CardSummary `json:"cheapest"`
+	PhotoURL        string       `json:"photoUrl,omitempty"`
 	ResultCount     int          `json:"resultCount"`
 	WebsiteURL      string       `json:"websiteUrl"`
 	TotalDurationMs int64        `json:"totalDurationMs"`
