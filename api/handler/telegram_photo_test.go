@@ -20,6 +20,14 @@ func TestSelectTelegramPhotoURL_ReturnsEmptyWithoutCandidates(t *testing.T) {
 	require.Empty(t, selectTelegramPhotoURL(nil))
 }
 
+func TestSelectTelegramPhotoURL_SkipsWebPFromCheapest(t *testing.T) {
+	photoURL := selectTelegramPhotoURL([]controller.Card{
+		{Name: "Sol Ring", Img: "https://thetcgmarketplace.com:3500/uploads/products/sol-ring.webp"},
+		{Name: "Sol Ring", Img: "https://cdn.shopify.com/s/files/sol-ring.jpg"},
+	})
+	require.Equal(t, "https://cdn.shopify.com/s/files/sol-ring.jpg", photoURL)
+}
+
 func TestSelectTelegramPhotoURL_ReturnsEmptyWhenOnlyPlaceholders(t *testing.T) {
 	require.Empty(t, selectTelegramPhotoURL([]controller.Card{
 		{Name: "Opt", Img: "https://placehold.co/304x424?text=Opt"},

@@ -18,8 +18,16 @@ func TestIsSendable(t *testing.T) {
 	require.False(t, IsSendable("https://placehold.co/304x424?text=Opt"))
 	require.False(t, IsSendable("https://placehold.co/304x424/png?text=Opt"))
 	require.False(t, IsSendable("https://cdn.example/card.svg"))
+	require.False(t, IsSendable("https://thetcgmarketplace.com:3500/uploads/products/sol-ring.webp"))
+	require.False(t, IsSendable("https://cdn.example/card.webp?size=large"))
 	require.True(t, IsSendable("https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg"))
 	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.png"))
+}
+
+func TestSelect_SkipsWebPForNextCandidate(t *testing.T) {
+	webp := "https://thetcgmarketplace.com:3500/uploads/products/sol-ring.webp"
+	jpg := "https://cdn.shopify.com/s/files/sol-ring.jpg"
+	require.Equal(t, jpg, Select(webp, jpg))
 }
 
 func TestSelect(t *testing.T) {

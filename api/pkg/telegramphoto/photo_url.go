@@ -1,6 +1,7 @@
 package telegramphoto
 
 import (
+	"net/url"
 	"strings"
 )
 
@@ -31,10 +32,33 @@ func IsSendable(photoURL string) bool {
 		// Web search uses placehold.co fallbacks; Telegram sendPhoto rejects their SVG responses.
 		return false
 	}
-	if strings.HasSuffix(lower, ".svg") {
+	if hasUnsupportedImageExtension(lower) {
+		return false
+	}
+	if hasNonStandardPort(photoURL) {
 		return false
 	}
 	return true
+}
+
+func hasUnsupportedImageExtension(lowerURL string) bool {
+	path := lowerURL
+	if i := strings.IndexAny(path, "?#"); i >= 0 {
+		path = path[:i]
+	}
+	return strings.HasSuffix(path, ".svg") || strings.HasSuffix(path, ".webp")
+}
+
+func hasNonStandardPort(photoURL string) bool {
+	parsed, err := url.Parse(photoURL)
+	if err != nil {
+		return true
+	}
+	port := parsed.Port()
+	if port == "" {
+		return false
+	}
+	return port != "80" && port != "443"
 }
 
 // Select returns the first sendable photo URL from the provided candidates.
