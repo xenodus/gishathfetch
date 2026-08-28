@@ -395,15 +395,20 @@ func dedupeStoreCards(cards []gateway.Card) []gateway.Card {
 }
 
 func storeCardKey(card gateway.Card) string {
-	if url := strings.TrimSpace(card.Url); url != "" {
-		return url
+	extraInfo := make([]string, len(card.ExtraInfo))
+	for i, info := range card.ExtraInfo {
+		extraInfo[i] = util.FoldForMatch(info)
 	}
+	sort.Strings(extraInfo)
+
 	return fmt.Sprintf(
-		"%s|%s|%v|%0.2f",
-		card.Name,
+		"%s|%s|%s|%v|%0.2f|%s",
+		card.Source,
+		util.FoldForMatch(card.Name),
 		card.Quality,
 		card.IsFoil,
 		card.Price,
+		strings.Join(extraInfo, ","),
 	)
 }
 
