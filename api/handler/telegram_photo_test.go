@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"testing"
 
 	"mtg-price-checker-sg/controller"
@@ -10,14 +9,19 @@ import (
 )
 
 func TestSelectTelegramPhotoURL_PrefersCheapestStoreImage(t *testing.T) {
-	photoURL := selectTelegramPhotoURL(context.Background(), []controller.Card{
+	photoURL := selectTelegramPhotoURL([]controller.Card{
 		{Name: "Opt", Img: "https://placehold.co/304x424?text=Opt"},
 		{Name: "Opt", Img: "https://cdn.shopify.com/s/files/card.jpg"},
-	}, "Opt")
+	})
 	require.Equal(t, "https://cdn.shopify.com/s/files/card.jpg", photoURL)
 }
 
 func TestSelectTelegramPhotoURL_ReturnsEmptyWithoutCandidates(t *testing.T) {
-	photoURL := selectTelegramPhotoURL(context.Background(), nil, "")
-	require.Empty(t, photoURL)
+	require.Empty(t, selectTelegramPhotoURL(nil))
+}
+
+func TestSelectTelegramPhotoURL_ReturnsEmptyWhenOnlyPlaceholders(t *testing.T) {
+	require.Empty(t, selectTelegramPhotoURL([]controller.Card{
+		{Name: "Opt", Img: "https://placehold.co/304x424?text=Opt"},
+	}))
 }

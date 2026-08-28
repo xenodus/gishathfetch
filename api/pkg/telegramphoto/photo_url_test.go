@@ -20,7 +20,6 @@ func TestIsSendable(t *testing.T) {
 	require.False(t, IsSendable("https://cdn.example/card.svg"))
 	require.True(t, IsSendable("https://product-images.tcgplayer.com/fit-in/437x437/12345.jpg"))
 	require.True(t, IsSendable("https://cdn.shopify.com/s/files/card.png"))
-	require.True(t, IsSendable("https://cards.scryfall.io/normal/front/a/b/c.jpg"))
 }
 
 func TestSelect(t *testing.T) {

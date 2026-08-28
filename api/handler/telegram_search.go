@@ -73,7 +73,7 @@ func TelegramSearch(ctx context.Context, request events.APIGatewayProxyRequest) 
 
 	body := TelegramSearchResponse{
 		Cheapest:        cheapest,
-		PhotoURL:        selectTelegramPhotoURL(ctx, inStockCards, query.searchString),
+		PhotoURL:        selectTelegramPhotoURL(inStockCards),
 		ResultCount:     len(inStockCards),
 		WebsiteURL:      buildWebsiteSearchURL(query.searchString, query.lgs),
 		Errors:          storeErrors,
