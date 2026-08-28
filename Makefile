@@ -5,9 +5,20 @@ ECR_IMAGE := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):l
 LAMBDA_ROLE := arn:aws:iam::$(AWS_ACCOUNT_ID):role/lambda-mtg
 LAMBDA_FUNCTIONS := mtg-price-scrapper mtg-price-ck-refresh mtg-analytics-keywords-export mtg-telegram-bot
 
-deploy: deploy-common docker-tag docker-push lambda-update frontend-update
+deploy: deploy-common docker-tag docker-push lambda-update telegram-sync frontend-update
 
 deploy-common: docker-build aws-login
+
+TELEGRAM_SYNC_BIN=.cache/telegram-sync
+
+telegram-sync:
+	@mkdir -p .cache && \
+	cd api && go build -mod=vendor -o ../$(TELEGRAM_SYNC_BIN) ./cmd/telegram-sync && \
+	if [ -n "$${TELEGRAM_BOT_TOKEN:-}" ]; then \
+		../$(TELEGRAM_SYNC_BIN); \
+	else \
+		echo "Skipping telegram-sync: TELEGRAM_BOT_TOKEN not configured"; \
+	fi
 
 docker-build:
 	docker buildx build --platform linux/amd64 --provenance=false --load -t $(ECR_REPO) .
