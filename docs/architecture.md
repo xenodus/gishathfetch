@@ -417,6 +417,7 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | Telegram Bot API token | Bot Lambda | `TELEGRAM_BOT_TOKEN` |
 | Telegram webhook secret | Bot Lambda | `TELEGRAM_WEBHOOK_SECRET` |
 | Local dev origin secret | Vite only | `VITE_API_ORIGIN_VERIFY_SECRET` |
+| Google Maps browser API key | Vite / GitHub Actions | `VITE_GOOGLE_MAPS_API_KEY` |
 | Deploy role | GitHub Actions | `AWS_DEPLOY_ROLE_ARN` |
 
 The Web Bot Auth **public** key directory is generated at deploy time and uploaded to
@@ -428,6 +429,7 @@ is gitignored.
 | Item | Why it is public |
 |------|------------------|
 | GA4 measurement ID (`G-…` in `frontend/index.html`) | Embedded in the browser for analytics |
+| Google Maps browser API key (`VITE_GOOGLE_MAPS_API_KEY`) | Baked into the SPA at build time; restrict by HTTP referrer in Google Cloud |
 | Shopify **Storefront** access tokens in `api/gateway/*/search.go` | Shopify publishes these for client-side Storefront API use; they grant read-only storefront access, not admin |
 | AWS account ID / resource ARNs in `Makefile` and IAM examples | Identifiers, not credentials |
 | `api.gishathfetch.com`, bucket names, Lambda function names | Public infrastructure endpoints |

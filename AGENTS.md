@@ -142,6 +142,10 @@ Proxy target: `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`). 
 `VITE_API_ORIGIN_VERIFY_SECRET` when testing against an environment with
 `API_ORIGIN_VERIFY_SECRET` enabled.
 
+The LGS map modal uses the Google Maps JavaScript API. Set `VITE_GOOGLE_MAPS_API_KEY`
+in `frontend/.env.local` for local dev and in GitHub Actions secrets for production
+builds. Restrict the key to HTTP referrers (`gishathfetch.com`, `localhost:5173`).
+
 Full reference for the two abuse-mitigation layers:
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
