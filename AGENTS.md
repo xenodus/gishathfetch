@@ -41,15 +41,13 @@ needs updating. Do this even when the task is not privacy-related.
 
 ### Where policies live
 
-| Policy | Location | Public URL |
-|--------|----------|------------|
+| Policy | Source of truth | Public URL |
+|--------|-----------------|------------|
 | Main website | `frontend/src/components/Modals.jsx` (Privacy modal) | [https://gishathfetch.com/?privacy=1](https://gishathfetch.com/?privacy=1) |
-| Main website (repo mirror) | `docs/privacy-policy.md` | Same canonical URL as the modal |
 | Telegram bot | `frontend/public/telegram-bot-privacy.html` | [https://gishathfetch.com/telegram-bot-privacy.html](https://gishathfetch.com/telegram-bot-privacy.html) |
-| Telegram bot (repo mirror) | `docs/telegram-bot-privacy-policy.md` | Same canonical URL as the static page |
 
-Keep each policy's user-facing copy and its markdown mirror in sync when privacy text
-changes. Cross-link between the main policy and the Telegram policy when either is edited.
+Edit the relevant source file directly when privacy text changes. Cross-link between the
+main policy and the Telegram policy when either is edited.
 
 ### When to update
 
