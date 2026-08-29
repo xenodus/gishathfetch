@@ -1,4 +1,8 @@
 import { Button, Modal } from "react-bootstrap";
+import {
+  TELEGRAM_BOT_HANDLE_URL,
+  TELEGRAM_BOT_PRIVACY_URL,
+} from "../constants";
 import LazyMapIframe from "./LazyMapIframe";
 
 const Modals = ({
@@ -131,6 +135,11 @@ const Modals = ({
               <li>
                 <a href="#faq-q8" className="link-offset-2">
                   What is in Trending?
+                </a>
+              </li>
+              <li>
+                <a href="#faq-q9" className="link-offset-2">
+                  Where else can I find Gishath Fetch?
                 </a>
               </li>
             </ol>
@@ -286,6 +295,39 @@ const Modals = ({
               </p>
             </div>
           </div>
+          <div className="mb-4" id="faq-q9">
+            <div className="q-header">
+              <h5>9. Where else can I find Gishath Fetch?</h5>
+            </div>
+            <div className="q-answer">
+              <p>
+                You can also use Gishath Fetch on Telegram. Open{" "}
+                <a
+                  href={TELEGRAM_BOT_HANDLE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  @GishathFetchBot
+                </a>{" "}
+                and send <strong>/price</strong> followed by a card name for the
+                cheapest in-stock match across stores, or <strong>/ck</strong>{" "}
+                for a Card Kingdom price lookup. Send <strong>/help</strong> in
+                the chat for usage examples.
+              </p>
+              <p>
+                The bot links back to this site for the full search experience.
+                For what the bot collects and how that data is used, see the{" "}
+                <a
+                  href={TELEGRAM_BOT_PRIVACY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Telegram bot privacy policy
+                </a>
+                .
+              </p>
+            </div>
+          </div>
         </Modal.Body>
         <Modal.Footer className="justify-content-start">
           &copy; 2023 gishathfetch.com by{" "}
@@ -312,6 +354,7 @@ const Modals = ({
           <Modal.Title>Privacy Policy</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          <p className="text-muted">Last updated: 29 August 2026</p>
           <div>
             <p className="fw-bold">Access Logs</p>
             <p>
@@ -335,6 +378,16 @@ const Modals = ({
             </p>
           </div>
           <div>
+            <p className="fw-bold">Search Session Cookie</p>
+            <p>
+              Before you run a search, the site may request a short-lived
+              HttpOnly session cookie (<code>gf_api_session</code>) from our
+              search API at <code>api.gishathfetch.com</code>. The cookie helps
+              protect the search API from abuse. It is not used to identify you
+              personally or to track you across other websites.
+            </p>
+          </div>
+          <div>
             <p className="fw-bold">Google Analytics</p>
             <p>
               This website uses Google Analytics. Google Analytics employs
@@ -344,10 +397,77 @@ const Modals = ({
               site, including your IP address, is transmitted to Google.
             </p>
             <p>
+              When you search for a card, we also send the{" "}
+              <strong>search term</strong> (the card name or text you entered)
+              to Google Analytics as an event parameter. We use this in
+              aggregate form to understand usage and to power features such as{" "}
+              <strong>Trending</strong>. We do not use it to build a profile of
+              you as an identifiable person.
+            </p>
+            <p>
               Google Analytics offers a deactivation add-on for most current
               browsers that provides you with more control over what data Google
               can collect on websites you access. You can find additional
-              information about the add-on here.
+              information about the add-on{" "}
+              <a
+                href="https://tools.google.com/dlpage/gaoptout"
+                target="_blank"
+                rel="noreferrer"
+              >
+                here
+              </a>
+              .
+            </p>
+          </div>
+          <div>
+            <p className="fw-bold">Google AdSense</p>
+            <p>
+              This website uses Google AdSense to display advertisements. Google
+              and its partners may use cookies and similar technologies to serve
+              ads based on your prior visits to this or other websites, and to
+              measure ad performance. Ad-related data is processed by Google
+              under{" "}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Google&apos;s Privacy Policy
+              </a>
+              .
+            </p>
+            <p>
+              You can manage ad personalisation through{" "}
+              <a
+                href="https://adssettings.google.com/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Google Ads Settings
+              </a>
+              .
+            </p>
+          </div>
+          <div>
+            <p className="fw-bold">Telegram Bot</p>
+            <p>
+              Gishath Fetch is also available as a Telegram bot (
+              <a
+                href={TELEGRAM_BOT_HANDLE_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                @GishathFetchBot
+              </a>
+              ). The bot has a{" "}
+              <a
+                href={TELEGRAM_BOT_PRIVACY_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                separate privacy policy
+              </a>{" "}
+              that explains what the bot collects and how that data is used.
             </p>
           </div>
         </Modal.Body>

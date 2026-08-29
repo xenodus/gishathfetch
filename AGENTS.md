@@ -34,6 +34,38 @@ Notes:
   - `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
 - Always verify gateway card search behavior for impacted stores. Downstream HTML/API frequently changes due to scraping targets, so regressions may appear even when code compiles.
 
+## Privacy policy
+
+After each change (before opening or updating a PR), check whether the privacy policy
+needs updating. Do this even when the task is not privacy-related.
+
+### Where policies live
+
+| Policy | Source of truth | Public URL |
+|--------|-----------------|------------|
+| Main website | `frontend/src/components/Modals.jsx` (Privacy modal) | [https://gishathfetch.com/?privacy=1](https://gishathfetch.com/?privacy=1) |
+| Telegram bot | `frontend/public/telegram-bot-privacy.html` | [https://gishathfetch.com/telegram-bot-privacy.html](https://gishathfetch.com/telegram-bot-privacy.html) |
+
+Edit the relevant source file directly when privacy text changes. Cross-link between the
+main policy and the Telegram policy when either is edited.
+
+### When to update
+
+Review privacy impact when a change introduces or alters any of:
+
+- Cookies or browser storage (for example `gf_api_session`, theme, saved cards, favourites)
+- Analytics or telemetry (GA4 events, search terms, Trending, server-side measurement)
+- Advertising (AdSense or similar third-party scripts)
+- New user-facing channels (Telegram, email, other bots or integrations)
+- Personal or identifiable data collection, logging, or retention
+- Third-party services that receive user input or identifiers (for example Scryfall autocomplete)
+
+If disclosure is needed, update the relevant policy in the same PR. Note what changed
+in the PR description. Refresh privacy-modal screenshots when visible policy text changes.
+
+If no update is required, say so briefly in the PR (for example: "Privacy policy:
+no change — no new data collection").
+
 ## UI deliverables
 
 For any PR that includes UI changes:

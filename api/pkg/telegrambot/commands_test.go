@@ -33,5 +33,6 @@ func TestFormatHelpMessage_IncludesCommands(t *testing.T) {
 	}
 	require.Contains(t, msg, "/price Lightning Bolt")
 	require.Contains(t, msg, "/ck Lightning Bolt")
+	require.Contains(t, msg, TelegramBotPrivacyURL)
 	require.True(t, strings.HasPrefix(msg, "Search Singapore MTG singles prices."))
 }
