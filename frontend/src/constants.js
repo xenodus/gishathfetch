@@ -215,6 +215,9 @@ export const API_SESSION_URL = apiUrl("/session");
 
 export const BASE_URL = "https://gishathfetch.com/";
 
+/** Deep link that opens the main privacy policy modal on the site. */
+export const PRIVACY_POLICY_URL = `${BASE_URL}?privacy=1`;
+
 export const TELEGRAM_BOT_HANDLE_URL = "https://t.me/GishathFetchBot";
 
 /** Static page on gishathfetch.com (deployed from frontend/public/). */

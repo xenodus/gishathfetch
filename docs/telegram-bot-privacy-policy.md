@@ -6,8 +6,7 @@
 
 This policy describes how the **Gishath Fetch Telegram bot** (`@GishathFetchBot`) handles
 information when you use it. It applies only to the bot. The main Gishath Fetch website
-([gishathfetch.com](https://gishathfetch.com)) has a separate privacy policy (available
-from the site footer).
+has a [separate privacy policy](https://gishathfetch.com/?privacy=1).
 
 ## Summary
 

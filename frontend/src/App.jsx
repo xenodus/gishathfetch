@@ -116,12 +116,16 @@ export default function App() {
     }
   }, [theme]);
 
-  // Support ?faq=1 in the URL so the FAQ modal can be opened for screenshots or deep links.
+  // Support ?faq=1 and ?privacy=1 for modal deep links.
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
     const sp = new URLSearchParams(window.location.search);
+    if (sp.get("privacy") === "1") {
+      setModalType("PRIVACY");
+      return;
+    }
     if (sp.get("faq") === "1") {
       setModalType("FAQ");
     }
