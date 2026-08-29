@@ -1,4 +1,8 @@
 import { Button, Modal } from "react-bootstrap";
+import {
+  TELEGRAM_BOT_HANDLE_URL,
+  TELEGRAM_BOT_PRIVACY_URL,
+} from "../constants";
 import LazyMapIframe from "./LazyMapIframe";
 
 const Modals = ({
@@ -131,6 +135,11 @@ const Modals = ({
               <li>
                 <a href="#faq-q8" className="link-offset-2">
                   What is in Trending?
+                </a>
+              </li>
+              <li>
+                <a href="#faq-q9" className="link-offset-2">
+                  Where else can I find Gishath Fetch?
                 </a>
               </li>
             </ol>
@@ -283,6 +292,39 @@ const Modals = ({
                 <strong>Top drops @ CK (24h)</strong> to see Card Kingdom cards
                 with the largest USD price increases or decreases over the last
                 24 hours.
+              </p>
+            </div>
+          </div>
+          <div className="mb-4" id="faq-q9">
+            <div className="q-header">
+              <h5>9. Where else can I find Gishath Fetch?</h5>
+            </div>
+            <div className="q-answer">
+              <p>
+                You can also use Gishath Fetch on Telegram. Open{" "}
+                <a
+                  href={TELEGRAM_BOT_HANDLE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  @GishathFetchBot
+                </a>{" "}
+                and send <strong>/price</strong> followed by a card name for the
+                cheapest in-stock match across stores, or <strong>/ck</strong>{" "}
+                for a Card Kingdom price lookup. Send <strong>/help</strong> in
+                the chat for usage examples.
+              </p>
+              <p>
+                The bot links back to this site for the full search experience.
+                For what the bot collects and how that data is used, see the{" "}
+                <a
+                  href={TELEGRAM_BOT_PRIVACY_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Telegram bot privacy policy
+                </a>
+                .
               </p>
             </div>
           </div>

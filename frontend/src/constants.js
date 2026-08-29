@@ -215,6 +215,11 @@ export const API_SESSION_URL = apiUrl("/session");
 
 export const BASE_URL = "https://gishathfetch.com/";
 
+export const TELEGRAM_BOT_HANDLE_URL = "https://t.me/GishathFetchBot";
+
+/** Static page on gishathfetch.com (deployed from frontend/public/). */
+export const TELEGRAM_BOT_PRIVACY_URL = `${BASE_URL}telegram-bot-privacy.html`;
+
 // Same-origin on production (served from gishathfetch.com via CloudFront).
 export const TOP_SEARCH_KEYWORDS_URL =
   "/analytics/top-search-keywords/latest.json";

@@ -29,6 +29,8 @@ func TelegramMenuCommands() []BotCommand {
 	}
 }
 
+const TelegramBotPrivacyURL = "https://gishathfetch.com/telegram-bot-privacy.html"
+
 func formatHelpMessage() string {
 	lines := []string{
 		"Search Singapore MTG singles prices.",
@@ -47,6 +49,8 @@ func formatHelpMessage() string {
 		"Examples:",
 		"/price Lightning Bolt",
 		"/ck Lightning Bolt",
+		"",
+		"Privacy: "+TelegramBotPrivacyURL,
 	)
 	return strings.Join(lines, "\n")
 }
