@@ -49,6 +49,8 @@ export const LGS_MAP = [
     id: "5-mana-map",
     name: "5 Mana",
     address: "511 Guillemard Rd, #02-06, Singapore 399849",
+    lat: 1.314306298673231,
+    lng: 103.88875987494157,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7686522542544!2d103.88875987494157!3d1.314306298673231!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19ef83dc5edf%3A0xf45523d5c3efb509!2s5-MANA.SG!5e0!3m2!1sen!2ssg!4v1768142747318!5m2!1sen!2ssg",
     website: "https://5-mana.sg/",
@@ -57,6 +59,8 @@ export const LGS_MAP = [
     id: "agora-map",
     name: "Agora Hobby",
     address: "French Rd, #05-164 Blk 809, Singapore 200809",
+    lat: 1.3084089617085968,
+    lng: 103.85967687451628,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778050505021!2d103.85967687451628!3d1.3084089617085968!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19c9f7d7f74d%3A0xeaa1a66df7d4bcd6!2sAgora%20Hobby!5e0!3m2!1sen!2ssg!4v1702820213937!5m2!1sen!2ssg",
     website: "https://agorahobby.com/",
@@ -65,6 +69,8 @@ export const LGS_MAP = [
     id: "arcane-sanctum-map",
     name: "Arcane Sanctum",
     address: "809 French Rd, #02-36 Kitchener Complex, Singapore 200809",
+    lat: 1.3084036,
+    lng: 103.85967687451628,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.778050505021!2d103.85967687451628!3d1.3084036!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da197e8c761a49%3A0x8c56b7150064528b!2sArcane%20Sanctum!5e0!3m2!1sen!2ssg!4v1785400000000!5m2!1sen!2ssg",
     website: "https://arcanesanctumtcg.com/",
@@ -73,6 +79,8 @@ export const LGS_MAP = [
     id: "cards-central-map",
     name: "Cards Central",
     address: "62A Smith Street, Chinatown, Singapore 058964",
+    lat: 1.282578,
+    lng: 103.844359,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.8188188188!2d103.844359!3d1.282578!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190d6e6a1d4d%3A0x6e6e6e6e6e6e6e6e!2s62A%20Smith%20St%2C%20Singapore%20058964!5e0!3m2!1sen!2ssg!4v1731824736033!5m2!1sen!2ssg",
     website: "https://cardscentral.com/",
@@ -81,6 +89,8 @@ export const LGS_MAP = [
     id: "cards-citadel-map",
     name: "Cards Citadel",
     address: "Blk 10 North Bridge Road, #02-5117, Singapore 190010",
+    lat: 1.305557,
+    lng: 103.863559,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.783678524258!2d103.863559!3d1.305557!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190c9e183751%3A0xa2119a95d1e683f2!2sCards%20Citadel!5e0!3m2!1sen!2ssg!4v1782086400000!5m2!1sen!2ssg",
     website: "https://cardscitadel.com/",
@@ -89,6 +99,8 @@ export const LGS_MAP = [
     id: "dueller-point-map",
     name: "Dueller's Point",
     address: "450 Hougang Ave 10, B1-541, Singapore 530450",
+    lat: 1.3793695614804176,
+    lng: 103.89300967489284,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.6621597567673!2d103.89300967489284!3d1.3793695614804176!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da163eecb250ff%3A0xc7c259e72671dc62!2sDueller's%20Point!5e0!3m2!1sen!2ssg!4v1771347706226!5m2!1sen!2ssg",
     website: "https://www.duellerspoint.com/",
@@ -97,6 +109,8 @@ export const LGS_MAP = [
     id: "flagship-games-map",
     name: "Flagship Games",
     address: "214 Bishan St. 23, B1-223, Singapore 570214",
+    lat: 1.3574649065942905,
+    lng: 103.84829838647084,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d490.0218996351789!2d103.84829838647084!3d1.3574649065942905!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da173ef6ffcc0b%3A0x880386dee363a253!2sFlagship%20Games!5e0!3m2!1sen!2ssg!4v1734958555684!5m2!1sen!2ssg",
     website: "https://www.flagshipgames.sg/",
@@ -105,6 +119,8 @@ export const LGS_MAP = [
     id: "fyendal-hobby-map",
     name: "Fyendal Hobby",
     address: "86 Marine Parade Central, #04-305, Singapore 440086",
+    lat: 1.3017381,
+    lng: 103.9067387,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.79!2d103.9067387!3d1.3017381!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19a72dacf6d1%3A0x5ff49c2fc4a11159!2sFyendal%20Hobby!5e0!3m2!1sen!2ssg!4v1782000000000!5m2!1sen!2ssg",
     website: "https://fyendalhobby.com/",
@@ -113,6 +129,8 @@ export const LGS_MAP = [
     id: "games-haven-pl-map",
     name: "Games Haven - Paya Lebar",
     address: "736 Geylang Rd, Singapore 389647",
+    lat: 1.350592080054757,
+    lng: 103.79905633083244,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63819.358332241325!2d103.79905633083244!3d1.350592080054757!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da1817d10ac901%3A0x2cacb3a0679089a2!2sGames%20Haven!5e0!3m2!1sen!2ssg!4v1702821045126!5m2!1sen!2ssg",
     website: "https://www.gameshaventcg.com/",
@@ -121,6 +139,8 @@ export const LGS_MAP = [
     id: "grey-ogre-map",
     name: "Grey Ogre Games",
     address: "83 Club St, Singapore 069451",
+    lat: 1.2817574584814586,
+    lng: 103.84085797576442,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.8199964760065!2d103.84085797576442!3d1.2817574584814586!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da190d242b70db%3A0x965b932c3bc19eda!2sGrey%20Ogre%20Games!5e0!3m2!1sen!2ssg!4v1702821297360!5m2!1sen!2ssg",
     website: "https://www.greyogregames.com/",
@@ -130,6 +150,8 @@ export const LGS_MAP = [
     name: "Hideyoshi",
     address:
       "504 Jurong West Street 51, #04-211, Hong Kah Court, Singapore 640504",
+    lat: 1.3492252,
+    lng: 103.7192003,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63838.71666448266!2d103.7192003!3d1.3492252!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da0f00180a50f3%3A0xedf0967d08ff8944!2sHideyoshi!5e0!3m2!1sen!2ssg!4v1782000000000!5m2!1sen!2ssg",
     website: "https://hideyoshitcg.com/",
@@ -138,6 +160,8 @@ export const LGS_MAP = [
     id: "hideout-map",
     name: "Hideout",
     address: "803 King George's Ave, #02-190, Singapore 200803",
+    lat: 1.3083185,
+    lng: 103.84179288715819,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15955.112777358516!2d103.84179288715819!3d1.3083185!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19e075f4c4f5%3A0x60e4a2c61816be63!2sHideout!5e0!3m2!1sen!2ssg!4v1702821327690!5m2!1sen!2ssg",
     website: "https://hideoutcg.com/",
@@ -146,6 +170,8 @@ export const LGS_MAP = [
     id: "manapro-map",
     name: "Mana Pro",
     address: "BLK 203 Choa Chu Kang Ave 1, B1-41, Singapore 680203",
+    lat: 1.3815577614740542,
+    lng: 103.74693327451605,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.6584888121897!2d103.74693327451605!3d1.3815577614740542!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da1176665e2737%3A0x3b8608ab4d67724f!2sMana%20Pro!5e0!3m2!1sen!2ssg!4v1702821359528!5m2!1sen!2ssg",
     website: "https://sg-manapro.com/",
@@ -154,6 +180,8 @@ export const LGS_MAP = [
     id: "mox-map",
     name: "Mox & Lotus",
     address: "215 Bedok North Street 1, #02-85, Singapore 460215",
+    lat: 1.3259392,
+    lng: 103.9334704,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d15954.999958678827!2d103.9334704!3d1.3259392!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19d89d198d6b%3A0xb3e238feedd6c90d!2sMox%20%26%20Lotus!5e0!3m2!1sen!2ssg!4v1730797737444!5m2!1sen!2ssg",
     website: "https://www.moxandlotus.sg/",
@@ -162,6 +190,8 @@ export const LGS_MAP = [
     id: "mtg-asia-map",
     name: "MTG Asia",
     address: "261 Waterloo St, #03-28, Singapore 180261",
+    lat: 1.2989162986887468,
+    lng: 103.8493947744998,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7930896678654!2d103.8493947744998!3d1.2989162986887468!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19bb4a2bee83%3A0x28725aa3a3e2a51!2sMTG-Asia!5e0!3m2!1sen!2ssg!4v1703085334392!5m2!1sen!2ssg",
     website: "https://www.mtg-asia.com/",
@@ -170,6 +200,8 @@ export const LGS_MAP = [
     id: "onemtg-map",
     name: "One MTG",
     address: "100 Jln Sultan, #03-11 Sultan Plaza, Singapore 199001",
+    lat: 1.3029641617257042,
+    lng: 103.85910407451628,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7866900551694!2d103.85910407451628!3d1.3029641617257042!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19180d91f3a1%3A0x75c807bf93d430a4!2sOne%20MTG!5e0!3m2!1sen!2ssg!4v1702821425238!5m2!1sen!2ssg",
     website: "https://onemtg.com.sg/",
@@ -178,11 +210,18 @@ export const LGS_MAP = [
     id: "tefuda-map",
     name: "Tefuda",
     address: "401 MacPherson Rd, #B1-02 Macpherson Mall, Singapore 368125",
+    lat: 1.3317319986556433,
+    lng: 103.8765490749657,
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.740634996764!2d103.8765490749657!3d1.3317319986556433!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da178ea031acdb%3A0xac7ea94397d6a870!2sTefuda!5e0!3m2!1sen!2ssg!4v1743179304416!5m2!1sen!2ssg",
     website: "https://tefudagames.com/",
   },
 ];
+
+export const GOOGLE_MAPS_API_KEY =
+  typeof import.meta.env.VITE_GOOGLE_MAPS_API_KEY === "string"
+    ? import.meta.env.VITE_GOOGLE_MAPS_API_KEY.trim()
+    : "";
 
 export const MIN_SEARCH_LENGTH = 3;
 // Covers the longest MTG card name (~141 characters) with a small buffer while
