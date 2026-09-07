@@ -3,7 +3,8 @@
 const AGORA_STORE_NAME = "Agora Hobby";
 
 // Toggle Agora Hobby in the store list and search UI.
-export const AGORA_SEARCH_ENABLED = true;
+// Temporarily disabled: agorahobby.com is behind a Cloudflare managed JS challenge.
+export const AGORA_SEARCH_ENABLED = false;
 
 export const PAGE_TITLE =
   "Gishath Fetch: MTG Price Checker for Singapore's LGS & Online Shops";
