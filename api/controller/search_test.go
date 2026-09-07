@@ -12,6 +12,7 @@ import (
 	"mtg-price-checker-sg/gateway/cardscitadel"
 	"mtg-price-checker-sg/gateway/hideout"
 	"mtg-price-checker-sg/gateway/tcgmarketplace"
+	"mtg-price-checker-sg/pkg/config"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -22,11 +23,19 @@ import (
 func TestInitAndMapShops_FiltersByRequestedLGS(t *testing.T) {
 	shops := initAndMapShops([]string{agora.StoreName, hideout.StoreName})
 
-	if len(shops) != 2 {
-		t.Fatalf("expected 2 shops after filtering, got %d", len(shops))
+	expectedCount := 1
+	if config.AgoraSearchEnabled {
+		expectedCount = 2
 	}
-	if _, ok := shops[agora.StoreName]; !ok {
-		t.Fatalf("expected %q to be included", agora.StoreName)
+	if len(shops) != expectedCount {
+		t.Fatalf("expected %d shops after filtering, got %d", expectedCount, len(shops))
+	}
+	if config.AgoraSearchEnabled {
+		if _, ok := shops[agora.StoreName]; !ok {
+			t.Fatalf("expected %q to be included", agora.StoreName)
+		}
+	} else if _, ok := shops[agora.StoreName]; ok {
+		t.Fatalf("did not expect %q to be included while disabled", agora.StoreName)
 	}
 	if _, ok := shops[hideout.StoreName]; !ok {
 		t.Fatalf("expected %q to be included", hideout.StoreName)
