@@ -56,6 +56,7 @@ export default function App() {
     searchStoreErrors,
     searchStoreStats,
     searchTotalDurationMs,
+    turnstileDurationMs,
     sessionMintDurationMs,
     searchResponseDurationMs,
     onDismissStoreErrors,
@@ -280,6 +281,7 @@ export default function App() {
           <SearchStats
             stats={searchStoreStats}
             totalDurationMs={searchTotalDurationMs}
+            turnstileDurationMs={turnstileDurationMs}
             sessionMintDurationMs={sessionMintDurationMs}
             searchResponseDurationMs={searchResponseDurationMs}
             hasSearched={hasSearched}

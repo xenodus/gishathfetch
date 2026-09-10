@@ -4,11 +4,14 @@ The search API is public-facing and relatively expensive (parallel LGS scrapes).
 Inbound requests are gated by two optional, layered controls:
 
 1. **CloudFront → API origin secret** (`X-Origin-Verify`)
-2. **Browser session cookie** (`gf_api_session`)
+2. **Browser session cookie** (`gf_api_session`), with an optional **Cloudflare
+   Turnstile** challenge on session mint when `TURNSTILE_SECRET_KEY` /
+   `VITE_TURNSTILE_SITE_KEY` are configured
 
 Each layer is **off until its secret/key is configured**. With none set, `/search`
 and `/session` behave as open CORS-allowlisted endpoints (useful for local
-Lambda/`go run` testing). In production, enable both together.
+Lambda/`go run` testing). In production, enable origin verify and the session
+cookie together; enable Turnstile on session mint in production as well.
 
 Production also attaches **AWS WAF** web ACLs to both public CloudFront
 distributions (see [Edge protection](#edge-protection-aws-waf) below).
@@ -23,18 +26,34 @@ For agent-oriented enablement notes (env vars, Vite), see also
 ```mermaid
 sequenceDiagram
     participant U as Browser
+    participant TS as Cloudflare Turnstile
     participant CF as CloudFront<br/>api.gishathfetch.com
     participant API as API Gateway
+    participant L as Lambda mtg-price-scrapper
 
     Note over U: SPA load (gishathfetch.com)
-    U->>CF: GET /session
+    opt Turnstile enabled
+        U->>TS: invisible challenge (widget)
+        TS-->>U: one-time turnstileToken
+    end
+    U->>CF: GET /session?turnstileToken=... (when Turnstile on)
     CF->>API: origin request + X-Origin-Verify
-    Note over API: origin check (secret header)
+    API->>L: GET /session
+    Note over L: origin check (layer 1)
+    opt Turnstile secret configured
+        L->>TS: POST siteverify (secret + token + remote IP)
+        TS-->>L: success + hostname
+        Note over L: reject if hostname not gishathfetch.com / localhost
+    end
+    Note over L: mint gf_api_session HMAC cookie
+    L-->>API: 200 JSON + Set-Cookie
     API-->>CF: 200 JSON + Set-Cookie: gf_api_session=...
     CF-->>U: 200 JSON + Set-Cookie: gf_api_session=...
     U->>CF: GET /search?s=... (credentials: include)
     CF->>API: origin request + X-Origin-Verify + cookie
-    Note over API: origin check + session cookie HMAC
+    API->>L: GET /search
+    Note over L: origin check + session cookie HMAC
+    L-->>API: search JSON
     API-->>CF: search JSON
     CF-->>U: search JSON
 ```
@@ -231,6 +250,40 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
 | Missing / malformed / bad HMAC | `session required` | 403 |
 | Past expiry | `session expired` | 403 |
 
+### Cloudflare Turnstile (optional session-mint gate)
+
+**Purpose:** Add a browser challenge before minting `gf_api_session`, so scripted
+callers that skip the SPA cannot obtain a session cookie even when they know the
+API shape.
+
+| Item | Value |
+|------|--------|
+| Lambda env | `TURNSTILE_SECRET_KEY` (verifies tokens via Cloudflare `siteverify`) |
+| Frontend build env | `VITE_TURNSTILE_SITE_KEY` (invisible widget; empty = skipped in dev) |
+| Token transport | `turnstileToken` query param on `GET /session` |
+| Code | `api/pkg/apiauth/turnstile.go`, `api/handler/session.go`, `frontend/src/utils/turnstile.js` |
+
+When both keys are set:
+
+1. **Frontend** preloads `https://challenges.cloudflare.com/turnstile/v0/api.js`
+   and renders an invisible widget (`frontend/src/main.jsx`).
+2. Each session mint (initial load, search, and 10-minute background refresh)
+   runs Turnstile and sends the one-time token as `?turnstileToken=` on
+   `GET /session`.
+3. **Backend** (`api/handler/session.go`) requires the token when
+   `TURNSTILE_SECRET_KEY` is set (missing token → **400**
+   `verification required`; bad token → **403** `verification failed`).
+4. **Backend** (`api/pkg/apiauth/turnstile.go`) POSTs to Cloudflare
+   `https://challenges.cloudflare.com/turnstile/v0/siteverify` with the secret,
+   token, and client IP, then checks `success` and that the response `hostname`
+   matches the SPA origin (`gishathfetch.com`, or `localhost` when `ENV` is not
+   `prod`). Only then does it mint `gf_api_session`.
+5. `GET /session?statusOnly=1` skips Turnstile and cookie minting (notice/maintenance
+   banners only).
+
+Turnstile is disclosed in the site privacy modal
+(`frontend/src/components/Modals.jsx`).
+
 ### Frontend behavior
 
 - `ensureApiSession()` (`frontend/src/utils/apiSession.js`) mints the cookie
@@ -242,6 +295,11 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
   (`API_SESSION_REFRESH_INTERVAL_MS`) so idle tabs stay under the 15-minute TTL.
   Each refresh also runs Turnstile when configured.
 - On 403 session errors, search retries once after a forced remint.
+- **Search stats** (footer toggle) shows client-side timing when a search
+  completes: **Turnstile** (challenge only, when &gt; 0), **Session mint** (`GET
+  /session` fetch only), and **Search response** (`GET /search`). Per-store
+  scrape timings come from the API `stats` array. Code:
+  `frontend/src/components/SearchStats.jsx`.
 
 ---
 

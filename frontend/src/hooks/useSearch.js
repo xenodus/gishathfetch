@@ -81,6 +81,7 @@ export default function useSearch() {
   const [searchStoreErrors, setSearchStoreErrors] = useState([]);
   const [searchStoreStats, setSearchStoreStats] = useState([]);
   const [searchTotalDurationMs, setSearchTotalDurationMs] = useState(null);
+  const [turnstileDurationMs, setTurnstileDurationMs] = useState(null);
   const [sessionMintDurationMs, setSessionMintDurationMs] = useState(null);
   const [searchResponseDurationMs, setSearchResponseDurationMs] =
     useState(null);
@@ -305,6 +306,7 @@ export default function useSearch() {
       setSearchStoreErrors([]);
       setSearchStoreStats([]);
       setSearchTotalDurationMs(null);
+      setTurnstileDurationMs(null);
       setSessionMintDurationMs(null);
       setSearchResponseDurationMs(null);
       setDismissedStoreErrorsKey(null);
@@ -328,6 +330,7 @@ export default function useSearch() {
         const sessionTiming = await ensureApiSession({
           forceRefresh: sessionRetried,
         });
+        setTurnstileDurationMs(sessionTiming.turnstileDurationMs);
         setSessionMintDurationMs(sessionTiming.sessionMintDurationMs);
 
         const searchFetchStart = performance.now();
@@ -411,6 +414,7 @@ export default function useSearch() {
                 storeErrors,
                 storeStats,
                 totalDurationMs,
+                turnstileDurationMs: sessionTiming.turnstileDurationMs,
                 sessionMintDurationMs: sessionTiming.sessionMintDurationMs,
                 searchResponseDurationMs,
                 hasSearched: true,
@@ -494,6 +498,7 @@ export default function useSearch() {
               storeErrors: [],
               storeStats: [],
               totalDurationMs: null,
+              turnstileDurationMs: null,
               sessionMintDurationMs: null,
               searchResponseDurationMs: null,
               hasSearched: true,
@@ -560,6 +565,7 @@ export default function useSearch() {
         setSearchStoreErrors([]);
         setSearchStoreStats([]);
         setSearchTotalDurationMs(null);
+        setTurnstileDurationMs(null);
         setSessionMintDurationMs(null);
         setSearchResponseDurationMs(null);
         setSearchError(null);
@@ -592,6 +598,12 @@ export default function useSearch() {
       setSearchStoreStats(state.storeStats || []);
       setSearchTotalDurationMs(
         Number.isFinite(state.totalDurationMs) ? state.totalDurationMs : null,
+      );
+      setTurnstileDurationMs(
+        Number.isFinite(state.turnstileDurationMs) &&
+          state.turnstileDurationMs >= 0
+          ? state.turnstileDurationMs
+          : null,
       );
       setSessionMintDurationMs(
         Number.isFinite(state.sessionMintDurationMs) &&
@@ -845,6 +857,7 @@ export default function useSearch() {
     searchStoreErrors: visibleStoreErrors,
     searchStoreStats,
     searchTotalDurationMs,
+    turnstileDurationMs,
     sessionMintDurationMs,
     searchResponseDurationMs,
     onDismissStoreErrors: dismissStoreErrors,
