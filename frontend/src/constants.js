@@ -220,6 +220,9 @@ export const TURNSTILE_SITE_KEY =
     ? import.meta.env.VITE_TURNSTILE_SITE_KEY.trim()
     : "";
 
+/** Header sent with GET /session when Turnstile is enabled. */
+export const TURNSTILE_TOKEN_HEADER = "X-Turnstile-Token";
+
 export const BASE_URL = "https://gishathfetch.com/";
 
 /** Deep link that opens the main privacy policy modal on the site. */

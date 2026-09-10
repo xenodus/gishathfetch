@@ -1,4 +1,8 @@
-import { API_SESSION_URL, TURNSTILE_SITE_KEY } from "../constants";
+import {
+  API_SESSION_URL,
+  TURNSTILE_SITE_KEY,
+  TURNSTILE_TOKEN_HEADER,
+} from "../constants";
 import { isTurnstileEnabled, requestTurnstileToken } from "./turnstile";
 
 export const DEFAULT_MAINTENANCE_MESSAGE =
@@ -170,17 +174,17 @@ async function mintApiSession() {
   // Network failures surface as TypeError; rethrow as-is so the UI keeps the
   // accurate "unable to connect" copy instead of blaming session verification.
   const sessionMintStart = performance.now();
-  const fetchOptions = { credentials: "include" };
+  const fetchOptions = {
+    method: "GET",
+    credentials: "include",
+  };
 
   if (isTurnstileEnabled(TURNSTILE_SITE_KEY)) {
     const turnstileToken = await requestTurnstileToken(TURNSTILE_SITE_KEY);
-    Object.assign(fetchOptions, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ turnstileToken }),
-    });
-  } else {
-    fetchOptions.method = "GET";
+    // TODO(api-abuse): migrate to POST /session once API Gateway exposes POST.
+    fetchOptions.headers = {
+      [TURNSTILE_TOKEN_HEADER]: turnstileToken,
+    };
   }
 
   const res = await fetch(API_SESSION_URL, fetchOptions);

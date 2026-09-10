@@ -74,15 +74,12 @@ func TestSession_MintsWithVerifiedTurnstileToken(t *testing.T) {
 	t.Setenv(config.APISessionSecretEnv, "test-session-secret")
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
 
-	body, err := json.Marshal(sessionRequestBody{TurnstileToken: "good-token"})
-	require.NoError(t, err)
-
 	req := events.APIGatewayProxyRequest{
-		HTTPMethod: http.MethodPost,
+		HTTPMethod: http.MethodGet,
 		Headers: map[string]string{
-			"origin": "http://localhost:5173",
+			"origin":              "http://localhost:5173",
+			TurnstileTokenHeader:  "good-token",
 		},
-		Body: string(body),
 		RequestContext: events.APIGatewayProxyRequestContext{
 			Identity: events.APIGatewayRequestIdentity{
 				SourceIP: "203.0.113.1",
@@ -106,15 +103,12 @@ func TestSession_RejectsFailedTurnstileVerification(t *testing.T) {
 	t.Setenv(config.APISessionSecretEnv, "test-session-secret")
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
 
-	body, err := json.Marshal(sessionRequestBody{TurnstileToken: "bad-token"})
-	require.NoError(t, err)
-
 	req := events.APIGatewayProxyRequest{
-		HTTPMethod: http.MethodPost,
+		HTTPMethod: http.MethodGet,
 		Headers: map[string]string{
-			"origin": "http://localhost:5173",
+			"origin":             "http://localhost:5173",
+			TurnstileTokenHeader: "bad-token",
 		},
-		Body: string(body),
 	}
 
 	res, err := Session(context.Background(), req)
@@ -124,4 +118,25 @@ func TestSession_RejectsFailedTurnstileVerification(t *testing.T) {
 	var payload ErrorResponse
 	require.NoError(t, json.Unmarshal([]byte(res.Body), &payload))
 	require.Equal(t, "verification failed", payload.Error)
+}
+
+func TestSession_RejectsPostWhenTurnstileConfigured(t *testing.T) {
+	t.Setenv(config.APISessionSecretEnv, "test-session-secret")
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: http.MethodPost,
+		Headers: map[string]string{
+			"origin":             "http://localhost:5173",
+			TurnstileTokenHeader: "good-token",
+		},
+	}
+
+	res, err := Session(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, res.StatusCode)
+
+	var body ErrorResponse
+	require.NoError(t, json.Unmarshal([]byte(res.Body), &body))
+	require.Equal(t, "method not allowed", body.Error)
 }

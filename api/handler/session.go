@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
@@ -15,12 +14,12 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
+// TurnstileTokenHeader carries a one-time Cloudflare Turnstile response on GET /session.
+// TODO(api-abuse): migrate to POST /session with a JSON body once API Gateway exposes POST.
+const TurnstileTokenHeader = "X-Turnstile-Token"
+
 var sessionTokenFunc = apiauth.NewSessionToken
 var turnstileVerifyFunc = apiauth.VerifyTurnstileToken
-
-type sessionRequestBody struct {
-	TurnstileToken string `json:"turnstileToken"`
-}
 
 // Session mints an HttpOnly cookie the browser must send before search requests.
 func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -65,28 +64,19 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 }
 
 func parseSessionTurnstileToken(request events.APIGatewayProxyRequest) (string, error) {
+	if request.HTTPMethod != http.MethodGet {
+		return "", errSessionMethodNotAllowed
+	}
+
 	if config.TurnstileSecretKey() == "" {
-		if request.HTTPMethod != http.MethodGet {
-			return "", errSessionMethodNotAllowed
-		}
 		return "", nil
 	}
 
-	if request.HTTPMethod != http.MethodPost {
+	token := strings.TrimSpace(headerValue(request.Headers, strings.ToLower(TurnstileTokenHeader)))
+	if token == "" {
 		return "", errSessionVerificationRequired
 	}
-
-	var body sessionRequestBody
-	if strings.TrimSpace(request.Body) == "" {
-		return "", errSessionVerificationRequired
-	}
-	if err := json.Unmarshal([]byte(request.Body), &body); err != nil {
-		return "", errSessionVerificationRequired
-	}
-	if strings.TrimSpace(body.TurnstileToken) == "" {
-		return "", errSessionVerificationRequired
-	}
-	return strings.TrimSpace(body.TurnstileToken), nil
+	return token, nil
 }
 
 func enforceTurnstile(
