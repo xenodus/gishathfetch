@@ -28,6 +28,13 @@ export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const SESSION_MINT_MAX_ATTEMPTS = 3;
 
 let sessionBootstrapPromise = null;
+/** @type {SessionBootstrapTiming | null} */
+let cachedSessionBootstrap = null;
+
+/** Resolved bootstrap timing when session mint has completed (for fast UI hydration). */
+export function getCachedSessionBootstrap() {
+  return cachedSessionBootstrap;
+}
 
 export function parseMaintenanceFromSessionResponse(res) {
   if (res.headers.get(MAINTENANCE_MODE_HEADER) !== "1") {
@@ -138,12 +145,14 @@ export async function ensureApiSession(options = {}) {
 
   try {
     const bootstrapTiming = await sessionBootstrapPromise;
+    cachedSessionBootstrap = bootstrapTiming;
     if (!initiatedBootstrap) {
       return joinedBootstrapTiming(bootstrapTiming);
     }
     return bootstrapTiming;
   } catch (err) {
     sessionBootstrapPromise = null;
+    cachedSessionBootstrap = null;
     throw err;
   }
 }
@@ -226,6 +235,7 @@ export function isApiSessionAccessDenied(message, statusCode) {
 /** Clears the cached bootstrap promise (for tests or after auth errors). */
 export function resetApiSessionCache() {
   sessionBootstrapPromise = null;
+  cachedSessionBootstrap = null;
 }
 
 /** User-facing copy when the initial session bootstrap fails. */

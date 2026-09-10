@@ -1,4 +1,4 @@
-const TURNSTILE_SCRIPT_URL =
+export const TURNSTILE_SCRIPT_URL =
   "https://challenges.cloudflare.com/turnstile/v0/api.js";
 const TURNSTILE_TIMEOUT_MS = 30_000;
 
@@ -58,6 +58,19 @@ function ensureWidget(siteKey) {
   });
 
   return widgetId;
+}
+
+/**
+ * Loads the Turnstile script and pre-renders the invisible widget so the first
+ * session mint does not wait on script download during React hydration.
+ */
+export async function preloadTurnstile(siteKey) {
+  if (!isTurnstileEnabled(siteKey)) {
+    return;
+  }
+
+  await loadTurnstileScript();
+  ensureWidget(siteKey.trim());
 }
 
 /**
