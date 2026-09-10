@@ -9,6 +9,7 @@ import {
 } from "../constants";
 import {
   API_SESSION_REFRESH_INTERVAL_MS,
+  DEFAULT_MAINTENANCE_MESSAGE,
   ensureApiSession,
   fetchSiteStatus,
   formatSessionBootstrapError,
@@ -124,13 +125,25 @@ export default function useSearch() {
   }, [searchResults]);
 
   const runLandingSearchIfNeeded = useCallback((timing) => {
-    if (landingSearchHandledRef.current || timing?.maintenanceMode) {
+    if (landingSearchHandledRef.current) {
       return;
     }
 
     const query = readLandingSearchQuery();
     if (!query) {
       landingSearchHandledRef.current = true;
+      return;
+    }
+
+    if (timing?.maintenanceMode) {
+      landingSearchHandledRef.current = true;
+      skipSuggestionsRef.current = true;
+      setIsSearching(false);
+      setSearchProgress("Search");
+      setHasSearched(true);
+      setSearchError(
+        timing.maintenanceMessage?.trim() || DEFAULT_MAINTENANCE_MESSAGE,
+      );
       return;
     }
 
@@ -152,6 +165,10 @@ export default function useSearch() {
       setNoticeMessage(status.noticeMessage ?? "");
     };
 
+    // Start the landing search immediately so the button shows "Searching"
+    // while Turnstile/session bootstrap runs inside performSearch.
+    runLandingSearchIfNeeded(getCachedSiteStatus());
+
     fetchSiteStatus()
       .then((status) => {
         if (!cancelled) {
@@ -169,7 +186,6 @@ export default function useSearch() {
         }
         applySiteStatus(timing);
         setSessionBootstrapped(true);
-        runLandingSearchIfNeeded(timing);
       })
       .catch((err) => {
         if (!cancelled) {
