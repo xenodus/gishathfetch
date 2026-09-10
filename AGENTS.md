@@ -142,12 +142,15 @@ Proxy target: `VITE_API_PROXY_TARGET` (default `https://api.gishathfetch.com`). 
 `VITE_API_ORIGIN_VERIFY_SECRET` when testing against an environment with
 `API_ORIGIN_VERIFY_SECRET` enabled.
 
-Full reference for the two abuse-mitigation layers:
+Full reference for abuse-mitigation layers (origin secret, session cookie,
+Turnstile):
 [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
 #### API abuse mitigation (overview)
 
-Two optional layers; each is **off until configured**:
+Two optional layers; each is **off until configured**. Session mint can also
+require **Cloudflare Turnstile** when `TURNSTILE_SECRET_KEY` /
+`VITE_TURNSTILE_SITE_KEY` are set:
 
 1. **CloudFront → API origin secret** (`API_ORIGIN_VERIFY_SECRET`): when set, requests
    must include a matching `X-Origin-Verify` header injected by the API CloudFront
@@ -157,9 +160,13 @@ Two optional layers; each is **off until configured**:
    (default TTL 15m via `API_SESSION_TTL_SECONDS`). `/search` requires a valid cookie
    (`session required` / `session expired` → 403). Frontend: `ensureApiSession()` with a
    10-minute background refresh and one retry on expiry
-   (`frontend/src/utils/apiSession.js`).
+   (`frontend/src/utils/apiSession.js`). When Turnstile is enabled, each mint runs
+   invisible Turnstile first (`frontend/src/utils/turnstile.js`) and sends
+   `turnstileToken` on `GET /session`. Footer search stats show Turnstile,
+   session-mint, and search-response client timings when enabled.
 
-Production should enable both together. Both public CloudFront distributions
+Production should enable origin verify and the session cookie together; enable
+Turnstile on session mint in production as well. Both public CloudFront distributions
 (`gishathfetch.com` and `api.gishathfetch.com`) have **AWS WAF** web ACLs
 attached; see [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md) →
 *Edge protection*. `make deploy` does not wire these Lambda

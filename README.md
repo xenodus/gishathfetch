@@ -48,9 +48,13 @@ Telegram bot uses a bearer token on `/telegram/search` (see
    requests.
 2. **Session token** — `GET /session` mints HttpOnly `gf_api_session`
    (HMAC via `API_SESSION_SECRET`, default TTL 15m); `/search` requires it.
+3. **Cloudflare Turnstile** (optional, on session mint) — when
+   `TURNSTILE_SECRET_KEY` / `VITE_TURNSTILE_SITE_KEY` are set, the SPA runs an
+   invisible challenge before each `GET /session` and sends `turnstileToken` as a
+   query param. Lambda verifies with Cloudflare `siteverify`.
 
-Details, env reference, CloudFront header setup, and the browser sequence
-diagram: [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
+Details, env reference, CloudFront header setup, Turnstile flow, and the browser
+sequence diagram: [`docs/api-abuse-mitigation.md`](docs/api-abuse-mitigation.md).
 
 ## 🔎 Search flow
 

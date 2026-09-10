@@ -28,6 +28,10 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
 - Fetches trending keyword and CK price-change JSON from same-origin S3 paths
   served through CloudFront (`/analytics/.../latest.json`).
 - Persistent cart with export/import for cross-device sharing.
+- Optional **Cloudflare Turnstile** on session mint when `VITE_TURNSTILE_SITE_KEY`
+  is set at build time (`frontend/src/utils/turnstile.js`). Footer **search
+  stats** can show Turnstile, session-mint, and search-response client timings
+  alongside per-store scrape durations from the API.
 
 ### Backend
 
@@ -75,7 +79,8 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   invalidation). WAF rules, API Gateway route wiring, and Lambda env secrets are
   managed outside `make deploy`.
 
-Inbound API abuse mitigation (WAF, origin secret, session cookie) is documented in
+Inbound API abuse mitigation (WAF, origin secret, session cookie, optional
+Cloudflare Turnstile on session mint) is documented in
 [`api-abuse-mitigation.md`](api-abuse-mitigation.md).
 
 ### External services
@@ -88,6 +93,7 @@ Inbound API abuse mitigation (WAF, origin secret, session cookie) is documented 
 | [Card Kingdom pricelist API](https://api.cardkingdom.com/api/v2/pricelist) | CK refresh Lambda | Daily retail price index |
 | Google Analytics (GA4) | Frontend (events), analytics Lambda (Data API) | Search telemetry and trending keywords |
 | [Telegram Bot API](https://core.telegram.org/bots/api) | `mtg-telegram-bot` | Webhook updates, outbound chat replies |
+| [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) | Browser SPA | Invisible challenge before `GET /session` when Turnstile keys are configured |
 
 ## System diagram
 
@@ -122,12 +128,14 @@ flowchart TB
         Scryfall[Scryfall API]
         GA4[Google Analytics GA4]
         TG[Telegram Bot API]
+        CFTurnstile[Cloudflare Turnstile]
     end
 
     Browser -->|HTTPS| WAFSPA
     WAFSPA --> CF
     CF --> S3
     Browser -->|gtag search events| GA4
+    Browser -->|invisible challenge when enabled| CFTurnstile
     Browser -->|GET /session, /search| WAFAPI
     WAFAPI --> APICF
     APICF -->|+ X-Origin-Verify| AGW
@@ -157,13 +165,24 @@ flowchart TB
     Deploy[Frontend deploy] -.->|http-message-signatures-directory| S3
 ```
 
+## Browser session and search
+
+Browser calls to `/session` and `/search` are cross-origin to
+`api.gishathfetch.com` with credentialed cookies. When Turnstile keys are
+configured, the SPA runs an invisible Cloudflare challenge before each session
+mint (including background refresh); Lambda verifies the token with Cloudflare
+`siteverify` before setting `gf_api_session`.
+
+Sequence diagram (origin verify, Turnstile, session cookie, search):
+[`api-abuse-mitigation.md`](api-abuse-mitigation.md) → *Request flow (browser)*.
+
 ## AWS services
 
 | Service | Name / endpoint | Role |
 |---------|-----------------|------|
 | Frontend CDN | WAF → CloudFront → `gishathfetch.com` | Serves the React SPA from S3 |
 | Web Bot Auth directory | `https://gishathfetch.com/.well-known/http-message-signatures-directory` | Public signing keys; built by `make generate-signature-directory` and uploaded on frontend deploy |
-| Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`, `GET /telegram/search`; origin-verify header; session cookie on browser routes ([docs](api-abuse-mitigation.md)) |
+| Search API | WAF → CloudFront → `api.gishathfetch.com` → API Gateway | `GET /search`, `GET /session`, `GET /telegram/search`; origin-verify header; session cookie on browser routes; optional Turnstile on `/session` ([docs](api-abuse-mitigation.md)) |
 | Search Lambda | `mtg-price-scrapper` | Concurrent LGS scraping; optional Web Bot Auth; optional CK price lookup; `/telegram/search` for bot |
 | Telegram bot API | HTTP API Gateway → `mtg-telegram-bot` | `POST /telegram/webhook` (Telegram updates). Optional custom domain (e.g. `bot.gishathfetch.com`). |
 | Telegram bot Lambda | `mtg-telegram-bot` | Webhook auth, `/help`, async `/price` via self-invoke → Gishath `/telegram/search` |
@@ -390,7 +409,7 @@ repository secrets.
 
 ## Related docs
 
-- [`api-abuse-mitigation.md`](api-abuse-mitigation.md) — WAF, origin secret, session cookie, env reference
+- [`api-abuse-mitigation.md`](api-abuse-mitigation.md) — WAF, origin secret, session cookie, Turnstile, env reference
 - [`search-strategies-retries-timeouts.md`](search-strategies-retries-timeouts.md) — per-store timeouts, proxy tiers, strategy order
 - [`binderpos-search-feature-parity.md`](binderpos-search-feature-parity.md) — BinderPOS gateway feature matrix
 
