@@ -1,5 +1,6 @@
 import {
   API_SESSION_URL,
+  STATUS_ONLY_QUERY_PARAM,
   TURNSTILE_SITE_KEY,
   TURNSTILE_TOKEN_QUERY_PARAM,
 } from "../constants";
@@ -14,10 +15,15 @@ const NOTICE_MESSAGE_HEADER = "X-Notice-Message";
 
 /**
  * @typedef {{
+ *   maintenanceMode: boolean,
+ *   maintenanceMessage: string,
+ *   noticeMessage: string,
+ * }} SiteStatus
+ */
+
+/**
+ * @typedef {SiteStatus & {
  *   sessionMintDurationMs: number,
- *   maintenanceMode?: boolean,
- *   maintenanceMessage?: string,
- *   noticeMessage?: string,
  * }} SessionBootstrapTiming
  */
 
@@ -28,6 +34,46 @@ export const API_SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const SESSION_MINT_MAX_ATTEMPTS = 3;
 
 let sessionBootstrapPromise = null;
+/** @type {SessionBootstrapTiming | null} */
+let cachedSessionBootstrap = null;
+let siteStatusPromise = null;
+/** @type {SiteStatus | null} */
+let cachedSiteStatus = null;
+
+/** Resolved bootstrap timing when session mint has completed (for fast UI hydration). */
+export function getCachedSessionBootstrap() {
+  return cachedSessionBootstrap;
+}
+
+/** Resolved site status when the status-only probe has completed. */
+export function getCachedSiteStatus() {
+  return cachedSiteStatus;
+}
+
+/**
+ * Fetches notice/maintenance without Turnstile or session cookies so banners can
+ * render before session bootstrap completes.
+ *
+ * @returns {Promise<SiteStatus>}
+ */
+export async function fetchSiteStatus(options = {}) {
+  const { forceRefresh = false } = options;
+
+  if (forceRefresh) {
+    siteStatusPromise = null;
+  }
+
+  if (!siteStatusPromise) {
+    siteStatusPromise = loadSiteStatus().catch((err) => {
+      siteStatusPromise = null;
+      throw err;
+    });
+  }
+
+  const status = await siteStatusPromise;
+  cachedSiteStatus = status;
+  return status;
+}
 
 export function parseMaintenanceFromSessionResponse(res) {
   if (res.headers.get(MAINTENANCE_MODE_HEADER) !== "1") {
@@ -138,12 +184,14 @@ export async function ensureApiSession(options = {}) {
 
   try {
     const bootstrapTiming = await sessionBootstrapPromise;
+    cachedSessionBootstrap = bootstrapTiming;
     if (!initiatedBootstrap) {
       return joinedBootstrapTiming(bootstrapTiming);
     }
     return bootstrapTiming;
   } catch (err) {
     sessionBootstrapPromise = null;
+    cachedSessionBootstrap = null;
     throw err;
   }
 }
@@ -168,6 +216,22 @@ async function bootstrapSessionWithRetry() {
   }
 
   throw lastError ?? new Error("API session failed");
+}
+
+async function loadSiteStatus() {
+  const params = new URLSearchParams({
+    [STATUS_ONLY_QUERY_PARAM]: "1",
+  });
+  const res = await fetch(`${API_SESSION_URL}?${params.toString()}`, {
+    method: "GET",
+    credentials: "omit",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Site status failed (${res.status})`);
+  }
+
+  return parseSiteStatusFromSession(res);
 }
 
 async function mintApiSession() {
@@ -226,6 +290,13 @@ export function isApiSessionAccessDenied(message, statusCode) {
 /** Clears the cached bootstrap promise (for tests or after auth errors). */
 export function resetApiSessionCache() {
   sessionBootstrapPromise = null;
+  cachedSessionBootstrap = null;
+}
+
+/** Clears cached site status (for tests). */
+export function resetSiteStatusCache() {
+  siteStatusPromise = null;
+  cachedSiteStatus = null;
 }
 
 /** User-facing copy when the initial session bootstrap fails. */

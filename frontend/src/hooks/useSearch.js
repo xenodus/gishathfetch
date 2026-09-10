@@ -10,7 +10,10 @@ import {
 import {
   API_SESSION_REFRESH_INTERVAL_MS,
   ensureApiSession,
+  fetchSiteStatus,
   formatSessionBootstrapError,
+  getCachedSessionBootstrap,
+  getCachedSiteStatus,
   isApiSessionAccessDenied,
   resetApiSessionCache,
 } from "../utils/apiSession";
@@ -41,7 +44,23 @@ const AUTOCOMPLETE_DEBOUNCE_MS = 300;
 const SEARCH_PROGRESS_INTERVAL_MS = 1000;
 const MAX_PROGRESS_DOTS = 15;
 
+function readLandingSearchQuery() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.has("s") || urlParams.get("s") === "") {
+    return null;
+  }
+
+  const query = decodeURIComponent(urlParams.get("s"));
+  if (query.length < MIN_SEARCH_LENGTH || query.length > MAX_SEARCH_LENGTH) {
+    return null;
+  }
+
+  return query;
+}
+
 export default function useSearch() {
+  const initialSiteStatus = getCachedSiteStatus();
+  const initialBootstrap = getCachedSessionBootstrap();
   const [searchQuery, setSearchQuery] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("s") && urlParams.get("s") !== "") {
@@ -67,10 +86,18 @@ export default function useSearch() {
   const [cardKingdomPrice, setCardKingdomPrice] = useState(null);
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState("");
-  const [noticeMessage, setNoticeMessage] = useState("");
-  const [sessionBootstrapped, setSessionBootstrapped] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(() =>
+    Boolean(initialSiteStatus?.maintenanceMode),
+  );
+  const [maintenanceMessage, setMaintenanceMessage] = useState(
+    () => initialSiteStatus?.maintenanceMessage ?? "",
+  );
+  const [noticeMessage, setNoticeMessage] = useState(
+    () => initialSiteStatus?.noticeMessage ?? "",
+  );
+  const [sessionBootstrapped, setSessionBootstrapped] = useState(
+    () => initialBootstrap !== null,
+  );
   const [selectedStores, setSelectedStores] = useState(() =>
     getInitialSelectedStores(),
   );
@@ -90,23 +117,59 @@ export default function useSearch() {
   const skipHistorySyncRef = useRef(false);
   const restoringHistoryRef = useRef(false);
   const performSearchRef = useRef(() => {});
+  const landingSearchHandledRef = useRef(false);
 
   useEffect(() => {
     searchResultsRef.current = searchResults;
   }, [searchResults]);
 
+  const runLandingSearchIfNeeded = useCallback((timing) => {
+    if (landingSearchHandledRef.current || timing?.maintenanceMode) {
+      return;
+    }
+
+    const query = readLandingSearchQuery();
+    if (!query) {
+      landingSearchHandledRef.current = true;
+      return;
+    }
+
+    landingSearchHandledRef.current = true;
+    skipSuggestionsRef.current = true;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlStores = getStoresFromUrl(urlParams);
+    const stores = urlStores ?? getInitialSelectedStores(urlParams);
+    performSearchRef.current(query, stores);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
+
+    const applySiteStatus = (status) => {
+      setMaintenanceMode(Boolean(status.maintenanceMode));
+      setMaintenanceMessage(status.maintenanceMessage ?? "");
+      setNoticeMessage(status.noticeMessage ?? "");
+    };
+
+    fetchSiteStatus()
+      .then((status) => {
+        if (!cancelled) {
+          applySiteStatus(status);
+        }
+      })
+      .catch(() => {
+        // Notice is optional; session bootstrap may still provide status later.
+      });
 
     ensureApiSession()
       .then((timing) => {
         if (cancelled) {
           return;
         }
-        setMaintenanceMode(Boolean(timing.maintenanceMode));
-        setMaintenanceMessage(timing.maintenanceMessage ?? "");
-        setNoticeMessage(timing.noticeMessage ?? "");
+        applySiteStatus(timing);
         setSessionBootstrapped(true);
+        runLandingSearchIfNeeded(timing);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -116,15 +179,17 @@ export default function useSearch() {
       });
 
     const refreshTimer = setInterval(() => {
-      ensureApiSession({ forceRefresh: true })
-        .then((timing) => {
-          setMaintenanceMode(Boolean(timing.maintenanceMode));
-          setMaintenanceMessage(timing.maintenanceMessage ?? "");
-          setNoticeMessage(timing.noticeMessage ?? "");
+      fetchSiteStatus({ forceRefresh: true })
+        .then((siteStatus) => {
+          applySiteStatus(siteStatus);
         })
         .catch(() => {
-          // Next search or interval will try again.
+          // Next interval will try again.
         });
+
+      ensureApiSession({ forceRefresh: true }).catch(() => {
+        // Next search or interval will try again.
+      });
     }, API_SESSION_REFRESH_INTERVAL_MS);
 
     return () => {
@@ -745,40 +810,12 @@ export default function useSearch() {
     persistSelectedStores(stores);
   }, []);
 
-  // --- Initialization ---
-  // Run a deep-linked ?s= search once session bootstrap (incl. Turnstile) completes.
-  const landingSearchHandledRef = useRef(false);
-
-  const runLandingSearchIfNeeded = useCallback(() => {
-    if (landingSearchHandledRef.current || maintenanceMode) {
-      return;
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.has("s") || urlParams.get("s") === "") {
-      landingSearchHandledRef.current = true;
-      return;
-    }
-
-    const q = decodeURIComponent(urlParams.get("s"));
-    if (q.length < MIN_SEARCH_LENGTH || q.length > MAX_SEARCH_LENGTH) {
-      landingSearchHandledRef.current = true;
-      return;
-    }
-
-    landingSearchHandledRef.current = true;
-    skipSuggestionsRef.current = true;
-
-    const urlStores = getStoresFromUrl(urlParams);
-    const stores = urlStores ?? getInitialSelectedStores(urlParams);
-    performSearch(q, stores);
-  }, [maintenanceMode, performSearch]);
-
+  // Fallback when bootstrap completed before this hook subscribed (e.g. fast remount).
   useEffect(() => {
     if (!sessionBootstrapped) {
       return;
     }
-    runLandingSearchIfNeeded();
+    runLandingSearchIfNeeded(getCachedSessionBootstrap());
   }, [sessionBootstrapped, runLandingSearchIfNeeded]);
 
   return {

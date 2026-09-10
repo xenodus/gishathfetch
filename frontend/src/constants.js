@@ -223,6 +223,9 @@ export const TURNSTILE_SITE_KEY =
 /** Query param sent with GET /session when Turnstile is enabled. */
 export const TURNSTILE_TOKEN_QUERY_PARAM = "turnstileToken";
 
+/** Query param for GET /session that returns notice/maintenance without Turnstile. */
+export const STATUS_ONLY_QUERY_PARAM = "statusOnly";
+
 export const BASE_URL = "https://gishathfetch.com/";
 
 /** Deep link that opens the main privacy policy modal on the site. */

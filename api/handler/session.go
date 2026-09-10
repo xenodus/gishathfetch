@@ -14,6 +14,10 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
+// StatusOnlyQueryParam requests site status (notice/maintenance) without Turnstile or
+// session cookie minting so the frontend can show banners before session bootstrap.
+const StatusOnlyQueryParam = "statusOnly"
+
 // TurnstileTokenQueryParam carries a one-time Cloudflare Turnstile response on GET /session.
 // Query string avoids a CORS preflight for a custom header; API Gateway OPTIONS does not
 // forward preflights to Lambda with our current CORS wiring.
@@ -34,6 +38,10 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers); !ok {
 		return res, nil
+	}
+
+	if isStatusOnlyRequest(request) {
+		return statusOnlyResponse(apiRes, origin)
 	}
 
 	if config.APISessionSecret() == "" {
@@ -103,6 +111,28 @@ func enforceTurnstile(
 	}
 
 	return apiRes, true
+}
+
+func isStatusOnlyRequest(request events.APIGatewayProxyRequest) bool {
+	if request.HTTPMethod != http.MethodGet || request.QueryStringParameters == nil {
+		return false
+	}
+	value := strings.TrimSpace(request.QueryStringParameters[StatusOnlyQueryParam])
+	return value == "1" || strings.EqualFold(value, "true")
+}
+
+func statusOnlyResponse(
+	apiRes events.APIGatewayProxyResponse,
+	origin string,
+) (events.APIGatewayProxyResponse, error) {
+	apiRes, err := jsonResponse(apiRes, origin, http.StatusOK, buildSiteStatusResponse())
+	if err != nil {
+		return errorResponse(apiRes, origin, "err marshalling response", http.StatusInternalServerError)
+	}
+	applyMaintenanceHeaders(&apiRes)
+	headers := ensureResponseHeaders(&apiRes)
+	headers["Cache-Control"] = "public, max-age=60"
+	return apiRes, nil
 }
 
 var (

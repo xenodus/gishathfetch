@@ -209,6 +209,19 @@ cannot search when this layer is on.
 Token format: `expiryUnix.nonce.hmac` (HMAC-SHA256 over `expiry.nonce` with
 `API_SESSION_SECRET`).
 
+### Site status probe (`GET /session?statusOnly=1`)
+
+The SPA fetches notice and maintenance banners with **`GET /session?statusOnly=1`**
+before Turnstile and session minting complete. This path:
+
+1. Passes origin verification (layer 1) when configured.
+2. Skips Turnstile and does **not** mint a session cookie (even when
+   `TURNSTILE_SECRET_KEY` / `API_SESSION_SECRET` are set).
+3. Returns the same JSON site status and `X-Maintenance-*` / `X-Notice-Message`
+   headers as a successful mint, with `Cache-Control: public, max-age=60`.
+
+No API Gateway route change is required — it uses the existing `/session` route.
+
 ### Enforcement (`GET /search`)
 
 When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
