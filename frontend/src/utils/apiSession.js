@@ -1,7 +1,7 @@
 import {
   API_SESSION_URL,
   TURNSTILE_SITE_KEY,
-  TURNSTILE_TOKEN_HEADER,
+  TURNSTILE_TOKEN_QUERY_PARAM,
 } from "../constants";
 import { isTurnstileEnabled, requestTurnstileToken } from "./turnstile";
 
@@ -179,15 +179,18 @@ async function mintApiSession() {
     credentials: "include",
   };
 
+  let sessionUrl = API_SESSION_URL;
   if (isTurnstileEnabled(TURNSTILE_SITE_KEY)) {
     const turnstileToken = await requestTurnstileToken(TURNSTILE_SITE_KEY);
-    // TODO(api-abuse): migrate to POST /session once API Gateway exposes POST.
-    fetchOptions.headers = {
-      [TURNSTILE_TOKEN_HEADER]: turnstileToken,
-    };
+    const params = new URLSearchParams({
+      [TURNSTILE_TOKEN_QUERY_PARAM]: turnstileToken,
+    });
+    // Query param avoids CORS preflight for X-Turnstile-Token (API Gateway OPTIONS
+    // does not allow that header today). TODO(api-abuse): POST /session when available.
+    sessionUrl = `${API_SESSION_URL}?${params.toString()}`;
   }
 
-  const res = await fetch(API_SESSION_URL, fetchOptions);
+  const res = await fetch(sessionUrl, fetchOptions);
   const sessionMintDurationMs = Math.round(
     performance.now() - sessionMintStart,
   );

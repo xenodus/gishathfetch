@@ -77,8 +77,10 @@ func TestSession_MintsWithVerifiedTurnstileToken(t *testing.T) {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: http.MethodGet,
 		Headers: map[string]string{
-			"origin":              "http://localhost:5173",
-			TurnstileTokenHeader:  "good-token",
+			"origin": "http://localhost:5173",
+		},
+		QueryStringParameters: map[string]string{
+			TurnstileTokenQueryParam: "good-token",
 		},
 		RequestContext: events.APIGatewayProxyRequestContext{
 			Identity: events.APIGatewayRequestIdentity{
@@ -106,8 +108,10 @@ func TestSession_RejectsFailedTurnstileVerification(t *testing.T) {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: http.MethodGet,
 		Headers: map[string]string{
-			"origin":             "http://localhost:5173",
-			TurnstileTokenHeader: "bad-token",
+			"origin": "http://localhost:5173",
+		},
+		QueryStringParameters: map[string]string{
+			TurnstileTokenQueryParam: "bad-token",
 		},
 	}
 
@@ -127,8 +131,10 @@ func TestSession_RejectsPostWhenTurnstileConfigured(t *testing.T) {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: http.MethodPost,
 		Headers: map[string]string{
-			"origin":             "http://localhost:5173",
-			TurnstileTokenHeader: "good-token",
+			"origin": "http://localhost:5173",
+		},
+		QueryStringParameters: map[string]string{
+			TurnstileTokenQueryParam: "good-token",
 		},
 	}
 
