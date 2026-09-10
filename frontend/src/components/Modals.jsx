@@ -354,7 +354,7 @@ const Modals = ({
           <Modal.Title>Privacy Policy</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p className="text-muted">Last updated: 29 August 2026</p>
+          <p className="text-muted">Last updated: 10 September 2026</p>
           <div>
             <p className="fw-bold">Access Logs</p>
             <p>
@@ -385,6 +385,25 @@ const Modals = ({
               search API at <code>api.gishathfetch.com</code>. The cookie helps
               protect the search API from abuse. It is not used to identify you
               personally or to track you across other websites.
+            </p>
+          </div>
+          <div>
+            <p className="fw-bold">Cloudflare Turnstile</p>
+            <p>
+              When enabled, we use Cloudflare Turnstile (an invisible challenge)
+              before minting a search session cookie. Turnstile may process
+              browser signals such as your IP address, user agent, and
+              interaction data to distinguish automated traffic from legitimate
+              visitors. This helps protect the search API from scripted abuse.
+              Cloudflare&apos;s processing is described in{" "}
+              <a
+                href="https://www.cloudflare.com/privacypolicy/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Cloudflare&apos;s Privacy Policy
+              </a>
+              .
             </p>
           </div>
           <div>

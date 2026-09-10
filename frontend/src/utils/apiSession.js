@@ -1,4 +1,5 @@
-import { API_SESSION_URL } from "../constants";
+import { API_SESSION_URL, TURNSTILE_SITE_KEY } from "../constants";
+import { isTurnstileEnabled, requestTurnstileToken } from "./turnstile";
 
 export const DEFAULT_MAINTENANCE_MESSAGE =
   "Search is temporarily unavailable. Please try again later.";
@@ -169,10 +170,20 @@ async function mintApiSession() {
   // Network failures surface as TypeError; rethrow as-is so the UI keeps the
   // accurate "unable to connect" copy instead of blaming session verification.
   const sessionMintStart = performance.now();
-  const res = await fetch(API_SESSION_URL, {
-    method: "GET",
-    credentials: "include",
-  });
+  const fetchOptions = { credentials: "include" };
+
+  if (isTurnstileEnabled(TURNSTILE_SITE_KEY)) {
+    const turnstileToken = await requestTurnstileToken(TURNSTILE_SITE_KEY);
+    Object.assign(fetchOptions, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ turnstileToken }),
+    });
+  } else {
+    fetchOptions.method = "GET";
+  }
+
+  const res = await fetch(API_SESSION_URL, fetchOptions);
   const sessionMintDurationMs = Math.round(
     performance.now() - sessionMintStart,
   );
