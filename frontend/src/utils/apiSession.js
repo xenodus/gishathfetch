@@ -23,6 +23,7 @@ const NOTICE_MESSAGE_HEADER = "X-Notice-Message";
 
 /**
  * @typedef {SiteStatus & {
+ *   turnstileDurationMs: number,
  *   sessionMintDurationMs: number,
  * }} SessionBootstrapTiming
  */
@@ -160,6 +161,7 @@ export async function parseSiteStatusFromSession(res) {
 function joinedBootstrapTiming(bootstrapTiming) {
   return {
     ...bootstrapTiming,
+    turnstileDurationMs: 0,
     sessionMintDurationMs: 0,
   };
 }
@@ -198,13 +200,16 @@ export async function ensureApiSession(options = {}) {
 
 async function bootstrapSessionWithRetry() {
   let lastError = null;
+  let turnstileDurationMs = 0;
   let sessionMintDurationMs = 0;
 
   for (let attempt = 1; attempt <= SESSION_MINT_MAX_ATTEMPTS; attempt += 1) {
     try {
       const timing = await mintApiSession();
+      turnstileDurationMs += timing.turnstileDurationMs;
       sessionMintDurationMs += timing.sessionMintDurationMs;
       return {
+        turnstileDurationMs,
         sessionMintDurationMs,
         maintenanceMode: timing.maintenanceMode,
         maintenanceMessage: timing.maintenanceMessage,
@@ -237,15 +242,17 @@ async function loadSiteStatus() {
 async function mintApiSession() {
   // Network failures surface as TypeError; rethrow as-is so the UI keeps the
   // accurate "unable to connect" copy instead of blaming session verification.
-  const sessionMintStart = performance.now();
   const fetchOptions = {
     method: "GET",
     credentials: "include",
   };
 
+  let turnstileDurationMs = 0;
   let sessionUrl = API_SESSION_URL;
   if (isTurnstileEnabled(TURNSTILE_SITE_KEY)) {
+    const turnstileStart = performance.now();
     const turnstileToken = await requestTurnstileToken(TURNSTILE_SITE_KEY);
+    turnstileDurationMs = Math.round(performance.now() - turnstileStart);
     const params = new URLSearchParams({
       [TURNSTILE_TOKEN_QUERY_PARAM]: turnstileToken,
     });
@@ -254,6 +261,7 @@ async function mintApiSession() {
     sessionUrl = `${API_SESSION_URL}?${params.toString()}`;
   }
 
+  const sessionMintStart = performance.now();
   const res = await fetch(sessionUrl, fetchOptions);
   const sessionMintDurationMs = Math.round(
     performance.now() - sessionMintStart,
@@ -270,6 +278,7 @@ async function mintApiSession() {
 
   const siteStatus = await parseSiteStatusFromSession(res);
   return {
+    turnstileDurationMs,
     sessionMintDurationMs,
     ...siteStatus,
   };

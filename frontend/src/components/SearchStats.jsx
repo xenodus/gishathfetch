@@ -24,6 +24,7 @@ function readShowStatsPreference() {
 const SearchStats = ({
   stats,
   totalDurationMs,
+  turnstileDurationMs,
   sessionMintDurationMs,
   searchResponseDurationMs,
   hasSearched,
@@ -45,11 +46,14 @@ const SearchStats = ({
 
   const storeStats = Array.isArray(stats) ? stats : [];
   const hasTotal = Number.isFinite(totalDurationMs) && totalDurationMs >= 0;
+  const hasTurnstileTiming =
+    Number.isFinite(turnstileDurationMs) && turnstileDurationMs > 0;
   const hasSessionMintTiming =
     Number.isFinite(sessionMintDurationMs) && sessionMintDurationMs >= 0;
   const hasSearchResponseTiming =
     Number.isFinite(searchResponseDurationMs) && searchResponseDurationMs >= 0;
-  const hasClientTiming = hasSessionMintTiming || hasSearchResponseTiming;
+  const hasClientTiming =
+    hasTurnstileTiming || hasSessionMintTiming || hasSearchResponseTiming;
 
   return (
     <div className="search-stats mt-3 rounded py-2 px-3">
@@ -93,6 +97,14 @@ const SearchStats = ({
                       </tr>
                     </thead>
                     <tbody>
+                      {hasTurnstileTiming && (
+                        <tr>
+                          <td>Turnstile</td>
+                          <td className="text-end text-nowrap">
+                            {formatDurationMs(turnstileDurationMs)}
+                          </td>
+                        </tr>
+                      )}
                       {hasSessionMintTiming && (
                         <tr>
                           <td>Session mint</td>
