@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,10 +21,29 @@ var turnstileSiteVerifyURL = "https://challenges.cloudflare.com/turnstile/v0/sit
 var ErrTurnstileVerificationFailed = errors.New("turnstile verification failed")
 
 type turnstileSiteVerifyResponse struct {
-	Success bool `json:"success"`
+	Success  bool   `json:"success"`
+	Hostname string `json:"hostname"`
 }
 
 var turnstileHTTPClient = &http.Client{Timeout: 5 * time.Second}
+
+// allowedTurnstileHostnames lists page hostnames where the Turnstile widget may run.
+// Tokens are minted on the SPA origin (gishathfetch.com), not api.gishathfetch.com.
+func allowedTurnstileHostnames() []string {
+	hostnames := []string{"gishathfetch.com"}
+	if os.Getenv("ENV") != config.EnvProd {
+		hostnames = append(hostnames, "localhost")
+	}
+	return hostnames
+}
+
+func isAllowedTurnstileHostname(hostname string) bool {
+	hostname = strings.ToLower(strings.TrimSpace(hostname))
+	if hostname == "" {
+		return false
+	}
+	return slices.Contains(allowedTurnstileHostnames(), hostname)
+}
 
 // VerifyTurnstileToken checks a browser Turnstile response with Cloudflare when configured.
 // When TURNSTILE_SECRET_KEY is unset, verification is skipped.
@@ -71,6 +92,9 @@ func VerifyTurnstileToken(ctx context.Context, token, remoteIP string) error {
 		return err
 	}
 	if !parsed.Success {
+		return ErrTurnstileVerificationFailed
+	}
+	if !isAllowedTurnstileHostname(parsed.Hostname) {
 		return ErrTurnstileVerificationFailed
 	}
 

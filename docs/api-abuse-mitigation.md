@@ -183,6 +183,10 @@ cannot search when this layer is on.
 
    > **TODO:** migrate to `POST /session` with a JSON body once API Gateway exposes
    > `POST` on `/session` (keeps tokens out of access logs and preflight headers).
+
+   After siteverify succeeds, Lambda checks the response `hostname` matches the SPA
+   origin (`gishathfetch.com`, or `localhost` when `ENV` is not `prod`). Tokens
+   solved on other hostnames (including `api.gishathfetch.com`) are rejected.
 4. Response is **200 OK** with JSON site status, `Set-Cookie: gf_api_session=...`,
    and `Cache-Control: no-store`.
 

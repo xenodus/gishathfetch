@@ -24,6 +24,7 @@ func TestVerifyTurnstileToken_RejectsEmptyToken(t *testing.T) {
 
 func TestVerifyTurnstileToken_AcceptsSuccessfulSiteVerify(t *testing.T) {
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+	t.Setenv("ENV", config.EnvProd)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
@@ -33,7 +34,7 @@ func TestVerifyTurnstileToken_AcceptsSuccessfulSiteVerify(t *testing.T) {
 		require.Equal(t, "good-token", r.FormValue("response"))
 		require.Equal(t, "203.0.113.1", r.FormValue("remoteip"))
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"success":true}`))
+		_, _ = w.Write([]byte(`{"success":true,"hostname":"gishathfetch.com"}`))
 	}))
 	t.Cleanup(server.Close)
 
@@ -49,8 +50,31 @@ func TestVerifyTurnstileToken_AcceptsSuccessfulSiteVerify(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestVerifyTurnstileToken_AcceptsLocalhostWhenNotProd(t *testing.T) {
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+	t.Setenv("ENV", config.EnvLocal)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"success":true,"hostname":"localhost"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	originalClient := turnstileHTTPClient
+	turnstileHTTPClient = server.Client()
+	t.Cleanup(func() { turnstileHTTPClient = originalClient })
+
+	originalURL := turnstileSiteVerifyURL
+	turnstileSiteVerifyURL = server.URL
+	t.Cleanup(func() { turnstileSiteVerifyURL = originalURL })
+
+	err := VerifyTurnstileToken(context.Background(), "good-token", "")
+	require.NoError(t, err)
+}
+
 func TestVerifyTurnstileToken_RejectsFailedSiteVerify(t *testing.T) {
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+	t.Setenv("ENV", config.EnvProd)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -67,5 +91,49 @@ func TestVerifyTurnstileToken_RejectsFailedSiteVerify(t *testing.T) {
 	t.Cleanup(func() { turnstileSiteVerifyURL = originalURL })
 
 	err := VerifyTurnstileToken(context.Background(), "bad-token", "")
+	require.ErrorIs(t, err, ErrTurnstileVerificationFailed)
+}
+
+func TestVerifyTurnstileToken_RejectsUnexpectedHostname(t *testing.T) {
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+	t.Setenv("ENV", config.EnvProd)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"success":true,"hostname":"api.gishathfetch.com"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	originalClient := turnstileHTTPClient
+	turnstileHTTPClient = server.Client()
+	t.Cleanup(func() { turnstileHTTPClient = originalClient })
+
+	originalURL := turnstileSiteVerifyURL
+	turnstileSiteVerifyURL = server.URL
+	t.Cleanup(func() { turnstileSiteVerifyURL = originalURL })
+
+	err := VerifyTurnstileToken(context.Background(), "good-token", "")
+	require.ErrorIs(t, err, ErrTurnstileVerificationFailed)
+}
+
+func TestVerifyTurnstileToken_RejectsLocalhostInProd(t *testing.T) {
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+	t.Setenv("ENV", config.EnvProd)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"success":true,"hostname":"localhost"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	originalClient := turnstileHTTPClient
+	turnstileHTTPClient = server.Client()
+	t.Cleanup(func() { turnstileHTTPClient = originalClient })
+
+	originalURL := turnstileSiteVerifyURL
+	turnstileSiteVerifyURL = server.URL
+	t.Cleanup(func() { turnstileSiteVerifyURL = originalURL })
+
+	err := VerifyTurnstileToken(context.Background(), "good-token", "")
 	require.ErrorIs(t, err, ErrTurnstileVerificationFailed)
 }
