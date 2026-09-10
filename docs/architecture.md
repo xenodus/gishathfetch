@@ -407,6 +407,8 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 |----------|----------------|-------------------|
 | API origin-verify secret | Lambda | `API_ORIGIN_VERIFY_SECRET` |
 | Search session HMAC key | Lambda | `API_SESSION_SECRET` |
+| Turnstile secret (session mint) | Lambda | `TURNSTILE_SECRET_KEY` |
+| Turnstile site key (public) | Frontend build | `VITE_TURNSTILE_SITE_KEY` |
 | Web Bot Auth signing key | Lambda / deploy | `WEB_BOT_AUTH_PRIVATE_KEY` or `WEB_BOT_AUTH_PRIVATE_KEY_FILE` |
 | Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1` |
 | TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   DEFAULT_MAINTENANCE_MESSAGE,
+  formatSessionBootstrapError,
   parseMaintenanceFromSessionResponse,
   parseNoticeFromSessionResponse,
   parseSiteStatusFromSession,
@@ -102,6 +103,15 @@ assert.deepEqual(
     maintenanceMessage: "",
     noticeMessage: "Back soon.",
   },
+);
+
+assert.equal(
+  formatSessionBootstrapError(new Error("Turnstile timed out")),
+  "Session verification failed. Please refresh the page and try again.",
+);
+assert.equal(
+  formatSessionBootstrapError(new Error("network down")),
+  "Unable to start a search session: network down",
 );
 
 assert.deepEqual(

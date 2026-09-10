@@ -1,4 +1,9 @@
-import { API_SESSION_URL } from "../constants";
+import {
+  API_SESSION_URL,
+  TURNSTILE_SITE_KEY,
+  TURNSTILE_TOKEN_HEADER,
+} from "../constants";
+import { isTurnstileEnabled, requestTurnstileToken } from "./turnstile";
 
 export const DEFAULT_MAINTENANCE_MESSAGE =
   "Search is temporarily unavailable. Please try again later.";
@@ -169,10 +174,20 @@ async function mintApiSession() {
   // Network failures surface as TypeError; rethrow as-is so the UI keeps the
   // accurate "unable to connect" copy instead of blaming session verification.
   const sessionMintStart = performance.now();
-  const res = await fetch(API_SESSION_URL, {
+  const fetchOptions = {
     method: "GET",
     credentials: "include",
-  });
+  };
+
+  if (isTurnstileEnabled(TURNSTILE_SITE_KEY)) {
+    const turnstileToken = await requestTurnstileToken(TURNSTILE_SITE_KEY);
+    // TODO(api-abuse): migrate to POST /session once API Gateway exposes POST.
+    fetchOptions.headers = {
+      [TURNSTILE_TOKEN_HEADER]: turnstileToken,
+    };
+  }
+
+  const res = await fetch(API_SESSION_URL, fetchOptions);
   const sessionMintDurationMs = Math.round(
     performance.now() - sessionMintStart,
   );
@@ -208,4 +223,19 @@ export function isApiSessionAccessDenied(message, statusCode) {
 /** Clears the cached bootstrap promise (for tests or after auth errors). */
 export function resetApiSessionCache() {
   sessionBootstrapPromise = null;
+}
+
+/** User-facing copy when the initial session bootstrap fails. */
+export function formatSessionBootstrapError(err) {
+  if (err instanceof Error && err.message) {
+    const message = err.message.trim();
+    if (message.toLowerCase().includes("turnstile")) {
+      return "Session verification failed. Please refresh the page and try again.";
+    }
+    if (message.toLowerCase().includes("api session")) {
+      return message;
+    }
+    return `Unable to start a search session: ${message}`;
+  }
+  return "Unable to start a search session. Please refresh and try again.";
 }

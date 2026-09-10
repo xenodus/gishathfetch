@@ -102,6 +102,8 @@ const (
 	APIOriginVerifyHeaderEnv = "API_ORIGIN_VERIFY_HEADER"
 	// APISessionSecretEnv signs HttpOnly browser session cookies for search requests.
 	APISessionSecretEnv = "API_SESSION_SECRET"
+	// TurnstileSecretKeyEnv verifies Cloudflare Turnstile tokens on POST /session.
+	TurnstileSecretKeyEnv = "TURNSTILE_SECRET_KEY"
 	// APISessionTTLEnv overrides session lifetime in seconds (default 15 minutes).
 	APISessionTTLEnv = "API_SESSION_TTL_SECONDS"
 	// APIMaintenanceModeEnv toggles maintenance mode for /search. When true, search
@@ -222,6 +224,11 @@ func APIOriginVerifyHeader() string {
 // APISessionSecret returns the HMAC secret for browser session cookies when set.
 func APISessionSecret() string {
 	return strings.TrimSpace(os.Getenv(APISessionSecretEnv))
+}
+
+// TurnstileSecretKey returns the Cloudflare Turnstile secret used to verify session mints.
+func TurnstileSecretKey() string {
+	return strings.TrimSpace(os.Getenv(TurnstileSecretKeyEnv))
 }
 
 // APISessionTTL is how long a minted browser session remains valid.

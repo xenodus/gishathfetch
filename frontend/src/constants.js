@@ -214,6 +214,15 @@ export const API_SEARCH_URL = apiUrl("/search");
 /** API host endpoint that mints the HttpOnly search session cookie. */
 export const API_SESSION_URL = apiUrl("/session");
 
+/** Cloudflare Turnstile site key for session minting (empty = disabled in dev). */
+export const TURNSTILE_SITE_KEY =
+  typeof import.meta.env.VITE_TURNSTILE_SITE_KEY === "string"
+    ? import.meta.env.VITE_TURNSTILE_SITE_KEY.trim()
+    : "";
+
+/** Header sent with GET /session when Turnstile is enabled. */
+export const TURNSTILE_TOKEN_HEADER = "X-Turnstile-Token";
+
 export const BASE_URL = "https://gishathfetch.com/";
 
 /** Deep link that opens the main privacy policy modal on the site. */

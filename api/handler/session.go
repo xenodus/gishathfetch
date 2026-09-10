@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"mtg-price-checker-sg/pkg/apiauth"
@@ -12,7 +14,12 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
+// TurnstileTokenHeader carries a one-time Cloudflare Turnstile response on GET /session.
+// TODO(api-abuse): migrate to POST /session with a JSON body once API Gateway exposes POST.
+const TurnstileTokenHeader = "X-Turnstile-Token"
+
 var sessionTokenFunc = apiauth.NewSessionToken
+var turnstileVerifyFunc = apiauth.VerifyTurnstileToken
 
 // Session mints an HttpOnly cookie the browser must send before search requests.
 func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -23,16 +30,20 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return optionsResponse(origin)
 	}
 
-	if request.HTTPMethod != http.MethodGet {
-		return errorResponse(apiRes, origin, "method not allowed", http.StatusMethodNotAllowed)
-	}
-
 	if res, ok := enforceOriginVerify(apiRes, origin, request.Headers); !ok {
 		return res, nil
 	}
 
 	if config.APISessionSecret() == "" {
 		return errorResponse(apiRes, origin, "session not configured", http.StatusServiceUnavailable)
+	}
+
+	turnstileToken, err := parseSessionTurnstileToken(request)
+	if err != nil {
+		return errorResponse(apiRes, origin, err.Error(), http.StatusBadRequest)
+	}
+	if res, ok := enforceTurnstile(ctx, apiRes, origin, turnstileToken, request); !ok {
+		return res, nil
 	}
 
 	token, err := sessionTokenFunc(time.Now().UTC())
@@ -51,3 +62,46 @@ func Session(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	headers["Cache-Control"] = "no-store"
 	return apiRes, nil
 }
+
+func parseSessionTurnstileToken(request events.APIGatewayProxyRequest) (string, error) {
+	if request.HTTPMethod != http.MethodGet {
+		return "", errSessionMethodNotAllowed
+	}
+
+	if config.TurnstileSecretKey() == "" {
+		return "", nil
+	}
+
+	token := strings.TrimSpace(headerValue(request.Headers, strings.ToLower(TurnstileTokenHeader)))
+	if token == "" {
+		return "", errSessionVerificationRequired
+	}
+	return token, nil
+}
+
+func enforceTurnstile(
+	ctx context.Context,
+	apiRes events.APIGatewayProxyResponse,
+	origin string,
+	turnstileToken string,
+	request events.APIGatewayProxyRequest,
+) (events.APIGatewayProxyResponse, bool) {
+	if config.TurnstileSecretKey() == "" {
+		return apiRes, true
+	}
+
+	if err := turnstileVerifyFunc(ctx, turnstileToken, request.RequestContext.Identity.SourceIP); err != nil {
+		if errors.Is(err, apiauth.ErrTurnstileVerificationFailed) {
+			return accessDeniedResponse(apiRes, origin, "verification failed"), false
+		}
+		res, _ := errorResponse(apiRes, origin, "verification unavailable", http.StatusServiceUnavailable)
+		return res, false
+	}
+
+	return apiRes, true
+}
+
+var (
+	errSessionVerificationRequired = errors.New("verification required")
+	errSessionMethodNotAllowed     = errors.New("method not allowed")
+)

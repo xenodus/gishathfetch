@@ -175,7 +175,19 @@ cannot search when this layer is on.
 
 1. Origin verification (layer 1) must pass.
 2. `API_SESSION_SECRET` must be set; otherwise **503** (`session not configured`).
-3. Response is **200 OK** with JSON site status, `Set-Cookie: gf_api_session=...`,
+3. When `TURNSTILE_SECRET_KEY` is set, minting requires **`GET /session`** with a
+   valid Cloudflare Turnstile token in the `X-Turnstile-Token` header. Requests
+   without the header return **400** (`verification required`). The SPA runs
+   invisible Turnstile on every mint and background refresh when
+   `VITE_TURNSTILE_SITE_KEY` is configured.
+
+   > **TODO:** migrate to `POST /session` with a JSON body once API Gateway exposes
+   > `POST` on `/session` (keeps tokens out of access logs and preflight headers).
+
+   After siteverify succeeds, Lambda checks the response `hostname` matches the SPA
+   origin (`gishathfetch.com`, or `localhost` when `ENV` is not `prod`). Tokens
+   solved on other hostnames (including `api.gishathfetch.com`) are rejected.
+4. Response is **200 OK** with JSON site status, `Set-Cookie: gf_api_session=...`,
    and `Cache-Control: no-store`.
 
    ```json
@@ -206,8 +218,12 @@ When `API_SESSION_SECRET` is set, `/search` requires a valid cookie:
 
 - `ensureApiSession()` (`frontend/src/utils/apiSession.js`) mints the cookie
   before search (and shares one in-flight mint).
+- When Turnstile is enabled, each mint runs invisible Turnstile via
+  `frontend/src/utils/turnstile.js` and sends the token in `X-Turnstile-Token`
+  on `GET /session`.
 - Background refresh every **10 minutes**
   (`API_SESSION_REFRESH_INTERVAL_MS`) so idle tabs stay under the 15-minute TTL.
+  Each refresh also runs Turnstile when configured.
 - On 403 session errors, search retries once after a forced remint.
 
 ---
@@ -278,6 +294,8 @@ GitHub Actions secrets, or a local `.env` file (gitignored). See also
 | `API_ORIGIN_VERIFY_HEADER` | Lambda | `X-Origin-Verify` | Custom header name for the shared secret |
 | `API_SESSION_SECRET` | Lambda | unset = skip session on `/search`; `/session` 503 | Sign/validate `gf_api_session` |
 | `API_SESSION_TTL_SECONDS` | Lambda | `900` | Cookie / token lifetime |
+| `TURNSTILE_SECRET_KEY` | Lambda | unset = `GET /session` unchanged | Require `X-Turnstile-Token` on `GET /session` |
+| `VITE_TURNSTILE_SITE_KEY` | Frontend | unset = Turnstile skipped in dev | Invisible Turnstile before each session mint |
 | `API_MAINTENANCE_MODE` | Lambda | unset/`false` = off | `/search` returns **503**; `/session` advertises maintenance headers |
 | `API_MAINTENANCE_MESSAGE` | Lambda | generic unavailable message | User-visible banner text while maintenance mode is on |
 | `API_NOTICE_MESSAGE` | Lambda | unset = hidden | Optional site-wide notice banner in `/session` JSON; search remains available |
