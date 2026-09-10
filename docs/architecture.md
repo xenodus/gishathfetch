@@ -48,6 +48,10 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   `/.well-known/http-message-signatures-directory`.
 - Optional Card Kingdom price lookup from DynamoDB when `CK_PRICE_LOOKUP_ENABLED`
   is set; card names verified against Scryfall before lookup.
+- Optional **Cloudflare Turnstile** verification on `GET /session` when
+  `TURNSTILE_SECRET_KEY` is set: Lambda calls Cloudflare `siteverify` and
+  rejects tokens solved on the wrong hostname before minting `gf_api_session`
+  (`api/pkg/apiauth/turnstile.go`, `api/handler/session.go`).
 - Three additional Lambda handlers share the same ECR image and IAM role:
   `mtg-price-ck-refresh` (daily CK pricelist sync),
   `mtg-analytics-keywords-export` (daily GA4 keyword export), and
@@ -93,7 +97,7 @@ Cloudflare Turnstile on session mint) is documented in
 | [Card Kingdom pricelist API](https://api.cardkingdom.com/api/v2/pricelist) | CK refresh Lambda | Daily retail price index |
 | Google Analytics (GA4) | Frontend (events), analytics Lambda (Data API) | Search telemetry and trending keywords |
 | [Telegram Bot API](https://core.telegram.org/bots/api) | `mtg-telegram-bot` | Webhook updates, outbound chat replies |
-| [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) | Browser SPA | Invisible challenge before `GET /session` when Turnstile keys are configured |
+| [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) | Browser SPA (widget) + search Lambda (`siteverify`) | Invisible browser challenge; backend verifies token before session mint |
 
 ## System diagram
 
@@ -137,6 +141,7 @@ flowchart TB
     Browser -->|gtag search events| GA4
     Browser -->|invisible challenge when enabled| CFTurnstile
     Browser -->|GET /session, /search| WAFAPI
+    SearchLambda -->|POST siteverify when TURNSTILE_SECRET_KEY set| CFTurnstile
     WAFAPI --> APICF
     APICF -->|+ X-Origin-Verify| AGW
     AGW --> SearchLambda
@@ -168,10 +173,17 @@ flowchart TB
 ## Browser session and search
 
 Browser calls to `/session` and `/search` are cross-origin to
-`api.gishathfetch.com` with credentialed cookies. When Turnstile keys are
-configured, the SPA runs an invisible Cloudflare challenge before each session
-mint (including background refresh); Lambda verifies the token with Cloudflare
-`siteverify` before setting `gf_api_session`.
+`api.gishathfetch.com` with credentialed cookies. Turnstile is a **two-sided**
+control when both keys are configured:
+
+- **Frontend** (`VITE_TURNSTILE_SITE_KEY`): invisible widget challenge; sends
+  `turnstileToken` on `GET /session`.
+- **Backend** (`TURNSTILE_SECRET_KEY`): `session.go` enforces the token;
+  `apiauth/turnstile.go` calls Cloudflare `siteverify` and checks the widget
+  hostname before minting `gf_api_session`.
+
+`/search` does not run Turnstile; it only requires a valid session cookie minted
+after a successful `/session` verification.
 
 Sequence diagram (origin verify, Turnstile, session cookie, search):
 [`api-abuse-mitigation.md`](api-abuse-mitigation.md) → *Request flow (browser)*.

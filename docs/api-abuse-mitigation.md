@@ -29,6 +29,7 @@ sequenceDiagram
     participant TS as Cloudflare Turnstile
     participant CF as CloudFront<br/>api.gishathfetch.com
     participant API as API Gateway
+    participant L as Lambda mtg-price-scrapper
 
     Note over U: SPA load (gishathfetch.com)
     opt Turnstile enabled
@@ -37,12 +38,22 @@ sequenceDiagram
     end
     U->>CF: GET /session?turnstileToken=... (when Turnstile on)
     CF->>API: origin request + X-Origin-Verify
-    Note over API: origin check + Turnstile siteverify (if secret set)
+    API->>L: GET /session
+    Note over L: origin check (layer 1)
+    opt Turnstile secret configured
+        L->>TS: POST siteverify (secret + token + remote IP)
+        TS-->>L: success + hostname
+        Note over L: reject if hostname not gishathfetch.com / localhost
+    end
+    Note over L: mint gf_api_session HMAC cookie
+    L-->>API: 200 JSON + Set-Cookie
     API-->>CF: 200 JSON + Set-Cookie: gf_api_session=...
     CF-->>U: 200 JSON + Set-Cookie: gf_api_session=...
     U->>CF: GET /search?s=... (credentials: include)
     CF->>API: origin request + X-Origin-Verify + cookie
-    Note over API: origin check + session cookie HMAC
+    API->>L: GET /search
+    Note over L: origin check + session cookie HMAC
+    L-->>API: search JSON
     API-->>CF: search JSON
     CF-->>U: search JSON
 ```
@@ -254,15 +265,21 @@ API shape.
 
 When both keys are set:
 
-1. The SPA preloads `https://challenges.cloudflare.com/turnstile/v0/api.js` and
-   renders an invisible widget (`frontend/src/main.jsx`).
+1. **Frontend** preloads `https://challenges.cloudflare.com/turnstile/v0/api.js`
+   and renders an invisible widget (`frontend/src/main.jsx`).
 2. Each session mint (initial load, search, and 10-minute background refresh)
    runs Turnstile and sends the one-time token as `?turnstileToken=` on
    `GET /session`.
-3. Lambda calls Cloudflare `siteverify`, then checks the response `hostname`
+3. **Backend** (`api/handler/session.go`) requires the token when
+   `TURNSTILE_SECRET_KEY` is set (missing token → **400**
+   `verification required`; bad token → **403** `verification failed`).
+4. **Backend** (`api/pkg/apiauth/turnstile.go`) POSTs to Cloudflare
+   `https://challenges.cloudflare.com/turnstile/v0/siteverify` with the secret,
+   token, and client IP, then checks `success` and that the response `hostname`
    matches the SPA origin (`gishathfetch.com`, or `localhost` when `ENV` is not
-   `prod`).
-4. `GET /session?statusOnly=1` skips Turnstile (notice/maintenance banners only).
+   `prod`). Only then does it mint `gf_api_session`.
+5. `GET /session?statusOnly=1` skips Turnstile and cookie minting (notice/maintenance
+   banners only).
 
 Turnstile is disclosed in the site privacy modal
 (`frontend/src/components/Modals.jsx`).
