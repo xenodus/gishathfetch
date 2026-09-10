@@ -746,29 +746,40 @@ export default function useSearch() {
   }, []);
 
   // --- Initialization ---
-  // Note: performSearch is included in deps but is stable (empty dep array in useCallback)
-  // This effect should only run once on mount, not when selectedStores changes
-  const hasInitializedRef = useRef(false);
+  // Run a deep-linked ?s= search once session bootstrap (incl. Turnstile) completes.
+  const landingSearchHandledRef = useRef(false);
 
-  useEffect(() => {
-    if (!sessionBootstrapped || hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
-
-    if (maintenanceMode) {
+  const runLandingSearchIfNeeded = useCallback(() => {
+    if (landingSearchHandledRef.current || maintenanceMode) {
       return;
     }
 
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has("s") && urlParams.get("s") !== "") {
-      const q = decodeURIComponent(urlParams.get("s"));
-      skipSuggestionsRef.current = true;
-
-      const urlStores = getStoresFromUrl(urlParams);
-      const stores = urlStores ?? selectedStores;
-
-      setTimeout(() => performSearch(q, stores), 100);
+    if (!urlParams.has("s") || urlParams.get("s") === "") {
+      landingSearchHandledRef.current = true;
+      return;
     }
-  }, [sessionBootstrapped, maintenanceMode, performSearch, selectedStores]);
+
+    const q = decodeURIComponent(urlParams.get("s"));
+    if (q.length < MIN_SEARCH_LENGTH || q.length > MAX_SEARCH_LENGTH) {
+      landingSearchHandledRef.current = true;
+      return;
+    }
+
+    landingSearchHandledRef.current = true;
+    skipSuggestionsRef.current = true;
+
+    const urlStores = getStoresFromUrl(urlParams);
+    const stores = urlStores ?? getInitialSelectedStores(urlParams);
+    performSearch(q, stores);
+  }, [maintenanceMode, performSearch]);
+
+  useEffect(() => {
+    if (!sessionBootstrapped) {
+      return;
+    }
+    runLandingSearchIfNeeded();
+  }, [sessionBootstrapped, runLandingSearchIfNeeded]);
 
   return {
     searchQuery,
