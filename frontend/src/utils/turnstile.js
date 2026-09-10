@@ -62,7 +62,7 @@ function ensureWidget(siteKey) {
 
 /**
  * Runs invisible Turnstile and returns a one-time token for GET /session
- * (sent in the X-Turnstile-Token header). Safe to call on every session mint
+ * (sent as the turnstileToken query param). Safe to call on every session mint
  * and background refresh.
  */
 export async function requestTurnstileToken(siteKey) {

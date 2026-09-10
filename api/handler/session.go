@@ -14,9 +14,11 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-// TurnstileTokenHeader carries a one-time Cloudflare Turnstile response on GET /session.
+// TurnstileTokenQueryParam carries a one-time Cloudflare Turnstile response on GET /session.
+// Query string avoids a CORS preflight for a custom header; API Gateway OPTIONS does not
+// forward preflights to Lambda with our current CORS wiring.
 // TODO(api-abuse): migrate to POST /session with a JSON body once API Gateway exposes POST.
-const TurnstileTokenHeader = "X-Turnstile-Token"
+const TurnstileTokenQueryParam = "turnstileToken"
 
 var sessionTokenFunc = apiauth.NewSessionToken
 var turnstileVerifyFunc = apiauth.VerifyTurnstileToken
@@ -72,11 +74,13 @@ func parseSessionTurnstileToken(request events.APIGatewayProxyRequest) (string, 
 		return "", nil
 	}
 
-	token := strings.TrimSpace(headerValue(request.Headers, strings.ToLower(TurnstileTokenHeader)))
-	if token == "" {
-		return "", errSessionVerificationRequired
+	if request.QueryStringParameters != nil {
+		token := strings.TrimSpace(request.QueryStringParameters[TurnstileTokenQueryParam])
+		if token != "" {
+			return token, nil
+		}
 	}
-	return token, nil
+	return "", errSessionVerificationRequired
 }
 
 func enforceTurnstile(
