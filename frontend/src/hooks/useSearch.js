@@ -10,6 +10,7 @@ import {
 import {
   API_SESSION_REFRESH_INTERVAL_MS,
   ensureApiSession,
+  formatSessionBootstrapError,
   isApiSessionAccessDenied,
   resetApiSessionCache,
 } from "../utils/apiSession";
@@ -107,8 +108,9 @@ export default function useSearch() {
         setNoticeMessage(timing.noticeMessage ?? "");
         setSessionBootstrapped(true);
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
+          setSearchError(formatSessionBootstrapError(err));
           setSessionBootstrapped(true);
         }
       });

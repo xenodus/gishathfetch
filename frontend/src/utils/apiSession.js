@@ -224,3 +224,18 @@ export function isApiSessionAccessDenied(message, statusCode) {
 export function resetApiSessionCache() {
   sessionBootstrapPromise = null;
 }
+
+/** User-facing copy when the initial session bootstrap fails. */
+export function formatSessionBootstrapError(err) {
+  if (err instanceof Error && err.message) {
+    const message = err.message.trim();
+    if (message.toLowerCase().includes("turnstile")) {
+      return "Session verification failed. Please refresh the page and try again.";
+    }
+    if (message.toLowerCase().includes("api session")) {
+      return message;
+    }
+    return `Unable to start a search session: ${message}`;
+  }
+  return "Unable to start a search session. Please refresh and try again.";
+}
