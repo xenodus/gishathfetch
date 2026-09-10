@@ -5,8 +5,8 @@ import (
 )
 
 func TestAgoraSearchEnabled(t *testing.T) {
-	if AgoraSearchEnabled {
-		t.Fatalf("expected agora search to be temporarily disabled")
+	if !AgoraSearchEnabled {
+		t.Fatalf("expected agora search to be enabled")
 	}
 }
 

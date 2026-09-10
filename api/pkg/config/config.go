@@ -131,8 +131,7 @@ const (
 const UseLeasedDedicatedProxy = false
 
 // AgoraSearchEnabled toggles Agora Hobby search in the search Lambda.
-// Temporarily disabled: agorahobby.com is behind a Cloudflare managed JS challenge.
-const AgoraSearchEnabled = false
+const AgoraSearchEnabled = true
 
 // UseDedicatedProxy reports whether DEDICATED_PROXY_* env vars may be used.
 // Defaults to enabled when unset or invalid.
