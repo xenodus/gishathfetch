@@ -124,6 +124,30 @@ func TestSession_RejectsFailedTurnstileVerification(t *testing.T) {
 	require.Equal(t, "verification failed", payload.Error)
 }
 
+func TestSession_StatusOnly_SkipsTurnstileAndCookieMint(t *testing.T) {
+	t.Setenv(config.APISessionSecretEnv, "test-session-secret")
+	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")
+	t.Setenv(config.APINoticeMessageEnv, "Card Kingdom prices may be delayed today.")
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: http.MethodGet,
+		Headers: map[string]string{
+			"origin": "http://localhost:5173",
+		},
+		QueryStringParameters: map[string]string{
+			StatusOnlyQueryParam: "1",
+		},
+	}
+
+	res, err := Session(context.Background(), req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	require.Empty(t, res.Headers["Set-Cookie"])
+	require.Equal(t, "Card Kingdom prices may be delayed today.", res.Headers[noticeMessageHeader])
+	require.Contains(t, res.Body, `"noticeMessage":"Card Kingdom prices may be delayed today."`)
+	require.Equal(t, "public, max-age=60", res.Headers["Cache-Control"])
+}
+
 func TestSession_RejectsPostWhenTurnstileConfigured(t *testing.T) {
 	t.Setenv(config.APISessionSecretEnv, "test-session-secret")
 	t.Setenv(config.TurnstileSecretKeyEnv, "test-turnstile-secret")

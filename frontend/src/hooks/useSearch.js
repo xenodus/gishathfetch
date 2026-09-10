@@ -10,8 +10,10 @@ import {
 import {
   API_SESSION_REFRESH_INTERVAL_MS,
   ensureApiSession,
+  fetchSiteStatus,
   formatSessionBootstrapError,
   getCachedSessionBootstrap,
+  getCachedSiteStatus,
   isApiSessionAccessDenied,
   resetApiSessionCache,
 } from "../utils/apiSession";
@@ -57,6 +59,7 @@ function readLandingSearchQuery() {
 }
 
 export default function useSearch() {
+  const initialSiteStatus = getCachedSiteStatus();
   const initialBootstrap = getCachedSessionBootstrap();
   const [searchQuery, setSearchQuery] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -84,13 +87,13 @@ export default function useSearch() {
   const [dismissedStoreErrorsKey, setDismissedStoreErrorsKey] = useState(null);
   const [storesWarning, setStoresWarning] = useState(null);
   const [maintenanceMode, setMaintenanceMode] = useState(() =>
-    Boolean(initialBootstrap?.maintenanceMode),
+    Boolean(initialSiteStatus?.maintenanceMode),
   );
   const [maintenanceMessage, setMaintenanceMessage] = useState(
-    () => initialBootstrap?.maintenanceMessage ?? "",
+    () => initialSiteStatus?.maintenanceMessage ?? "",
   );
   const [noticeMessage, setNoticeMessage] = useState(
-    () => initialBootstrap?.noticeMessage ?? "",
+    () => initialSiteStatus?.noticeMessage ?? "",
   );
   const [sessionBootstrapped, setSessionBootstrapped] = useState(
     () => initialBootstrap !== null,
@@ -143,14 +146,28 @@ export default function useSearch() {
   useEffect(() => {
     let cancelled = false;
 
+    const applySiteStatus = (status) => {
+      setMaintenanceMode(Boolean(status.maintenanceMode));
+      setMaintenanceMessage(status.maintenanceMessage ?? "");
+      setNoticeMessage(status.noticeMessage ?? "");
+    };
+
+    fetchSiteStatus()
+      .then((status) => {
+        if (!cancelled) {
+          applySiteStatus(status);
+        }
+      })
+      .catch(() => {
+        // Notice is optional; session bootstrap may still provide status later.
+      });
+
     ensureApiSession()
       .then((timing) => {
         if (cancelled) {
           return;
         }
-        setMaintenanceMode(Boolean(timing.maintenanceMode));
-        setMaintenanceMessage(timing.maintenanceMessage ?? "");
-        setNoticeMessage(timing.noticeMessage ?? "");
+        applySiteStatus(timing);
         setSessionBootstrapped(true);
         runLandingSearchIfNeeded(timing);
       })
@@ -162,15 +179,17 @@ export default function useSearch() {
       });
 
     const refreshTimer = setInterval(() => {
-      ensureApiSession({ forceRefresh: true })
-        .then((timing) => {
-          setMaintenanceMode(Boolean(timing.maintenanceMode));
-          setMaintenanceMessage(timing.maintenanceMessage ?? "");
-          setNoticeMessage(timing.noticeMessage ?? "");
+      fetchSiteStatus({ forceRefresh: true })
+        .then((siteStatus) => {
+          applySiteStatus(siteStatus);
         })
         .catch(() => {
-          // Next search or interval will try again.
+          // Next interval will try again.
         });
+
+      ensureApiSession({ forceRefresh: true }).catch(() => {
+        // Next search or interval will try again.
+      });
     }, API_SESSION_REFRESH_INTERVAL_MS);
 
     return () => {

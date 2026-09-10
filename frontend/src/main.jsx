@@ -3,11 +3,11 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 import { TURNSTILE_SITE_KEY } from "./constants";
-import { ensureApiSession } from "./utils/apiSession";
+import { ensureApiSession, fetchSiteStatus } from "./utils/apiSession";
 import { isTurnstileEnabled, preloadTurnstile } from "./utils/turnstile";
 
-// Overlap Turnstile + session mint with React hydration so trending ?s= links
-// show the API notice and start searching sooner after landing.
+// Fetch notice/maintenance immediately (no Turnstile). Overlap session mint with hydration.
+void fetchSiteStatus();
 if (isTurnstileEnabled(TURNSTILE_SITE_KEY)) {
   void preloadTurnstile(TURNSTILE_SITE_KEY);
 }
