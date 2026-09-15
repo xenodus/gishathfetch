@@ -20,6 +20,8 @@ const (
 	DefaultMeasurementID = "G-6NRLSYZ9P9"
 	defaultCollectURL    = "https://www.google-analytics.com/mp/collect"
 	telegramClientID     = "telegram-bot"
+	searchSourceParam    = "search_source"
+	searchSourceTelegram = "telegram"
 )
 
 // MeasurementSender posts GA4 events via the Measurement Protocol.
@@ -68,6 +70,7 @@ func (s *MeasurementSender) SendSearchEvent(ctx context.Context, searchTerm stri
 				"name": SearchEventName,
 				"params": map[string]any{
 					"search_term":          searchTerm,
+					searchSourceParam:      searchSourceTelegram,
 					"engagement_time_msec": 1,
 				},
 			},
