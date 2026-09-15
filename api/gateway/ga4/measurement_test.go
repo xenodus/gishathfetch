@@ -58,6 +58,7 @@ func TestMeasurementSender_SendSearchEvent(t *testing.T) {
 	params, ok := event["params"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "Lightning Bolt", params["search_term"])
+	require.Equal(t, searchSourceTelegram, params[searchSourceParam])
 }
 
 func TestMeasurementSender_SendSearchEvent_RejectsEmptyTerm(t *testing.T) {
