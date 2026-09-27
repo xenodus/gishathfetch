@@ -67,6 +67,18 @@ func StoresWithNoResults(
 	return withoutStock
 }
 
+func resolveCanonicalCardName(
+	ctx context.Context,
+	searchQuery string,
+	ckLookupPerformed bool,
+	ckVerifiedCardName string,
+) (string, error) {
+	if ckLookupPerformed {
+		return strings.TrimSpace(ckVerifiedCardName), nil
+	}
+	return verifyExactCardNameFunc(ctx, searchQuery)
+}
+
 // TryRecordLgsCardNotFoundEvents sends lgs_card_not_found Measurement Protocol
 // events for exact card-name searches with zero in-stock hits at a store.
 func TryRecordLgsCardNotFoundEvents(
@@ -76,15 +88,22 @@ func TryRecordLgsCardNotFoundEvents(
 	searchedStores []string,
 	stats []controller.StoreStat,
 	storeErrors []controller.StoreError,
+	ckLookupPerformed bool,
+	ckVerifiedCardName string,
 ) {
 	if !config.GA4MeasurementConfigured() {
 		return
 	}
 
-	trackCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	trackCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	canonical, err := verifyExactCardNameFunc(trackCtx, searchQuery)
+	canonical, err := resolveCanonicalCardName(
+		trackCtx,
+		searchQuery,
+		ckLookupPerformed,
+		ckVerifiedCardName,
+	)
 	if err != nil {
 		logger.From(ctx).WarnContext(ctx, "ga4 lgs_card_not_found skipped", "err", err)
 		return
