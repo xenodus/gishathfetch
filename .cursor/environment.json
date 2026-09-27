@@ -4,7 +4,7 @@
   "terminals": [
     {
       "name": "vite-dev",
-      "command": "cd frontend && npm run dev",
+      "command": "cd frontend && bun run dev",
       "description": "Frontend Vite dev server (port 5173)"
     }
   ],

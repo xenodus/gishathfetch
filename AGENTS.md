@@ -87,7 +87,7 @@ For any PR that includes UI changes:
 | Service | Location | Run command | Port |
 |---------|----------|-------------|------|
 | Go backend (Lambda handler) | `api/` | `cd api && go run -mod=vendor ./cmd/main.go` | N/A (one-shot, prints JSON) |
-| Frontend dev server (Vite) | `frontend/` | `cd frontend && npm run dev` | 5173 |
+| Frontend dev server (Vite) | `frontend/` | `cd frontend && bun run dev` | 5173 |
 
 ### Go version requirement
 
@@ -101,7 +101,7 @@ export PATH="/usr/local/go/bin:$PATH"
 
 - Full test suite: `make test` (from repo root)
 - Gateway/controller focused: `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
-- Frontend lint: `cd frontend && npm run lint`
+- Frontend lint: `cd frontend && bun run lint`
 
 ### UI screenshots
 
@@ -117,7 +117,7 @@ Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
 A reusable full-page screenshot helper is pre-provisioned at `~/.agent-tools/screenshots/screenshot.mjs`. It drives the system-installed Google Chrome via Playwright (no bundled-browser download; the startup update script keeps its deps installed).
 
-Start the dev server first (`cd frontend && npm run dev`, port 5173), then run:
+Start the dev server first (`cd frontend && bun run dev`, port 5173), then run:
 
 ```bash
 node ~/.agent-tools/screenshots/screenshot.mjs http://localhost:5173 /opt/cursor/artifacts homepage

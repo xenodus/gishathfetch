@@ -17,20 +17,20 @@ Apply this order when trade-offs exist:
 ## Scope
 
 - Go backend deps (`api/go.mod`, `api/go.sum`, `api/vendor/`)
-- Frontend deps (`frontend/package.json`, lockfile if present)
+- Frontend deps (`frontend/package.json`, `frontend/bun.lock`)
 - Build/runtime references (Dockerfile, CI/workflows, scripts)
 
 ## Workflow
 
 1. Discover outdated dependencies:
    - Go: `cd api && go list -m -u all`
-   - Frontend: `cd frontend && npm outdated` (if frontend scope is included)
+   - Frontend: `cd frontend && bun outdated` (if frontend scope is included)
 2. Build an upgrade plan:
    - Prefer patch/minor upgrades first.
    - Group upgrades by ecosystem and risk.
    - Mark any major upgrades with expected behavior impact.
 3. Implement:
-   - Use native package managers (`go get`, `npm install`/`npm update`).
+   - Use native package managers (`go get`, `bun update`).
    - Regenerate dependency artifacts with official tooling:
      - Go: `go mod tidy && go mod vendor`
 4. Validate:
