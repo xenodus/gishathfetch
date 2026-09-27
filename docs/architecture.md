@@ -26,11 +26,10 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
 - Sends GA4 `search` events with a `search_term` parameter on search start
   (`frontend/src/hooks/useSearch.js`). When `GA4_MEASUREMENT_API_SECRET` is set,
   the search Lambda also sends `lgs_card_not_found` (params: `search_term`,
-  `lgs`) via Measurement Protocol for exact card-name queries with zero
-  in-stock hits at a store (`api/gateway/ga4/lgs_not_found.go`). Card-name
-  resolution reuses the Scryfall verify from CK price lookup when enabled;
-  otherwise it calls `VerifyExactCardName`. Analytics run in a background
-  goroutine so they do not extend search response time.
+  `lgs`) via Measurement Protocol when CK price lookup is enabled and
+  verified the card name, for stores with zero in-stock hits
+  (`api/gateway/ga4/lgs_not_found.go`). Analytics run in a background goroutine
+  so they do not extend search response time.
 - Fetches trending keyword and CK price-change JSON from same-origin S3 paths
   served through CloudFront (`/analytics/.../latest.json`).
 - Persistent cart with export/import for cross-device sharing.

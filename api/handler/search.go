@@ -131,14 +131,14 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	webRes.TotalDurationMs = totalDurationMs
 	webRes.CardKingdomPrice = ckPrice
 
-	scheduleSearchLgsNotFoundAnalytics(ctx, request, searchLgsNotFoundAnalyticsInput{
-		searchQuery:        query.searchString,
-		searchedStores:     query.lgs,
-		stats:              storeStats,
-		storeErrors:        storeErrors,
-		ckLookupPerformed:  ckLookupPerformed,
-		ckVerifiedCardName: ckVerifiedCardName,
-	})
+	if ckLookupPerformed {
+		scheduleSearchLgsNotFoundAnalytics(ctx, request, searchLgsNotFoundAnalyticsInput{
+			verifiedCardName: ckVerifiedCardName,
+			searchedStores:   query.lgs,
+			stats:            storeStats,
+			storeErrors:      storeErrors,
+		})
+	}
 
 	return searchSuccessResponse(apiRes, webRes, origin)
 }

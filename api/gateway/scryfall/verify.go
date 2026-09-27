@@ -82,48 +82,6 @@ func VerifyCardName(ctx context.Context, query string) (string, error) {
 	return "", nil
 }
 
-// VerifyExactCardName returns the canonical Scryfall card name when query is a
-// 1:1 match (autocomplete or named?exact= only; no fuzzy fallback).
-func VerifyExactCardName(ctx context.Context, query string) (string, error) {
-	trimmed := strings.TrimSpace(query)
-	if trimmed == "" {
-		return "", nil
-	}
-
-	autocompleteRequestURL := fmt.Sprintf("%s?q=%s", autocompleteURL, url.QueryEscape(trimmed))
-	resp, err := httpGet(ctx, autocompleteRequestURL)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		body, err := gateway.ReadResponseBody(resp)
-		if err != nil {
-			return "", err
-		}
-		var autocomplete struct {
-			Data []string `json:"data"`
-		}
-		if err := json.Unmarshal(body, &autocomplete); err != nil {
-			return "", err
-		}
-		for _, name := range autocomplete.Data {
-			if cardNamesMatchForVerify(name, trimmed) {
-				return name, nil
-			}
-		}
-	}
-
-	if verifiedName, ok, err := lookupNamedCard(ctx, trimmed, "exact"); err != nil {
-		return "", err
-	} else if ok {
-		return verifiedName, nil
-	}
-
-	return "", nil
-}
-
 func lookupNamedCard(ctx context.Context, query, matchMode string) (string, bool, error) {
 	namedRequestURL := fmt.Sprintf("%s?%s=%s", namedURL, matchMode, url.QueryEscape(query))
 	namedResp, err := httpGet(ctx, namedRequestURL)

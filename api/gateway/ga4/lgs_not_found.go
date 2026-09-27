@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"mtg-price-checker-sg/controller"
-	"mtg-price-checker-sg/gateway/scryfall"
 	"mtg-price-checker-sg/pkg/config"
 	"mtg-price-checker-sg/pkg/logger"
 )
@@ -19,8 +18,6 @@ const (
 	searchSourceWebsite      = "website"
 	websiteSearchClientID    = "gishath-website-search"
 )
-
-var verifyExactCardNameFunc = scryfall.VerifyExactCardName
 
 // StoresWithNoResults lists stores that completed search with zero in-stock items.
 func StoresWithNoResults(
@@ -67,50 +64,28 @@ func StoresWithNoResults(
 	return withoutStock
 }
 
-func resolveCanonicalCardName(
-	ctx context.Context,
-	searchQuery string,
-	ckLookupPerformed bool,
-	ckVerifiedCardName string,
-) (string, error) {
-	if ckLookupPerformed {
-		return strings.TrimSpace(ckVerifiedCardName), nil
-	}
-	return verifyExactCardNameFunc(ctx, searchQuery)
-}
-
 // TryRecordLgsCardNotFoundEvents sends lgs_card_not_found Measurement Protocol
-// events for exact card-name searches with zero in-stock hits at a store.
+// events when CK price lookup verified the card name and a store returned zero
+// in-stock hits.
 func TryRecordLgsCardNotFoundEvents(
 	ctx context.Context,
 	clientID string,
-	searchQuery string,
+	verifiedCardName string,
 	searchedStores []string,
 	stats []controller.StoreStat,
 	storeErrors []controller.StoreError,
-	ckLookupPerformed bool,
-	ckVerifiedCardName string,
 ) {
 	if !config.GA4MeasurementConfigured() {
 		return
 	}
 
-	trackCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	canonical, err := resolveCanonicalCardName(
-		trackCtx,
-		searchQuery,
-		ckLookupPerformed,
-		ckVerifiedCardName,
-	)
-	if err != nil {
-		logger.From(ctx).WarnContext(ctx, "ga4 lgs_card_not_found skipped", "err", err)
-		return
-	}
+	canonical := strings.TrimSpace(verifiedCardName)
 	if canonical == "" {
 		return
 	}
+
+	trackCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	stores := StoresWithNoResults(searchedStores, stats, storeErrors)
 	if len(stores) == 0 {

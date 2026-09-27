@@ -29,34 +29,6 @@ func TestVerifyCardNameAccentInsensitiveAutocomplete(t *testing.T) {
 	}
 }
 
-func TestVerifyExactCardNameSkipsFuzzyFallback(t *testing.T) {
-	origHTTPGet := httpGet
-	t.Cleanup(func() { httpGet = origHTTPGet })
-
-	httpGet = func(_ context.Context, requestURL string) (*http.Response, error) {
-		switch {
-		case strings.Contains(requestURL, "/cards/autocomplete"):
-			return jsonResponse(http.StatusOK, `{"object":"catalog","data":[]}`), nil
-		case strings.Contains(requestURL, "/cards/named?exact="):
-			return jsonResponse(http.StatusNotFound, `{"object":"error","code":"not_found"}`), nil
-		case strings.Contains(requestURL, "/cards/named?fuzzy="):
-			t.Fatal("VerifyExactCardName must not call fuzzy lookup")
-			return nil, nil
-		default:
-			t.Fatalf("unexpected request URL: %s", requestURL)
-			return nil, nil
-		}
-	}
-
-	got, err := VerifyExactCardName(context.Background(), "Juzam Djinn")
-	if err != nil {
-		t.Fatalf("VerifyExactCardName() error = %v", err)
-	}
-	if got != "" {
-		t.Fatalf("VerifyExactCardName() = %q, want empty", got)
-	}
-}
-
 func TestVerifyCardNameFuzzyFallback(t *testing.T) {
 	origHTTPGet := httpGet
 	t.Cleanup(func() { httpGet = origHTTPGet })

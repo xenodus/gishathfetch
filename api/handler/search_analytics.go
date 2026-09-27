@@ -18,12 +18,10 @@ const lgsNotFoundAnalyticsTimeout = 5 * time.Second
 var recordLgsCardNotFoundEventsFunc = ga4.TryRecordLgsCardNotFoundEvents
 
 type searchLgsNotFoundAnalyticsInput struct {
-	searchQuery        string
-	searchedStores     []string
-	stats              []controller.StoreStat
-	storeErrors        []controller.StoreError
-	ckLookupPerformed  bool
-	ckVerifiedCardName string
+	verifiedCardName string
+	searchedStores   []string
+	stats            []controller.StoreStat
+	storeErrors      []controller.StoreError
 }
 
 func scheduleSearchLgsNotFoundAnalytics(
@@ -43,12 +41,10 @@ func scheduleSearchLgsNotFoundAnalytics(
 		recordLgsCardNotFoundEventsFunc(
 			trackCtx,
 			clientID,
-			input.searchQuery,
+			input.verifiedCardName,
 			searchedStores,
 			stats,
 			storeErrors,
-			input.ckLookupPerformed,
-			input.ckVerifiedCardName,
 		)
 	}()
 }
