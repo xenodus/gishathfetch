@@ -213,7 +213,7 @@ export default function useSearch() {
       cancelled = true;
       clearInterval(refreshTimer);
     };
-  }, []);
+  }, [runLandingSearchIfNeeded]);
 
   const syncSearchHistory = useCallback((snapshot) => {
     if (window.location.hostname === "localhost") {

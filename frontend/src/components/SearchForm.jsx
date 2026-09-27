@@ -166,15 +166,15 @@ const SearchForm = ({
   return (
     <div ref={wrapperRef}>
       {noticeMessage && (
-        <div
+        <output
           className="alert alert-info mb-3 d-flex align-items-start gap-2"
-          role="status"
+          aria-live="polite"
         >
           <Info size={18} className="flex-shrink-0 mt-1" aria-hidden="true" />
           <div className="flex-grow-1">
             <LinkifiedText text={noticeMessage} />
           </div>
-        </div>
+        </output>
       )}
 
       {maintenanceMode && (
