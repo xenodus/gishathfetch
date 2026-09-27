@@ -128,6 +128,15 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	webRes.TotalDurationMs = totalDurationMs
 	webRes.CardKingdomPrice = ckPrice
 
+	recordSearchLgsNotFoundAnalytics(
+		ctx,
+		request,
+		query.searchString,
+		query.lgs,
+		storeStats,
+		storeErrors,
+	)
+
 	return searchSuccessResponse(apiRes, webRes, origin)
 }
 

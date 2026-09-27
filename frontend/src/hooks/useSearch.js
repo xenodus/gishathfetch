@@ -18,7 +18,6 @@ import {
   isApiSessionAccessDenied,
   resetApiSessionCache,
 } from "../utils/apiSession";
-import { recordSearchAnalytics } from "../utils/searchAnalytics";
 import {
   buildSearchHistoryState,
   buildSearchUrl,
@@ -312,6 +311,10 @@ export default function useSearch() {
       setSearchResponseDurationMs(null);
       setDismissedStoreErrorsKey(null);
 
+      if (window.gtag) {
+        window.gtag("event", "search", { search_term: query });
+      }
+
       const searchUrl = `${API_SEARCH_URL}?s=${encodeURIComponent(query)}&lgs=${encodeURIComponent(stores.join(","))}`;
 
       const progressInterval = setInterval(() => {
@@ -420,13 +423,11 @@ export default function useSearch() {
               });
             }
             skipHistorySyncRef.current = false;
-            void recordSearchAnalytics({
-              query,
-              stores,
-              storeStats,
-              storeErrors,
-              signal: searchAbortController.signal,
-            });
+            if (window.gtag) {
+              window.gtag("event", "view_search_results", {
+                search_term: query,
+              });
+            }
           } else {
             throw new Error("Invalid response format from server");
           }

@@ -23,10 +23,11 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
 - Calls **`https://api.gishathfetch.com/search`** and **`/session`** (cross-origin,
   credentialed). Local dev can proxy via Vite — see
   [`AGENTS.md`](../AGENTS.md) → *Frontend API connection*.
-- Sends GA4 `search` and `view_search_results` events with a `search_term`
-  parameter only when the query is an exact Scryfall card-name match. Stores
-  with zero in-stock hits for that search emit `lgs_card_not_found` (params:
-  `search_term`, `lgs`) — see `frontend/src/utils/searchAnalytics.js`.
+- Sends GA4 `search` events with a `search_term` parameter on search start
+  (`frontend/src/hooks/useSearch.js`). When `GA4_MEASUREMENT_API_SECRET` is set,
+  the search Lambda also sends `lgs_card_not_found` (params: `search_term`,
+  `lgs`) via Measurement Protocol for exact card-name queries with zero
+  in-stock hits at a store (`api/gateway/ga4/lgs_not_found.go`).
 - Fetches trending keyword and CK price-change JSON from same-origin S3 paths
   served through CloudFront (`/analytics/.../latest.json`).
 - Persistent cart with export/import for cross-device sharing.
