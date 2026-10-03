@@ -694,23 +694,35 @@ func isNonemptyExtraInfo(info string) bool {
 	return extraInfoInnerText(info) != ""
 }
 
+func trimTrailingNameSeparator(name string) string {
+	name = strings.TrimSpace(name)
+	for _, sep := range []string{" -", " –", " —"} {
+		if strings.HasSuffix(name, sep) {
+			return strings.TrimSpace(name[:len(name)-len(sep)])
+		}
+	}
+	return name
+}
+
 func cleanName(name, quality string, extraInfo []string) (string, []string) {
 	cleanCardName := name
 
 	// if we have quality, remove it from name
 	if quality != "" {
-		cleanCardName = strings.Replace(cleanCardName, quality, "", -1)
-
-		if idx := strings.LastIndex(cleanCardName, " -"); idx != -1 {
-			cleanCardName = cleanCardName[:idx]
+		cleanCardName = strings.TrimSpace(cleanCardName)
+		if before, ok := strings.CutSuffix(cleanCardName, quality); ok {
+			cleanCardName = strings.TrimSpace(before)
+		} else {
+			cleanCardName = strings.Replace(cleanCardName, quality, "", -1)
 		}
+		cleanCardName = trimTrailingNameSeparator(cleanCardName)
 	}
 
 	// if string has [, get index of it to strip [*] away
 	squareBracketIndex := strings.Index(cleanCardName, "[")
 	if squareBracketIndex > 0 {
 		extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[squareBracketIndex:]))
-		cleanCardName = strings.TrimSpace(cleanCardName[:squareBracketIndex])
+		cleanCardName = trimTrailingNameSeparator(cleanCardName[:squareBracketIndex])
 	}
 
 	// if string has (, get index of it to strip (*) away
@@ -720,7 +732,7 @@ func cleanName(name, quality string, extraInfo []string) (string, []string) {
 		cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex])
 	}
 
-	cleanCardName = strings.TrimSpace(cleanCardName)
+	cleanCardName = trimTrailingNameSeparator(cleanCardName)
 
 	var extraInfoWithBrackets []string
 	if len(extraInfo) > 0 {
