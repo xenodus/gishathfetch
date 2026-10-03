@@ -152,6 +152,17 @@ func TestCleanName(t *testing.T) {
 	}
 }
 
+func TestCleanName_ManaProSetSuffix(t *testing.T) {
+	name := "Seraph of the Sword - [Magic 2014 (M14) - M14 - 31] - Near Mint / English / Normal"
+	gotName, gotExtra := cleanName(name, "Near Mint / English / Normal", nil)
+	if gotName != "Seraph of the Sword" {
+		t.Fatalf("gotName = %q, want %q", gotName, "Seraph of the Sword")
+	}
+	if len(gotExtra) != 1 || gotExtra[0] != "[Magic 2014 (M14) - M14 - 31]" {
+		t.Fatalf("gotExtra = %v", gotExtra)
+	}
+}
+
 func TestCleanName_TefudaPreparsedSetTags(t *testing.T) {
 	gotName, gotExtra := cleanName("Belladonna Took", "Near Mint", []string{"[HOB]", "[4]"})
 	if gotName != "Belladonna Took" {
