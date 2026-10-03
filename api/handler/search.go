@@ -37,12 +37,12 @@ type ErrorResponse struct {
 
 var searchFunc = controller.Search
 
-var lookupCKPriceFunc = func(ctx context.Context, query string) (*cardkingdom.Listing, error) {
+var lookupCKPriceFunc = func(ctx context.Context, query string) (*cardkingdom.Listing, string, error) {
 	store, err := ckprices.NewDynamoDBStore(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return ckprice.GetLatestPrice(ctx, store, query)
+	return ckprice.LookupLatestPrice(ctx, store, query)
 }
 
 func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -75,15 +75,17 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 
 	var (
-		inStockCards []controller.Card
-		storeErrors  []controller.StoreError
-		storeStats   []controller.StoreStat
-		ckPrice      *cardkingdom.Listing
-		searchErr    error
+		inStockCards       []controller.Card
+		storeErrors        []controller.StoreError
+		storeStats         []controller.StoreStat
+		ckPrice            *cardkingdom.Listing
+		ckVerifiedCardName string
+		searchErr          error
 	)
 
 	requestStart := time.Now()
 	var wg sync.WaitGroup
+	ckLookupPerformed := config.CKPriceLookupEnabled()
 
 	wg.Go(func() {
 		inStockCards, storeErrors, storeStats, searchErr = searchFunc(ctx, controller.SearchInput{
@@ -92,17 +94,18 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 		})
 	})
 
-	if config.CKPriceLookupEnabled() {
+	if ckLookupPerformed {
 		wg.Go(func() {
 			ckCtx, cancel := context.WithTimeout(ctx, config.CKPriceLookupTimeout)
 			defer cancel()
 
-			price, err := lookupCKPriceFunc(ckCtx, query.searchString)
+			price, verifiedName, err := lookupCKPriceFunc(ckCtx, query.searchString)
 			if err != nil {
 				logger.From(ckCtx).WarnContext(ckCtx, "ck price lookup failed", "search", query.searchString, "err", err)
 				return
 			}
 			ckPrice = price
+			ckVerifiedCardName = verifiedName
 		})
 	}
 
@@ -127,6 +130,15 @@ func Search(ctx context.Context, request events.APIGatewayProxyRequest) (events.
 	}
 	webRes.TotalDurationMs = totalDurationMs
 	webRes.CardKingdomPrice = ckPrice
+
+	if ckLookupPerformed {
+		scheduleSearchLgsNotFoundAnalytics(ctx, request, searchLgsNotFoundAnalyticsInput{
+			verifiedCardName: ckVerifiedCardName,
+			searchedStores:   query.lgs,
+			stats:            storeStats,
+			storeErrors:      storeErrors,
+		})
+	}
 
 	return searchSuccessResponse(apiRes, webRes, origin)
 }
