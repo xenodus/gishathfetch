@@ -9,10 +9,13 @@ import {
   parseSiteStatusFromSessionResponse,
 } from "./apiSession.js";
 
-assert.deepEqual(parseMaintenanceFromSessionResponse(new Response(null, { status: 204 })), {
-  maintenanceMode: false,
-  maintenanceMessage: "",
-});
+assert.deepEqual(
+  parseMaintenanceFromSessionResponse(new Response(null, { status: 204 })),
+  {
+    maintenanceMode: false,
+    maintenanceMessage: "",
+  },
+);
 
 assert.deepEqual(
   parseMaintenanceFromSessionResponse(
@@ -45,9 +48,12 @@ assert.deepEqual(
   },
 );
 
-assert.deepEqual(parseNoticeFromSessionResponse(new Response(null, { status: 204 })), {
-  noticeMessage: "",
-});
+assert.deepEqual(
+  parseNoticeFromSessionResponse(new Response(null, { status: 204 })),
+  {
+    noticeMessage: "",
+  },
+);
 
 assert.deepEqual(
   parseNoticeFromSessionResponse(

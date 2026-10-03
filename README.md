@@ -242,8 +242,7 @@ Requires `TELEGRAM_BOT_TOKEN` in the environment.
 
 ## ✅ Prerequisites
 
-- Node.js 22 (matches CI workflow)
-- npm
+- [Bun](https://bun.sh) 1.4.x (frontend package manager; matches `frontend/package.json` `packageManager`)
 - Go (version declared in `api/go.mod`)
 
 ## 🧪 Tests

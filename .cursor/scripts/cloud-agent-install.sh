@@ -43,8 +43,34 @@ fi
 export PATH="/usr/local/go/bin:$PATH"
 "${go_root}/bin/go" version
 
+bun_version="1.4.2"
+bun_root="${HOME}/.bun"
+bun_profile_snippet="/etc/profile.d/cursor-bun.sh"
+
+install_bun() {
+  curl -fsSL "https://bun.sh/install" | bash -s "bun-v${bun_version}"
+}
+
+if [[ ! -x "${bun_root}/bin/bun" ]]; then
+  echo "Installing Bun ${bun_version} to ${bun_root}"
+  install_bun
+elif ! "${bun_root}/bin/bun" --version | grep -q "^${bun_version}"; then
+  echo "Replacing Bun $("${bun_root}/bin/bun" --version) with Bun ${bun_version}"
+  install_bun
+else
+  echo "Bun ${bun_version} already installed at ${bun_root}"
+fi
+
+if [[ ! -f "$bun_profile_snippet" ]] || ! grep -q "${bun_root}/bin" "$bun_profile_snippet"; then
+  echo "export PATH=\"${bun_root}/bin:\$PATH\"" | sudo tee "$bun_profile_snippet" >/dev/null
+  sudo chmod 644 "$bun_profile_snippet"
+fi
+
+export PATH="${bun_root}/bin:$PATH"
+"${bun_root}/bin/bun" --version
+
 cd "${repo_root}/frontend"
-npm ci
+bun install --frozen-lockfile
 
 # Warm the Go build cache so the first `make test` / `go build` / `go fix`
 # starts from a hot cache instead of recompiling every vendored package.
