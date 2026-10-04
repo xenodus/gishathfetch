@@ -585,6 +585,9 @@ func filterAndSortCards(cards []gateway.Card, searchString string) []Card {
 	for _, c := range cards {
 		if c.InStock && c.Price > 0 {
 			cleanCardName, extraInfo := cleanName(c.Name, c.Quality, c.ExtraInfo)
+			if c.Source == manapro.StoreName {
+				extraInfo = splitManaProBracketExtraInfo(extraInfo)
+			}
 
 			card := Card{
 				Name:      cleanCardName,
@@ -702,6 +705,35 @@ func trimTrailingNameSeparator(name string) string {
 		}
 	}
 	return name
+}
+
+// splitManaProBracketExtraInfo splits the inner text of Mana Pro's first bracket
+// block on " - " (e.g. "[Universes Beyond: Fallout - PIP - 97]" → three tags).
+func splitManaProBracketExtraInfo(extraInfo []string) []string {
+	if len(extraInfo) == 0 {
+		return extraInfo
+	}
+	first := strings.TrimSpace(extraInfo[0])
+	inner := extraInfoInnerText(first)
+	if inner == first || !strings.Contains(inner, " - ") {
+		return extraInfo
+	}
+	parts := strings.Split(inner, " - ")
+	var split []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if !strings.HasPrefix(part, "[") {
+			part = "[" + part + "]"
+		}
+		split = append(split, part)
+	}
+	if len(split) <= 1 {
+		return extraInfo
+	}
+	return append(split, extraInfo[1:]...)
 }
 
 func cleanName(name, quality string, extraInfo []string) (string, []string) {
