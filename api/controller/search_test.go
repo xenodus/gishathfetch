@@ -158,8 +158,52 @@ func TestCleanName_ManaProSetSuffix(t *testing.T) {
 	if gotName != "Seraph of the Sword" {
 		t.Fatalf("gotName = %q, want %q", gotName, "Seraph of the Sword")
 	}
-	if len(gotExtra) != 1 || gotExtra[0] != "[Magic 2014 (M14) - M14 - 31]" {
-		t.Fatalf("gotExtra = %v", gotExtra)
+	wantExtra := []string{"[Magic 2014 (M14)]", "[M14]", "[31]"}
+	gotExtra = splitManaProBracketExtraInfo(gotExtra)
+	if len(gotExtra) != len(wantExtra) {
+		t.Fatalf("gotExtra = %v, want %v", gotExtra, wantExtra)
+	}
+	for i := range wantExtra {
+		if gotExtra[i] != wantExtra[i] {
+			t.Fatalf("gotExtra[%d] = %q, want %q", i, gotExtra[i], wantExtra[i])
+		}
+	}
+}
+
+func TestSplitManaProBracketExtraInfo(t *testing.T) {
+	tests := map[string]struct {
+		in   []string
+		want []string
+	}{
+		"PIP triple": {
+			in:   []string{"[Universes Beyond: Fallout - PIP - 97]"},
+			want: []string{"[Universes Beyond: Fallout]", "[PIP]", "[97]"},
+		},
+		"single segment unchanged": {
+			in:   []string{"[Foundations]"},
+			want: []string{"[Foundations]"},
+		},
+		"no inner dash unchanged": {
+			in:   []string{"[Magic 2014 (M14)]"},
+			want: []string{"[Magic 2014 (M14)]"},
+		},
+		"preserves trailing extras": {
+			in:   []string{"[Set A - B]", "(foil)"},
+			want: []string{"[Set A]", "[B]", "(foil)"},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := splitManaProBracketExtraInfo(tt.in)
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Fatalf("[%d] got %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
 	}
 }
 
