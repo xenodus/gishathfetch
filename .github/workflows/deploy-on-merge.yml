@@ -10,6 +10,8 @@ on:
 permissions:
   id-token: write
   contents: read
+  # setup-go restores/saves the module cache via actions/cache.
+  actions: write
 
 jobs:
   deploy:
@@ -37,10 +39,10 @@ jobs:
           bun-version: "1.4.2"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           role-session-name: github-actions-deploy
