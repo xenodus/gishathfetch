@@ -207,13 +207,20 @@ func decodeListings(raw json.RawMessage) ([]listing, error) {
 	return nil, fmt.Errorf("%s: unexpected search response payload", StoreName)
 }
 
+func tcgMarketplaceOutboundOpts() gateway.OutboundRequestOptions {
+	return gateway.OutboundRequestOptions{
+		DirectAttemptTimeout:    config.TCGMarketplaceSearchAttemptTimeout,
+		DedicatedAttemptTimeout: config.TCGMarketplaceSearchAttemptTimeout,
+	}
+}
+
 func getApiResponse(ctx context.Context, payload []byte, accessTokenConfigured bool) ([]listing, error) {
 	var requestContext []string
 	if !accessTokenConfigured {
 		requestContext = append(requestContext, "access_token_configured=false")
 	}
 
-	resp, err := gateway.DoOutboundRoundTrip(ctx, gateway.OutboundRequestOptions{}, config.DedicatedSearchAttemptTimeout, func() (*http.Request, error) {
+	resp, err := gateway.DoOutboundRoundTrip(ctx, tcgMarketplaceOutboundOpts(), config.TCGMarketplaceSearchAttemptTimeout, func() (*http.Request, error) {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, cardLinkAPI, bytes.NewBuffer(payload))
 		if err != nil {
 			return nil, err
