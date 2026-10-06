@@ -24,8 +24,8 @@ func Test_Search_AccessControl(t *testing.T) {
 	searchFunc = func(_ context.Context, _ controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
 		return nil, nil, nil, nil
 	}
-	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
-		return nil, nil
+	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, string, error) {
+		return nil, "", nil
 	}
 
 	require.NoError(t, os.Setenv("ENV", config.EnvProd))

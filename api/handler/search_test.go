@@ -109,8 +109,8 @@ func Test_Search_Success(t *testing.T) {
 			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
 				return tc.mockSearchResponse, tc.mockStoreErrors, tc.mockStoreStats, tc.mockSearchErr
 			}
-			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
-				return nil, nil
+			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, string, error) {
+				return nil, "", nil
 			}
 
 			err := os.Setenv("ENV", config.EnvProd)
@@ -143,8 +143,8 @@ func Test_Search_CORS(t *testing.T) {
 	searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
 		return []controller.Card{}, []controller.StoreError{}, []controller.StoreStat{}, nil
 	}
-	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
-		return nil, nil
+	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, string, error) {
+		return nil, "", nil
 	}
 
 	err := os.Setenv("ENV", config.EnvProd)
@@ -241,8 +241,8 @@ func Test_Search_Err(t *testing.T) {
 			searchFunc = func(_ context.Context, input controller.SearchInput) ([]controller.Card, []controller.StoreError, []controller.StoreStat, error) {
 				return tc.mockSearchResponse, nil, nil, tc.mockSearchErr
 			}
-			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
-				return nil, nil
+			lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, string, error) {
+				return nil, "", nil
 			}
 
 			err := os.Setenv("ENV", config.EnvProd)
@@ -274,14 +274,14 @@ func Test_Search_CKPriceLookupTimeoutDoesNotBlockPastCap(t *testing.T) {
 			{Store: "Arcane Sanctum", ItemCount: 0, DurationMs: 700},
 		}, nil
 	}
-	lookupCKPriceFunc = func(ctx context.Context, _ string) (*cardkingdom.Listing, error) {
+	lookupCKPriceFunc = func(ctx context.Context, _ string) (*cardkingdom.Listing, string, error) {
 		timer := time.NewTimer(10 * time.Second)
 		defer timer.Stop()
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, "", ctx.Err()
 		case <-timer.C:
-			return &cardkingdom.Listing{CardName: "late", PriceUsd: 1}, nil
+			return &cardkingdom.Listing{CardName: "late", PriceUsd: 1}, "late", nil
 		}
 	}
 
