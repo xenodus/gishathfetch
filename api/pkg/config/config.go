@@ -31,7 +31,7 @@ const (
 	MoxAndLotusSearchAttemptTimeout = 10 * time.Second
 	// TCGMarketplaceSearchAttemptTimeout is the per-attempt cap for The TCG Marketplace
 	// CardLink API (:3501), which can be slow to respond.
-	TCGMarketplaceSearchAttemptTimeout = 10 * time.Second
+	TCGMarketplaceSearchAttemptTimeout = PerSiteTimeout
 	// UseDedicatedProxyEnv toggles whether DEDICATED_PROXY_* may be used for outbound
 	// scrapes and API calls. When false, dedicated proxy transports are skipped even
 	// if configured. Defaults to enabled when unset or invalid.
