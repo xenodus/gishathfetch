@@ -16,16 +16,17 @@ jobs:
     name: Run make deploy
     # Only deploy for PRs that were actually merged into master.
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    # Pin until deploy is validated on ubuntu-26.04 (ubuntu-latest migrates Oct–Nov 2026).
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: api/go.mod
           cache-dependency-path: api/go.sum
