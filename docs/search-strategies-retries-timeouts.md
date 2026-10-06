@@ -100,6 +100,7 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 | Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
 | Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
 | The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 10s | Direct → dedicated → dynamic | Transport fallback only |
+| The TCG Marketplace (alt, not wired) | POST `:3501/product/advancedfilter` + RSA product URLs | 10s | Same as primary | Not used in production search yet |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 
