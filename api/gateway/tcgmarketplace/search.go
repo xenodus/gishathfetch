@@ -5,11 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 
 	"mtg-price-checker-sg/gateway"
@@ -35,6 +33,7 @@ type apiEnvelope struct {
 }
 
 type listing struct {
+	ID                    int64  `json:"id"`
 	Name                  string `json:"name"`
 	Setcode               string `json:"setcode"`
 	Setname               string `json:"setname"`
@@ -70,6 +69,10 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	if config.TCGMarketplaceAdvancedFilterSearchEnabled() {
+		return s.SearchAdvancedFilter(ctx, searchStr)
+	}
+
 	var (
 		listings    []listing
 		cards       []gateway.Card
@@ -93,55 +96,12 @@ func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, er
 		return cards, err
 	}
 
-	if len(listings) > 0 {
-		for _, card := range listings {
-			stock, err := strconv.ParseInt(fmt.Sprint(card.Available), 10, 64)
-			if err != nil {
-				continue
-			}
-
-			if stock > 0 {
-				price, err := strconv.ParseFloat(fmt.Sprint(card.From), 64)
-				if err != nil {
-					continue
-				}
-
-				// Strip [XXX] prefix from card name
-				// e.g. [CMM] Deflecting Swat (V2)(Etched foil)
-				name := strings.TrimSpace(card.Name)
-				squareBracketIndex := strings.Index(name, "]")
-				if squareBracketIndex > 1 {
-					name = strings.TrimSpace(name[squareBracketIndex+1:])
-				}
-
-				var img string
-				images := strings.Split(card.Image, " ")
-				if len(images) > 0 {
-					img = images[0]
-				}
-
-				cleanPageURL, err := canonicalProductURL(card.URL)
-				if err != nil {
-					slog.Warn("error parsing url", "store", s.Name, "value", card.URL, "err", err)
-					continue
-				}
-				cleanPageURL.RawQuery = url.Values{
-					"utm_source": []string{config.UtmSource},
-				}.Encode()
-
-				extraInfo := []string{fmt.Sprintf("[%s]", card.Setname)}
-				cards = append(cards, gateway.Card{
-					Name:      strings.TrimSpace(name),
-					Url:       cleanPageURL.String(),
-					InStock:   true,
-					Price:     price,
-					Source:    s.Name,
-					Img:       img,
-					IsFoil:    isSurgeFoil(extraInfo, name),
-					ExtraInfo: extraInfo,
-				})
-			}
+	for _, listing := range listings {
+		card, ok := cardFromListing(s, listing)
+		if !ok {
+			continue
 		}
+		cards = append(cards, card)
 	}
 	return cards, nil
 }

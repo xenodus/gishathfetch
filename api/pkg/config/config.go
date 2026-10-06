@@ -32,6 +32,9 @@ const (
 	// TCGMarketplaceSearchAttemptTimeout is the per-attempt cap for The TCG Marketplace
 	// CardLink API (:3501), which can be slow to respond.
 	TCGMarketplaceSearchAttemptTimeout = 10 * time.Second
+	// TCGMarketplaceAdvancedFilterSearchEnv toggles The TCG Marketplace store search to use
+	// POST /product/advancedfilter instead of encoder/advancedsearch (no access token).
+	TCGMarketplaceAdvancedFilterSearchEnv = "TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH"
 	// UseDedicatedProxyEnv toggles whether DEDICATED_PROXY_* may be used for outbound
 	// scrapes and API calls. When false, dedicated proxy transports are skipped even
 	// if configured. Defaults to enabled when unset or invalid.
@@ -180,6 +183,22 @@ func WebBotAuthTTL() time.Duration {
 		return defaultTTL
 	}
 	return time.Duration(seconds) * time.Second
+}
+
+// TCGMarketplaceAdvancedFilterSearchEnabled reports whether The TCG Marketplace search
+// uses POST /product/advancedfilter instead of the CardLink encoder API.
+func TCGMarketplaceAdvancedFilterSearchEnabled() bool {
+	rawValue := strings.TrimSpace(os.Getenv(TCGMarketplaceAdvancedFilterSearchEnv))
+	if rawValue == "" {
+		return false
+	}
+
+	enabled, err := strconv.ParseBool(rawValue)
+	if err != nil {
+		return false
+	}
+
+	return enabled
 }
 
 // CKPriceLookupEnabled reports whether search responses should include Card Kingdom prices.
