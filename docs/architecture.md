@@ -442,7 +442,8 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | Turnstile site key (public) | Frontend build | `VITE_TURNSTILE_SITE_KEY` |
 | Web Bot Auth signing key | Lambda / deploy | `WEB_BOT_AUTH_PRIVATE_KEY` or `WEB_BOT_AUTH_PRIVATE_KEY_FILE` |
 | Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1` |
-| TCG Marketplace API token | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` |
+| TCG Marketplace advanced-filter search toggle | Lambda | `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH` (`true` → `/product/advancedfilter`; default off) |
+| TCG Marketplace API token (CardLink search) | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` (ignored when advanced filter is enabled) |
 | Cards Central LGS API key | Lambda | `CARDS_CENTRAL_KEY` |
 | GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |
 | GA4 Measurement Protocol API secret | Search Lambda | `GA4_MEASUREMENT_API_SECRET` (optional `GA4_MEASUREMENT_ID`) |

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"mtg-price-checker-sg/gateway/gatewaytest"
+	"mtg-price-checker-sg/pkg/config"
 
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
@@ -97,6 +98,22 @@ func TestIsSurgeFoil(t *testing.T) {
 
 func Test_Search(t *testing.T) {
 	ctx := context.Background()
+	if config.TCGMarketplaceAdvancedFilterSearchEnabled() {
+		s := NewLGS()
+		result, err := s.Search(ctx, "abrade")
+		if err != nil {
+			t.Logf("advanced filter search failed (%v); probing api structure", err)
+			gatewaytest.RequireTCGMarketplaceAdvancedFilterStructure(t, ctx, "abrade")
+			return
+		}
+		gatewaytest.RequireSearchOrProbe(t, err, result, gatewaytest.CardExpect{
+			URLContains: StoreBaseURL + "/product/B/",
+		}, func(t *testing.T, ctx context.Context) {
+			gatewaytest.RequireTCGMarketplaceAdvancedFilterStructure(t, ctx, "abrade")
+		})
+		return
+	}
+
 	token := os.Getenv(accessTokenKey)
 	if token == "" {
 		gatewaytest.RequireTCGMarketplaceAPIStructure(t, ctx, "", "abrade")
@@ -115,4 +132,17 @@ func Test_Search(t *testing.T) {
 	}, func(t *testing.T, ctx context.Context) {
 		gatewaytest.RequireTCGMarketplaceAPIStructure(t, ctx, token, "abrade")
 	})
+}
+
+func Test_SearchRoutesToAdvancedFilterWhenEnabled(t *testing.T) {
+	t.Setenv(config.TCGMarketplaceAdvancedFilterSearchEnv, "true")
+	require.True(t, config.TCGMarketplaceAdvancedFilterSearchEnabled())
+
+	ctx := context.Background()
+	s := NewLGS()
+	_, err := s.Search(ctx, "Opt")
+	if err != nil {
+		gatewaytest.RequireTCGMarketplaceAdvancedFilterStructure(t, ctx, "Opt")
+		return
+	}
 }

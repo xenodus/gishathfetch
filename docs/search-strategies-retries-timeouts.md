@@ -99,7 +99,8 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 | Dueller's Point | HTML search page (`/products/search`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
 | Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
 | Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
-| The TCG Marketplace | CardLink POST (`:3501/encoder/advancedsearch`) | 20s | Direct → dedicated → dynamic | Transport fallback only |
+| The TCG Marketplace (default) | CardLink POST (`:3501/encoder/advancedsearch`) | 20s | Direct → dedicated → dynamic | Transport fallback only; requires `TCG_MARKETPLACE_ACCESS_TOKEN` |
+| The TCG Marketplace (when `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH=true`) | POST `:3501/product/advancedfilter` + RSA-OAEP product URLs | 20s | Same as primary | No access token; selected by `Store.Search` in `search.go` |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 
