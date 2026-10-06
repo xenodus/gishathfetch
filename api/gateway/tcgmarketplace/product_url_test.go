@@ -3,6 +3,7 @@ package tcgmarketplace
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -39,7 +40,7 @@ func decryptProductID(encoded string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	plain, err := rsa.DecryptPKCS1v15(rand.Reader, key, ciphertext)
+	plain, err := rsa.DecryptOAEP(sha1.New(), rand.Reader, key, ciphertext, nil)
 	if err != nil {
 		return "", err
 	}

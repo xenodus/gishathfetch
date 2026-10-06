@@ -3,6 +3,7 @@ package tcgmarketplace
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -18,6 +19,7 @@ import (
 
 // productURLPublicKeyPEM matches the storefront RSA public key used to encode IDs in
 // /product/B/{encoded_id}/0 links (see thetcgmarketplace.com static bundle).
+// The React app uses crypto-browserify publicEncrypt (RSA-OAEP, SHA-1), not PKCS#1 v1.5.
 const productURLPublicKeyPEM = `-----BEGIN PUBLIC KEY-----
 MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgGlempQY/LwZbvzeYl76yMaH/onD
 /olkEmMC5rbms3BSAA/TbzPMEVjjXcKjFHcBlKC5KOAyqNF5z7VZc6hyM6GL8l4o
@@ -77,7 +79,8 @@ func encodeProductID(id int64) (string, error) {
 		return "", err
 	}
 	allowWeakRSA1024Keys()
-	encrypted, err := rsa.EncryptPKCS1v15(rand.Reader, pub, []byte(strconv.FormatInt(id, 10)))
+	plaintext := []byte(strconv.FormatInt(id, 10))
+	encrypted, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, pub, plaintext, nil)
 	if err != nil {
 		return "", err
 	}
