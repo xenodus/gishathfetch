@@ -23,7 +23,7 @@ type advancedFilterPayload struct {
 }
 
 // SearchAdvancedFilter queries POST /product/advancedfilter (no access token).
-// It is an alternative to encoder/advancedsearch and is not wired into production search yet.
+// Store.Search delegates here when TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH is true.
 func (s Store) SearchAdvancedFilter(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	reqPayload, err := json.Marshal(advancedFilterPayload{
 		CategoryID:     strconv.Itoa(mtgCategoryNo),

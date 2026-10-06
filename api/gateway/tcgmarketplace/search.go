@@ -69,6 +69,10 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
+	if config.TCGMarketplaceAdvancedFilterSearchEnabled() {
+		return s.SearchAdvancedFilter(ctx, searchStr)
+	}
+
 	var (
 		listings    []listing
 		cards       []gateway.Card
