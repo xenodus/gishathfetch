@@ -63,7 +63,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | Decklist portal concurrency | 4 in-flight | `binderposPortalMaxConcurrent` in `api/gateway/binderpos/storefront_portal_gate.go` | Caps concurrent requests to `portal.binderpos.com` when decklist helpers are called directly (not used in the live search chain). |
 | Decklist requests | Single send | `doDecklistRequestWithRetry` in `api/gateway/binderpos/storefront_decklist_retry.go` | No automatic retries on 429/5xx or network errors. Decklist is implemented but not wired into `storefront_search.go`. |
 | “Retries” | N/A (sequential fallbacks) | `runFallbackAttempts` in `storefront_fallback.go` | Stops on the first attempt that returns **cards**. An empty **GraphQL** or **scrape** attempt without error is **final** and later strategies are not tried. HTTP **5xx** on scrape or GraphQL is **final**. Other GraphQL errors fall through to HTML scrap. Returns the last annotated error if all attempts fail. This is **not** exponential backoff retry of a single scrape request. |
-| Storefront GraphQL | Public per-store `accessToken` | `api/gateway/binderpos/storefront_graphql.go`; tokens in each store package (`StoreStorefrontAccessToken`) | Shopify Storefront `search` with `available: true`. MTG filtered client-side via product type/tags. Variant deep-links include `?variant=`. Enabled only when the store configures a token. |
+| Storefront GraphQL | Public per-store `accessToken` | `api/gateway/binderpos/storefront_graphql.go`; tokens in each store package (`StoreStorefrontAccessToken`) | POST to `https://{shopifyDomain}/api/2024-10/graphql.json` when `StoreShopifyDomain` is set; otherwise `{storeBaseURL}/api/2024-10/graphql.json`. Shopify Storefront `search` with `available: true`. MTG filtered client-side via product type/tags. Product URLs use `baseURL`; variant deep-links include `?variant=`. Enabled only when the store configures a token. |
 
 ### BinderPOS stores (registry in `api/controller/search.go`)
 
@@ -83,6 +83,8 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | One MTG | Yes | 2 | 4 |
 
 Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
+
+**MTG Asia (2026):** Public site `https://mtg-asia.com` is a Base44 app without BinderPOS scrape markers or Storefront GraphQL on the custom domain. Gateway `StoreBaseURL` is `https://former.mtg-asia.com` for Shopify product links; GraphQL runs on `mtgasia.myshopify.com`. See [Split public site vs Shopify inventory](binderpos-search-feature-parity.md#split-public-site-vs-shopify-inventory).
 
 ---
 
