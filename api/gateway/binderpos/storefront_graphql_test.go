@@ -8,6 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestResolveStorefrontGraphQLURLUsesShopifyDomain(t *testing.T) {
+	apiURL, storeBase, err := resolveStorefrontGraphQLURL("mtgasia.myshopify.com", "https://mtg-asia.com")
+	require.NoError(t, err)
+	require.Equal(t, "https://mtgasia.myshopify.com/api/2024-10/graphql.json", apiURL.String())
+	require.Equal(t, "mtg-asia.com", storeBase.Host)
+}
+
 func TestShopifyVariantID(t *testing.T) {
 	id, ok := shopifyVariantID("gid://shopify/ProductVariant/42851708993708")
 	require.True(t, ok)
