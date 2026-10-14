@@ -164,7 +164,7 @@ export const LGS_MAP = [
     address: "261 Waterloo St, #03-28, Singapore 180261",
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7930896678654!2d103.8493947744998!3d1.2989162986887468!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19bb4a2bee83%3A0x28725aa3a3e2a51!2sMTG-Asia!5e0!3m2!1sen!2ssg!4v1703085334392!5m2!1sen!2ssg",
-    website: "https://www.mtg-asia.com/",
+    website: "https://mtg-asia.com/",
   },
   {
     id: "onemtg-map",

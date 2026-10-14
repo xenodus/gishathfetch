@@ -34,6 +34,7 @@ Use this skill when:
 1. Reproduce and localize
    - Run focused tests for failing gateway(s).
    - Inspect parser/selectors, normalization logic, and request/response assumptions.
+   - For BinderPOS stores, confirm whether the **public custom domain** still serves HTML scrape markers and `/api/2024-10/graphql.json`, or whether inventory moved to **`*.myshopify.com`** / a legacy Shopify host while the marketing site changed (see `docs/binderpos-search-feature-parity.md` → *Split public site vs Shopify inventory*; example: MTG Asia / Base44).
 
 2. Validate data integrity first
    - Confirm card identity fields are correct (name/set/finish/language/collector number when available).

@@ -53,29 +53,31 @@ The first strategy skips per-domain pacing; later steps honor the 200ms minimum 
 
 Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** (1–4) that selects the HTML parser and influences card-name formatting for API methods too.
 
-| Store | Scrap variant | GraphQL token | Shopify domain |
-|-------|---------------|---------------|----------------|
-| Arcane Sanctum | 2 | Yes | `30uetm-1y.myshopify.com` |
-| Card Affinity | 2 | No | `563304-2.myshopify.com` |
-| Cards Citadel | 1 | Yes | `card-citadel.myshopify.com` |
-| Flagship | 2 | Yes | `flagship-games.myshopify.com` |
-| Fyendal Hobby | 4 | Yes | `fyendal-hobby.myshopify.com` |
-| Games Haven | 3 | Yes | `games-haven-sg.myshopify.com` |
-| GOG | 3 | Yes | `grey-ogre-games-singapore.myshopify.com` |
-| Hideout | 3 | Yes | `220022-20.myshopify.com` |
-| Hideyoshi | 2 | Yes | `bposacct-9.myshopify.com` |
-| Mana Pro | 2 | Yes | `mana-pro-sg.myshopify.com` |
-| MTG Asia | 2 | Yes | `mtgasia.myshopify.com` |
-| One MTG | 2 | Yes | `one-mtg.myshopify.com` |
+| Store | Scrap variant | GraphQL token | Shopify domain | Public `baseURL` (gateway) |
+|-------|---------------|---------------|----------------|----------------------------|
+| Arcane Sanctum | 2 | Yes | `30uetm-1y.myshopify.com` | `https://arcanesanctumtcg.com` |
+| Card Affinity | 2 | No | `563304-2.myshopify.com` | `https://card-affinity.com` |
+| Cards Citadel | 1 | Yes | `card-citadel.myshopify.com` | `https://cardscitadel.com` |
+| Flagship | 2 | Yes | `flagship-games.myshopify.com` | `https://www.flagshipgames.sg` |
+| Fyendal Hobby | 4 | Yes | `fyendal-hobby.myshopify.com` | `https://fyendalhobby.com` |
+| Games Haven | 3 | Yes | `games-haven-sg.myshopify.com` | `https://www.gameshaventcg.com` |
+| GOG | 3 | Yes | `grey-ogre-games-singapore.myshopify.com` | `https://www.greyogregames.com` |
+| Hideout | 3 | Yes | `220022-20.myshopify.com` | `https://hideoutcg.com` |
+| Hideyoshi | 2 | Yes | `bposacct-9.myshopify.com` | `https://hideyoshitcg.com` |
+| Mana Pro | 2 | Yes | `mana-pro-sg.myshopify.com` | `https://sg-manapro.com` |
+| MTG Asia | 2 | Yes | `mtgasia.myshopify.com` | `https://former.mtg-asia.com` (Shopify product links; public site is `https://mtg-asia.com`) |
+| One MTG | 2 | Yes | `one-mtg.myshopify.com` | `https://onemtg.com.sg` |
 
 ### HTML variant details
 
 | Variant | Stores | Search query shaping | DOM / data source | MTG filter on scrape path |
 |---------|--------|----------------------|-------------------|---------------------------|
 | **1** | Cards Citadel | `searchStr + " mtg"`; wildcard template `/search?q=*%s*` | `div.Norm` + `div.addNow` price text | Query suffix only |
-| **2** | Arcane Sanctum, Card Affinity, Flagship, Hideyoshi, Mana Pro, MTG Asia, One MTG | `searchStr + " mtg"` | Embedded `data-product-variants` JSON (`CardInfo`) | `shouldIncludeBinderposProduct` when `data-product-type` present |
+| **2** | Arcane Sanctum, Card Affinity, Flagship, Hideyoshi, Mana Pro, One MTG | `searchStr + " mtg"` | Embedded `data-product-variants` JSON (`CardInfo`) | `shouldIncludeBinderposProduct` when `data-product-type` present |
 | **3** | Games Haven, GOG, Hideout | `searchStr + " mtg"` | `div.productCard__card` + `ul.productChip__grid` variant chips | Query suffix only |
 | **4** | Fyendal Hobby | `product_type:"MTG Single Cards" AND {searchStr}` | `div.product-item--vertical` theme layout | Server-side product_type filter in query |
+
+MTG Asia still passes scrap **variant 2** for card-name formatting (GraphQL/decklist), but the public site no longer serves variant-2 HTML; live search relies on **Storefront GraphQL** on the myshopify host (see [Split public site vs Shopify inventory](#split-public-site-vs-shopify-inventory)).
 
 ---
 
@@ -83,7 +85,7 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 
 | Source | Endpoint | Auth / params |
 |--------|----------|---------------|
-| **GraphQL** | `{storeBaseURL}/api/2024-10/graphql.json` | Header `X-Shopify-Storefront-Access-Token`; body is Storefront `search` query |
+| **GraphQL** | `https://{shopifyDomain}/api/2024-10/graphql.json` when the store package sets `StoreShopifyDomain`; otherwise `{storeBaseURL}/api/2024-10/graphql.json` | Header `X-Shopify-Storefront-Access-Token`; body is Storefront `search` query. Outbound headers (referrer, cookies) still use the store’s public `baseURL`. |
 | **Decklist** | `POST https://portal.binderpos.com/external/shopify/decklist?storeUrl={shopifyDomain}&type=mtg` | JSON body `[{"card": searchStr, "quantity": 1}]`; portal concurrency capped at 4 in-flight |
 | **HTML scrape** | Store-specific `searchURL` on the public storefront | Colly single-page fetch; SGD currency cookie applied |
 
@@ -118,7 +120,7 @@ All methods map into the same struct (`api/gateway/spec.go`):
 | Capability | GraphQL | Decklist | HTML scrape |
 |------------|:-------:|:--------:|:-----------:|
 | Requires Storefront token | Yes | No | No |
-| Requires Shopify domain | No | Yes | No |
+| Requires Shopify domain | Yes (GraphQL API host when configured) | Yes (decklist `storeUrl`) | No |
 | MTG scope | Client: `isMagicProductType` | Server: `type=mtg` | Query suffix / product_type / variant-2 DOM filter |
 | Availability filter | Server: `available: true` | `quantity > 0` | Per-variant DOM checks |
 | Max products | **25** (`first: 25`) | Single-card lookup | Single HTML page |
@@ -182,6 +184,18 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 
 ---
 
+## Split public site vs Shopify inventory
+
+Some stores no longer serve BinderPOS HTML or Storefront GraphQL on their marketing/custom domain. Inventory remains on Shopify; the gateway keeps a separate **public `baseURL`** (product deep links, outbound headers) and **`StoreShopifyDomain`** (GraphQL host and decklist `storeUrl`).
+
+| Store | Public site | Shopify / product host | Notes |
+|-------|-------------|------------------------|--------|
+| **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `https://former.mtg-asia.com`, `mtgasia.myshopify.com` | Custom domain does not proxy `/api/*`. Scrape steps return empty HTML shells. Live test probes GraphQL on the myshopify host (`api/gateway/mtgasia/search_test.go`). BinderPOS decklist API still accepts `storeUrl=mtgasia.myshopify.com`. |
+
+When debugging empty MTG Asia results, verify Storefront GraphQL on **`mtgasia.myshopify.com`**, not `mtg-asia.com`.
+
+---
+
 ## Known gaps and intentional differences
 
 1. **Result breadth differs** — GraphQL caps at 25 products × 20 variants; decklist is a single-card portal lookup; scrape is one HTML results page with no pagination.
@@ -190,6 +204,7 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 4. **Decklist deduplication only** — other methods may return duplicate `url|price|instock` combinations.
 5. **Quantity not exposed** — decklist has per-variant stock counts but they are not mapped to `gateway.Card`.
 6. **Language not supported** — no method extracts or returns card language.
+7. **Custom domain vs myshopify GraphQL** — when the public site stops proxying Shopify, GraphQL must use `shopifyDomain`; HTML scrape markers may be absent even though variant constants are unchanged.
 
 ---
 

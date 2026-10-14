@@ -94,7 +94,7 @@ type graphQLVariant struct {
 	} `json:"price"`
 }
 
-func searchByStorefrontGraphQLDedicated(ctx context.Context, scrapVariant int, storeName, baseURL, accessToken, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontGraphQLDedicated(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, accessToken, searchStr string) ([]gateway.Card, error) {
 	if !gateway.DedicatedProxiesEnabled() {
 		return nil, fmt.Errorf("dedicated proxies disabled for binderpos storefront graphql")
 	}
@@ -121,10 +121,10 @@ func searchByStorefrontGraphQLDedicated(ctx context.Context, scrapVariant int, s
 	if err != nil {
 		return nil, fmt.Errorf("invalid dedicated proxy configured for binderpos storefront graphql: %w", err)
 	}
-	return searchByStorefrontGraphQL(ctx, client, scrapVariant, storeName, baseURL, accessToken, searchStr)
+	return searchByStorefrontGraphQL(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, accessToken, searchStr)
 }
 
-func searchByStorefrontGraphQLDirect(ctx context.Context, scrapVariant int, storeName, baseURL, accessToken, searchStr string) ([]gateway.Card, error) {
+func searchByStorefrontGraphQLDirect(ctx context.Context, scrapVariant int, storeName, baseURL, shopifyDomain, accessToken, searchStr string) ([]gateway.Card, error) {
 	profile := gateway.PickBrowserProfile()
 	if !gateway.ShouldUseBrowserTLSEmulationForScraping() {
 		profile = gateway.BrowserEmulationProfile{}
@@ -133,28 +133,23 @@ func searchByStorefrontGraphQLDirect(ctx context.Context, scrapVariant int, stor
 	if err != nil {
 		return nil, fmt.Errorf("binderpos graphql direct client: %w", err)
 	}
-	return searchByStorefrontGraphQL(ctx, client, scrapVariant, storeName, baseURL, accessToken, searchStr)
+	return searchByStorefrontGraphQL(ctx, client, scrapVariant, storeName, baseURL, shopifyDomain, accessToken, searchStr)
 }
 
 func searchByStorefrontGraphQL(
 	ctx context.Context,
 	client *http.Client,
 	scrapVariant int,
-	storeName, baseURL, accessToken, searchStr string,
+	storeName, baseURL, shopifyDomain, accessToken, searchStr string,
 ) ([]gateway.Card, error) {
 	accessToken = strings.TrimSpace(accessToken)
 	if accessToken == "" {
 		return nil, fmt.Errorf("missing storefront access token for binderpos graphql")
 	}
 
-	storeBase, err := url.Parse(strings.TrimSpace(baseURL))
+	apiURL, storeBase, err := resolveStorefrontGraphQLURL(shopifyDomain, baseURL)
 	if err != nil {
 		return nil, err
-	}
-	apiURL := &url.URL{
-		Scheme: storeBase.Scheme,
-		Host:   storeBase.Host,
-		Path:   storefrontGraphQLPath,
 	}
 
 	payload, err := json.Marshal(graphQLRequest{
@@ -206,6 +201,28 @@ func searchByStorefrontGraphQL(
 	}
 
 	return mapGraphQLProducts(scrapVariant, storeName, baseURL, parsed.Data.Search.Edges), nil
+}
+
+func resolveStorefrontGraphQLURL(shopifyDomain, baseURL string) (*url.URL, *url.URL, error) {
+	storeBase, err := url.Parse(strings.TrimSpace(baseURL))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	apiHost := storeBase.Host
+	if domain := strings.TrimSpace(shopifyDomain); domain != "" {
+		domain = strings.TrimPrefix(domain, "https://")
+		domain = strings.TrimPrefix(domain, "http://")
+		domain = strings.TrimSuffix(domain, "/")
+		apiHost = domain
+	}
+
+	apiURL := &url.URL{
+		Scheme: "https",
+		Host:   apiHost,
+		Path:   storefrontGraphQLPath,
+	}
+	return apiURL, storeBase, nil
 }
 
 func mapGraphQLProducts(scrapVariant int, storeName, baseURL string, edges []graphQLEdge) []gateway.Card {
