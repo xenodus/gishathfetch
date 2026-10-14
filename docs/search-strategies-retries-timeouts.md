@@ -84,7 +84,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 
 Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
 
-**MTG Asia (2026):** Public site `https://mtg-asia.com` is a Base44 app without BinderPOS scrape markers or Storefront GraphQL on the custom domain. Gateway `StoreBaseURL` is `https://former.mtg-asia.com` for Shopify product links; GraphQL runs on `mtgasia.myshopify.com`. See [Split public site vs Shopify inventory](binderpos-search-feature-parity.md#split-public-site-vs-shopify-inventory).
+**MTG Asia (2026):** Public site `https://mtg-asia.com` is a Base44 app without BinderPOS scrape markers or Storefront GraphQL on the custom domain. Gateway `StoreBaseURL` is `https://new.mtg-asia.com` for Shopify product links; GraphQL runs on `mtgasia.myshopify.com`. See [Split public site vs Shopify inventory](binderpos-search-feature-parity.md#split-public-site-vs-shopify-inventory).
 
 ---
 

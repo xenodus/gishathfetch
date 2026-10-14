@@ -10,7 +10,7 @@ import (
 const StoreName = "MTG Asia"
 // StoreBaseURL is the Shopify storefront used for product deep links. The public
 // site (https://mtg-asia.com) is a Base44 app and no longer serves BinderPOS HTML.
-const StoreBaseURL = "https://former.mtg-asia.com"
+const StoreBaseURL = "https://new.mtg-asia.com"
 const StoreStorefrontAccessToken = "199d9ab7d26aaba337bd43110a51265f"
 const StoreShopifyDomain = "mtgasia.myshopify.com"
 const StoreSearchURL = "/search?q=%s"

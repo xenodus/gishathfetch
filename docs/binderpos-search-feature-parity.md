@@ -65,7 +65,7 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 | Hideout | 3 | Yes | `220022-20.myshopify.com` | `https://hideoutcg.com` |
 | Hideyoshi | 2 | Yes | `bposacct-9.myshopify.com` | `https://hideyoshitcg.com` |
 | Mana Pro | 2 | Yes | `mana-pro-sg.myshopify.com` | `https://sg-manapro.com` |
-| MTG Asia | 2 | Yes | `mtgasia.myshopify.com` | `https://former.mtg-asia.com` (Shopify product links; public site is `https://mtg-asia.com`) |
+| MTG Asia | 2 | Yes | `mtgasia.myshopify.com` | `https://new.mtg-asia.com` (Shopify product links; public site is `https://mtg-asia.com`) |
 | One MTG | 2 | Yes | `one-mtg.myshopify.com` | `https://onemtg.com.sg` |
 
 ### HTML variant details
@@ -190,7 +190,7 @@ Some stores no longer serve BinderPOS HTML or Storefront GraphQL on their market
 
 | Store | Public site | Shopify / product host | Notes |
 |-------|-------------|------------------------|--------|
-| **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `https://former.mtg-asia.com`, `mtgasia.myshopify.com` | Custom domain does not proxy `/api/*`. Scrape steps return empty HTML shells. Live test probes GraphQL on the myshopify host (`api/gateway/mtgasia/search_test.go`). BinderPOS decklist API still accepts `storeUrl=mtgasia.myshopify.com`. |
+| **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `https://new.mtg-asia.com`, `mtgasia.myshopify.com` | Custom domain does not proxy `/api/*`. Scrape steps return empty HTML shells. Live test probes GraphQL on the myshopify host (`api/gateway/mtgasia/search_test.go`). BinderPOS decklist API still accepts `storeUrl=mtgasia.myshopify.com`. |
 
 When debugging empty MTG Asia results, verify Storefront GraphQL on **`mtgasia.myshopify.com`**, not `mtg-asia.com`.
 
