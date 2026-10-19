@@ -299,6 +299,34 @@ func TestDedupeStoreCards_RemovesDuplicateListings(t *testing.T) {
 	}
 }
 
+func TestDedupeStoreCards_KeepsMTGAsiaSubCategoryVariants(t *testing.T) {
+	cards := []gateway.Card{
+		{
+			Name:      "Swords to Plowshares [Reality Fracture] - Near Mint",
+			Url:       "https://mtg-asia.com/card/reality-fracture-swords-to-plowshares/6ab21f0c8a7dddcb3960518d",
+			Price:     2.9,
+			InStock:   true,
+			Source:    "MTG Asia",
+			Quality:   "Near Mint",
+			ExtraInfo: []string{"[FDN Commander]"},
+		},
+		{
+			Name:      "Swords to Plowshares [Reality Fracture] - Near Mint",
+			Url:       "https://mtg-asia.com/card/reality-fracture-swords-to-plowshares/6aab8e65856c9cea00b7184d",
+			Price:     2.9,
+			InStock:   true,
+			Source:    "MTG Asia",
+			Quality:   "Near Mint",
+			ExtraInfo: []string{"[FRC Non-Foil]"},
+		},
+	}
+
+	deduped := dedupeStoreCards(cards)
+	if len(deduped) != 2 {
+		t.Fatalf("expected 2 distinct MTG Asia sub_category variants, got %d", len(deduped))
+	}
+}
+
 func TestDedupeStoreCards_RemovesDualQueryDuplicatesWithDifferentURLs(t *testing.T) {
 	cards := []gateway.Card{
 		{
