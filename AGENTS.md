@@ -80,6 +80,19 @@ For any PR that includes UI changes:
 - **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts used in the PR description.
 - Embed screenshots using **GitHub-hosted image URLs that render in PR descriptions** (for example `github.com/.../releases/download/...` or `github.com/user-attachments/assets/...`). Do not use `cursor.com/artifacts/...` URLs or uncommitted local file paths.
 
+### Seasonal header logo (Gishath mascot)
+
+Promotional header art lives in `frontend/public/img/gishath-fetch-*.png` and is selected via
+`SITE_LOGO_SRC` in `frontend/src/constants.js` (default when no promo: `img/gishath-fetch-web.png`).
+
+When adding or updating a seasonal logo:
+
+- **Use PNG with a transparent background (RGBA)**, matching `gishath-fetch-web.png`. Do not ship a
+  flat black, white, or colored backdrop—the mascot must sit cleanly on both light and dark theme
+  backgrounds.
+- Match the default logo canvas (~278×261) and placement unless intentionally aligning with another
+  existing seasonal asset's dimensions.
+
 ## Cursor Cloud specific instructions
 
 ### Services overview
