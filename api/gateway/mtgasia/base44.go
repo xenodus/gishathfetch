@@ -222,7 +222,8 @@ func mapInventoryItem(item inventoryItem, setName string) (gateway.Card, bool) {
 		return gateway.Card{}, false
 	}
 
-	subCategory := strings.ToLower(strings.TrimSpace(item.SubCategory))
+	subCategoryRaw := strings.TrimSpace(item.SubCategory)
+	subCategory := strings.ToLower(subCategoryRaw)
 	isFoil := strings.Contains(subCategory, "foil") && !strings.Contains(subCategory, "non-foil")
 
 	img := strings.TrimSpace(item.Image)
@@ -230,16 +231,32 @@ func mapInventoryItem(item inventoryItem, setName string) (gateway.Card, bool) {
 		img = fmt.Sprintf("https://placehold.co/304x424?text=%s", url.QueryEscape(name))
 	}
 
+	var extraInfo []string
+	if label := subCategoryExtraInfoLabel(subCategoryRaw); label != "" {
+		extraInfo = []string{label}
+	}
+
 	return gateway.Card{
-		Name:    displayName,
-		Url:     cardURL,
-		Img:     img,
-		Price:   price,
-		InStock: true,
-		IsFoil:  isFoil,
-		Source:  StoreName,
-		Quality: qualityLabel,
+		Name:      displayName,
+		Url:       cardURL,
+		Img:       img,
+		Price:     price,
+		InStock:   true,
+		IsFoil:    isFoil,
+		Source:    StoreName,
+		Quality:   qualityLabel,
+		ExtraInfo: extraInfo,
 	}, true
+}
+
+// subCategoryExtraInfoLabel surfaces MTG Asia Base44 sub_category (e.g. FRC Non-Foil vs
+// FDN Commander) so multiple in-stock rows for the same set do not look like duplicates.
+func subCategoryExtraInfoLabel(subCategory string) string {
+	subCategory = strings.TrimSpace(subCategory)
+	if subCategory == "" {
+		return ""
+	}
+	return fmt.Sprintf("[%s]", subCategory)
 }
 
 func buildCardSinglePageURL(baseURL, itemID, cardName, setName string) (string, error) {

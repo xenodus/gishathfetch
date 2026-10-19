@@ -323,7 +323,7 @@ func searchShop(
 		if err != nil {
 			recordShopSearchError(searchString, shopName, err, aggregator)
 		}
-		aggregator.addCards(cards)
+		aggregator.addCards(dedupeStoreCards(cards))
 		return
 	}
 

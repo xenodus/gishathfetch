@@ -18,6 +18,26 @@ func Test_storefrontSellable(t *testing.T) {
 	require.False(t, storefrontSellable(cardSet{Name: "Commander Masters", Hidden: true}, true))
 }
 
+func Test_subCategoryExtraInfoLabel(t *testing.T) {
+	require.Equal(t, "[FDN Commander]", subCategoryExtraInfoLabel("FDN Commander"))
+	require.Equal(t, "[FRC Non-Foil]", subCategoryExtraInfoLabel("FRC Non-Foil"))
+	require.Empty(t, subCategoryExtraInfoLabel(""))
+}
+
+func Test_mapInventoryItem_includesSubCategoryInExtraInfo(t *testing.T) {
+	card, ok := mapInventoryItem(inventoryItem{
+		ID:           "6ab21f0c8a7dddcb3960518d",
+		Name:         "Swords to Plowshares",
+		SubCategory:  "FDN Commander",
+		Condition:    "NM",
+		SellingPrice: 2.9,
+		QtyAvailable: 2,
+	}, "Reality Fracture")
+	require.True(t, ok)
+	require.Equal(t, []string{"[FDN Commander]"}, card.ExtraInfo)
+	require.Contains(t, card.Url, "6ab21f0c8a7dddcb3960518d")
+}
+
 func Test_buildCardSinglePageURL(t *testing.T) {
 	got, err := buildCardSinglePageURL(
 		"https://mtg-asia.com",
