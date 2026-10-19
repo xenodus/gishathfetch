@@ -38,8 +38,9 @@ type inventoryItem struct {
 }
 
 type cardSet struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Hidden bool   `json:"hidden"`
 }
 
 func searchBase44Inventory(ctx context.Context, searchStr string) ([]gateway.Card, error) {
@@ -56,18 +57,31 @@ func searchBase44Inventory(ctx context.Context, searchStr string) ([]gateway.Car
 		return nil, nil
 	}
 
-	setNames, err := fetchSetNames(ctx, items)
+	sets, err := fetchSets(ctx, items)
 	if err != nil {
 		return nil, err
 	}
 
 	cards := make([]gateway.Card, 0, len(items))
 	for _, item := range items {
-		if card, ok := mapInventoryItem(item, setNames[item.SetID]); ok {
+		set, hasSet := sets[item.SetID]
+		if !storefrontSellable(set, hasSet) {
+			continue
+		}
+		setName := ""
+		if hasSet {
+			setName = set.Name
+		}
+		if card, ok := mapInventoryItem(item, setName); ok {
 			cards = append(cards, card)
 		}
 	}
 	return cards, nil
+}
+
+// storefrontSellable mirrors the MTG Asia Base44 SPA: CardSet.hidden shows "NOT FOR SALE".
+func storefrontSellable(set cardSet, found bool) bool {
+	return !found || !set.Hidden
 }
 
 func fetchInventoryItems(ctx context.Context, searchStr string) ([]inventoryItem, error) {
@@ -117,7 +131,7 @@ func fetchInventoryItems(ctx context.Context, searchStr string) ([]inventoryItem
 	return items, nil
 }
 
-func fetchSetNames(ctx context.Context, items []inventoryItem) (map[string]string, error) {
+func fetchSets(ctx context.Context, items []inventoryItem) (map[string]cardSet, error) {
 	unique := map[string]struct{}{}
 	for _, item := range items {
 		if id := strings.TrimSpace(item.SetID); id != "" {
@@ -125,7 +139,7 @@ func fetchSetNames(ctx context.Context, items []inventoryItem) (map[string]strin
 		}
 	}
 	if len(unique) == 0 {
-		return map[string]string{}, nil
+		return map[string]cardSet{}, nil
 	}
 
 	ids := make([]string, 0, len(unique))
@@ -171,13 +185,14 @@ func fetchSetNames(ctx context.Context, items []inventoryItem) (map[string]strin
 		return nil, gateway.WrapJSONDecodeError(err, resp, body)
 	}
 
-	names := make(map[string]string, len(sets))
+	byID := make(map[string]cardSet, len(sets))
 	for _, set := range sets {
 		if id := strings.TrimSpace(set.ID); id != "" {
-			names[id] = strings.TrimSpace(set.Name)
+			set.Name = strings.TrimSpace(set.Name)
+			byID[id] = set
 		}
 	}
-	return names, nil
+	return byID, nil
 }
 
 func mapInventoryItem(item inventoryItem, setName string) (gateway.Card, bool) {

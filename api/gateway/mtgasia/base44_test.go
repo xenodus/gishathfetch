@@ -12,6 +12,12 @@ func Test_cardPathSlug_matchesStorefront(t *testing.T) {
 	require.Equal(t, "reality-fracture-aerid-konstrari", cardPathSlug("Aerid Konstrari", "Reality Fracture"))
 }
 
+func Test_storefrontSellable(t *testing.T) {
+	require.True(t, storefrontSellable(cardSet{}, false))
+	require.True(t, storefrontSellable(cardSet{Name: "Foundations", Hidden: false}, true))
+	require.False(t, storefrontSellable(cardSet{Name: "Commander Masters", Hidden: true}, true))
+}
+
 func Test_buildCardSinglePageURL(t *testing.T) {
 	got, err := buildCardSinglePageURL(
 		"https://mtg-asia.com",
