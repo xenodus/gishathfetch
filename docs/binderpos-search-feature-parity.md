@@ -65,7 +65,7 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 | Hideout | 3 | Yes | `220022-20.myshopify.com` | `https://hideoutcg.com` |
 | Hideyoshi | 2 | Yes | `bposacct-9.myshopify.com` | `https://hideyoshitcg.com` |
 | Mana Pro | 2 | Yes | `mana-pro-sg.myshopify.com` | `https://sg-manapro.com` |
-| MTG Asia | — | No (Base44) | `base44.app` (public InventoryItem API) | `https://new.mtg-asia.com` (`/card/{slug}/{id}` single pages; public site is `https://mtg-asia.com`) |
+| MTG Asia | — | No (Base44) | `base44.app` (public InventoryItem API) | `https://mtg-asia.com` (`/card/{slug}/{id}` single pages) |
 | One MTG | 2 | Yes | `one-mtg.myshopify.com` | `https://onemtg.com.sg` |
 
 ### HTML variant details
@@ -190,7 +190,7 @@ Some stores no longer serve BinderPOS HTML or Storefront GraphQL on their market
 
 | Store | Public site | Shopify / product host | Notes |
 |-------|-------------|------------------------|--------|
-| **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `https://new.mtg-asia.com`, `base44.app` | Gateway search reads in-stock singles from the public Base44 `InventoryItem` API and links to `/card/{slug}/{id}` on `new.mtg-asia.com`. Legacy Shopify GraphQL on `mtgasia.myshopify.com` is no longer used for live search. |
+| **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `base44.app` | Gateway search reads in-stock singles from the public Base44 `InventoryItem` API and links to `/card/{slug}/{id}` on `mtg-asia.com`. Legacy Shopify GraphQL on `mtgasia.myshopify.com` is no longer used for live search. |
 
 When debugging empty MTG Asia results, verify the Base44 **`InventoryItem`** list on **`base44.app`** (app id in `api/gateway/mtgasia/base44.go`), not the marketing site at `mtg-asia.com`.
 
