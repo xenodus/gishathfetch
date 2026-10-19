@@ -192,7 +192,7 @@ Some stores no longer serve BinderPOS HTML or Storefront GraphQL on their market
 |-------|-------------|------------------------|--------|
 | **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `base44.app` | Gateway search reads in-stock singles from the public Base44 `InventoryItem` API and links to `/card/{slug}/{id}` on `mtg-asia.com`. Legacy Shopify GraphQL on `mtgasia.myshopify.com` is no longer used for live search. |
 
-When debugging empty MTG Asia results, verify the Base44 **`InventoryItem`** list on **`base44.app`** (app id in `api/gateway/mtgasia/base44.go`), not the marketing site at `mtg-asia.com`.
+When debugging empty MTG Asia results, verify the Base44 **`InventoryItem`** list on **`base44.app`** (app id in `api/gateway/mtgasia/base44.go`), not the marketing site at `mtg-asia.com`. Items in a **`CardSet` with `hidden: true`** are omitted from gishathfetch search because the storefront shows **NOT FOR SALE** for those sets (staff/admin excepted).
 
 ---
 
