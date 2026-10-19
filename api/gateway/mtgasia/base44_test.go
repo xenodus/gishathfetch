@@ -14,12 +14,12 @@ func Test_cardPathSlug_matchesStorefront(t *testing.T) {
 
 func Test_buildCardSinglePageURL(t *testing.T) {
 	got, err := buildCardSinglePageURL(
-		"https://new.mtg-asia.com",
+		"https://mtg-asia.com",
 		"6ac33f1368fe2a219f23d9d0",
 		"Abrade",
 		"Innistrad Remastered",
 	)
 	require.NoError(t, err)
-	require.Contains(t, got, "https://new.mtg-asia.com/card/innistrad-remastered-abrade/6ac33f1368fe2a219f23d9d0")
+	require.Contains(t, got, "https://mtg-asia.com/card/innistrad-remastered-abrade/6ac33f1368fe2a219f23d9d0")
 	require.Contains(t, got, "utm_source=")
 }

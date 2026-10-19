@@ -220,7 +220,7 @@ const binderposStores = [
   { id: 'hideout', name: 'Hideout', baseUrl: 'https://hideoutcg.com', token: '986e6f452e7b632be7a14cba965f64a8', shopifyDomain: '220022-20.myshopify.com' },
   { id: 'hideyoshi', name: 'Hideyoshi', baseUrl: 'https://hideyoshitcg.com', token: '08d34daee87c87da96bab125075f193a', shopifyDomain: 'bposacct-9.myshopify.com' },
   { id: 'manapro', name: 'Mana Pro', baseUrl: 'https://sg-manapro.com', token: 'ba695fbdd730f9fa7b1e8f32e36691cf', shopifyDomain: 'mana-pro-sg.myshopify.com' },
-  { id: 'mtgasia', name: 'MTG Asia', baseUrl: 'https://new.mtg-asia.com', token: '199d9ab7d26aaba337bd43110a51265f', shopifyDomain: 'mtgasia.myshopify.com' },
+  { id: 'mtgasia', name: 'MTG Asia', baseUrl: 'https://mtg-asia.com', token: '199d9ab7d26aaba337bd43110a51265f', shopifyDomain: 'mtgasia.myshopify.com' },
   { id: 'onemtg', name: 'OneMtg', baseUrl: 'https://onemtg.com.sg', token: '84d91e8d0ae281e71b204f4c5a8101df', shopifyDomain: 'one-mtg.myshopify.com' },
 ];
 

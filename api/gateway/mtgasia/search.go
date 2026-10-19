@@ -7,10 +7,10 @@ import (
 )
 
 const StoreName = "MTG Asia"
-// StoreBaseURL is the Base44 storefront on new.mtg-asia.com (card single pages at /card/...).
+// StoreBaseURL is the Base44 storefront on mtg-asia.com (card single pages at /card/...).
 // Inventory search uses the public Base44 entity API; the legacy Shopify host remains
 // available for diagnostics only.
-const StoreBaseURL = "https://new.mtg-asia.com"
+const StoreBaseURL = "https://mtg-asia.com"
 const StoreSearchURL = "/search?q=%s"
 
 type Store struct {
