@@ -40,6 +40,8 @@ export const SITE_TAGLINE =
 
 // Seasonal/promotional header logo. Default: img/gishath-fetch-web.png
 export const SITE_LOGO_SRC = "img/gishath-fetch-halloween.png";
+// Header display width (px). Default web logo: 120. Taller seasonal art (e.g. hats) often reads small at 120.
+export const SITE_LOGO_WIDTH_PX = 132;
 
 // Keep in sync with meta/og descriptions in frontend/index.html.
 export const SITE_DESCRIPTION = `Compare MTG singles prices across ${LGS_OPTIONS.length} Singapore local game stores and online shops in one search. In-stock results sorted by price.`;
