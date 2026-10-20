@@ -47,7 +47,7 @@ func TelegramCK(ctx context.Context, request events.APIGatewayProxyRequest) (eve
 	}
 
 	started := time.Now()
-	listing, err := lookupCKPriceFunc(ctx, query.searchString)
+	listing, _, err := lookupCKPriceFunc(ctx, query.searchString)
 	if err != nil {
 		return errorResponse(apiRes, origin, "err looking up card kingdom price", http.StatusInternalServerError)
 	}
