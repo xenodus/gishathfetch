@@ -171,7 +171,7 @@ func buildOutboundGETAttempts(ctx context.Context, timeout time.Duration, opts O
 		if opts.SkipDedicated || !DedicatedProxiesEnabled() {
 			return dst
 		}
-		proxyURL, ok := dedicatedProxyURLForOutbound(ctx)
+		proxyURL, ok := dedicatedProxyURLForOutbound(ctx, opts)
 		if !ok {
 			return dst
 		}
@@ -205,7 +205,10 @@ func outboundAttemptTimeouts(opts OutboundRequestOptions) (direct, dedicated tim
 	return direct, dedicated
 }
 
-func dedicatedProxyURLForOutbound(ctx context.Context) (string, bool) {
+func dedicatedProxyURLForOutbound(ctx context.Context, opts OutboundRequestOptions) (string, bool) {
+	if proxyURL := strings.TrimSpace(opts.DedicatedFallbackProxyURL); proxyURL != "" {
+		return proxyURL, true
+	}
 	if pinned, ok := RequestDedicatedProxyURL(ctx); ok {
 		return pinned, true
 	}

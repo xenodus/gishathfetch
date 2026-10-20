@@ -79,12 +79,12 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | Hideout | Yes | 3 | 4 |
 | Hideyoshi | Yes | 2 | 4 |
 | Mana Pro | Yes | 2 | 4 |
-| MTG Asia | Yes | 2 | 4 |
+| MTG Asia | — (Base44 API) | — | — |
 | One MTG | Yes | 2 | 4 |
 
 Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
 
-**MTG Asia (2026):** Storefront and inventory UI live on `https://mtg-asia.com` (Base44). Live search uses the public Base44 `InventoryItem` API (`base44.app`); product links use `https://mtg-asia.com/card/{slug}/{id}`. See [Split public site vs Shopify inventory](binderpos-search-feature-parity.md#split-public-site-vs-shopify-inventory).
+**MTG Asia (2026):** Storefront and inventory UI live on `https://mtg-asia.com` (Base44). Live search uses the public Base44 `InventoryItem` API (`base44.app`); product links use `https://mtg-asia.com/card/{slug}/{id}`. See [Split public site vs Shopify inventory](binderpos-search-feature-parity.md#split-public-site-vs-shopify-inventory). Documented under [non-BinderPOS stores](#backend-non-binderpos-stores) below.
 
 ---
 
@@ -97,6 +97,7 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 | Agora Hobby | HTML search page (`/store/search`) | 20s | **Direct → dedicated** (browser TLS via `SkipWebBotAuth` + `BROWSER_TLS_EMULATION_ENABLED`) | Transport fallback only |
 | 5 Mana | **graphql** → **html** (Dawn `main-search` section) | 3s direct / 5s dedicated per path | **Direct → dedicated** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
 | Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 3s direct / 5s dedicated per path | **Direct → dedicated** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
+| MTG Asia | Base44 `InventoryItem` + `CardSet` APIs (`base44.app`) | 3s direct / 5s dedicated | **Direct → `DEDICATED_PROXY_1`** on 4xx or connection failure | Uses `DedicatedFallbackProxyURL` (not the per-store leased dedicated slot). Transport fallback only. |
 | Cards Central | JSON API (`/api/lgs/search?q=…`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
 | Dueller's Point | HTML search page (`/products/search`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
 | Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
@@ -104,7 +105,7 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 | The TCG Marketplace (default) | CardLink POST (`:3501/encoder/advancedsearch`) | 20s | Direct → dedicated → dynamic | Transport fallback only; requires `TCG_MARKETPLACE_ACCESS_TOKEN` |
 | The TCG Marketplace (when `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH=true`) | POST `:3501/product/advancedfilter` + RSA-OAEP product URLs | 20s | Same as primary | No access token; selected by `Store.Search` in `search.go` |
 
-Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
+Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/mtgasia/base44.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 
 All stores with dedicated proxy configured use **direct before dedicated** transport fallback when dedicated proxies are enabled.
 

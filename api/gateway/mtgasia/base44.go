@@ -43,6 +43,16 @@ type cardSet struct {
 	Hidden bool   `json:"hidden"`
 }
 
+// base44OutboundOpts uses direct egress first, then DEDICATED_PROXY_1 on 4xx or
+// connection failure (not the per-store leased dedicated proxy slot).
+func base44OutboundOpts() gateway.OutboundRequestOptions {
+	opts := gateway.OutboundRequestOptions{Style: gateway.OutboundStyleJSON}
+	if proxyURL, ok := util.FirstDedicatedProxyURL(); ok {
+		opts.DedicatedFallbackProxyURL = proxyURL
+	}
+	return opts
+}
+
 func searchBase44Inventory(ctx context.Context, searchStr string) ([]gateway.Card, error) {
 	searchStr = strings.TrimSpace(searchStr)
 	if searchStr == "" {
@@ -108,9 +118,7 @@ func fetchInventoryItems(ctx context.Context, searchStr string) ([]inventoryItem
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
-		Style: gateway.OutboundStyleJSON,
-	}, config.DedicatedSearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), base44OutboundOpts(), config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +172,7 @@ func fetchSets(ctx context.Context, items []inventoryItem) (map[string]cardSet, 
 		}.Encode(),
 	}
 
-	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), gateway.OutboundRequestOptions{
-		Style: gateway.OutboundStyleJSON,
-	}, config.DedicatedSearchAttemptTimeout)
+	resp, err := gateway.DoOutboundGET(ctx, apiURL.String(), base44OutboundOpts(), config.DedicatedSearchAttemptTimeout)
 	if err != nil {
 		return nil, err
 	}
