@@ -86,3 +86,12 @@ func GetDedicatedProxyURLs() []string {
 	}
 	return proxyURLs
 }
+
+// FirstDedicatedProxyURL returns the URL for DEDICATED_PROXY_1 when configured.
+func FirstDedicatedProxyURL() (string, bool) {
+	proxies := GetDedicatedProxy()
+	if len(proxies) == 0 {
+		return "", false
+	}
+	return BuildDedicatedProxyURL(proxies[0])
+}

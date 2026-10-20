@@ -40,6 +40,10 @@ type OutboundRequestOptions struct {
 	// OnlyProxyURL restricts DoOutboundGET to a single proxy transport when set.
 	// Direct and dedicated fallbacks are skipped.
 	OnlyProxyURL string
+	// DedicatedFallbackProxyURL pins the dedicated transport in DoOutboundGET
+	// fallback chains. When set, it replaces the request-scoped dedicated proxy
+	// lease and random dedicated proxy selection for that request.
+	DedicatedFallbackProxyURL string
 	// SkipWebBotAuth uses a browser User-Agent and omits Web Bot Auth signing.
 	SkipWebBotAuth bool
 	// ShopifySGDCurrency sets cart_currency/localization cookies for Shopify storefronts.

@@ -113,6 +113,21 @@ func TestBuildOutboundGETAttempts_UsesRequestDedicatedProxy(t *testing.T) {
 	require.Equal(t, "http://user:pass@1.2.3.4:8080", attempts[1].proxyURL)
 }
 
+func TestBuildOutboundGETAttempts_UsesDedicatedFallbackProxyURL(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
+	t.Setenv("DEDICATED_PROXY_2", "5.6.7.8|8080|user|pass")
+
+	ctx := WithRequestDedicatedProxy(context.Background(), "http://user:pass@5.6.7.8:8080")
+	attempts := buildOutboundGETAttempts(ctx, 2*time.Second, OutboundRequestOptions{
+		DedicatedFallbackProxyURL: "http://user:pass@1.2.3.4:8080",
+	})
+	require.Len(t, attempts, 2)
+	require.Equal(t, "direct", attempts[0].strategy)
+	require.Equal(t, "dedicated-1", attempts[1].strategy)
+	require.Equal(t, "http://user:pass@1.2.3.4:8080", attempts[1].proxyURL)
+}
+
 func TestBuildOutboundGETAttempts_SkipDirect(t *testing.T) {
 	clearProxyEnv(t)
 	t.Setenv("DEDICATED_PROXY_1", "1.2.3.4|8080|user|pass")
