@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Form, Modal, Offcanvas } from "react-bootstrap";
 import { decodeCartImport, encodeCartExport } from "../utils/cartTransfer";
+import { savedCardMatchesFilter } from "../utils/savedCartFilter";
 import AdComponent from "./AdComponent";
 import Card from "./Card";
 
@@ -18,6 +19,7 @@ const CartOffcanvas = ({
   baseUrl,
 }) => {
   const [sortOption, setSortOption] = useState("default");
+  const [searchFilter, setSearchFilter] = useState("");
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [exportCode, setExportCode] = useState("");
@@ -52,6 +54,24 @@ const CartOffcanvas = ({
     setShowImportModal(true);
   };
 
+  useEffect(() => {
+    if (!show) {
+      setSearchFilter("");
+    }
+  }, [show]);
+
+  const filteredCartEntries = useMemo(() => {
+    const query = searchFilter.trim();
+    const entries = cart.map((card, originalIndex) => ({
+      card,
+      originalIndex,
+    }));
+    if (!query) {
+      return entries;
+    }
+    return entries.filter(({ card }) => savedCardMatchesFilter(card, query));
+  }, [cart, searchFilter]);
+
   const handleImport = () => {
     const { items, error } = decodeCartImport(importCode);
     if (error) {
@@ -65,9 +85,9 @@ const CartOffcanvas = ({
   };
 
   const displayedCart = useMemo(() => {
-    const withIndex = cart.map((card, index) => ({
+    const withIndex = filteredCartEntries.map(({ card, originalIndex }) => ({
       ...card,
-      originalIndex: index,
+      originalIndex,
     }));
 
     if (sortOption === "name-asc") {
@@ -87,22 +107,27 @@ const CartOffcanvas = ({
     }
 
     return withIndex;
-  }, [cart, sortOption]);
+  }, [filteredCartEntries, sortOption]);
 
   const groupedCart = useMemo(() => {
     if (sortOption !== "store") return null;
 
     const groups = {};
-    cart.forEach((card, index) => {
+    filteredCartEntries.forEach(({ card, originalIndex }) => {
       const storeName = card.src || "Unknown Store";
       if (!groups[storeName]) {
         groups[storeName] = { cards: [], total: 0 };
       }
-      groups[storeName].cards.push({ ...card, originalIndex: index });
+      groups[storeName].cards.push({
+        ...card,
+        originalIndex,
+      });
       groups[storeName].total += card.price || 0;
     });
     return groups;
-  }, [cart, sortOption]);
+  }, [filteredCartEntries, sortOption]);
+
+  const hasActiveSearch = searchFilter.trim().length > 0;
 
   return (
     <Offcanvas show={show} onHide={onHide} placement="end">
@@ -137,6 +162,44 @@ const CartOffcanvas = ({
         </div>
 
         {cart.length > 0 && (
+          <Form.Group className="mb-3">
+            <Form.Label
+              htmlFor="saved-cards-filter"
+              className="small fw-bold text-uppercase mb-1"
+            >
+              Filter
+            </Form.Label>
+            <div className="d-flex gap-2">
+              <Form.Control
+                id="saved-cards-filter"
+                type="search"
+                size="sm"
+                placeholder="Search name, store, set…"
+                value={searchFilter}
+                onChange={(event) => setSearchFilter(event.target.value)}
+                autoComplete="off"
+              />
+              {hasActiveSearch && (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="text-nowrap"
+                  onClick={() => setSearchFilter("")}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            {hasActiveSearch && (
+              <div className="small text-muted mt-1">
+                Showing {filteredCartEntries.length} of {cart.length} saved card
+                {cart.length !== 1 ? "s" : ""}
+              </div>
+            )}
+          </Form.Group>
+        )}
+
+        {cart.length > 0 && (
           <Form.Group className="mb-4">
             <Form.Label className="small fw-bold text-uppercase mb-1">
               Sort By
@@ -154,7 +217,11 @@ const CartOffcanvas = ({
           </Form.Group>
         )}
 
-        {cart.length > 0 ? (
+        {cart.length > 0 && filteredCartEntries.length === 0 ? (
+          <div className="text-muted">
+            <strong>No saved cards match your filter.</strong>
+          </div>
+        ) : cart.length > 0 ? (
           <>
             {(sortOption === "default" ||
               sortOption === "name-asc" ||
