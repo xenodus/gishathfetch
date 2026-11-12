@@ -1,4 +1,4 @@
-import { normalizeExtraInfo } from "./cardIdentity";
+import { normalizeExtraInfo } from "./cardIdentity.js";
 
 export function savedCardMatchesFilter(card, query) {
   const normalizedQuery = String(query ?? "")

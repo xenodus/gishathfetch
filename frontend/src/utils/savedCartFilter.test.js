@@ -1,36 +1,28 @@
-import { describe, expect, it } from "vitest";
-import { savedCardMatchesFilter } from "./savedCartFilter";
+import assert from "node:assert/strict";
+import { savedCardMatchesFilter } from "./savedCartFilter.js";
 
-describe("savedCardMatchesFilter", () => {
-  const baseCard = {
-    name: "Lightning Bolt",
-    src: "The Cardboard Collective",
-    price: 1.5,
-    quality: "NM",
-    isFoil: false,
-    extraInfo: "Modern Masters",
-  };
+const baseCard = {
+  name: "Lightning Bolt",
+  src: "The Cardboard Collective",
+  price: 1.5,
+  quality: "NM",
+  isFoil: false,
+  extraInfo: "Modern Masters",
+};
 
-  it("matches all cards when query is empty", () => {
-    expect(savedCardMatchesFilter(baseCard, "")).toBe(true);
-    expect(savedCardMatchesFilter(baseCard, "   ")).toBe(true);
-  });
+assert.equal(savedCardMatchesFilter(baseCard, ""), true);
+assert.equal(savedCardMatchesFilter(baseCard, "   "), true);
 
-  it("matches card name, store, condition, and set info", () => {
-    expect(savedCardMatchesFilter(baseCard, "lightning")).toBe(true);
-    expect(savedCardMatchesFilter(baseCard, "cardboard")).toBe(true);
-    expect(savedCardMatchesFilter(baseCard, "nm")).toBe(true);
-    expect(savedCardMatchesFilter(baseCard, "modern")).toBe(true);
-  });
+assert.equal(savedCardMatchesFilter(baseCard, "lightning"), true);
+assert.equal(savedCardMatchesFilter(baseCard, "cardboard"), true);
+assert.equal(savedCardMatchesFilter(baseCard, "nm"), true);
+assert.equal(savedCardMatchesFilter(baseCard, "modern"), true);
 
-  it("matches foil cards when searching foil", () => {
-    expect(savedCardMatchesFilter({ ...baseCard, isFoil: true }, "foil")).toBe(
-      true,
-    );
-    expect(savedCardMatchesFilter(baseCard, "foil")).toBe(false);
-  });
+assert.equal(
+  savedCardMatchesFilter({ ...baseCard, isFoil: true }, "foil"),
+  true,
+);
+assert.equal(savedCardMatchesFilter(baseCard, "foil"), false);
+assert.equal(savedCardMatchesFilter(baseCard, "counterspell"), false);
 
-  it("returns false when nothing matches", () => {
-    expect(savedCardMatchesFilter(baseCard, "counterspell")).toBe(false);
-  });
-});
+console.log("savedCartFilter tests passed");
