@@ -169,27 +169,15 @@ const CartOffcanvas = ({
             >
               Filter
             </Form.Label>
-            <div className="d-flex gap-2">
-              <Form.Control
-                id="saved-cards-filter"
-                type="search"
-                size="sm"
-                placeholder="Search name, store, set…"
-                value={searchFilter}
-                onChange={(event) => setSearchFilter(event.target.value)}
-                autoComplete="off"
-              />
-              {hasActiveSearch && (
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  className="text-nowrap"
-                  onClick={() => setSearchFilter("")}
-                >
-                  Clear
-                </Button>
-              )}
-            </div>
+            <Form.Control
+              id="saved-cards-filter"
+              type="search"
+              size="sm"
+              placeholder="Search name, store, set…"
+              value={searchFilter}
+              onChange={(event) => setSearchFilter(event.target.value)}
+              autoComplete="off"
+            />
             {hasActiveSearch && (
               <div className="small text-muted mt-1">
                 Showing {filteredCartEntries.length} of {cart.length} saved card
