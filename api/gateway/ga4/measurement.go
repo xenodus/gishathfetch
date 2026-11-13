@@ -24,6 +24,61 @@ const (
 	searchSourceTelegram = "telegram"
 )
 
+func (s *MeasurementSender) sendMeasurementEvent(
+	ctx context.Context,
+	clientID string,
+	eventName string,
+	params map[string]any,
+) error {
+	clientID = strings.TrimSpace(clientID)
+	if clientID == "" {
+		return fmt.Errorf("ga4: client id is required")
+	}
+	eventName = strings.TrimSpace(eventName)
+	if eventName == "" {
+		return fmt.Errorf("ga4: event name is required")
+	}
+
+	payload := map[string]any{
+		"client_id": clientID,
+		"events": []map[string]any{
+			{
+				"name":   eventName,
+				"params": params,
+			},
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	endpoint, err := s.collectEndpoint()
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := s.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(io.LimitReader(res.Body, 512))
+		return fmt.Errorf("ga4: measurement protocol status %d: %s", res.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	return nil
+}
+
 // MeasurementSender posts GA4 events via the Measurement Protocol.
 type MeasurementSender struct {
 	collectURL    string
@@ -63,48 +118,11 @@ func (s *MeasurementSender) SendSearchEvent(ctx context.Context, searchTerm stri
 		return fmt.Errorf("ga4: search term is required")
 	}
 
-	payload := map[string]any{
-		"client_id": telegramClientID,
-		"events": []map[string]any{
-			{
-				"name": SearchEventName,
-				"params": map[string]any{
-					"search_term":          searchTerm,
-					searchSourceParam:      searchSourceTelegram,
-					"engagement_time_msec": 1,
-				},
-			},
-		},
-	}
-
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	endpoint, err := s.collectEndpoint()
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	res, err := s.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(io.LimitReader(res.Body, 512))
-		return fmt.Errorf("ga4: measurement protocol status %d: %s", res.StatusCode, strings.TrimSpace(string(respBody)))
-	}
-
-	return nil
+	return s.sendMeasurementEvent(ctx, telegramClientID, SearchEventName, map[string]any{
+		"search_term":          searchTerm,
+		searchSourceParam:      searchSourceTelegram,
+		"engagement_time_msec": 1,
+	})
 }
 
 func (s *MeasurementSender) collectEndpoint() (string, error) {

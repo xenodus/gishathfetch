@@ -21,7 +21,7 @@ func TestTelegramCK_Success(t *testing.T) {
 	}()
 
 	inStock := true
-	lookupCKPriceFunc = func(_ context.Context, query string) (*cardkingdom.Listing, error) {
+	lookupCKPriceFunc = func(_ context.Context, query string) (*cardkingdom.Listing, string, error) {
 		require.Equal(t, "lightning bolt", query)
 		return &cardkingdom.Listing{
 			CardName: "Lightning Bolt",
@@ -29,7 +29,7 @@ func TestTelegramCK_Success(t *testing.T) {
 			PriceUsd: 0.49,
 			URL:      "https://www.cardkingdom.com/mtg/fourth-edition/lightning-bolt",
 			InStock:  &inStock,
-		}, nil
+		}, "Lightning Bolt", nil
 	}
 
 	require.NoError(t, os.Setenv("ENV", config.EnvProd))
@@ -60,8 +60,8 @@ func TestTelegramCK_NoListing(t *testing.T) {
 		lookupCKPriceFunc = originalLookupCKPriceFunc
 	}()
 
-	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
-		return nil, nil
+	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, string, error) {
+		return nil, "", nil
 	}
 
 	require.NoError(t, os.Setenv("ENV", config.EnvProd))
@@ -89,8 +89,8 @@ func TestTelegramCK_AccessControl(t *testing.T) {
 		lookupCKPriceFunc = originalLookupCKPriceFunc
 	}()
 
-	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, error) {
-		return nil, nil
+	lookupCKPriceFunc = func(_ context.Context, _ string) (*cardkingdom.Listing, string, error) {
+		return nil, "", nil
 	}
 
 	require.NoError(t, os.Setenv("ENV", config.EnvProd))
