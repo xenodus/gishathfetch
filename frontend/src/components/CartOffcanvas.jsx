@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Form, Modal, Offcanvas } from "react-bootstrap";
+import { X } from "react-feather";
 import { decodeCartImport, encodeCartExport } from "../utils/cartTransfer";
 import { savedCardMatchesFilter } from "../utils/savedCartFilter";
 import AdComponent from "./AdComponent";
@@ -169,15 +170,30 @@ const CartOffcanvas = ({
             >
               Filter
             </Form.Label>
-            <Form.Control
-              id="saved-cards-filter"
-              type="search"
-              size="sm"
-              placeholder="Search name, store, set…"
-              value={searchFilter}
-              onChange={(event) => setSearchFilter(event.target.value)}
-              autoComplete="off"
-            />
+            <div className="saved-cards-filter-wrapper">
+              <Form.Control
+                id="saved-cards-filter"
+                type="text"
+                inputMode="search"
+                size="sm"
+                placeholder="Search name, store, set…"
+                value={searchFilter}
+                onChange={(event) => setSearchFilter(event.target.value)}
+                autoComplete="off"
+              />
+              {hasActiveSearch && (
+                <div className="saved-cards-filter-actions">
+                  <button
+                    type="button"
+                    className="search-input-clear"
+                    onClick={() => setSearchFilter("")}
+                    aria-label="Clear filter"
+                  >
+                    <X size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
             {hasActiveSearch && (
               <div className="small text-muted mt-1">
                 Showing {filteredCartEntries.length} of {cart.length} saved card
