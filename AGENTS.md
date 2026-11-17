@@ -26,6 +26,15 @@ Notes:
   - `cd api && go fix ./...`
 - If `go fix` changes any files, include those changes in the same commit/PR as the session work.
 
+## Supply-chain pins (CVE, lib, or Go updates)
+
+When fixing CVEs, updating libraries, or bumping Go, also review non-module pins (not only `go.mod` / `package.json`):
+
+- **Distroless Lambda runtime** — `Dockerfile` final stage `gcr.io/distroless/static-debian13@sha256:...`; refresh when behind `:latest` (`crane digest` or `docker buildx imagetools inspect`). See `docs/skills/fix-cves.md`.
+- **GitHub Actions** — `.github/workflows/codeql-analysis.yml`, `deploy-on-merge.yml`: third-party `uses:` majors (`actions/checkout`, `actions/setup-go`, `github/codeql-action/*`, `oven-sh/setup-bun`, `docker/setup-buildx-action`, `aws-actions/configure-aws-credentials`). Compare to latest tags and bump stale majors when inputs stay compatible. See `docs/skills/fix-cves.md` (procedure step 6).
+
+Call out digest and workflow version changes in the PR when you update them.
+
 ## Required validation before raising a PR
 
 - Run repository tests before opening/updating a PR:

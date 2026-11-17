@@ -36,6 +36,7 @@ Keep Go version declarations consistent across all relevant files (module, CI, D
    - Update Docker/base image tags and any other pinned Go runtime references:
      - Build stage: `golang:<go-version>-alpine` in `Dockerfile`.
      - Final Lambda stage: refresh `gcr.io/distroless/static-debian13@sha256:...` if it lags `:latest` (same check as fix-cves / update-libs).
+   - While touching Go-related CI, review `.github/workflows/*` for stale `actions/setup-go` and `actions/checkout` majors (see `docs/skills/fix-cves.md` step 6).
    - Run `go mod tidy`.
    - Run `go mod vendor`.
 

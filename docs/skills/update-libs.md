@@ -34,7 +34,7 @@ Apply this order when trade-offs exist:
    - Regenerate dependency artifacts with official tooling:
      - Go: `go mod tidy && go mod vendor`
    - When Go modules, `api/go.mod` `go` version, or the `Dockerfile` build stage changes, also review the **distroless** runtime pin in `Dockerfile` (final `FROM gcr.io/distroless/static-debian13@sha256:...`). Refresh the digest if it no longer matches `static-debian13:latest`; document any digest change in the PR.
-   - Scan `.github/workflows/*` for outdated `uses:` action major versions and update when inputs stay compatible.
+   - Review **GitHub Actions** in `.github/workflows/*` the same way as CVE work (`docs/skills/fix-cves.md` step 6): `actions/checkout`, `actions/setup-go`, `github/codeql-action/*`, `oven-sh/setup-bun`, `docker/setup-buildx-action`, `aws-actions/configure-aws-credentials`. Refresh stale major tags when safe; document changes in the PR.
 4. Validate:
    - Always run full tests: `make test`
    - For any gateway/scraper-related dependency changes:
