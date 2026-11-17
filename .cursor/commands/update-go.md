@@ -33,7 +33,9 @@ Keep Go version declarations consistent across all relevant files (module, CI, D
 3. Implement version updates:
    - Update `go.mod` `go` and/or `toolchain` directives as needed.
    - Update CI setup (for example `actions/setup-go` inputs or `go-version-file` usage).
-   - Update Docker/base image tags and any other pinned Go runtime references.
+   - Update Docker/base image tags and any other pinned Go runtime references:
+     - Build stage: `golang:<go-version>-alpine` in `Dockerfile`.
+     - Final Lambda stage: refresh `gcr.io/distroless/static-debian13@sha256:...` if it lags `:latest` (same check as fix-cves / update-libs).
    - Run `go mod tidy`.
    - Run `go mod vendor`.
 

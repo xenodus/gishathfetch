@@ -17,6 +17,7 @@ Key must-do constraints:
 4. For backend or scraper/gateway touching updates, also run:
    - `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
 5. Explicitly verify that gateway card search still works for impacted stores, since downstream HTML/API can change unexpectedly.
+6. When updating Go/frontend deps or Docker build inputs, check whether the distroless runtime digest in `Dockerfile` should be refreshed (see `docs/skills/update-libs.md`).
 
 Return results in this format:
 1. `Update Scope`
