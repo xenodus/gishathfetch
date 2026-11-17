@@ -31,9 +31,10 @@ Resolve known vulnerabilities with the smallest safe dependency updates while pr
    - Compare the pin to current `:latest` (for example `crane digest gcr.io/distroless/static-debian13:latest` or `docker buildx imagetools inspect gcr.io/distroless/static-debian13:latest`).
    - Keep the **debian13** variant unless deliberately changing runtime OS; refresh the digest when it lags `:latest`.
    - Note old → new digest in the PR summary when updated.
-6. Run targeted tests, then broader repository tests.
-7. Re-run security checks to confirm remediation.
-8. Summarize:
+6. Review `.github/workflows/*` third-party `uses:` pins (for example `actions/checkout`, `actions/setup-go`, `github/codeql-action`); bump stale major versions when safe.
+7. Run targeted tests, then broader repository tests.
+8. Re-run security checks to confirm remediation.
+9. Summarize:
    - advisory/CVE -> dependency -> old/new version
    - validation commands and outcomes
    - risk notes for major upgrades

@@ -19,6 +19,7 @@ Mandatory constraints:
    - `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
    - and verify gateway card search behavior for impacted stores.
 6. Check `Dockerfile` for a pinned `gcr.io/distroless/static-debian13@sha256:...` digest; refresh it when behind `:latest` and call it out in the PR (see `docs/skills/fix-cves.md`).
+7. Review `.github/workflows/*` action `uses:` versions for obvious staleness (see `docs/skills/fix-cves.md`).
 
 Return results in this format:
 1. `Fixed`
