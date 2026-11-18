@@ -59,21 +59,57 @@ func searchBase44Inventory(ctx context.Context, searchStr string) ([]gateway.Car
 		return nil, fmt.Errorf("%s: empty search string", StoreName)
 	}
 
-	items, err := fetchInventoryItems(ctx, searchStr)
-	if err != nil {
-		return nil, err
+	var (
+		items  []inventoryItem
+		hidden map[string]struct{}
+	)
+
+	type fetchResult struct {
+		err error
+	}
+	results := make(chan fetchResult, 2)
+	go func() {
+		var err error
+		items, err = fetchInventoryItems(ctx, searchStr)
+		results <- fetchResult{err: err}
+	}()
+	go func() {
+		var err error
+		hidden, err = getHiddenSetIDs(ctx)
+		results <- fetchResult{err: err}
+	}()
+	for range 2 {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case r := <-results:
+			if r.err != nil {
+				return nil, r.err
+			}
+		}
 	}
 	if len(items) == 0 {
 		return nil, nil
 	}
 
-	sets, err := fetchSets(ctx, items)
+	sellable := make([]inventoryItem, 0, len(items))
+	for _, item := range items {
+		if inventoryInHiddenSet(item.SetID, hidden) {
+			continue
+		}
+		sellable = append(sellable, item)
+	}
+	if len(sellable) == 0 {
+		return nil, nil
+	}
+
+	sets, err := fetchSets(ctx, sellable)
 	if err != nil {
 		return nil, err
 	}
 
-	cards := make([]gateway.Card, 0, len(items))
-	for _, item := range items {
+	cards := make([]gateway.Card, 0, len(sellable))
+	for _, item := range sellable {
 		set, hasSet := sets[item.SetID]
 		if !storefrontSellable(set, hasSet) {
 			continue
