@@ -122,9 +122,9 @@ flowchart TD
 
 ### Fallback rules
 
-- The chain advances to the next attempt **on error only**. An empty but
-  error-free **GraphQL** or **scrape** result counts as success and stops the
-  chain.
+- The chain advances to the next attempt on **error**, or when **GraphQL returns
+  no cards** (stores with a token then try HTML scrap). An empty **scrape**
+  result without error stops the chain.
 - HTTP **5xx** errors on scrape or GraphQL attempts are final. Other GraphQL
   failures fall through to HTML scrap.
 - Each attempt is bounded by a **3s** direct or **5s** dedicated timeout. The first
