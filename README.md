@@ -81,16 +81,18 @@ above) when those controls are enabled in the environment.
 ### Two kinds of stores
 
 **Non-BinderPOS stores** (e.g. Agora Hobby, Cards Central, Cards & Collections,
-Dueller's Point, Mox & Lotus, The TCG Marketplace) each implement a single
+Dueller's Point, Mox & Lotus, The TCG Marketplace, **MTG Asia**) each implement a single
 bespoke `Search` — a custom JSON API call or one HTML scrape — with no
 multi-strategy fallback chain (5 Mana is an exception; see below). On failure the
 store simply contributes nothing.
+
+**MTG Asia** uses **Base44** (`base44.app` entity APIs) for inventory; product links target `mtg-asia.com`.
 
 **5 Mana** is Shopify (Dawn, not BinderPOS). It tries Storefront GraphQL first,
 then falls back to a `main-search` HTML section scrape when GraphQL fails.
 
 **BinderPOS stores** (e.g. Arcane Sanctum, Card Affinity, Cards Citadel, Flagship, Game's Haven,
-Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro, MTG Asia,
+Fyendal Hobby, Grey Ogre Games, Hideout, Hideyoshi, Mana Pro,
 OneMTG) share one gateway. Stores with a configured Storefront access token try
 **GraphQL first** (direct → dedicated), then fall back to HTML scrape.
 
@@ -120,9 +122,9 @@ flowchart TD
 
 ### Fallback rules
 
-- The chain advances to the next attempt **on error only**. An empty but
-  error-free **GraphQL** or **scrape** result counts as success and stops the
-  chain.
+- The chain advances to the next attempt on **error**, or when **GraphQL returns
+  no cards** (stores with a token then try HTML scrap). An empty **scrape**
+  result without error stops the chain.
 - HTTP **5xx** errors on scrape or GraphQL attempts are final. Other GraphQL
   failures fall through to HTML scrap.
 - Each attempt is bounded by a **3s** direct or **5s** dedicated timeout. The first

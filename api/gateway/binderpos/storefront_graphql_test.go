@@ -8,6 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestStorefrontGraphQLSearchQuery(t *testing.T) {
+	require.Equal(t, "Opt mtg", storefrontGraphQLSearchQuery(2, "Opt"))
+	require.Equal(t, `product_type:"MTG Single Cards" AND Abrade`, storefrontGraphQLSearchQuery(4, "Abrade"))
+}
+
 func TestResolveStorefrontGraphQLURLUsesShopifyDomain(t *testing.T) {
 	apiURL, storeBase, err := resolveStorefrontGraphQLURL("mtgasia.myshopify.com", "https://mtg-asia.com")
 	require.NoError(t, err)

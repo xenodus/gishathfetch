@@ -45,6 +45,18 @@ Some tests in `api/gateway/binderpos/*_test.go` hit real stores and proxies. The
 
 ---
 
+## Store platforms (registry overview)
+
+| Platform | Stores | Gateway |
+|----------|--------|---------|
+| **BinderPOS / Shopify** | Arcane Sanctum, Card Affinity, Cards Citadel, Flagship, Fyendal Hobby, Games Haven, GOG, Hideout, Hideyoshi, Mana Pro, One MTG | `api/gateway/binderpos/` + per-store package |
+| **Shopify Dawn** (not BinderPOS) | 5 Mana, Tefuda | Per-store GraphQL → HTML fallback |
+| **Base44** | MTG Asia | `api/gateway/mtgasia/base44.go` |
+| **Custom JSON / APIs** | Cards Central, Dueller's Point, Mox & Lotus, Cards & Collections, The TCG Marketplace | Per-store package |
+| **HTML scrape** | Agora Hobby | `api/gateway/agora/` |
+
+---
+
 ## Backend: BinderPOS (storefront scraper fallbacks)
 
 For **field-level feature parity** between HTML scrape, Storefront GraphQL, Decklist API, scrap variants, and transport modes, see [`binderpos-search-feature-parity.md`](binderpos-search-feature-parity.md).
@@ -70,7 +82,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | Store | GraphQL token | HTML scrap variant | Max strategy steps |
 |-------|---------------|--------------------|--------------------|
 | Arcane Sanctum | Yes | 2 | 4 |
-| Card Affinity | No | 2 | 2 |
+| Card Affinity | Yes | 2 | 4 |
 | Cards Citadel | Yes | 1 | 4 |
 | Flagship | Yes | 2 | 4 |
 | Fyendal Hobby | Yes | 4 | 4 |
@@ -79,12 +91,11 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | Hideout | Yes | 3 | 4 |
 | Hideyoshi | Yes | 2 | 4 |
 | Mana Pro | Yes | 2 | 4 |
-| MTG Asia | — (Base44 API) | — | — |
 | One MTG | Yes | 2 | 4 |
 
-Card Affinity is the only BinderPOS store without a Storefront GraphQL token.
+All registered BinderPOS stores configure a Storefront GraphQL token.
 
-**MTG Asia (2026):** Storefront and inventory UI live on `https://mtg-asia.com` (Base44). Live search uses the public Base44 `InventoryItem` API (`base44.app`); product links use `https://mtg-asia.com/card/{slug}/{id}`. See [Split public site vs Shopify inventory](binderpos-search-feature-parity.md#split-public-site-vs-shopify-inventory). Documented under [non-BinderPOS stores](#backend-non-binderpos-stores) below.
+**MTG Asia** is **not** in the BinderPOS registry; see [Store platforms](#store-platforms-registry-overview) and [non-BinderPOS stores](#backend-non-binderpos-stores) below.
 
 ---
 
@@ -99,11 +110,11 @@ Shared `net/http` transport fallback for `DoOutboundGET` / `DoOutboundRoundTrip`
 | Tefuda | **graphql** → **html** (Ride theme; MTG singles `product_type` filter) | 3s direct / 5s dedicated per path | **Direct → dedicated** | GraphQL 5xx is final; other GraphQL errors fall through to HTML. Transport fallback per path. |
 | MTG Asia | Base44 `InventoryItem` + `CardSet` APIs (`base44.app`) | 3s direct / 5s dedicated | **Direct → `DEDICATED_PROXY_1`** on 4xx or connection failure | Uses `DedicatedFallbackProxyURL` (not the per-store leased dedicated slot). Transport fallback only. |
 | Cards Central | JSON API (`/api/lgs/search?q=…`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
-| Dueller's Point | HTML search page (`/products/search`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
+| Dueller's Point | JSON `GET /products/search?search_text=…` | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
 | Mox & Lotus | JSON API GET (`/api/products?search=…`, `limit=24`) | 10s | **Direct → dedicated**; browser JSON headers + `SkipWebBotAuth` | Transport fallback only |
 | Cards & Collections | Elasticsearch-style POST (`/api/catalog/`) | 3s direct / 5s dedicated | Direct → dedicated | Transport fallback only |
-| The TCG Marketplace (default) | CardLink POST (`:3501/encoder/advancedsearch`) | 20s | Direct → dedicated → dynamic | Transport fallback only; requires `TCG_MARKETPLACE_ACCESS_TOKEN` |
-| The TCG Marketplace (when `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH=true`) | POST `:3501/product/advancedfilter` + RSA-OAEP product URLs | 20s | Same as primary | No access token; selected by `Store.Search` in `search.go` |
+| The TCG Marketplace (default) | POST `:3501/product/advancedfilter` + RSA-OAEP product URLs | 20s | Direct → dedicated → dynamic | No access token; set `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH=false` to use CardLink |
+| The TCG Marketplace (legacy CardLink) | CardLink POST (`:3501/encoder/advancedsearch`) | 20s | Same as primary | Requires `TCG_MARKETPLACE_ACCESS_TOKEN`; used when advanced filter is disabled |
 
 Store implementations: `api/gateway/agora/search.go`, `api/gateway/fivemana/search.go` + `graphql.go`, `api/gateway/tefuda/search.go` + `graphql.go`, `api/gateway/mtgasia/base44.go`, `api/gateway/cardscentral/search.go`, `api/gateway/duellerpoint/search.go`, `api/gateway/moxandlotus/search.go`, `api/gateway/cardsandcollection/search.go`, `api/gateway/tcgmarketplace/search.go`.
 

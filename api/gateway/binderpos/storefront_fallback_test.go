@@ -100,6 +100,34 @@ func TestRunFallbackAttempts(t *testing.T) {
 		}
 	})
 
+	t.Run("when graphql is empty with continueOnEmpty, falls through to scrap", func(t *testing.T) {
+		sequence := make([]string, 0, 2)
+		cards, err := runFallbackAttempts(
+			fallbackAttempt{
+				strategy:        "graphql-direct",
+				family:          strategyFamilyGraphQL,
+				continueOnEmpty: true,
+				fn: func() ([]gateway.Card, error) {
+					sequence = append(sequence, "graphql-direct")
+					return []gateway.Card{}, nil
+				},
+			},
+			fallbackAttempt{strategy: "scrap-direct", family: strategyFamilyScrap, fn: func() ([]gateway.Card, error) {
+				sequence = append(sequence, "scrap-direct")
+				return []gateway.Card{{Name: "scrap-direct"}}, nil
+			}},
+		)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if len(cards) != 1 || cards[0].Name != "scrap-direct" {
+			t.Fatalf("expected scrap card, got %+v", cards)
+		}
+		if len(sequence) != 2 {
+			t.Fatalf("expected both strategies, got %v", sequence)
+		}
+	})
+
 	t.Run("when scrap is empty, returns final empty result without trying decklist", func(t *testing.T) {
 		sequence := make([]string, 0, 2)
 		cards, err := runFallbackAttempts(

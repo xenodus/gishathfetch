@@ -154,7 +154,7 @@ func searchByStorefrontGraphQL(
 
 	payload, err := json.Marshal(graphQLRequest{
 		Query:     storefrontGraphQLQuery,
-		Variables: map[string]any{"q": strings.TrimSpace(searchStr)},
+		Variables: map[string]any{"q": storefrontGraphQLSearchQuery(scrapVariant, searchStr)},
 	})
 	if err != nil {
 		return nil, err
@@ -201,6 +201,23 @@ func searchByStorefrontGraphQL(
 	}
 
 	return mapGraphQLProducts(scrapVariant, storeName, baseURL, parsed.Data.Search.Edges), nil
+}
+
+// storefrontGraphQLSearchQuery mirrors HTML scrape query shaping so Storefront
+// search returns the same MTG-focused result set as the scrap fallbacks.
+func storefrontGraphQLSearchQuery(scrapVariant int, searchStr string) string {
+	searchStr = strings.TrimSpace(searchStr)
+	if searchStr == "" {
+		return ""
+	}
+	switch scrapVariant {
+	case 4:
+		return fyendalSearchQuery(searchStr)
+	case 1, 2, 3:
+		return searchStr + " mtg"
+	default:
+		return searchStr
+	}
 }
 
 func resolveStorefrontGraphQLURL(shopifyDomain, baseURL string) (*url.URL, *url.URL, error) {

@@ -96,10 +96,17 @@ func TestAPINoticeMessage(t *testing.T) {
 }
 
 func TestTCGMarketplaceAdvancedFilterSearchEnabled(t *testing.T) {
-	t.Run("defaults to disabled when unset", func(t *testing.T) {
+	t.Run("defaults to enabled when unset", func(t *testing.T) {
 		t.Setenv(TCGMarketplaceAdvancedFilterSearchEnv, "")
+		if !TCGMarketplaceAdvancedFilterSearchEnabled() {
+			t.Fatalf("expected advanced filter search to be enabled by default")
+		}
+	})
+
+	t.Run("respects explicit false", func(t *testing.T) {
+		t.Setenv(TCGMarketplaceAdvancedFilterSearchEnv, "false")
 		if TCGMarketplaceAdvancedFilterSearchEnabled() {
-			t.Fatalf("expected advanced filter search to be disabled by default")
+			t.Fatalf("expected advanced filter search to be disabled when false")
 		}
 	})
 
