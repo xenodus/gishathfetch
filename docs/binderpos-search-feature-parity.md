@@ -40,7 +40,8 @@ Only **Card Affinity** omits GraphQL (no token configured).
 | Outcome | Next step |
 |---------|-----------|
 | Returns **cards** | Stop — success |
-| **Scrap or GraphQL**: empty, no error | **Final** — return empty |
+| **GraphQL**: empty, no error (store has token) | Try next strategy (HTML scrap) |
+| **Scrap or decklist**: empty, no error | **Final** — return empty |
 | **Scrap or GraphQL**: HTTP **5xx** | **Final** — return error |
 | **Scrap or GraphQL**: other error (403, 429, network) | Try next strategy |
 | All attempts fail | Return last annotated error: `attempt N (strategy-name): …` |
