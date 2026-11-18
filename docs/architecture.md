@@ -41,7 +41,7 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   timeout), merges partial results, filters, and sorts. See README → *Search flow*
   for store types and BinderPOS fallback chains.
 - Scraper gateways live under `api/gateway/` — one package per store or store
-  family (e.g. BinderPOS, Shopify).
+  family (e.g. BinderPOS, Shopify Dawn, Base44).
 - Optional **Web Bot Auth** outbound signing when `WEB_BOT_AUTH_ENABLED` is set
   ([RFC 9421](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/));
   public key directory at

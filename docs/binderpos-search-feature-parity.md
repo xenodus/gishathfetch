@@ -8,7 +8,7 @@ For **strategy order, timeouts, proxy config, and fallback rules**, see [`search
 
 ## Overview
 
-All 11 BinderPOS-backed stores share one orchestrator: `binderpos.impl.Search` in `api/gateway/binderpos/storefront_search.go`. It runs an **ordered list of strategy steps** (not retries of a single request). Each step is one HTTP interaction bounded by **3s** (direct) or **5s** (dedicated).
+Ten BinderPOS-backed stores share one orchestrator: `binderpos.impl.Search` in `api/gateway/binderpos/storefront_search.go`. It runs an **ordered list of strategy steps** (not retries of a single request). Each step is one HTTP interaction bounded by **3s** (direct) or **5s** (dedicated). **MTG Asia** is not BinderPOS; live search uses the public **Base44** inventory API (see [`search-strategies-retries-timeouts.md`](search-strategies-retries-timeouts.md) → *Store platforms*).
 
 | Data source | Implementation | Named strategies |
 |-------------|----------------|------------------|
@@ -65,7 +65,6 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 | Hideout | 3 | Yes | `220022-20.myshopify.com` | `https://hideoutcg.com` |
 | Hideyoshi | 2 | Yes | `bposacct-9.myshopify.com` | `https://hideyoshitcg.com` |
 | Mana Pro | 2 | Yes | `mana-pro-sg.myshopify.com` | `https://sg-manapro.com` |
-| MTG Asia | — | No (Base44) | `base44.app` (public InventoryItem API) | `https://mtg-asia.com` (`/card/{slug}/{id}` single pages) |
 | One MTG | 2 | Yes | `one-mtg.myshopify.com` | `https://onemtg.com.sg` |
 
 ### HTML variant details
@@ -76,8 +75,6 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 | **2** | Arcane Sanctum, Card Affinity, Flagship, Hideyoshi, Mana Pro, One MTG | `searchStr + " mtg"` | Embedded `data-product-variants` JSON (`CardInfo`) | `shouldIncludeBinderposProduct` when `data-product-type` present |
 | **3** | Games Haven, GOG, Hideout | `searchStr + " mtg"` | `div.productCard__card` + `ul.productChip__grid` variant chips | Query suffix only |
 | **4** | Fyendal Hobby | `product_type:"MTG Single Cards" AND {searchStr}` | `div.product-item--vertical` theme layout | Server-side product_type filter in query |
-
-MTG Asia still passes scrap **variant 2** for card-name formatting (GraphQL/decklist), but the public site no longer serves variant-2 HTML; live search relies on **Storefront GraphQL** on the myshopify host (see [Split public site vs Shopify inventory](#split-public-site-vs-shopify-inventory)).
 
 ---
 
@@ -184,15 +181,17 @@ Cards Citadel (variant 1) additionally uses a wildcard search template: `/search
 
 ---
 
-## Split public site vs Shopify inventory
+## Split public site vs inventory host
 
-Some stores no longer serve BinderPOS HTML or Storefront GraphQL on their marketing/custom domain. Inventory remains on Shopify; the gateway keeps a separate **public `baseURL`** (product deep links, outbound headers) and **`StoreShopifyDomain`** (GraphQL host and decklist `storeUrl`).
+Some BinderPOS stores no longer serve HTML scrape markers or Storefront GraphQL on their marketing/custom domain. Inventory remains on Shopify; the gateway keeps a separate **public `baseURL`** (product deep links, outbound headers) and **`StoreShopifyDomain`** (GraphQL host and decklist `storeUrl`).
 
-| Store | Public site | Shopify / product host | Notes |
-|-------|-------------|------------------------|--------|
-| **MTG Asia** | `https://mtg-asia.com` (Base44 SPA) | `base44.app` | Gateway search reads in-stock singles from the public Base44 `InventoryItem` API and links to `/card/{slug}/{id}` on `mtg-asia.com`. Legacy Shopify GraphQL on `mtgasia.myshopify.com` is no longer used for live search. |
+| Store | Public site | Inventory / API host | Notes |
+|-------|-------------|----------------------|--------|
+| *(none today)* | — | — | When a store’s public domain stops proxying Shopify, add a row here and set `StoreShopifyDomain` in its gateway package. |
 
-When debugging empty MTG Asia results, verify the Base44 **`InventoryItem`** list on **`base44.app`** (app id in `api/gateway/mtgasia/base44.go`), not the marketing site at `mtg-asia.com`. Items in a **`CardSet` with `hidden: true`** are omitted from gishathfetch search because the storefront shows **NOT FOR SALE** for those sets (staff/admin excepted).
+**MTG Asia (Base44, not BinderPOS)** — storefront SPA on `https://mtg-asia.com`; search uses the public Base44 **`InventoryItem`** / **`CardSet`** APIs on **`base44.app`** (app id in `api/gateway/mtgasia/base44.go`). Product links use `/card/{slug}/{id}` on the marketing site. Legacy Shopify / BinderPOS paths are diagnostic only (Postman).
+
+When debugging empty MTG Asia results, query **`InventoryItem`** on **`base44.app`**, not the marketing HTML. Items in a **`CardSet` with `hidden: true`** are omitted because the storefront shows **NOT FOR SALE** for those sets (staff/admin excepted).
 
 ---
 

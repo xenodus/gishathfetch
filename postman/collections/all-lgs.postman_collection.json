@@ -12,6 +12,52 @@
   ],
   "item": [
     {
+      "name": "MTG Asia",
+      "item": [
+        {
+          "name": "InventoryItem search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base44_server}}/api/apps/{{base44_app_id}}/entities/InventoryItem?q=%7B%22name%22%3A%7B%22%24regex%22%3A%22{{search_query}}%22%2C%22%24options%22%3A%22i%22%7D%2C%22qty_available%22%3A%7B%22%24gt%22%3A0%7D%7D&limit=25&sort=name",
+              "host": [
+                "{{base44_server}}"
+              ],
+              "path": [
+                "api",
+                "apps",
+                "{{base44_app_id}}",
+                "entities",
+                "InventoryItem"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{\"name\":{\"$regex\":\"{{search_query}}\",\"$options\":\"i\"},\"qty_available\":{\"$gt\":0}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "25"
+                },
+                {
+                  "key": "sort",
+                  "value": "name"
+                }
+              ]
+            },
+            "description": "GET /api/apps/{appId}/entities/InventoryItem with q filter (name regex, qty_available>0)."
+          }
+        }
+      ],
+      "description": "Base44 public entity API on base44.app (live gishathfetch path). InventoryItem regex filter + CardSet lookup for hidden sets. Product URLs are on mtg-asia.com."
+    },
+    {
       "name": "Cards Central",
       "item": [
         {
@@ -1130,96 +1176,6 @@
               ]
             },
             "description": "Search Mana Pro via BinderPOS portal decklist API (storeUrl=mana-pro-sg.myshopify.com).",
-            "body": {
-              "mode": "raw",
-              "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "MTG Asia",
-      "item": [
-        {
-          "name": "Shopify Storefront GraphQL Search",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Shopify-Storefront-Access-Token",
-                "value": "199d9ab7d26aaba337bd43110a51265f"
-              },
-              {
-                "key": "Cookie",
-                "value": "cart_currency=SGD; localization=SG"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/2024-10/graphql.json",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "2024-10",
-                "graphql.json"
-              ]
-            },
-            "description": "Search MTG Asia inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
-            }
-          }
-        },
-        {
-          "name": "BinderPOS Decklist API Search",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "https://portal.binderpos.com/external/shopify/decklist?storeUrl={{shopify_domain}}&type=mtg",
-              "protocol": "https",
-              "host": [
-                "portal",
-                "binderpos",
-                "com"
-              ],
-              "path": [
-                "external",
-                "shopify",
-                "decklist"
-              ],
-              "query": [
-                {
-                  "key": "storeUrl",
-                  "value": "{{shopify_domain}}"
-                },
-                {
-                  "key": "type",
-                  "value": "mtg"
-                }
-              ]
-            },
-            "description": "Search MTG Asia via BinderPOS portal decklist API (storeUrl=mtgasia.myshopify.com).",
             "body": {
               "mode": "raw",
               "raw": "[\n  {\n    \"card\": \"{{search_query}}\",\n    \"quantity\": 1\n  }\n]"
