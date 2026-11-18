@@ -57,7 +57,7 @@ Each store package (`api/gateway/{store}/search.go`) passes a **scrap variant** 
 | Store | Scrap variant | GraphQL token | Shopify domain | Public `baseURL` (gateway) |
 |-------|---------------|---------------|----------------|----------------------------|
 | Arcane Sanctum | 2 | Yes | `30uetm-1y.myshopify.com` | `https://arcanesanctumtcg.com` |
-| Card Affinity | 2 | No | `563304-2.myshopify.com` | `https://card-affinity.com` |
+| Card Affinity | 2 | Yes | `563304-2.myshopify.com` | `https://card-affinity.com` |
 | Cards Citadel | 1 | Yes | `card-citadel.myshopify.com` | `https://cardscitadel.com` |
 | Flagship | 2 | Yes | `flagship-games.myshopify.com` | `https://www.flagshipgames.sg` |
 | Fyendal Hobby | 4 | Yes | `fyendal-hobby.myshopify.com` | `https://fyendalhobby.com` |

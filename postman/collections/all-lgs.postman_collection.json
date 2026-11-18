@@ -418,6 +418,46 @@
       "name": "Card Affinity",
       "item": [
         {
+          "name": "Shopify Storefront GraphQL Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Shopify-Storefront-Access-Token",
+                "value": "28c94c0dd51e167fe6bc5b7f4151e099"
+              },
+              {
+                "key": "Cookie",
+                "value": "cart_currency=SGD; localization=SG"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2024-10/graphql.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "2024-10",
+                "graphql.json"
+              ]
+            },
+            "description": "Search Card Affinity inventory via Shopify Storefront API (same path used by gishathfetch gateway).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"query SearchCards($q: String!) {\\n  search(\\n    query: $q\\n    first: 25\\n    types: PRODUCT\\n    productFilters: [{ available: true }]\\n  ) {\\n    edges {\\n      node {\\n        ... on Product {\\n          title\\n          handle\\n          availableForSale\\n          productType\\n          tags\\n          featuredImage { url }\\n          variants(first: 20) {\\n            edges {\\n              node {\\n                id\\n                title\\n                availableForSale\\n                price { amount }\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\",\n  \"variables\": {\n    \"q\": \"{{search_query}}\"\n  }\n}"
+            }
+          }
+        },
+        {
           "name": "BinderPOS Decklist API Search",
           "request": {
             "method": "POST",

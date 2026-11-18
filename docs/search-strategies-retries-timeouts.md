@@ -82,7 +82,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | Store | GraphQL token | HTML scrap variant | Max strategy steps |
 |-------|---------------|--------------------|--------------------|
 | Arcane Sanctum | Yes | 2 | 4 |
-| Card Affinity | No | 2 | 2 |
+| Card Affinity | Yes | 2 | 4 |
 | Cards Citadel | Yes | 1 | 4 |
 | Flagship | Yes | 2 | 4 |
 | Fyendal Hobby | Yes | 4 | 4 |
@@ -93,7 +93,7 @@ For **field-level feature parity** between HTML scrape, Storefront GraphQL, Deck
 | Mana Pro | Yes | 2 | 4 |
 | One MTG | Yes | 2 | 4 |
 
-Card Affinity is the only BinderPOS store without a Storefront GraphQL token (when unset).
+All registered BinderPOS stores configure a Storefront GraphQL token.
 
 **MTG Asia** is **not** in the BinderPOS registry; see [Store platforms](#store-platforms-registry-overview) and [non-BinderPOS stores](#backend-non-binderpos-stores) below.
 

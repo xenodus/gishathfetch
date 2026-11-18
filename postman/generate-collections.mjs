@@ -211,7 +211,7 @@ function decklistRequest(storeName, shopifyDomain) {
 
 const binderposStores = [
   { id: 'arcanesanctum', name: 'Arcane Sanctum', baseUrl: 'https://arcanesanctumtcg.com', token: '228ce7e7cffe6623f36634d0ca085e9e', shopifyDomain: '30uetm-1y.myshopify.com' },
-  { id: 'cardaffinity', name: 'Card Affinity', baseUrl: 'https://card-affinity.com', token: null, shopifyDomain: '563304-2.myshopify.com' },
+  { id: 'cardaffinity', name: 'Card Affinity', baseUrl: 'https://card-affinity.com', token: '28c94c0dd51e167fe6bc5b7f4151e099', shopifyDomain: '563304-2.myshopify.com' },
   { id: 'cardscitadel', name: 'Cards Citadel', baseUrl: 'https://cardscitadel.com', token: 'b68bd33b7d819fc110eb25a07988cc8e', shopifyDomain: 'card-citadel.myshopify.com' },
   { id: 'flagship', name: 'Flagship Games', baseUrl: 'https://www.flagshipgames.sg', token: 'e08d01a75c052a2ba9e40b5cfa5b0e36', shopifyDomain: 'flagship-games.myshopify.com' },
   { id: 'fyendalhobby', name: 'Fyendal Hobby', baseUrl: 'https://fyendalhobby.com', token: '62ebf8066d0372bca57bb96d7a009a79', shopifyDomain: 'fyendal-hobby.myshopify.com' },
@@ -227,6 +227,38 @@ const BASE44_APP_ID = '6a984c3786516ed6b7f9a090';
 const BASE44_SERVER = 'https://base44.app';
 
 const customStores = [
+  {
+    id: 'mtgasia',
+    name: 'MTG Asia',
+    description:
+      'Base44 public entity API on base44.app (live gishathfetch path). InventoryItem regex filter + CardSet lookup for hidden sets. Product URLs are on mtg-asia.com.',
+    variables: [
+      { key: 'base44_server', value: BASE44_SERVER },
+      { key: 'base44_app_id', value: BASE44_APP_ID },
+      { key: 'search_query', value: 'Lightning Bolt' },
+    ],
+    items: [
+      getRequest(
+        'InventoryItem search',
+        'GET /api/apps/{appId}/entities/InventoryItem with q filter (name regex, qty_available>0).',
+        'GET',
+        {
+          raw: '{{base44_server}}/api/apps/{{base44_app_id}}/entities/InventoryItem?q=%7B%22name%22%3A%7B%22%24regex%22%3A%22{{search_query}}%22%2C%22%24options%22%3A%22i%22%7D%2C%22qty_available%22%3A%7B%22%24gt%22%3A0%7D%7D&limit=25&sort=name',
+          host: ['{{base44_server}}'],
+          path: ['api', 'apps', '{{base44_app_id}}', 'entities', 'InventoryItem'],
+          query: [
+            {
+              key: 'q',
+              value: '{"name":{"$regex":"{{search_query}}","$options":"i"},"qty_available":{"$gt":0}}',
+            },
+            { key: 'limit', value: '25' },
+            { key: 'sort', value: 'name' },
+          ],
+        },
+        [{ key: 'Accept', value: 'application/json' }],
+      ),
+    ],
+  },
   {
     id: 'cardscentral',
     name: 'Cards Central',
