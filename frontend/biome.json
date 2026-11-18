@@ -19,6 +19,18 @@
       "recommended": true
     }
   },
+  "overrides": [
+    {
+      "includes": ["index.html"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noArguments": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"

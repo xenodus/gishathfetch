@@ -22,10 +22,6 @@ body {
   min-height: 100vh;
 }
 
-#logo {
-  width: 120px;
-}
-
 .theme-toggle-btn {
   width: 32px;
   height: 32px;
@@ -302,6 +298,25 @@ body {
 #suggestions div.suggestion-item.selected {
   background: var(--bs-primary);
   color: var(--bs-white);
+}
+
+.saved-cards-filter-wrapper {
+  position: relative;
+}
+
+.saved-cards-filter-wrapper .form-control {
+  padding-right: 2.25rem;
+}
+
+.saved-cards-filter-actions {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  z-index: 3;
+  pointer-events: none;
 }
 
 .search-input-wrapper {

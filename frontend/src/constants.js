@@ -39,7 +39,9 @@ export const SITE_TAGLINE =
   "Magic: The Gathering price checker for Singapore's LGS and online shops";
 
 // Seasonal/promotional header logo. Default: img/gishath-fetch-web.png
-export const SITE_LOGO_SRC = "img/gishath-fetch-jace.png";
+export const SITE_LOGO_SRC = "img/gishath-fetch-web.png";
+// Header display width (px). Default web logo: 120. Taller seasonal art (e.g. hats) often reads small at 120.
+export const SITE_LOGO_WIDTH_PX = 120;
 
 // Keep in sync with meta/og descriptions in frontend/index.html.
 export const SITE_DESCRIPTION = `Compare MTG singles prices across ${LGS_OPTIONS.length} Singapore local game stores and online shops in one search. In-stock results sorted by price.`;
@@ -164,7 +166,7 @@ export const LGS_MAP = [
     address: "261 Waterloo St, #03-28, Singapore 180261",
     iframe:
       "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7930896678654!2d103.8493947744998!3d1.2989162986887468!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31da19bb4a2bee83%3A0x28725aa3a3e2a51!2sMTG-Asia!5e0!3m2!1sen!2ssg!4v1703085334392!5m2!1sen!2ssg",
-    website: "https://www.mtg-asia.com/",
+    website: "https://mtg-asia.com/",
   },
   {
     id: "onemtg-map",

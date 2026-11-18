@@ -152,6 +152,61 @@ func TestCleanName(t *testing.T) {
 	}
 }
 
+func TestCleanName_ManaProSetSuffix(t *testing.T) {
+	name := "Seraph of the Sword - [Magic 2014 (M14) - M14 - 31] - Near Mint / English / Normal"
+	gotName, gotExtra := cleanName(name, "Near Mint / English / Normal", nil)
+	if gotName != "Seraph of the Sword" {
+		t.Fatalf("gotName = %q, want %q", gotName, "Seraph of the Sword")
+	}
+	wantExtra := []string{"[Magic 2014 (M14)]", "[M14]", "[31]"}
+	gotExtra = splitManaProBracketExtraInfo(gotExtra)
+	if len(gotExtra) != len(wantExtra) {
+		t.Fatalf("gotExtra = %v, want %v", gotExtra, wantExtra)
+	}
+	for i := range wantExtra {
+		if gotExtra[i] != wantExtra[i] {
+			t.Fatalf("gotExtra[%d] = %q, want %q", i, gotExtra[i], wantExtra[i])
+		}
+	}
+}
+
+func TestSplitManaProBracketExtraInfo(t *testing.T) {
+	tests := map[string]struct {
+		in   []string
+		want []string
+	}{
+		"PIP triple": {
+			in:   []string{"[Universes Beyond: Fallout - PIP - 97]"},
+			want: []string{"[Universes Beyond: Fallout]", "[PIP]", "[97]"},
+		},
+		"single segment unchanged": {
+			in:   []string{"[Foundations]"},
+			want: []string{"[Foundations]"},
+		},
+		"no inner dash unchanged": {
+			in:   []string{"[Magic 2014 (M14)]"},
+			want: []string{"[Magic 2014 (M14)]"},
+		},
+		"preserves trailing extras": {
+			in:   []string{"[Set A - B]", "(foil)"},
+			want: []string{"[Set A]", "[B]", "(foil)"},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := splitManaProBracketExtraInfo(tt.in)
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %v, want %v", got, tt.want)
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Fatalf("[%d] got %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestCleanName_TefudaPreparsedSetTags(t *testing.T) {
 	gotName, gotExtra := cleanName("Belladonna Took", "Near Mint", []string{"[HOB]", "[4]"})
 	if gotName != "Belladonna Took" {
@@ -241,6 +296,34 @@ func TestDedupeStoreCards_RemovesDuplicateListings(t *testing.T) {
 	deduped := dedupeStoreCards(cards)
 	if len(deduped) != 2 {
 		t.Fatalf("expected 2 deduped cards, got %d", len(deduped))
+	}
+}
+
+func TestDedupeStoreCards_KeepsMTGAsiaSubCategoryVariants(t *testing.T) {
+	cards := []gateway.Card{
+		{
+			Name:      "Swords to Plowshares [Reality Fracture] - Near Mint",
+			Url:       "https://mtg-asia.com/card/reality-fracture-swords-to-plowshares/6ab21f0c8a7dddcb3960518d",
+			Price:     2.9,
+			InStock:   true,
+			Source:    "MTG Asia",
+			Quality:   "Near Mint",
+			ExtraInfo: []string{"[FDN Commander]"},
+		},
+		{
+			Name:      "Swords to Plowshares [Reality Fracture] - Near Mint",
+			Url:       "https://mtg-asia.com/card/reality-fracture-swords-to-plowshares/6aab8e65856c9cea00b7184d",
+			Price:     2.9,
+			InStock:   true,
+			Source:    "MTG Asia",
+			Quality:   "Near Mint",
+			ExtraInfo: []string{"[FRC Non-Foil]"},
+		},
+	}
+
+	deduped := dedupeStoreCards(cards)
+	if len(deduped) != 2 {
+		t.Fatalf("expected 2 distinct MTG Asia sub_category variants, got %d", len(deduped))
 	}
 }
 

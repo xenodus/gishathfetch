@@ -26,6 +26,15 @@ Notes:
   - `cd api && go fix ./...`
 - If `go fix` changes any files, include those changes in the same commit/PR as the session work.
 
+## Supply-chain pins (CVE, lib, or Go updates)
+
+When fixing CVEs, updating libraries, or bumping Go, also review non-module pins (not only `go.mod` / `package.json`):
+
+- **Distroless Lambda runtime** — `Dockerfile` final stage `gcr.io/distroless/static-debian13@sha256:...`; refresh when behind `:latest` (`crane digest` or `docker buildx imagetools inspect`). See `docs/skills/fix-cves.md`.
+- **GitHub Actions** — `.github/workflows/codeql-analysis.yml`, `deploy-on-merge.yml`: third-party `uses:` majors (`actions/checkout`, `actions/setup-go`, `github/codeql-action/*`, `oven-sh/setup-bun`, `docker/setup-buildx-action`, `aws-actions/configure-aws-credentials`). Compare to latest tags and bump stale majors when inputs stay compatible. See `docs/skills/fix-cves.md` (procedure step 6).
+
+Call out digest and workflow version changes in the PR when you update them.
+
 ## Required validation before raising a PR
 
 - Run repository tests before opening/updating a PR:
@@ -80,6 +89,19 @@ For any PR that includes UI changes:
 - **Do not commit screenshot files to the repo.** Screenshots are PR-only artifacts used in the PR description.
 - Embed screenshots using **GitHub-hosted image URLs that render in PR descriptions** (for example `github.com/.../releases/download/...` or `github.com/user-attachments/assets/...`). Do not use `cursor.com/artifacts/...` URLs or uncommitted local file paths.
 
+### Seasonal header logo (Gishath mascot)
+
+Promotional header art lives in `frontend/public/img/gishath-fetch-*.png` and is selected via
+`SITE_LOGO_SRC` in `frontend/src/constants.js` (default when no promo: `img/gishath-fetch-web.png`).
+
+When adding or updating a seasonal logo:
+
+- **Use PNG with a transparent background (RGBA)**, matching `gishath-fetch-web.png`. Do not ship a
+  flat black, white, or colored backdrop—the mascot must sit cleanly on both light and dark theme
+  backgrounds.
+- Match the default logo canvas (~278×261) and placement unless intentionally aligning with another
+  existing seasonal asset's dimensions.
+
 ## Cursor Cloud specific instructions
 
 ### Services overview
@@ -87,11 +109,11 @@ For any PR that includes UI changes:
 | Service | Location | Run command | Port |
 |---------|----------|-------------|------|
 | Go backend (Lambda handler) | `api/` | `cd api && go run -mod=vendor ./cmd/main.go` | N/A (one-shot, prints JSON) |
-| Frontend dev server (Vite) | `frontend/` | `cd frontend && npm run dev` | 5173 |
+| Frontend dev server (Vite) | `frontend/` | `cd frontend && bun run dev` | 5173 |
 
 ### Go version requirement
 
-The project requires Go 1.27.0 (per `api/go.mod`). Cloud Agent VMs install the matching toolchain to `/usr/local/go` via `.cursor/environment.json` → `.cursor/scripts/cloud-agent-install.sh` (reads `api/go.mod`). You must have `/usr/local/go/bin` in your PATH:
+The project requires Go 1.27.4 (per `api/go.mod`). Cloud Agent VMs install the matching toolchain to `/usr/local/go` via `.cursor/environment.json` → `.cursor/scripts/cloud-agent-install.sh` (reads `api/go.mod`). You must have `/usr/local/go/bin` in your PATH:
 
 ```bash
 export PATH="/usr/local/go/bin:$PATH"
@@ -101,7 +123,7 @@ export PATH="/usr/local/go/bin:$PATH"
 
 - Full test suite: `make test` (from repo root)
 - Gateway/controller focused: `cd api && go test -mod=vendor -failfast -timeout 5m ./gateway/... ./controller/...`
-- Frontend lint: `cd frontend && npm run lint`
+- Frontend lint: `cd frontend && bun run lint`
 
 ### UI screenshots
 
@@ -117,7 +139,7 @@ Follow the [UI deliverables](#ui-deliverables) rules above. In short:
 
 A reusable full-page screenshot helper is pre-provisioned at `~/.agent-tools/screenshots/screenshot.mjs`. It drives the system-installed Google Chrome via Playwright (no bundled-browser download; the startup update script keeps its deps installed).
 
-Start the dev server first (`cd frontend && npm run dev`, port 5173), then run:
+Start the dev server first (`cd frontend && bun run dev`, port 5173), then run:
 
 ```bash
 node ~/.agent-tools/screenshots/screenshot.mjs http://localhost:5173 /opt/cursor/artifacts homepage

@@ -7,6 +7,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFirstDedicatedProxyURL(t *testing.T) {
+	t.Setenv("DEDICATED_PROXY_1", "host-1|1111|user-1|pass-1")
+	t.Setenv("DEDICATED_PROXY_2", "host-2|2222|user-2|pass-2")
+
+	got, ok := FirstDedicatedProxyURL()
+	require.True(t, ok)
+	require.Equal(t, "http://user-1:pass-1@host-1:1111", got)
+}
+
 func TestGetDedicatedProxyReadsEnvVars(t *testing.T) {
 	// Set all env vars explicitly to make the test deterministic.
 	t.Setenv("DEDICATED_PROXY_1", "host-1|1111|user-1|pass-1")

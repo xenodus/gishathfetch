@@ -37,13 +37,13 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 			storefrontStrategy{
 				name: "graphql-direct",
 				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return searchByStorefrontGraphQLDirect(attemptCtx, scrapVariant, storeName, baseURL, token, searchStr)
+					return searchByStorefrontGraphQLDirect(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, token, searchStr)
 				},
 			},
 			storefrontStrategy{
 				name: "graphql-dedicated",
 				run: func(attemptCtx context.Context) ([]gateway.Card, error) {
-					return searchByStorefrontGraphQLDedicated(attemptCtx, scrapVariant, storeName, baseURL, token, searchStr)
+					return searchByStorefrontGraphQLDedicated(attemptCtx, scrapVariant, storeName, baseURL, shopifyDomain, token, searchStr)
 				},
 			},
 		)

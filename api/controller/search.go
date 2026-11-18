@@ -92,7 +92,7 @@ var shopRegistry = []shopSpec{
 	{name: hideyoshi.StoreName, newLGS: hideyoshi.NewLGS, isBinderpos: true},
 	{name: manapro.StoreName, newLGS: manapro.NewLGS, isBinderpos: true},
 	{name: moxandlotus.StoreName, newLGS: moxandlotus.NewLGS},
-	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS, isBinderpos: true},
+	{name: mtgasia.StoreName, newLGS: mtgasia.NewLGS},
 	{name: onemtg.StoreName, newLGS: onemtg.NewLGS, isBinderpos: true},
 	{name: tcgmarketplace.StoreName, newLGS: tcgmarketplace.NewLGS},
 	{name: tefuda.StoreName, newLGS: tefuda.NewLGS},
@@ -323,7 +323,7 @@ func searchShop(
 		if err != nil {
 			recordShopSearchError(searchString, shopName, err, aggregator)
 		}
-		aggregator.addCards(cards)
+		aggregator.addCards(dedupeStoreCards(cards))
 		return
 	}
 
@@ -585,6 +585,9 @@ func filterAndSortCards(cards []gateway.Card, searchString string) []Card {
 	for _, c := range cards {
 		if c.InStock && c.Price > 0 {
 			cleanCardName, extraInfo := cleanName(c.Name, c.Quality, c.ExtraInfo)
+			if c.Source == manapro.StoreName {
+				extraInfo = splitManaProBracketExtraInfo(extraInfo)
+			}
 
 			card := Card{
 				Name:      cleanCardName,
@@ -694,23 +697,64 @@ func isNonemptyExtraInfo(info string) bool {
 	return extraInfoInnerText(info) != ""
 }
 
+func trimTrailingNameSeparator(name string) string {
+	name = strings.TrimSpace(name)
+	for _, sep := range []string{" -", " –", " —"} {
+		if strings.HasSuffix(name, sep) {
+			return strings.TrimSpace(name[:len(name)-len(sep)])
+		}
+	}
+	return name
+}
+
+// splitManaProBracketExtraInfo splits the inner text of Mana Pro's first bracket
+// block on " - " (e.g. "[Universes Beyond: Fallout - PIP - 97]" → three tags).
+func splitManaProBracketExtraInfo(extraInfo []string) []string {
+	if len(extraInfo) == 0 {
+		return extraInfo
+	}
+	first := strings.TrimSpace(extraInfo[0])
+	inner := extraInfoInnerText(first)
+	if inner == first || !strings.Contains(inner, " - ") {
+		return extraInfo
+	}
+	parts := strings.Split(inner, " - ")
+	var split []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if !strings.HasPrefix(part, "[") {
+			part = "[" + part + "]"
+		}
+		split = append(split, part)
+	}
+	if len(split) <= 1 {
+		return extraInfo
+	}
+	return append(split, extraInfo[1:]...)
+}
+
 func cleanName(name, quality string, extraInfo []string) (string, []string) {
 	cleanCardName := name
 
 	// if we have quality, remove it from name
 	if quality != "" {
-		cleanCardName = strings.Replace(cleanCardName, quality, "", -1)
-
-		if idx := strings.LastIndex(cleanCardName, " -"); idx != -1 {
-			cleanCardName = cleanCardName[:idx]
+		cleanCardName = strings.TrimSpace(cleanCardName)
+		if before, ok := strings.CutSuffix(cleanCardName, quality); ok {
+			cleanCardName = strings.TrimSpace(before)
+		} else {
+			cleanCardName = strings.Replace(cleanCardName, quality, "", -1)
 		}
+		cleanCardName = trimTrailingNameSeparator(cleanCardName)
 	}
 
 	// if string has [, get index of it to strip [*] away
 	squareBracketIndex := strings.Index(cleanCardName, "[")
 	if squareBracketIndex > 0 {
 		extraInfo = append(extraInfo, strings.TrimSpace(cleanCardName[squareBracketIndex:]))
-		cleanCardName = strings.TrimSpace(cleanCardName[:squareBracketIndex])
+		cleanCardName = trimTrailingNameSeparator(cleanCardName[:squareBracketIndex])
 	}
 
 	// if string has (, get index of it to strip (*) away
@@ -720,7 +764,7 @@ func cleanName(name, quality string, extraInfo []string) (string, []string) {
 		cleanCardName = strings.TrimSpace(cleanCardName[:roundBracketIndex])
 	}
 
-	cleanCardName = strings.TrimSpace(cleanCardName)
+	cleanCardName = trimTrailingNameSeparator(cleanCardName)
 
 	var extraInfoWithBrackets []string
 	if len(extraInfo) > 0 {

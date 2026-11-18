@@ -30,16 +30,18 @@ func Test_StorefrontSupportedGamesEndpoint_ExistsForGreyOgreAndMtgAsia(t *testin
 	client := &http.Client{Timeout: 20 * time.Second}
 
 	tests := []struct {
-		name     string
-		storeURL string
+		name          string
+		storeURL      string
+		shopifyDomain string
 	}{
 		{
 			name:     "grey ogre games",
 			storeURL: "https://www.greyogregames.com",
 		},
 		{
-			name:     "mtg asia",
-			storeURL: "https://www.mtg-asia.com",
+			name:          "mtg asia",
+			storeURL:      "https://mtg-asia.com",
+			shopifyDomain: "mtgasia.myshopify.com",
 		},
 	}
 
@@ -47,8 +49,12 @@ func Test_StorefrontSupportedGamesEndpoint_ExistsForGreyOgreAndMtgAsia(t *testin
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			shopifyDomain, err := fetchShopifyShopDomain(ctx, client, test.storeURL)
-			require.NoError(t, err)
+			shopifyDomain := strings.TrimSpace(test.shopifyDomain)
+			if shopifyDomain == "" {
+				var err error
+				shopifyDomain, err = fetchShopifyShopDomain(ctx, client, test.storeURL)
+				require.NoError(t, err)
+			}
 			require.NotEmpty(t, shopifyDomain)
 
 			storefrontAPIURL := fmt.Sprintf(

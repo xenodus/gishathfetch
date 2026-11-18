@@ -179,6 +179,34 @@ func RequireCardsCentralAPIStructure(t *testing.T, ctx context.Context, baseURL,
 	})
 }
 
+// RequireTCGMarketplaceAdvancedFilterStructure verifies POST /product/advancedfilter shape.
+func RequireTCGMarketplaceAdvancedFilterStructure(t *testing.T, ctx context.Context, query string) {
+	t.Helper()
+	requestBody := fmt.Appendf(nil, `{"category_id":"3","name_exact_match":false,"available_only":true,"name":%q,"order":"price_asc"}`, query)
+	RequireJSONStructure(t, ctx, JSONProbe{
+		Method: "POST",
+		URL:    "https://thetcgmarketplace.com:3501/product/advancedfilter",
+		Body:   requestBody,
+		Headers: map[string]string{
+			"Accept":       "application/json, text/plain, */*",
+			"Content-Type": "application/json",
+			"Referer":      "https://thetcgmarketplace.com/",
+		},
+		Validate: func(body []byte) error {
+			var payload map[string]json.RawMessage
+			if err := json.Unmarshal(body, &payload); err != nil {
+				return err
+			}
+			for _, key := range []string{"status", "data"} {
+				if _, ok := payload[key]; !ok {
+					return ValidateErrorf("missing %q key", key)
+				}
+			}
+			return nil
+		},
+	})
+}
+
 // RequireTCGMarketplaceAPIStructure verifies the TCG Marketplace advanced search API shape.
 func RequireTCGMarketplaceAPIStructure(t *testing.T, ctx context.Context, accessToken, query string) {
 	t.Helper()

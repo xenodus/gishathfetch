@@ -1,6 +1,6 @@
 module mtg-price-checker-sg
 
-go 1.27.0
+go 1.27.4
 
 require (
 	github.com/PuerkitoBio/goquery v1.11.0
@@ -19,7 +19,7 @@ require (
 	github.com/lestrrat-go/htmsig v1.0.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/text v0.41.0
+	golang.org/x/text v0.43.0
 	google.golang.org/api v0.286.0
 )
 
@@ -27,7 +27,7 @@ require (
 	cloud.google.com/go/auth v0.20.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	github.com/andybalholm/brotli v1.2.0 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/antchfx/htmlquery v1.3.5 // indirect
 	github.com/antchfx/xmlquery v1.5.0 // indirect
@@ -67,7 +67,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.16 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
-	github.com/klauspost/compress v1.18.7 // indirect
+	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/dsig v1.0.0 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
@@ -83,9 +83,9 @@ require (
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
-	golang.org/x/crypto v0.56.0 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
 	google.golang.org/grpc v1.83.2 // indirect

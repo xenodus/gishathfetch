@@ -95,6 +95,29 @@ func TestAPINoticeMessage(t *testing.T) {
 	})
 }
 
+func TestTCGMarketplaceAdvancedFilterSearchEnabled(t *testing.T) {
+	t.Run("defaults to disabled when unset", func(t *testing.T) {
+		t.Setenv(TCGMarketplaceAdvancedFilterSearchEnv, "")
+		if TCGMarketplaceAdvancedFilterSearchEnabled() {
+			t.Fatalf("expected advanced filter search to be disabled by default")
+		}
+	})
+
+	t.Run("respects explicit true", func(t *testing.T) {
+		t.Setenv(TCGMarketplaceAdvancedFilterSearchEnv, "true")
+		if !TCGMarketplaceAdvancedFilterSearchEnabled() {
+			t.Fatalf("expected advanced filter search to be enabled")
+		}
+	})
+
+	t.Run("invalid value is disabled", func(t *testing.T) {
+		t.Setenv(TCGMarketplaceAdvancedFilterSearchEnv, "maybe")
+		if TCGMarketplaceAdvancedFilterSearchEnabled() {
+			t.Fatalf("expected invalid toggle to disable advanced filter search")
+		}
+	})
+}
+
 func TestCKPriceLookupEnabled(t *testing.T) {
 	t.Run("defaults to enabled when dynamodb table is configured", func(t *testing.T) {
 		t.Setenv(CKPriceLookupEnabledEnv, "")

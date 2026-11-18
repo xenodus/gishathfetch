@@ -30,10 +30,10 @@ docker-push:
 	export AWS_PAGER="" && docker push $(ECR_IMAGE)
 
 frontend-dev:
-	cd frontend && npm install && npm run dev
+	cd frontend && bun install && bun run dev
 
 frontend-build: generate-signature-directory
-	cd frontend && npm install && npm run build
+	cd frontend && bun install --frozen-lockfile && bun run build
 
 SIGNATURE_DIRECTORY_BIN=.cache/signature-directory
 

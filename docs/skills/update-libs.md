@@ -17,22 +17,24 @@ Apply this order when trade-offs exist:
 ## Scope
 
 - Go backend deps (`api/go.mod`, `api/go.sum`, `api/vendor/`)
-- Frontend deps (`frontend/package.json`, lockfile if present)
+- Frontend deps (`frontend/package.json`, `frontend/bun.lock`)
 - Build/runtime references (Dockerfile, CI/workflows, scripts)
 
 ## Workflow
 
 1. Discover outdated dependencies:
    - Go: `cd api && go list -m -u all`
-   - Frontend: `cd frontend && npm outdated` (if frontend scope is included)
+   - Frontend: `cd frontend && bun outdated` (if frontend scope is included)
 2. Build an upgrade plan:
    - Prefer patch/minor upgrades first.
    - Group upgrades by ecosystem and risk.
    - Mark any major upgrades with expected behavior impact.
 3. Implement:
-   - Use native package managers (`go get`, `npm install`/`npm update`).
+   - Use native package managers (`go get`, `bun update`).
    - Regenerate dependency artifacts with official tooling:
      - Go: `go mod tidy && go mod vendor`
+   - When Go modules, `api/go.mod` `go` version, or the `Dockerfile` build stage changes, also review the **distroless** runtime pin in `Dockerfile` (final `FROM gcr.io/distroless/static-debian13@sha256:...`). Refresh the digest if it no longer matches `static-debian13:latest`; document any digest change in the PR.
+   - Review **GitHub Actions** in `.github/workflows/*` the same way as CVE work (`docs/skills/fix-cves.md` step 6): `actions/checkout`, `actions/setup-go`, `github/codeql-action/*`, `oven-sh/setup-bun`, `docker/setup-buildx-action`, `aws-actions/configure-aws-credentials`. Refresh stale major tags when safe; document changes in the PR.
 4. Validate:
    - Always run full tests: `make test`
    - For any gateway/scraper-related dependency changes:
