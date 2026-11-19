@@ -688,6 +688,9 @@ export default function useSearch() {
   };
 
   const handleClearQuery = useCallback(() => {
+    if (searchAbortControllerRef.current) {
+      cancelSearch();
+    }
     setSearchQuery("");
     setSuggestions([]);
     setShowSuggestions(false);
@@ -700,7 +703,7 @@ export default function useSearch() {
       autocompleteAbortControllerRef.current.abort();
       autocompleteAbortControllerRef.current = null;
     }
-  }, [searchError]);
+  }, [cancelSearch, searchError]);
 
   useEffect(() => {
     if (skipSuggestionsRef.current) {
