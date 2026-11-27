@@ -161,7 +161,7 @@ const SearchForm = ({
     (showSuggestions && suggestions.length > 0) ||
     isLoadingSuggestions ||
     showEmptySuggestions;
-  const showClearButton = searchQuery.length > 0 && !isSearching;
+  const showClearButton = searchQuery.length > 0;
 
   return (
     <div ref={wrapperRef}>
