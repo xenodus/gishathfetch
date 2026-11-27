@@ -51,7 +51,8 @@ func (i impl) Search(ctx context.Context, scrapVariant int, storeName, baseURL, 
 
 	strategies = append(strategies, scrap[0], scrap[1])
 
-	return runStorefrontStrategies(ctx, omitDedicatedStorefrontStrategies(strategies)...)
+	scrapeAfterEmptyGraphQL := strings.TrimSpace(storefrontAccessToken) != ""
+	return runStorefrontStrategies(ctx, scrapeAfterEmptyGraphQL, omitDedicatedStorefrontStrategies(strategies)...)
 }
 
 func omitDedicatedStorefrontStrategies(strategies []storefrontStrategy) []storefrontStrategy {
@@ -71,14 +72,17 @@ func omitDedicatedStorefrontStrategies(strategies []storefrontStrategy) []storef
 // runStorefrontStrategies runs the ordered strategies through the shared
 // fallback runner. The first attempt starts immediately; later attempts honor
 // per-domain request pacing. Each attempt is bounded by a transport-specific timeout.
-func runStorefrontStrategies(ctx context.Context, strategies ...storefrontStrategy) ([]gateway.Card, error) {
+func runStorefrontStrategies(ctx context.Context, scrapeAfterEmptyGraphQL bool, strategies ...storefrontStrategy) ([]gateway.Card, error) {
 	attempts := make([]fallbackAttempt, len(strategies))
 	for idx := range strategies {
 		strategy := strategies[idx]
 		applyRequestPacing := idx != 0
+		family := strategyFamilyFromName(strategy.name)
+		continueOnEmpty := scrapeAfterEmptyGraphQL && family == strategyFamilyGraphQL
 		attempts[idx] = fallbackAttempt{
-			strategy: strategy.name,
-			family:   strategyFamilyFromName(strategy.name),
+			strategy:        strategy.name,
+			family:          family,
+			continueOnEmpty: continueOnEmpty,
 			fn: func() ([]gateway.Card, error) {
 				return runWithAttemptTimeout(ctx, applyRequestPacing, attemptTimeoutForStrategy(strategy.name), strategy.run)
 			},

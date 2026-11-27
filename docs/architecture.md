@@ -41,7 +41,7 @@ for inbound API access control see [`api-abuse-mitigation.md`](api-abuse-mitigat
   timeout), merges partial results, filters, and sorts. See README → *Search flow*
   for store types and BinderPOS fallback chains.
 - Scraper gateways live under `api/gateway/` — one package per store or store
-  family (e.g. BinderPOS, Shopify).
+  family (e.g. BinderPOS, Shopify Dawn, Base44).
 - Optional **Web Bot Auth** outbound signing when `WEB_BOT_AUTH_ENABLED` is set
   ([RFC 9421](https://datatracker.ietf.org/doc/draft-meunier-web-bot-auth-architecture/));
   public key directory at
@@ -442,7 +442,7 @@ Those belong in Lambda env vars, GitHub Actions secrets, or a local `.env` file
 | Turnstile site key (public) | Frontend build | `VITE_TURNSTILE_SITE_KEY` |
 | Web Bot Auth signing key | Lambda / deploy | `WEB_BOT_AUTH_PRIVATE_KEY` or `WEB_BOT_AUTH_PRIVATE_KEY_FILE` |
 | Dedicated / residential proxies | Lambda | `DEDICATED_PROXY_*`, `RESIDENTIAL_PROXY_1` |
-| TCG Marketplace advanced-filter search toggle | Lambda | `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH` (`true` → `/product/advancedfilter`; default off) |
+| TCG Marketplace advanced-filter search toggle | Lambda | `TCG_MARKETPLACE_ADVANCED_FILTER_SEARCH` (`false` → legacy CardLink; default on) |
 | TCG Marketplace API token (CardLink search) | Lambda | `TCG_MARKETPLACE_ACCESS_TOKEN` (ignored when advanced filter is enabled) |
 | Cards Central LGS API key | Lambda | `CARDS_CENTRAL_KEY` |
 | GA4 Data API credentials | Lambda | `GA4_PROPERTY_ID`, `GA4_CREDENTIALS_JSON` |

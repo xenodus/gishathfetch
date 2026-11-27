@@ -10,6 +10,8 @@ const StoreName = "Card Affinity"
 const StoreBaseURL = "https://card-affinity.com"
 const StoreShopifyDomain = "563304-2.myshopify.com"
 const StoreSearchURL = "/search?q=%s"
+// StoreStorefrontAccessToken is published in the shop theme for Storefront API use.
+const StoreStorefrontAccessToken = "28c94c0dd51e167fe6bc5b7f4151e099"
 
 type Store struct {
 	Name         string
@@ -28,5 +30,5 @@ func NewLGS() gateway.LGS {
 }
 
 func (s Store) Search(ctx context.Context, searchStr string) ([]gateway.Card, error) {
-	return s.BinderposGwy.Search(ctx, 2, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr, "")
+	return s.BinderposGwy.Search(ctx, 2, s.Name, s.BaseUrl, StoreShopifyDomain, s.SearchUrl, searchStr, StoreStorefrontAccessToken)
 }

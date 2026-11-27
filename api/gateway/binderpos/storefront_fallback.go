@@ -17,9 +17,10 @@ const (
 )
 
 type fallbackAttempt struct {
-	strategy string
-	family   strategyFamily
-	fn       func() ([]gateway.Card, error)
+	strategy        string
+	family          strategyFamily
+	continueOnEmpty bool
+	fn              func() ([]gateway.Card, error)
 }
 
 func strategyFamilyFromName(name string) strategyFamily {
@@ -39,7 +40,8 @@ func strategyFamilyFromName(name string) strategyFamily {
 // result that returns cards.
 //
 // When any scrap, GraphQL, or decklist attempt returns no cards without error,
-// that empty result is final and no further strategies run.
+// that empty result is final unless continueOnEmpty is set (GraphQL-only when
+// scrape should run after an empty Storefront response).
 // HTTP 5xx errors on scrape and GraphQL attempts are final so a failing
 // storefront is not followed by the shared portal or HTML scrap. Other GraphQL
 // errors fall through to HTML scrap.
@@ -58,7 +60,10 @@ func runFallbackAttempts(attempts ...fallbackAttempt) ([]gateway.Card, error) {
 		err = annotateAttemptError(executedAttempt, attempt.strategy, err)
 
 		if err == nil {
-			return cards, nil
+			if len(cards) > 0 || !attempt.continueOnEmpty {
+				return cards, nil
+			}
+			continue
 		}
 
 		if (attempt.family == strategyFamilyScrap || attempt.family == strategyFamilyGraphQL) && gateway.IsHTTPServerError(err) {

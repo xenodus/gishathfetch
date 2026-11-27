@@ -190,7 +190,7 @@ func WebBotAuthTTL() time.Duration {
 func TCGMarketplaceAdvancedFilterSearchEnabled() bool {
 	rawValue := strings.TrimSpace(os.Getenv(TCGMarketplaceAdvancedFilterSearchEnv))
 	if rawValue == "" {
-		return false
+		return true
 	}
 
 	enabled, err := strconv.ParseBool(rawValue)
