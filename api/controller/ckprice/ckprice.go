@@ -18,20 +18,31 @@ var (
 	nowFunc            = time.Now
 )
 
+// LookupLatestPrice verifies the query against Scryfall and returns the canonical
+// card name plus the cheapest CK listing when one exists in the index.
+func LookupLatestPrice(ctx context.Context, store ckprices.Store, query string) (*cardkingdom.Listing, string, error) {
+	verifiedName, err := verifyCardNameFunc(ctx, query)
+	if err != nil {
+		return nil, "", err
+	}
+	if verifiedName == "" {
+		return nil, "", nil
+	}
+
+	now := nowFunc()
+	listing, err := cheapestFreshListing(ctx, store, cardkingdom.PriceLookupKeys(verifiedName), now)
+	if err != nil {
+		return nil, verifiedName, err
+	}
+	return listing, verifiedName, nil
+}
+
 // GetLatestPrice verifies the query against Scryfall and returns the cheapest CK listing.
 // For double-faced cards it always checks the combined name, front face, and back
 // face together and returns the lowest fresh price across all three.
 func GetLatestPrice(ctx context.Context, store ckprices.Store, query string) (*cardkingdom.Listing, error) {
-	verifiedName, err := verifyCardNameFunc(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	if verifiedName == "" {
-		return nil, nil
-	}
-
-	now := nowFunc()
-	return cheapestFreshListing(ctx, store, cardkingdom.PriceLookupKeys(verifiedName), now)
+	listing, _, err := LookupLatestPrice(ctx, store, query)
+	return listing, err
 }
 
 func cheapestFreshListing(
